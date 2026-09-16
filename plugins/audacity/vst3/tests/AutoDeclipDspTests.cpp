@@ -1,5 +1,6 @@
 #include "AutoDeclipDsp.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -98,6 +99,29 @@ void testShortNegativeClipIsRepaired()
     }
 }
 
+void testHardLimitedMasterBelowClipThresholdIsUntouched()
+{
+    constexpr double kLimiterCeiling = 0.994;
+    std::vector<double> input(4096);
+    std::size_t limitedSamples = 0;
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        const double sample = 1.25 * std::sin(static_cast<double>(i) * 0.071)
+            + 0.48 * std::sin(static_cast<double>(i) * 0.019 + 0.7)
+            + 0.22 * std::sin(static_cast<double>(i) * 0.137 + 1.1);
+        input[i] = std::clamp(sample, -kLimiterCeiling, kLimiterCeiling);
+        limitedSamples += std::abs(input[i]) == kLimiterCeiling ? 1 : 0;
+    }
+
+    require(limitedSamples > 500, "fixture is not strongly hard-limited");
+    const auto output = aligned(render(input), input.size());
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        require(output[i] == input[i],
+                "declipping detector changed intentionally limited audio below its clip threshold");
+    }
+}
+
 void testSinglePeakIsUntouched()
 {
     std::vector<double> input(140, 0.0);
@@ -173,6 +197,7 @@ int main()
         testCleanPassThrough();
         testShortPositiveClipIsRepaired();
         testShortNegativeClipIsRepaired();
+        testHardLimitedMasterBelowClipThresholdIsUntouched();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
         testSignChangingRunIsUntouched();
