@@ -18,7 +18,7 @@ The corpus is diagnostic. It is deliberately not tuned to make Auto Declip look 
 
 ## Recorded comparison
 
-The 2026-09-16 run is stored in `results.json`. The comparison used the Auto Declip sources at `883eeec`, deterministic linear and cubic-Hermite baselines, and Audacity Clip Fix 2.3.0-2 semantics with `Threshold=95%` and `Gain=0 dB`.
+The 2026-09-16 run is stored in `results.json`. The comparison used the Auto Declip sources at `06c3ce9`, deterministic linear and cubic-Hermite baselines, and Audacity Clip Fix 2.3.0-2 semantics with `Threshold=95%` and `Gain=0 dB`.
 
 Mean per-recording improvement in the injected samples was:
 
