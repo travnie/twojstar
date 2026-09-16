@@ -1,0 +1,50 @@
+---
+name: EOL guard
+
+# Commits authored through the GitHub web UI or REST API store exactly the bytes
+# they are given: .gitattributes is not applied server-side. A tool that reads a
+# file from a Windows checkout and pushes it back through the Contents API can
+# therefore store CRLF in a blob that .gitattributes says must be LF. The result
+# is a file stuck on "modified" in every clone, which neither `git checkout` nor
+# `git stash` can clear - only a renormalize commit. This job catches that on the
+# push instead of weeks later. Most commits here land straight on main, so the
+# push trigger is the one that matters; pull_request is the early warning.
+
+on: # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: eol-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  renormalize:
+    name: Stored blobs match .gitattributes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check every tracked file against .gitattributes
+        run: |
+          git add --renormalize .
+          if git diff --cached --quiet; then
+            echo "All stored blobs match .gitattributes."
+            exit 0
+          fi
+          echo "::error::Stored line endings contradict .gitattributes in the files below."
+          git diff --cached --name-only | sed 's/^/  /'
+          echo
+          echo "Fix it in a clone, then commit the result:"
+          echo "  git add --renormalize ."
+          echo "  git diff --cached --ignore-cr-at-eol --stat   # empty == EOL-only, safe"
+          echo "  git commit -m 'chore: renormalize line endings'"
+          echo
+          echo "If a listed file is meant to keep its bytes verbatim, give it -text"
+          echo "or binary in .gitattributes rather than excluding it here."
+          exit 1
