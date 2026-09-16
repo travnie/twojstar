@@ -6,10 +6,12 @@ on: # yamllint disable-line rule:truthy
     branches: [main]
     paths:
       - benches/**
+      - LICENSE
       - .github/workflows/benches-release.yml
   pull_request:
     paths:
       - benches/**
+      - LICENSE
       - .github/workflows/benches-release.yml
   workflow_dispatch:
 
@@ -63,6 +65,10 @@ jobs:
           cp benches/codebench/public/portable.html dist/codebench-portable.html
           cp benches/streambench/public/portable.html dist/streambench-portable.html
           cp benches/docbench/public/portable.html dist/docbench-portable.html
+          cp LICENSE dist/LICENSE
+          node benches/scripts/runtime-notices.mjs dist/THIRD-PARTY-NOTICES.txt
+          printf 'Source repository: https://github.com/travnie/twojstar\nSource commit: %s\n' \
+            "$GITHUB_SHA" > dist/BUILD-INFO.txt
           cat > dist/README.txt <<'EOF'
           Benches portable builds
 
@@ -75,6 +81,15 @@ jobs:
 
           docbench-portable.html
             Fully self-contained Docbench document workspace.
+
+          LICENSE
+            License for the Benches project code.
+
+          THIRD-PARTY-NOTICES.txt
+            Exact runtime dependency versions plus bundled license/notice texts.
+
+          BUILD-INFO.txt
+            Source repository and commit used to build this package.
           EOF
           (
             cd dist
@@ -82,11 +97,18 @@ jobs:
               codebench-portable.html \
               streambench-portable.html \
               docbench-portable.html \
-              README.txt
+              README.txt \
+              LICENSE \
+              THIRD-PARTY-NOTICES.txt \
+              BUILD-INFO.txt
             sha256sum \
               codebench-portable.html \
               streambench-portable.html \
               docbench-portable.html \
+              README.txt \
+              LICENSE \
+              THIRD-PARTY-NOTICES.txt \
+              BUILD-INFO.txt \
               benches-portable.zip > SHA256SUMS
           )
 
