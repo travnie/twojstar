@@ -194,6 +194,27 @@ void testMaxLengthClipFallsBackBeforeReclipping()
     }
 }
 
+void testMaxLengthClipFallsBackBeforeDeepValley()
+{
+    constexpr std::size_t kStart = 80;
+    std::vector<double> input(220, 0.0);
+    input[kStart - 2] = 0.88;
+    input[kStart - 1] = 0.80;
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        input[kStart + i] = 1.0;
+    }
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples] = 0.80;
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples + 1] = 0.88;
+
+    const auto output = aligned(render(input), input.size());
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        require(std::abs(output[kStart + i] - 0.80) < 1e-12,
+                "Hermite undershoot introduced a deep valley into a clipped peak");
+    }
+}
+
 void testSinglePeakIsUntouched()
 {
     std::vector<double> input(140, 0.0);
@@ -273,6 +294,7 @@ int main()
         testHardLimitedMasterBelowClipThresholdIsUntouched();
         testNearStartClipUsesSafeLinearFallback();
         testMaxLengthClipFallsBackBeforeReclipping();
+        testMaxLengthClipFallsBackBeforeDeepValley();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
         testSignChangingRunIsUntouched();

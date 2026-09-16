@@ -118,11 +118,14 @@ void AutoDeclipDsp::repairPendingRun(std::uint64_t rightContextIndex) noexcept
     };
 
     bool useCubic = haveLeftSlope;
+    const double minimumMagnitude = 0.90 * std::min(std::abs(left), std::abs(right));
     for (std::uint64_t offset = 0; useCubic && offset < runLength; ++offset)
     {
         const double candidate = interpolate(offset, true);
         const bool keepsSign = left > 0.0 ? candidate > 0.0 : candidate < 0.0;
-        if (!std::isfinite(candidate) || !keepsSign || std::abs(candidate) >= kClipThreshold)
+        if (!std::isfinite(candidate) || !keepsSign
+            || std::abs(candidate) < minimumMagnitude
+            || std::abs(candidate) >= kClipThreshold)
         {
             useCubic = false;
         }
