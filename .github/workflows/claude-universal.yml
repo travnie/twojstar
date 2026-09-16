@@ -194,10 +194,12 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
+          # No plugin_marketplaces / plugins: `code-review` ships with Claude
+          # Code itself. Installing it from a marketplace URL would pull an
+          # unpinned default branch into a job holding the OAuth token, and a
+          # marketplace URL takes no revision - so the fix is to not need it.
           prompt: >-
-            /code-review:code-review --comment
+            /code-review --comment
             ${{ github.repository }}/pull/${{ inputs.pr }}
             ${{ inputs.focus && format('Concentrate on: {0}', inputs.focus) || '' }}
           # A hand-fired run leaves no trace in the thread otherwise.
@@ -235,10 +237,8 @@ jobs:
   #         claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
   #         additional_permissions: |
   #           actions: read
-  #         plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-  #         plugins: 'code-review@claude-code-plugins'
   #         prompt: >-
-  #           /code-review:code-review --comment
+  #           /code-review --comment
   #           ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
   #         claude_args: >-
   #           --allowedTools "mcp__github_inline_comment__create_inline_comment"
