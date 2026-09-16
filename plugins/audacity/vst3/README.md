@@ -127,13 +127,16 @@ CI pins Steinberg VST3 SDK **3.8.0** by commit and checks its submodules recursi
 
 ## Before calling Auto Declip stable
 
-The initial implementation still needs real recordings and generated clipping fixtures beyond the unit tests. Before a stable release, validate:
+Current release gates:
 
-1. Steinberg validator/test-host behavior,
-2. Audacity scan/load and latency compensation,
-3. mono/stereo and 32/64-bit paths,
-4. block-boundary clipping runs,
-5. false-positive rate on hard-limited but intentionally undamaged masters,
-6. quality against Audacity Clip Fix and other deterministic baselines.
+- [x] Steinberg VST3 validator passes on the packaged bundle on Windows and Linux.
+- [x] Audacity 4 scans and loads the effect; fallback UI exposes `Denoise`, and VST3 state round-trip is covered.
+- [ ] Validate Audacity host latency compensation end to end. The processor reports 66 samples, but host compensation still needs an explicit host-level check.
+- [x] Mono/stereo and 32/64-bit processor paths are covered.
+- [x] A clipping run crossing a process-block boundary renders identically to the same signal in one block.
+- [x] A strongly hard-limited fixture below the clip threshold passes through unchanged.
+- [x] A generated clipping fixture verifies that repair cuts reference error by at least half.
+- [ ] Validate a broader corpus of real recordings and edge cases, not only generated fixtures.
+- [ ] Compare repair quality against Audacity Clip Fix and other deterministic baselines.
 
-Neural declipping is a later stage, not a branding sticker glued over an interpolation function.
+Steinberg's sample `audiohost` is not used as a CI gate: in SDK 3.8 it depends on JACK and is interactive. Neural declipping is a later stage, not a branding sticker glued over an interpolation function.
