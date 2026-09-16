@@ -91,9 +91,10 @@ def verify(source_path: Path, output_path: Path, kind: str):
     clip_start = LONG_CLIP_START if kind == "long" else SHORT_CLIP_START
     clip_end = clip_start + CLIP_LENGTH
     changed = any(abs(output[i] - source[i]) > 2 / 32768 for i in range(clip_start, clip_end))
-    if not changed:
-        raise RuntimeError("effect did not change the clipped plateau")
-    print(f"PASS {kind}: frames={len(output)} rate={output_rate} max_lag={max_lag} best_lag={best_lag} corr0={zero_score:.6f} clip_changed={changed}")
+    declipped = all(math.isfinite(output[i]) and abs(output[i]) < 0.995 for i in range(clip_start, clip_end))
+    if not changed or not declipped:
+        raise RuntimeError("effect did not replace the full-scale plateau with finite sub-threshold samples")
+    print(f"PASS {kind}: frames={len(output)} rate={output_rate} max_lag={max_lag} best_lag={best_lag} corr0={zero_score:.6f} clip_changed={changed} declipped={declipped}")
 
 
 def main():
