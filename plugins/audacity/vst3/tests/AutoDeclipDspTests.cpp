@@ -99,6 +99,39 @@ void testShortNegativeClipIsRepaired()
     }
 }
 
+void testGeneratedClipRepairReducesReferenceError()
+{
+    constexpr std::size_t kCenter = 80;
+    constexpr std::size_t kClipStart = 78;
+    constexpr std::size_t kClipEnd = 82;
+    std::vector<double> clean(160);
+    for (std::size_t i = 0; i < clean.size(); ++i)
+    {
+        clean[i] = 0.78 + 0.20 * std::cos((static_cast<double>(i) - kCenter) * 0.11);
+    }
+
+    auto damaged = clean;
+    for (std::size_t i = kClipStart; i < kClipEnd; ++i)
+    {
+        damaged[i] = 1.0;
+    }
+
+    const auto repaired = aligned(render(damaged), damaged.size());
+    double damagedError = 0.0;
+    double repairedError = 0.0;
+    for (std::size_t i = kClipStart; i < kClipEnd; ++i)
+    {
+        const double damagedDelta = damaged[i] - clean[i];
+        const double repairedDelta = repaired[i] - clean[i];
+        damagedError += damagedDelta * damagedDelta;
+        repairedError += repairedDelta * repairedDelta;
+    }
+
+    require(damagedError > 0.0, "generated clipping fixture has no reference error");
+    require(repairedError < damagedError * 0.5,
+            "declipping repair did not halve the generated clipping reference error");
+}
+
 void testHardLimitedMasterBelowClipThresholdIsUntouched()
 {
     constexpr double kLimiterCeiling = 0.994;
@@ -197,6 +230,7 @@ int main()
         testCleanPassThrough();
         testShortPositiveClipIsRepaired();
         testShortNegativeClipIsRepaired();
+        testGeneratedClipRepairReducesReferenceError();
         testHardLimitedMasterBelowClipThresholdIsUntouched();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
