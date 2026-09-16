@@ -128,8 +128,8 @@ void testGeneratedClipRepairReducesReferenceError()
     }
 
     require(damagedError > 0.0, "generated clipping fixture has no reference error");
-    require(repairedError < damagedError * 0.5,
-            "declipping repair did not halve the generated clipping reference error");
+    require(repairedError < damagedError * 0.02,
+            "cubic declipping repair did not reduce generated clipping error by at least 98%");
 }
 
 void testHardLimitedMasterBelowClipThresholdIsUntouched()
@@ -153,6 +153,24 @@ void testHardLimitedMasterBelowClipThresholdIsUntouched()
         require(output[i] == input[i],
                 "declipping detector changed intentionally limited audio below its clip threshold");
     }
+}
+
+void testNearStartClipUsesSafeLinearFallback()
+{
+    std::vector<double> input(96, 0.0);
+    input[0] = 0.80;
+    input[1] = 1.0;
+    input[2] = 1.0;
+    input[3] = 0.82;
+    input[4] = 0.74;
+
+    const auto output = aligned(render(input), input.size());
+    require(output[1] > 0.80 && output[1] < 0.82,
+            "near-start fallback did not interpolate the first clipped sample");
+    require(output[2] > 0.80 && output[2] < 0.82,
+            "near-start fallback did not interpolate the second clipped sample");
+    require(output[0] == input[0] && output[3] == input[3],
+            "near-start fallback changed clean edges");
 }
 
 void testSinglePeakIsUntouched()
@@ -232,6 +250,7 @@ int main()
         testShortNegativeClipIsRepaired();
         testGeneratedClipRepairReducesReferenceError();
         testHardLimitedMasterBelowClipThresholdIsUntouched();
+        testNearStartClipUsesSafeLinearFallback();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
         testSignChangingRunIsUntouched();

@@ -5,7 +5,6 @@
 
 namespace Travny::Audio {
 namespace {
-constexpr double kPi = 3.14159265358979323846;
 constexpr double kSafePeak = 0.999;
 }
 
@@ -81,7 +80,10 @@ void AutoDeclipDsp::repairPendingRun(std::uint64_t rightContextIndex) noexcept
     const double left = sampleAt(pendingStart_ - 1);
     const double right = sampleAt(pendingEnd_);
     const double rightContext = sampleAt(rightContextIndex);
-    if (!std::isfinite(left) || !std::isfinite(right) || !std::isfinite(rightContext))
+    const bool haveLeftSlope = pendingStart_ >= 2;
+    const double leftContext = haveLeftSlope ? sampleAt(pendingStart_ - 2) : left;
+    if (!std::isfinite(leftContext) || !std::isfinite(left)
+        || !std::isfinite(right) || !std::isfinite(rightContext))
     {
         return;
     }
@@ -94,17 +96,25 @@ void AutoDeclipDsp::repairPendingRun(std::uint64_t rightContextIndex) noexcept
         return;
     }
 
-    const double edgePeak = std::max(std::abs(left), std::abs(right));
-    const double headroom = std::clamp(kSafePeak - edgePeak, 0.0, 0.12);
-    const double sign = left < 0.0 ? -1.0 : 1.0;
+    const double span = static_cast<double>(runLength + 1);
+    const double leftSlope = left - leftContext;
+    const double rightSlope = rightContext - right;
 
     for (std::uint64_t offset = 0; offset < runLength; ++offset)
     {
-        const double t = static_cast<double>(offset + 1) / static_cast<double>(runLength + 1);
-        double repaired = left + (right - left) * t;
-        if (headroom > 0.0)
+        const double t = static_cast<double>(offset + 1) / span;
+        const double linear = left + (right - left) * t;
+        double repaired = linear;
+        if (haveLeftSlope)
         {
-            repaired += sign * headroom * std::sin(kPi * t);
+            const double t2 = t * t;
+            const double t3 = t2 * t;
+            const double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+            const double h10 = t3 - 2.0 * t2 + t;
+            const double h01 = -2.0 * t3 + 3.0 * t2;
+            const double h11 = t3 - t2;
+            repaired = h00 * left + h10 * span * leftSlope
+                + h01 * right + h11 * span * rightSlope;
         }
 
         sampleAt(pendingStart_ + offset) = std::clamp(repaired, -kSafePeak, kSafePeak);
