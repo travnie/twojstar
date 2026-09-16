@@ -149,7 +149,8 @@ Current release gates:
 - [x] A clipping run crossing a process-block boundary renders identically to the same signal in one block.
 - [x] A strongly hard-limited fixture below the clip threshold passes through unchanged.
 - [x] A generated clipping fixture verifies that repair cuts reference error by at least half.
-- [ ] Validate a broader corpus of real recordings and edge cases, not only generated fixtures.
-- [ ] Compare repair quality against Audacity Clip Fix and other deterministic baselines.
+- [x] A broader real-recording corpus is covered with eight 10-second EBU SQAM excerpts and 39 deterministic clipping events; methodology and results live in 	ests/quality/.
+- [x] Repair quality is compared against Audacity Clip Fix 2.3.0-2 plus deterministic linear and cubic-Hermite baselines.
+- [ ] Close the measured repair-quality gap before calling Auto Declip stable: the current core improves injected damage by +8.26 dB on average, versus +23.69 dB for Clip Fix on the recorded corpus.
 
 Steinberg's sample `audiohost` is not used as a CI gate: in SDK 3.8 it depends on JACK and is interactive. Neural declipping is a later stage, not a branding sticker glued over an interpolation function.

@@ -1,0 +1,67 @@
+{
+  "source": {
+    "name": "EBU Sound Quality Assessment Material (SQAM)",
+    "handbook": "https://tech.ebu.ch/publications/tech3253",
+    "archive": "SQAM_FLAC.zip",
+    "sample_rate": 44100,
+    "segment_seconds": 10
+  },
+  "recordings": [
+    {
+      "id": "castanets",
+      "file": "27.flac",
+      "label": "Castanets (single tone-rhythm)",
+      "start_seconds": 5,
+      "events": 2
+    },
+    {
+      "id": "organ",
+      "file": "43.flac",
+      "label": "Organ (arpeggio; melodious phrase; full organ)",
+      "start_seconds": 0,
+      "events": 7
+    },
+    {
+      "id": "harpsichord",
+      "file": "40.flac",
+      "label": "Harpsichord (arpeggio; melodious phrase)",
+      "start_seconds": 0,
+      "events": 4
+    },
+    {
+      "id": "female-speech",
+      "file": "49.flac",
+      "label": "Female Speech (English)",
+      "start_seconds": 0,
+      "events": 5
+    },
+    {
+      "id": "male-speech",
+      "file": "50.flac",
+      "label": "Male Speech (English)",
+      "start_seconds": 0,
+      "events": 5
+    },
+    {
+      "id": "trumpet",
+      "file": "55.flac",
+      "label": "Trumpet (Haydn)",
+      "start_seconds": 0,
+      "events": 4
+    },
+    {
+      "id": "piano",
+      "file": "60.flac",
+      "label": "Piano (Schubert)",
+      "start_seconds": 0,
+      "events": 4
+    },
+    {
+      "id": "orchestra",
+      "file": "65.flac",
+      "label": "Orchestra (R. Strauss)",
+      "start_seconds": 0,
+      "events": 8
+    }
+  ]
+}

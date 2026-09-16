@@ -31,6 +31,8 @@ jobs:
         run: cmake --build plugins/audacity/vst3/build --config Release
       - name: Run DSP tests
         run: ctest --test-dir plugins/audacity/vst3/build -C Release --output-on-failure
+      - name: Run quality harness unit tests
+        run: python -m unittest discover -s plugins/audacity/vst3/tests/quality -p "test_*.py" -v
 
   vst3:
     name: VST3 · ${{ matrix.os }}
