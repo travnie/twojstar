@@ -26,6 +26,12 @@ Current detector/repair rules:
 
 `DeNoiseDsp` is a separate conservative broadband downward expander for low-level stationary noise. It uses fixed-memory envelope/gain smoothing, has no algorithmic latency, never hard-mutes the floor, and resets safely after non-finite input. It is wired behind the explicit `Denoise` VST3 parameter, defaults to **Off**, and the selected state is stored with the host project/preset. Quiet ambience and reverb tails are therefore not altered unless the user enables broadband repair.
 
+### Audacity host validation
+
+On **Audacity 4.0**, Travny Auto Declip passes the current host-validation matrix: plug-in scanning/discovery succeeds, the effect loads, Audacity's fallback/generated parameter UI exposes `Denoise`, the toggle starts **Off** and can be switched **On**, Apply succeeds, and Audacity remains responsive afterward. The dedicated VST3 state round-trip regression also passes, confirming that the serialized `Denoise` state survives component/controller save-and-restore.
+
+Reopening the destructive effect creates a fresh effect instance, so seeing `Denoise` return to its default **Off** state in a newly opened effect window is expected host lifecycle behavior. It is not evidence that VST3 state serialization failed.
+
 ## Smart Transition 0.1 prototype
 
 Smart Transition is the first implementation from the [`../smart-edit/`](../smart-edit/) track. It targets the little click/thump/level jump left after a cut or join.
@@ -50,6 +56,8 @@ CI builds and packages `TravnySmartTransition.vst3` for Windows and Linux as an 
 Generic VST3 `ProcessData` does not provide a portable end-of-selection marker. The host-independent DSP core can finalize a late seam and shrink context for a short selection when its caller invokes `drainFrame()`, but the current VST3 adapter does not capture such a boundary and only calls `processFrame()`. End-of-selection behavior therefore remains a release gate even though the validated Audacity fixture below produces the expected output.
 
 Windows host validation on **Audacity 3.7.9** now passes discovery, Preview, Apply, Undo, cancellation, and host responsiveness. An 80-frame stereo fixture at 48 kHz with its seam at frame 40 was processed end-to-end: Apply preserved all 80 output frames and repaired the seam, validating Audacity's observed output for this specific case. Preview → Stop → Cancel left no Smart Transition undo entry, and the next Apply produced byte-identical PCM to the earlier Apply, confirming state reset and deterministic reprocessing for the same fixture.
+
+Audacity 4.0 has not yet been claimed as equivalent Smart Transition processing validation here. Any 4.0 scan/discovery evidence should be treated as host recognition only until Preview/Apply behavior and the end-of-selection contract are explicitly exercised there.
 
 Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and the planned `Mode`, `Max transition`, `Strength`, and `Repair` parameters remain required for 0.1. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
 
