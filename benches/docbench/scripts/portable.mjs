@@ -19,6 +19,7 @@ const [
   webmcp,
   tokenCounterCore,
   tokenCounter,
+  tokenCounterWorker,
   tiktokenLite,
   tiktokenChunk,
   tiktokenRank,
@@ -53,6 +54,7 @@ const [
   readFile("public/webmcp.js", "utf8"),
   readFile("public/token-counter-core.mjs", "utf8"),
   readFile("public/token-counter.mjs", "utf8"),
+  readFile("public/token-counter-worker.mjs", "utf8"),
   readFile("public/vendor/js-tiktoken/lite.js", "utf8"),
   readFile("public/vendor/js-tiktoken/chunk-VL2OQCWN.js", "utf8"),
   readFile("public/vendor/js-tiktoken/ranks/o200k_base.js", "utf8"),
@@ -110,6 +112,10 @@ const tiktokenLitePortable = tiktokenLite
 const tiktokenLiteUrl = dataUrl("text/javascript", tiktokenLitePortable);
 const tiktokenRankUrl = dataUrl("text/javascript", tiktokenRank);
 const tokenCounterCoreUrl = dataUrl("text/javascript", tokenCounterCore);
+const tokenCounterWorkerPortable = tokenCounterWorker.replace(
+  'from "./token-counter-core.mjs";',
+  `from ${JSON.stringify(tokenCounterCoreUrl)};`,
+);
 const tokenCounterPortable = tokenCounter.replace(
   'from "./token-counter-core.mjs";',
   `from ${JSON.stringify(tokenCounterCoreUrl)};`,
@@ -119,10 +125,14 @@ const inspectorPortable = inspector.replace(
   '"./token-counter.mjs"',
   JSON.stringify(tokenCounterUrl),
 );
-const portableTokenizerAssets = `<script>globalThis.__docbenchTokenizerAssets=${JSON.stringify({
-  liteUrl: tiktokenLiteUrl,
-  rankUrl: tiktokenRankUrl,
-})}</script>`;
+const portableTokenizerConfig = [
+  `globalThis.__docbenchTokenizerAssets=${JSON.stringify({
+    liteUrl: tiktokenLiteUrl,
+    rankUrl: tiktokenRankUrl,
+  })};`,
+  `globalThis.__docbenchTokenWorkerSource=${JSON.stringify(tokenCounterWorkerPortable)};`,
+].join("\n");
+const portableTokenizerAssets = `<script>${safeScript(portableTokenizerConfig)}</script>`;
 
 const qpdfBytesUrl = dataUrl("text/javascript", qpdfBytes);
 const browserRunnerPortable = qpdfBrowserRunner.replaceAll(
