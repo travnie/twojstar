@@ -29,9 +29,19 @@
 # upstream example asks for `contents: write` because it authenticates with a
 # bare API key and has to write with GITHUB_TOKEN instead.
 #
-# Access control is already handled: only users with write access can trigger
-# the action, and `allowed_bots` defaults to empty, so no bot can. An
-# `author_association` check in `if:` would be redundant.
+# Access control: the action itself only lets users with write access trigger
+# it, and `allowed_bots` defaults to empty, so no bot can. That is the real
+# gate. The `author_association` test in `mention` below is not a second
+# security layer - it just stops a runner from starting at all when a
+# passer-by writes @claude on a public repo, which the action would otherwise
+# spin up, check out and only then refuse.
+#
+# Fork PRs: `pull_request` passes no secrets, so the `claude` label cannot work
+# on a PR from a fork - the token would be empty. `issue_comment` runs in the
+# base repo and does get secrets, so @claude is the path that works there.
+# Deliberately not using `pull_request_target` to buy that back: it runs
+# trusted-context code for untrusted PRs, which is a poor trade for a case that
+# does not arise on a single-maintainer repo.
 
 name: Claude Code
 
@@ -80,11 +90,18 @@ jobs:
   # ════════════════════════════════════════════════════════════════════════
   mention:
     name: Claude (@mention)
+    # The author test is a cost filter, not the security boundary - see the
+    # header. Whichever of the three association fields the event carries has
+    # to name someone who could have triggered the action anyway.
     if: |
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+        github.event.comment.author_association ||
+        github.event.review.author_association ||
+        github.event.issue.author_association) && (
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action != 'labeled' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issues' && github.event.action != 'labeled' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
