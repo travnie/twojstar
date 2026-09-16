@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "recorded_on": "2026-09-16",
-  "source_commit": "06c3ce94e8ca92ea13a2492a515e22dbe73a6ec4",
+  "recorded_on": "2026-09-17",
+  "source_commit": "b12344124d83bd4ce089ee7c25cefe6290a84aae",
   "corpus": "EBU SQAM; 8 x 10-second excerpts; 39 injected two-sample clipping events",
   "provenance": {
     "autodeclip_core": "temporary source-equivalent local adapter mirroring AutoDeclipDsp.cpp",
