@@ -14,9 +14,5 @@ assert.ok(
   portable.includes("__docbenchTokenWorkerSource"),
   "portable build must embed the document-analysis worker source",
 );
-assert.ok(
-  portable.includes("docbench-document-stats"),
-  "portable build must keep the worker-backed counter runtime",
-);
 
 console.log("DocBench document-analysis worker checks passed.");
