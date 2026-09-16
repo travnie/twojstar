@@ -32,6 +32,19 @@ On **Audacity 4.0**, Travny Auto Declip passes the current host-validation matri
 
 Reopening the destructive effect creates a fresh effect instance, so seeing `Denoise` return to its default **Off** state in a newly opened effect window is expected host lifecycle behavior. It is not evidence that VST3 state serialization failed.
 
+On **Audacity 3.7.9 for Windows x64**, an end-to-end Apply → Export check verifies host latency compensation at 48 kHz. A 512-frame mono fixture remained exactly 512 frames with best correlation lag `0` (`corr=0.998620`) while its clipping plateau was repaired. A deliberately hostile **48-frame** selection, shorter than the plug-in's reported 66-sample latency and containing its own four-sample clipping plateau, also remained exactly 48 frames with best lag `0` (`corr=0.999272`) and repaired the plateau. This rules out the characteristic uncompensated 66-sample leading delay / end truncation for those measured host cases.
+
+`tests/AutoDeclipHostLatencyFixture.py` generates and verifies both fixtures without third-party Python packages. For the recorded run, Audacity used a 48 kHz mono project, the complete imported track was selected, `Travny Auto Declip` was applied once, and the processed selection was exported as uncompressed mono PCM24 WAV. The verifier accepts only uncompressed mono PCM16/24/32 WAV and requires identical frame count and rate. The 512-frame case searches timing displacement through ±80 samples; the 48-frame case can correlate only through ±23 samples, so it additionally relies on exact output length, non-silent energy, zero-lag correlation and a repaired plateau to reject the characteristic output of an uncompensated 66-sample delay. The tested plug-in binary SHA-256 was `BD6CFFB103E157EBAACB12E8DEB79AF40E1E049DD7D8FF70EA26B5E0788A143D`.
+
+```text
+long-in.wav   C69691548DEEB994A18256F8BAA40E3FBFF174D50FC46E76EC97AEA108BCF328
+long-out.wav  BF4E996831038DE22E2AEA6DA749DCD207CF9D87786F72BF34CF5E63765BFE04
+short-in.wav  5437641D201B92568E248FFB30CB289B9EB6837F66C6232493F0816B0009CD36
+short-out.wav 2DFBC22C7350AD15CF24E246514ECF2B5936604444901451C46F3F4335A5C986
+```
+
+Generate `long` or `short`, apply Auto Declip with the settings above, then run `verify <kind> <input.wav> <output.wav>`. The measured result is specifically the Audacity 3.7.9 host path; the separate Audacity 4.0 scan/load/Apply validation is not presented as an equivalent latency measurement.
+
 ## Smart Transition 0.1 prototype
 
 Smart Transition is the first implementation from the [`../smart-edit/`](../smart-edit/) track. It targets the little click/thump/level jump left after a cut or join.
@@ -131,7 +144,7 @@ Current release gates:
 
 - [x] Steinberg VST3 validator passes on the packaged bundle on Windows and Linux.
 - [x] Audacity 4 scans and loads the effect; fallback UI exposes `Denoise`, and VST3 state round-trip is covered.
-- [ ] Validate Audacity host latency compensation end to end. The processor reports 66 samples, but host compensation still needs an explicit host-level check.
+- [x] Audacity 3.7.9 host latency compensation is verified end to end at 48 kHz, including a 48-frame clipped selection shorter than the reported 66-sample latency; the reproducible fixture/checker is in `tests/AutoDeclipHostLatencyFixture.py`.
 - [x] Mono/stereo and 32/64-bit processor paths are covered.
 - [x] A clipping run crossing a process-block boundary renders identically to the same signal in one block.
 - [x] A strongly hard-limited fixture below the clip threshold passes through unchanged.
