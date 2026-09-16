@@ -18,7 +18,7 @@ The corpus is diagnostic. It is deliberately not tuned to make Auto Declip look 
 
 ## Recorded comparison
 
-The 2026-09-16 run is stored in `results.json`. The comparison used the current Auto Declip sources at `f940fe4`, deterministic linear and cubic-Hermite baselines, and Audacity Clip Fix 2.3.0-2 semantics with `Threshold=95%` and `Gain=0 dB`.
+The 2026-09-16 run is stored in `results.json`. The comparison used the Auto Declip sources at `883eeec`, deterministic linear and cubic-Hermite baselines, and Audacity Clip Fix 2.3.0-2 semantics with `Threshold=95%` and `Gain=0 dB`.
 
 Mean per-recording improvement in the injected samples was:
 
@@ -26,13 +26,13 @@ Mean per-recording improvement in the injected samples was:
 | --- | ---: |
 | Linear interpolation | +21.22 dB |
 | Cubic Hermite | +28.00 dB |
-| Auto Declip core | +8.26 dB |
-| Auto Declip default pipeline | +9.17 dB |
+| Auto Declip core | +28.00 dB |
+| Auto Declip default pipeline | +17.84 dB |
 | Audacity Clip Fix 2.3.0-2 | +23.69 dB |
 
 The default pipeline intentionally also runs de-click and de-hum, so it is not expected to be sample-identical outside the injected clipping windows. For apples-to-apples declipping quality, compare `autodeclip_core` with the interpolation and Clip Fix baselines.
 
-This run exposes a real quality gap: the current conservative Auto Declip core improves the injected damage, but trails Clip Fix and the interpolation baselines on most of this corpus. Corpus coverage and baseline comparison are therefore complete, while closing that gap remains a separate stability gate.
+The cubic-Hermite core closes the previously measured declipping gap on this corpus: +28.00 dB mean improvement versus +23.69 dB for Clip Fix. The full default pipeline reaches +17.84 dB because de-click and de-hum intentionally alter additional samples; that pipeline impact remains a separate stability gate.
 
 ## Reproduce
 
@@ -41,6 +41,6 @@ This run exposes a real quality gap: the current conservative Auto Declip core i
 3. Run `python benchmark.py prepare <excerpt.wav> <prepared-dir>` for each excerpt.
 4. Build `AutoDeclipQualityRunner` with the normal CMake test build and render both `core` and `pipeline` outputs from each `damaged.wav`.
 5. For the Clip Fix comparison, process the same damaged WAV with Audacity Clip Fix 2.3.0-2 at `95%` threshold and `0 dB` gain, or use an independently implemented source-equivalent adapter.
-6. Run `python benchmark.py score <prepared-dir> --autodeclip <core.wav> --clipfix <clipfix.wav> --json`; pipeline output can be scored under an additional method through the Python API.
+6. Run `python benchmark.py score <prepared-dir> --autodeclip-core <core.wav> --autodeclip-pipeline <pipeline.wav> --clipfix <clipfix.wav> --json`.
 
 The repository intentionally does not copy Audacity's GPL Clip Fix implementation. The recorded comparison used a temporary local source-equivalent adapter outside the repository. Audacity's experimental `mod-script-pipe` is also not part of this benchmark; host behavior is covered separately.

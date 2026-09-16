@@ -16,7 +16,7 @@ Current detector/repair rules:
 - de-hum uses narrow Q=35 notches at 50/60 Hz plus 100/120 and 150/180 Hz harmonics,
 - de-hum adds no algorithmic latency and resets its filter state after a non-finite sample,
 - audio outside the narrow repair bands remains effectively transparent; broadband `Denoise` is exported as an explicit VST3 on/off parameter and defaults to **Off**,
-- repaired runs are reconstructed between clean edges with a bounded peak-shaped interpolation,
+- repaired runs are reconstructed with bounded cubic Hermite interpolation using clean edge values and slopes,
 - output is capped just below full scale,
 - fixed **66-sample pipeline latency** (64 declip + 2 de-click), reported to the VST3 host,
 - mono and stereo, 32-bit and 64-bit floating-point processing,
@@ -148,9 +148,10 @@ Current release gates:
 - [x] Mono/stereo and 32/64-bit processor paths are covered.
 - [x] A clipping run crossing a process-block boundary renders identically to the same signal in one block.
 - [x] A strongly hard-limited fixture below the clip threshold passes through unchanged.
-- [x] A generated clipping fixture verifies that repair cuts reference error by at least half.
+- [x] A generated clipping fixture verifies that cubic repair cuts reference error by at least 98%.
 - [x] A broader real-recording corpus is covered with eight 10-second EBU SQAM excerpts and 39 deterministic clipping events; methodology and results live in 	ests/quality/.
 - [x] Repair quality is compared against Audacity Clip Fix 2.3.0-2 plus deterministic linear and cubic-Hermite baselines.
-- [ ] Close the measured repair-quality gap before calling Auto Declip stable: the current core improves injected damage by +8.26 dB on average, versus +23.69 dB for Clip Fix on the recorded corpus.
+- [x] Close the declip-core repair-quality gap: cubic Hermite improves injected damage by +28.00 dB on average, versus +23.69 dB for Clip Fix on the recorded corpus.
+- [ ] Bound the default pipeline quality impact before calling Auto Declip stable: declip -> de-click -> de-hum reaches +17.84 dB on the same injected-region metric and intentionally changes samples outside the clipping windows.
 
 Steinberg's sample `audiohost` is not used as a CI gate: in SDK 3.8 it depends on JACK and is interactive. Neural declipping is a later stage, not a branding sticker glued over an interpolation function.
