@@ -100,23 +100,37 @@ void AutoDeclipDsp::repairPendingRun(std::uint64_t rightContextIndex) noexcept
     const double leftSlope = left - leftContext;
     const double rightSlope = rightContext - right;
 
-    for (std::uint64_t offset = 0; offset < runLength; ++offset)
-    {
+    const auto interpolate = [&](std::uint64_t offset, bool cubic) noexcept {
         const double t = static_cast<double>(offset + 1) / span;
         const double linear = left + (right - left) * t;
-        double repaired = linear;
-        if (haveLeftSlope)
+        if (!cubic)
         {
-            const double t2 = t * t;
-            const double t3 = t2 * t;
-            const double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
-            const double h10 = t3 - 2.0 * t2 + t;
-            const double h01 = -2.0 * t3 + 3.0 * t2;
-            const double h11 = t3 - t2;
-            repaired = h00 * left + h10 * span * leftSlope
-                + h01 * right + h11 * span * rightSlope;
+            return linear;
         }
+        const double t2 = t * t;
+        const double t3 = t2 * t;
+        const double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+        const double h10 = t3 - 2.0 * t2 + t;
+        const double h01 = -2.0 * t3 + 3.0 * t2;
+        const double h11 = t3 - t2;
+        return h00 * left + h10 * span * leftSlope
+            + h01 * right + h11 * span * rightSlope;
+    };
 
+    bool useCubic = haveLeftSlope;
+    for (std::uint64_t offset = 0; useCubic && offset < runLength; ++offset)
+    {
+        const double candidate = interpolate(offset, true);
+        const bool keepsSign = left > 0.0 ? candidate > 0.0 : candidate < 0.0;
+        if (!std::isfinite(candidate) || !keepsSign || std::abs(candidate) >= kClipThreshold)
+        {
+            useCubic = false;
+        }
+    }
+
+    for (std::uint64_t offset = 0; offset < runLength; ++offset)
+    {
+        const double repaired = interpolate(offset, useCubic);
         sampleAt(pendingStart_ + offset) = std::clamp(repaired, -kSafePeak, kSafePeak);
     }
 }

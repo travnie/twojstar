@@ -173,6 +173,27 @@ void testNearStartClipUsesSafeLinearFallback()
             "near-start fallback changed clean edges");
 }
 
+void testMaxLengthClipFallsBackBeforeReclipping()
+{
+    constexpr std::size_t kStart = 80;
+    std::vector<double> input(220, 0.0);
+    input[kStart - 2] = 0.70;
+    input[kStart - 1] = 0.80;
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        input[kStart + i] = 1.0;
+    }
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples] = 0.80;
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples + 1] = 0.70;
+
+    const auto output = aligned(render(input), input.size());
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        require(std::abs(output[kStart + i]) < AutoDeclipDsp::kClipThreshold,
+                "Hermite overshoot recreated a clipped plateau");
+    }
+}
+
 void testSinglePeakIsUntouched()
 {
     std::vector<double> input(140, 0.0);
@@ -251,6 +272,7 @@ int main()
         testGeneratedClipRepairReducesReferenceError();
         testHardLimitedMasterBelowClipThresholdIsUntouched();
         testNearStartClipUsesSafeLinearFallback();
+        testMaxLengthClipFallsBackBeforeReclipping();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
         testSignChangingRunIsUntouched();
