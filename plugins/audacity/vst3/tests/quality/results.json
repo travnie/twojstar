@@ -1,0 +1,404 @@
+{
+  "schema": 1,
+  "recorded_on": "2026-09-16",
+  "source_commit": "f940fe4fb083468226ba0ad6e56debdc46141b58",
+  "corpus": "EBU SQAM; 8 x 10-second excerpts; 39 injected two-sample clipping events",
+  "provenance": {
+    "autodeclip_core": "temporary source-equivalent local adapter mirroring AutoDeclipDsp.cpp",
+    "autodeclip_pipeline": "temporary source-equivalent local adapter mirroring declip -> de-click -> de-hum with Denoise Off",
+    "clipfix": "temporary source-equivalent local adapter of Audacity Clip Fix 2.3.0-2, threshold 95%, gain 0 dB",
+    "host_note": "Audacity mod-script-pipe was not used for the recorded corpus metrics; host latency is validated separately"
+  },
+  "recordings": {
+    "castanets": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.8346912412672222,
+          "context_window_rmse": 0.19673861229902315,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.6236035278175789,
+          "context_window_rmse": 0.1469847610972213,
+          "improvement_db_vs_damaged": 2.532345858318216,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.768951740741979,
+          "context_window_rmse": 0.18124366342795112,
+          "improvement_db_vs_damaged": 0.7125354377272676,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.7147553387926316,
+          "context_window_rmse": 0.168469448983186,
+          "improvement_db_vs_damaged": 1.3473689669422653,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.7119343855336221,
+          "context_window_rmse": 0.16788826256184147,
+          "improvement_db_vs_damaged": 1.381717739763511,
+          "max_absolute_error_outside_evaluation_windows": 0.4648805218792584
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.7709378295956306,
+          "context_window_rmse": 0.18171178906010313,
+          "improvement_db_vs_damaged": 0.6901299893210082,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 2
+    },
+    "female-speech": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.2618583713726218,
+          "context_window_rmse": 0.061720610036015394,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.014641693590671285,
+          "context_window_rmse": 0.003451080275339759,
+          "improvement_db_vs_damaged": 25.04950296804467,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.0038831765781210856,
+          "context_window_rmse": 0.0009152734969780644,
+          "improvement_db_vs_damaged": 36.577586459281065,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.09003261318215114,
+          "context_window_rmse": 0.02122089043634814,
+          "improvement_db_vs_damaged": 9.273332136033812,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.0674393450150115,
+          "context_window_rmse": 0.03405031301658605,
+          "improvement_db_vs_damaged": 11.78306237556479,
+          "max_absolute_error_outside_evaluation_windows": 0.19325044074659833
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.008812742452261215,
+          "context_window_rmse": 0.0020771833162814895,
+          "improvement_db_vs_damaged": 29.45910768351675,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 5
+    },
+    "harpsichord": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.43691485368800104,
+          "context_window_rmse": 0.10298181861463791,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.1229674838135236,
+          "context_window_rmse": 0.028983713889996515,
+          "improvement_db_vs_damaged": 11.012130461244258,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.17058596700625814,
+          "context_window_rmse": 0.04020749801512993,
+          "improvement_db_vs_damaged": 8.169070156699702,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.17320108702089868,
+          "context_window_rmse": 0.04082388771378626,
+          "improvement_db_vs_damaged": 8.036923924301709,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.16776848987257262,
+          "context_window_rmse": 0.046164006901233914,
+          "improvement_db_vs_damaged": 8.313728284260142,
+          "max_absolute_error_outside_evaluation_windows": 0.5479827580431411
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.14303343209299357,
+          "context_window_rmse": 0.0337133032564471,
+          "improvement_db_vs_damaged": 9.699184997718147,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 4
+    },
+    "male-speech": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.23068683488883676,
+          "context_window_rmse": 0.05437340842678597,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.026847625594658458,
+          "context_window_rmse": 0.006328046038913504,
+          "improvement_db_vs_damaged": 18.682338553699203,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.01059776786544549,
+          "context_window_rmse": 0.002497917841032463,
+          "improvement_db_vs_damaged": 26.756168158801508,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.07659570045831347,
+          "context_window_rmse": 0.018053779734602333,
+          "improvement_db_vs_damaged": 9.576368366033156,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.08555095591783642,
+          "context_window_rmse": 0.04561615077726577,
+          "improvement_db_vs_damaged": 8.615958876549213,
+          "max_absolute_error_outside_evaluation_windows": 0.1318113960994954
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.018515263193285832,
+          "context_window_rmse": 0.004364089386475368,
+          "improvement_db_vs_damaged": 21.909858409912275,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 5
+    },
+    "orchestra": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.20002307367269812,
+          "context_window_rmse": 0.04714589059591374,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.0013461029966384686,
+          "context_window_rmse": 0.00031727951903286455,
+          "improvement_db_vs_damaged": 43.44003611111081,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.0010821508369099348,
+          "context_window_rmse": 0.0002550653983485709,
+          "improvement_db_vs_damaged": 45.335845939270925,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.09900790328887109,
+          "context_window_rmse": 0.023336386602207545,
+          "improvement_db_vs_damaged": 6.1082046630791815,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.06470202827982584,
+          "context_window_rmse": 0.043360437152557975,
+          "improvement_db_vs_damaged": 9.803244029356453,
+          "max_absolute_error_outside_evaluation_windows": 0.1660133798138356
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.0009657721502630814,
+          "context_window_rmse": 0.00022763467884404608,
+          "improvement_db_vs_damaged": 46.32410838034495,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 8
+    },
+    "organ": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.31357960268514096,
+          "context_window_rmse": 0.0739114211668155,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.033522191077457054,
+          "context_window_rmse": 0.00790125621036702,
+          "improvement_db_vs_damaged": 19.42030816542249,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.004980499129002309,
+          "context_window_rmse": 0.001173914902603742,
+          "improvement_db_vs_damaged": 35.98149874057249,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.07447905621521224,
+          "context_window_rmse": 0.017554881902050217,
+          "improvement_db_vs_damaged": 12.48627281608104,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.07022603257560413,
+          "context_window_rmse": 0.020093653011979094,
+          "improvement_db_vs_damaged": 12.996993437989557,
+          "max_absolute_error_outside_evaluation_windows": 0.0752060503013194
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.012379794681033549,
+          "context_window_rmse": 0.002917945589551991,
+          "improvement_db_vs_damaged": 28.072687270914862,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 7
+    },
+    "piano": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.24103102372418916,
+          "context_window_rmse": 0.05681155711723659,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.008408598030930305,
+          "context_window_rmse": 0.001981925562647556,
+          "improvement_db_vs_damaged": 29.146987072032182,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.00246739769224557,
+          "context_window_rmse": 0.0005815712133569602,
+          "improvement_db_vs_damaged": 39.79667582262854,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.09288922545753292,
+          "context_window_rmse": 0.021894200406729205,
+          "improvement_db_vs_damaged": 8.282152074765335,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.07983551819852454,
+          "context_window_rmse": 0.02540924916776209,
+          "improvement_db_vs_damaged": 9.597535935364164,
+          "max_absolute_error_outside_evaluation_windows": 0.06785786960814828
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.006813726941420884,
+          "context_window_rmse": 0.0016060108418107268,
+          "improvement_db_vs_damaged": 30.973764400158863,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 4
+    },
+    "trumpet": {
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 441000,
+      "methods": {
+        "damaged": {
+          "clipped_region_rmse": 0.27368302644511244,
+          "context_window_rmse": 0.06450770796499873,
+          "improvement_db_vs_damaged": 0.0,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "linear": {
+          "clipped_region_rmse": 0.025862492791531203,
+          "context_window_rmse": 0.006095848010426639,
+          "improvement_db_vs_damaged": 20.49154962196623,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "cubic_hermite": {
+          "clipped_region_rmse": 0.00799357255981897,
+          "context_window_rmse": 0.0018841031209849007,
+          "improvement_db_vs_damaged": 30.69013884402816,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_core": {
+          "clipped_region_rmse": 0.07758342045245739,
+          "context_window_rmse": 0.018286587569859902,
+          "improvement_db_vs_damaged": 10.949578822342293,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        },
+        "autodeclip_pipeline": {
+          "clipped_region_rmse": 0.07829085163493613,
+          "context_window_rmse": 0.023346297804205482,
+          "improvement_db_vs_damaged": 10.870736929006954,
+          "max_absolute_error_outside_evaluation_windows": 0.1497667014320733
+        },
+        "clipfix": {
+          "clipped_region_rmse": 0.020736238656111797,
+          "context_window_rmse": 0.004887578323346424,
+          "improvement_db_vs_damaged": 22.41035762304882,
+          "max_absolute_error_outside_evaluation_windows": 0.0
+        }
+      },
+      "event_count": 4
+    }
+  },
+  "summary": {
+    "damaged": {
+      "mean_clipped_rmse": 0.3490585034679778,
+      "mean_context_rmse": 0.08227387827767838,
+      "mean_improvement_db": 0.0,
+      "max_outside_error": 0.0
+    },
+    "linear": {
+      "mean_clipped_rmse": 0.10714996446412366,
+      "mean_context_rmse": 0.025255488825493146,
+      "mean_improvement_db": 21.22189985147976,
+      "max_outside_error": 0.0
+    },
+    "cubic_hermite": {
+      "mean_clipped_rmse": 0.12131778405122257,
+      "mean_context_rmse": 0.028594875927048218,
+      "mean_improvement_db": 28.00243994487621,
+      "max_outside_error": 0.0
+    },
+    "autodeclip_core": {
+      "mean_clipped_rmse": 0.17481804310850857,
+      "mean_context_rmse": 0.0412050079185962,
+      "mean_improvement_db": 8.25752522119735,
+      "max_outside_error": 0.0
+    },
+    "autodeclip_pipeline": {
+      "mean_clipped_rmse": 0.16571845087849166,
+      "mean_context_rmse": 0.05074104629917898,
+      "mean_improvement_db": 9.170372200981848,
+      "max_outside_error": 0.5479827580431411
+    },
+    "clipfix": {
+      "mean_clipped_rmse": 0.12277434997037506,
+      "mean_context_rmse": 0.028938191806607533,
+      "mean_improvement_db": 23.69239984436696,
+      "max_outside_error": 0.0
+    }
+  }
+}

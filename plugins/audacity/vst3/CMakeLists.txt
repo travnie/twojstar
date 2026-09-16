@@ -59,6 +59,10 @@ if(BUILD_TESTING)
     target_compile_features(AutoDeclipDspTests PRIVATE cxx_std_20)
     add_test(NAME AutoDeclipDspTests COMMAND AutoDeclipDspTests)
 
+    add_executable(AutoDeclipQualityRunner tests/quality/AutoDeclipQualityRunner.cpp)
+    target_link_libraries(AutoDeclipQualityRunner PRIVATE TravnyAutoDeclipDsp TravnyDeClickDsp TravnyDeHumDsp)
+    target_compile_features(AutoDeclipQualityRunner PRIVATE cxx_std_20)
+
     add_executable(DeClickDspTests tests/DeClickDspTests.cpp)
     target_link_libraries(DeClickDspTests PRIVATE TravnyDeClickDsp)
     target_compile_features(DeClickDspTests PRIVATE cxx_std_20)
