@@ -415,11 +415,13 @@ public sealed partial class FeedClient
         var icon = Text(root, "icon") ?? Text(root, "logo") ?? FaviconFrom(source.Url);
         return root.Elements().Where(x => x.Name.LocalName == "entry").Select(entry =>
         {
+            var entryId = Text(entry, "id")?.Trim();
             var link = entry.Elements().FirstOrDefault(x => x.Name.LocalName == "link" && ((string?)x.Attribute("rel") is null or "alternate"));
             var href = (string?)link?.Attribute("href");
             var articleUrl = string.IsNullOrWhiteSpace(href) ? source.Url : ResolveUrl(source.Url, href);
             if (string.IsNullOrWhiteSpace(articleUrl)) articleUrl = source.Url;
-            return BuildArticle(source, feedTitle, Text(entry, "title") ?? "(untitled)", articleUrl, Text(entry, "summary") ?? Text(entry, "content"), ParseDate(Text(entry, "published") ?? Text(entry, "updated")), ResolveUrl(source.Url, icon), FindThumbnail(entry, source.Url));
+            var article = BuildArticle(source, feedTitle, Text(entry, "title") ?? "(untitled)", articleUrl, Text(entry, "summary") ?? Text(entry, "content"), ParseDate(Text(entry, "published") ?? Text(entry, "updated")), ResolveUrl(source.Url, icon), FindThumbnail(entry, source.Url));
+            return string.IsNullOrWhiteSpace(entryId) ? article : article with { Id = StableId(source.Url, entryId) };
         }).ToList();
     }
 
