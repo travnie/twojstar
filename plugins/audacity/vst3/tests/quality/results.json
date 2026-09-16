@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "recorded_on": "2026-09-16",
-  "source_commit": "f940fe4fb083468226ba0ad6e56debdc46141b58",
+  "recorded_on": "2026-09-17",
+  "source_commit": "b12344124d83bd4ce089ee7c25cefe6290a84aae",
   "corpus": "EBU SQAM; 8 x 10-second excerpts; 39 injected two-sample clipping events",
   "provenance": {
     "autodeclip_core": "temporary source-equivalent local adapter mirroring AutoDeclipDsp.cpp",
@@ -34,15 +34,15 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.7147553387926316,
-          "context_window_rmse": 0.168469448983186,
-          "improvement_db_vs_damaged": 1.3473689669422653,
+          "clipped_region_rmse": 0.768951740741979,
+          "context_window_rmse": 0.18124366342795112,
+          "improvement_db_vs_damaged": 0.7125354377272676,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.7119343855336221,
-          "context_window_rmse": 0.16788826256184147,
-          "improvement_db_vs_damaged": 1.381717739763511,
+          "clipped_region_rmse": 0.7659993338900344,
+          "context_window_rmse": 0.1806284903876245,
+          "improvement_db_vs_damaged": 0.7459492867178956,
           "max_absolute_error_outside_evaluation_windows": 0.4648805218792584
         },
         "clipfix": {
@@ -78,16 +78,16 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.09003261318215114,
-          "context_window_rmse": 0.02122089043634814,
-          "improvement_db_vs_damaged": 9.273332136033812,
+          "clipped_region_rmse": 0.0038831765781210856,
+          "context_window_rmse": 0.0009152734969780644,
+          "improvement_db_vs_damaged": 36.577586459281065,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.0674393450150115,
-          "context_window_rmse": 0.03405031301658605,
-          "improvement_db_vs_damaged": 11.78306237556479,
-          "max_absolute_error_outside_evaluation_windows": 0.19325044074659833
+          "clipped_region_rmse": 0.02729597908174109,
+          "context_window_rmse": 0.03067640595184927,
+          "improvement_db_vs_damaged": 19.63935571581161,
+          "max_absolute_error_outside_evaluation_windows": 0.19325032153729457
         },
         "clipfix": {
           "clipped_region_rmse": 0.008812742452261215,
@@ -122,16 +122,16 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.17320108702089868,
-          "context_window_rmse": 0.04082388771378626,
-          "improvement_db_vs_damaged": 8.036923924301709,
+          "clipped_region_rmse": 0.17058596700625814,
+          "context_window_rmse": 0.04020749801512993,
+          "improvement_db_vs_damaged": 8.169070156699702,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.16776848987257262,
-          "context_window_rmse": 0.046164006901233914,
-          "improvement_db_vs_damaged": 8.313728284260142,
-          "max_absolute_error_outside_evaluation_windows": 0.5479827580431411
+          "clipped_region_rmse": 0.1653653557954611,
+          "context_window_rmse": 0.04566247560690263,
+          "improvement_db_vs_damaged": 8.439045598784032,
+          "max_absolute_error_outside_evaluation_windows": 0.5479828772524449
         },
         "clipfix": {
           "clipped_region_rmse": 0.14303343209299357,
@@ -166,16 +166,16 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.07659570045831347,
-          "context_window_rmse": 0.018053779734602333,
-          "improvement_db_vs_damaged": 9.576368366033156,
+          "clipped_region_rmse": 0.01059776786544549,
+          "context_window_rmse": 0.002497917841032463,
+          "improvement_db_vs_damaged": 26.756168158801508,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.08555095591783642,
-          "context_window_rmse": 0.04561615077726577,
-          "improvement_db_vs_damaged": 8.615958876549213,
-          "max_absolute_error_outside_evaluation_windows": 0.1318113960994954
+          "clipped_region_rmse": 0.044958324923440963,
+          "context_window_rmse": 0.042245701097454756,
+          "improvement_db_vs_damaged": 14.204253773220465,
+          "max_absolute_error_outside_evaluation_windows": 0.13181378028557064
         },
         "clipfix": {
           "clipped_region_rmse": 0.018515263193285832,
@@ -210,16 +210,16 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.09900790328887109,
-          "context_window_rmse": 0.023336386602207545,
-          "improvement_db_vs_damaged": 6.1082046630791815,
+          "clipped_region_rmse": 0.0010821508369099348,
+          "context_window_rmse": 0.0002550653983485709,
+          "improvement_db_vs_damaged": 45.335845939270925,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.06470202827982584,
-          "context_window_rmse": 0.043360437152557975,
-          "improvement_db_vs_damaged": 9.803244029356453,
-          "max_absolute_error_outside_evaluation_windows": 0.1660133798138356
+          "clipped_region_rmse": 0.052180944632673226,
+          "context_window_rmse": 0.0422931696987309,
+          "improvement_db_vs_damaged": 11.671363194813773,
+          "max_absolute_error_outside_evaluation_windows": 0.16600205492997824
         },
         "clipfix": {
           "clipped_region_rmse": 0.0009657721502630814,
@@ -254,15 +254,15 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.07447905621521224,
-          "context_window_rmse": 0.017554881902050217,
-          "improvement_db_vs_damaged": 12.48627281608104,
+          "clipped_region_rmse": 0.004980499129002309,
+          "context_window_rmse": 0.001173914902603742,
+          "improvement_db_vs_damaged": 35.98149874057249,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.07022603257560413,
-          "context_window_rmse": 0.020093653011979094,
-          "improvement_db_vs_damaged": 12.996993437989557,
+          "clipped_region_rmse": 0.007355580950015017,
+          "context_window_rmse": 0.011425429640308866,
+          "improvement_db_vs_damaged": 32.59461652297568,
           "max_absolute_error_outside_evaluation_windows": 0.0752060503013194
         },
         "clipfix": {
@@ -298,15 +298,15 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.09288922545753292,
-          "context_window_rmse": 0.021894200406729205,
-          "improvement_db_vs_damaged": 8.282152074765335,
+          "clipped_region_rmse": 0.00246739769224557,
+          "context_window_rmse": 0.0005815712133569602,
+          "improvement_db_vs_damaged": 39.79667582262854,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.07983551819852454,
-          "context_window_rmse": 0.02540924916776209,
-          "improvement_db_vs_damaged": 9.597535935364164,
+          "clipped_region_rmse": 0.012354649292647063,
+          "context_window_rmse": 0.017171217448635746,
+          "improvement_db_vs_damaged": 25.80485047191295,
           "max_absolute_error_outside_evaluation_windows": 0.06785786960814828
         },
         "clipfix": {
@@ -342,15 +342,15 @@
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_core": {
-          "clipped_region_rmse": 0.07758342045245739,
-          "context_window_rmse": 0.018286587569859902,
-          "improvement_db_vs_damaged": 10.949578822342293,
+          "clipped_region_rmse": 0.00799357255981897,
+          "context_window_rmse": 0.0018841031209849007,
+          "improvement_db_vs_damaged": 30.69013884402816,
           "max_absolute_error_outside_evaluation_windows": 0.0
         },
         "autodeclip_pipeline": {
-          "clipped_region_rmse": 0.07829085163493613,
-          "context_window_rmse": 0.023346297804205482,
-          "improvement_db_vs_damaged": 10.870736929006954,
+          "clipped_region_rmse": 0.009013746198141978,
+          "context_window_rmse": 0.014402123136983896,
+          "improvement_db_vs_damaged": 29.646850766678945,
           "max_absolute_error_outside_evaluation_windows": 0.1497667014320733
         },
         "clipfix": {
@@ -383,16 +383,16 @@
       "max_outside_error": 0.0
     },
     "autodeclip_core": {
-      "mean_clipped_rmse": 0.17481804310850857,
-      "mean_context_rmse": 0.0412050079185962,
-      "mean_improvement_db": 8.25752522119735,
+      "mean_clipped_rmse": 0.12131778405122257,
+      "mean_context_rmse": 0.028594875927048218,
+      "mean_improvement_db": 28.00243994487621,
       "max_outside_error": 0.0
     },
     "autodeclip_pipeline": {
-      "mean_clipped_rmse": 0.16571845087849166,
-      "mean_context_rmse": 0.05074104629917898,
-      "mean_improvement_db": 9.170372200981848,
-      "max_outside_error": 0.5479827580431411
+      "mean_clipped_rmse": 0.13556548934551935,
+      "mean_context_rmse": 0.04806312662106132,
+      "mean_improvement_db": 17.84328566636442,
+      "max_outside_error": 0.5479828772524449
     },
     "clipfix": {
       "mean_clipped_rmse": 0.12277434997037506,

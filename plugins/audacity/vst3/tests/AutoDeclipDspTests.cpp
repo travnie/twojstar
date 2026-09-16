@@ -128,8 +128,8 @@ void testGeneratedClipRepairReducesReferenceError()
     }
 
     require(damagedError > 0.0, "generated clipping fixture has no reference error");
-    require(repairedError < damagedError * 0.5,
-            "declipping repair did not halve the generated clipping reference error");
+    require(repairedError < damagedError * 0.02,
+            "cubic declipping repair did not reduce generated clipping error by at least 98%");
 }
 
 void testHardLimitedMasterBelowClipThresholdIsUntouched()
@@ -152,6 +152,66 @@ void testHardLimitedMasterBelowClipThresholdIsUntouched()
     {
         require(output[i] == input[i],
                 "declipping detector changed intentionally limited audio below its clip threshold");
+    }
+}
+
+void testNearStartClipUsesSafeLinearFallback()
+{
+    std::vector<double> input(96, 0.0);
+    input[0] = 0.80;
+    input[1] = 1.0;
+    input[2] = 1.0;
+    input[3] = 0.82;
+    input[4] = 0.74;
+
+    const auto output = aligned(render(input), input.size());
+    require(output[1] > 0.80 && output[1] < 0.82,
+            "near-start fallback did not interpolate the first clipped sample");
+    require(output[2] > 0.80 && output[2] < 0.82,
+            "near-start fallback did not interpolate the second clipped sample");
+    require(output[0] == input[0] && output[3] == input[3],
+            "near-start fallback changed clean edges");
+}
+
+void testMaxLengthClipFallsBackBeforeReclipping()
+{
+    constexpr std::size_t kStart = 80;
+    std::vector<double> input(220, 0.0);
+    input[kStart - 2] = 0.70;
+    input[kStart - 1] = 0.80;
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        input[kStart + i] = 1.0;
+    }
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples] = 0.80;
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples + 1] = 0.70;
+
+    const auto output = aligned(render(input), input.size());
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        require(std::abs(output[kStart + i]) < AutoDeclipDsp::kClipThreshold,
+                "Hermite overshoot recreated a clipped plateau");
+    }
+}
+
+void testMaxLengthClipFallsBackBeforeDeepValley()
+{
+    constexpr std::size_t kStart = 80;
+    std::vector<double> input(220, 0.0);
+    input[kStart - 2] = 0.88;
+    input[kStart - 1] = 0.80;
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        input[kStart + i] = 1.0;
+    }
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples] = 0.80;
+    input[kStart + AutoDeclipDsp::kMaxRepairSamples + 1] = 0.88;
+
+    const auto output = aligned(render(input), input.size());
+    for (std::size_t i = 0; i < AutoDeclipDsp::kMaxRepairSamples; ++i)
+    {
+        require(std::abs(output[kStart + i] - 0.80) < 1e-12,
+                "Hermite undershoot introduced a deep valley into a clipped peak");
     }
 }
 
@@ -232,6 +292,9 @@ int main()
         testShortNegativeClipIsRepaired();
         testGeneratedClipRepairReducesReferenceError();
         testHardLimitedMasterBelowClipThresholdIsUntouched();
+        testNearStartClipUsesSafeLinearFallback();
+        testMaxLengthClipFallsBackBeforeReclipping();
+        testMaxLengthClipFallsBackBeforeDeepValley();
         testSinglePeakIsUntouched();
         testLongClipIsUntouched();
         testSignChangingRunIsUntouched();
