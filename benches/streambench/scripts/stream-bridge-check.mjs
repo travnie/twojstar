@@ -72,6 +72,7 @@ assert.match(appSource, /playbackSubmissionContext/);
 assert.match(workspaceSource, /StreambenchWorkspace/);
 assert.match(workspaceSource, /submitPlaybackForm/);
 assert.match(bridgeSource, /submitPlaybackForm/);
+assert.doesNotMatch(bridgeSource, /streambench:channel/);
 assert.match(recoverySource, /streambench:playback-stop/);
 assert.match(sourceWorkspaceSource, /streambench:playback-stop/);
 assert.match(sourceWorkspaceSource, /generation !== sourceGeneration/);

@@ -100,9 +100,6 @@ if (typeof document !== "undefined") {
 
       action.setAttribute("aria-current", "true");
       if (title && selectedTitle) title.textContent = selectedTitle;
-      window.dispatchEvent(new CustomEvent("streambench:channel", {
-        detail: { title: selectedTitle },
-      }));
       if (hint) {
         hint.textContent = "Stream przechodzi przez ograniczony przekaźnik Streambencha, aby ominąć mixed content lub CORS HLS.";
       }
