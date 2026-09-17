@@ -30,6 +30,10 @@ env:
   PDN_52_SHA256: b0251c87f5c6de25a05c93abe58657327911262050ef50cc932515f8b5a1cba5
   MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
   MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
+  FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
+  FBCNN_SHA256: 172f6110577991fd5e9ce5b71d1780a79fe082df13b190d50d649cb4d668686b
+  SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
+  SCUNET_SHA256: 7b7264f9b2a9bbcf21a551b7754891fca81c677983961ac6afbc8add7fce134f
 
 jobs:
   build:
@@ -117,6 +121,28 @@ jobs:
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows -- .\model\realesr-general-x4v3.onnx
+
+      - name: Download and verify restoration models
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          $fbcnn = Join-Path $PWD 'model/fbcnn_color_fp16.onnx'
+          $scunet = Join-Path $PWD 'model/scunet_color_real_psnr_fp16.onnx'
+          Invoke-WebRequest $env:FBCNN_URL -OutFile $fbcnn
+          Invoke-WebRequest $env:SCUNET_URL -OutFile $scunet
+          if ((Get-FileHash $fbcnn -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:FBCNN_SHA256) {
+            throw 'FBCNN model checksum mismatch.'
+          }
+          if ((Get-FileHash $scunet -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:SCUNET_SHA256) {
+            throw 'SCUNet model checksum mismatch.'
+          }
+
+      - name: Run restoration model smoke tests
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- dejpeg .\model\fbcnn_color_fp16.onnx
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- denoise .\model\scunet_color_real_psnr_fp16.onnx
 
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}
