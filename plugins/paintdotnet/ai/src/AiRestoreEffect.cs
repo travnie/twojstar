@@ -6,7 +6,6 @@ using PaintDotNet.Rendering;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 
 namespace Travny.PaintDotNet.AI;
@@ -17,12 +16,14 @@ public sealed class AiRestoreEffect : PropertyBasedBitmapEffect
     // realesr-general-x4v3 has 34 stride-1 3x3 convolutions, so an output pixel
     // has a strict 34-pixel low-resolution receptive-field radius.
     private const int ContextRadius = 34;
-    private const int CoreTileSize = 128;
+    private const int CoreTileSize = RestorationMath.CoreTileSize;
     private const int MaxCachedTiles = 8;
     private const string ModelFileName = "realesr-general-x4v3.onnx";
 
     private static readonly Lazy<RealEsrganSession> SharedSession =
-        new(() => new RealEsrganSession(FindModelPath()), LazyThreadSafetyMode.ExecutionAndPublication);
+        new(
+            () => new RealEsrganSession(ModelPath.Resolve(typeof(AiRestoreEffect), ModelFileName)),
+            LazyThreadSafetyMode.ExecutionAndPublication);
 
     private readonly ConcurrentDictionary<TileKey, Lazy<RestoredTile>> tileCache = new();
     private readonly ConcurrentQueue<KeyValuePair<TileKey, Lazy<RestoredTile>>> tileOrder = new();
@@ -134,9 +135,9 @@ public sealed class AiRestoreEffect : PropertyBasedBitmapEffect
                             ColorBgra32 original = sourceRegion[x, y];
 
                             outputRegion[x, y] = ColorBgra32.FromBgra(
-                                Blend(original.B, restored.Get(restoredX, restoredY, 2), amount),
-                                Blend(original.G, restored.Get(restoredX, restoredY, 1), amount),
-                                Blend(original.R, restored.Get(restoredX, restoredY, 0), amount),
+                                RestorationMath.Blend(original.B, restored.Get(restoredX, restoredY, 2), amount),
+                                RestorationMath.Blend(original.G, restored.Get(restoredX, restoredY, 1), amount),
+                                RestorationMath.Blend(original.R, restored.Get(restoredX, restoredY, 0), amount),
                                 original.A);
                         }
                     }
@@ -303,36 +304,11 @@ public sealed class AiRestoreEffect : PropertyBasedBitmapEffect
         return Math.Clamp(sum / (scale * scale), 0f, 1f);
     }
 
-    private static byte Blend(byte original, float restored, float amount)
-    {
-        float originalFloat = original / 255f;
-        float mixed = originalFloat + ((restored - originalFloat) * amount);
-        return (byte)Math.Clamp((int)MathF.Round(mixed * 255f), 0, 255);
-    }
-
-    private static string FindModelPath()
-    {
-        string? assemblyPath = typeof(AiRestoreEffect).Assembly.Location;
-        string directory = string.IsNullOrEmpty(assemblyPath)
-            ? AppContext.BaseDirectory
-            : Path.GetDirectoryName(assemblyPath) ?? AppContext.BaseDirectory;
-        string modelPath = Path.Combine(directory, "model", ModelFileName);
-
-        if (!File.Exists(modelPath))
-        {
-            throw new FileNotFoundException(
-                "AI Restore model is missing. Install the complete Travny.PaintDotNet.AI plugin folder.",
-                modelPath);
-        }
-
-        return modelPath;
-    }
-
     private readonly record struct TileKey(int X, int Y)
     {
         public static TileKey FromPixel(int x, int y)
         {
-            return new TileKey((x / CoreTileSize) * CoreTileSize, (y / CoreTileSize) * CoreTileSize);
+            return new TileKey(RestorationMath.TileStart(x), RestorationMath.TileStart(y));
         }
     }
 

@@ -30,6 +30,10 @@ env:
   PDN_52_SHA256: b0251c87f5c6de25a05c93abe58657327911262050ef50cc932515f8b5a1cba5
   MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
   MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
+  FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
+  FBCNN_SHA256: 1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922
+  SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
+  SCUNET_SHA256: 8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a
 
 jobs:
   build:
@@ -118,6 +122,38 @@ jobs:
         shell: pwsh
         run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows -- .\model\realesr-general-x4v3.onnx
 
+      - name: Build restoration model smoke harness
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows --nologo
+
+      - name: Run restoration math smoke test
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
+
+      - name: Download and verify restoration models
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          $fbcnn = Join-Path $PWD 'model/fbcnn_color_fp16.onnx'
+          $scunet = Join-Path $PWD 'model/scunet_color_real_psnr_fp16.onnx'
+          Invoke-WebRequest $env:FBCNN_URL -OutFile $fbcnn
+          Invoke-WebRequest $env:SCUNET_URL -OutFile $scunet
+          if ((Get-FileHash $fbcnn -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:FBCNN_SHA256) {
+            throw 'FBCNN model checksum mismatch.'
+          }
+          if ((Get-FileHash $scunet -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:SCUNET_SHA256) {
+            throw 'SCUNet model checksum mismatch.'
+          }
+
+      - name: Run restoration model smoke tests
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- dejpeg .\model\fbcnn_color_fp16.onnx
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- denoise .\model\scunet_color_real_psnr_fp16.onnx
+
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
@@ -147,6 +183,8 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path "$common/model" | Out-Null
           Copy-Item .\model\realesr-general-x4v3.onnx "$common/model/"
+          Copy-Item .\model\fbcnn_color_fp16.onnx "$common/model/"
+          Copy-Item .\model\scunet_color_real_psnr_fp16.onnx "$common/model/"
           Copy-Item .\licenses "$common/licenses" -Recurse
           Copy-Item .\Install.bat "$package/Install.bat"
 
@@ -155,7 +193,9 @@ jobs:
             "$modernPackage/Travny.PaintDotNet.AI.Modern.dll",
             "$common/Microsoft.ML.OnnxRuntime.dll",
             "$common/onnxruntime.dll",
-            "$common/model/realesr-general-x4v3.onnx"
+            "$common/model/realesr-general-x4v3.onnx",
+            "$common/model/fbcnn_color_fp16.onnx",
+            "$common/model/scunet_color_real_psnr_fp16.onnx"
           )) {
             if (-not (Test-Path $required -PathType Leaf)) { throw "Package file missing: $required" }
           }
@@ -179,10 +219,10 @@ jobs:
           }
 
           @'
-          Paint.NET AI Restore
+          Paint.NET AI Restore / DeJPEG / Denoise
 
           Run Install.bat and select the installation type and Paint.NET version. It combines the matching
-          adapter with the shared ONNX Runtime, model and license files. Classic builds install
+          adapter with the shared ONNX Runtime, models and license files. Classic builds install
           to C:\Program Files\paint.net\Effects\Travny.PaintDotNet.AI (admin required).
           Microsoft Store builds fall back to Documents\Paint.NET App Files\Effects.
 

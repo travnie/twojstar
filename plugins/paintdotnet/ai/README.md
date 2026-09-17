@@ -1,6 +1,6 @@
 # Paint.NET AI
 
-Local AI/restoration pack for Paint.NET. The current **AI Restore** stays the fast, small default; the next profile is **Medium**: noticeably stronger than the tiny model, but still practical enough to ship as a normal plugin pack rather than turning Paint.NET into a Topaz-sized appliance.
+Local AI/restoration pack for Paint.NET. **AI Restore** stays the fast, small general default; **AI DeJPEG** and **AI Denoise** add stronger 1x restoration for compression artifacts and real-world noise without changing the canvas size.
 
 ## Profiles
 
@@ -15,18 +15,16 @@ Local AI/restoration pack for Paint.NET. The current **AI Restore** stays the fa
 - downsamples the model's 4x reconstruction back to the current canvas and blends it with the source
 - **Strength** controls how much of the restored result is applied
 
-### Medium — planned
+### Restore+ — DeJPEG and Denoise
 
-Medium remains part of this same `plugins/paintdotnet/ai` pack and reuses the existing ONNX/runtime/install infrastructure.
+Both effects reuse the same local ONNX Runtime, cancellation and bounded tile cache as AI Restore.
 
-Target tools:
+- **AI DeJPEG** — FBCNN Color FP16. `Strength` controls FBCNN's compression-removal input; 50 is the default. Uses 16 px tile context and applies the model at the current image size.
+- **AI Denoise** — SCUNet Color Real-PSNR FP16. `Strength` blends the denoised result with the source; 75 is the default. Uses 128 px context to avoid SCUNet tile seams.
+- Existing alpha is preserved; RGB inference never changes document dimensions.
+- No network access at runtime. Models are bundled and checksum-verified by CI.
 
-- **AI Restore+** — a stronger general restoration/super-resolution model, with the official RealESRGAN `x4plus` family as the first candidate. Keep tiled execution, cancellation and bounded memory.
-- **Smart Transparency** — foreground/background matting plus alpha-edge cleanup. MODNet is a good portrait-matting candidate; U²-Net is a broader salient-object candidate. Both upstream projects publish code/models under Apache-2.0, but exact packaged weights still require pinned provenance and hash verification before shipping.
-- **Alpha Refine** — deterministic decontamination around semi-transparent edges: remove colour fringing, repair halos, feather conservatively and preserve existing good alpha.
-- **Denoise / DeJPEG / small repair** — prefer one licensed multi-purpose restoration backend over a zoo of overlapping models. Models are added only after reproducible ONNX export and quality fixtures exist.
-
-Medium should be an explicit opt-in in the effect UI because it will use more RAM and inference time than Fast. The UI should make the trade-off obvious instead of silently switching models.
+The models are not tiny: FBCNN is about 144 MB and SCUNet about 38 MB. They are still practical for local desktop inference, but the release ZIP is intentionally larger than the Fast-only prototype.
 
 ## Upscaling
 
@@ -34,8 +32,8 @@ A normal Paint.NET effect renders into the current document bounds, so true 2x/4
 
 For Paint.NET 5.x the safe paths are:
 
-1. **Restore at current size** — Fast/Medium effect, no canvas change.
-2. **Resize then refine** — user resizes the image with Paint.NET, then runs Restore+ to reconstruct detail and suppress interpolation artifacts.
+1. **Restore at current size** — all current AI effects keep the existing canvas dimensions.
+2. **Resize then refine** — user resizes the image with Paint.NET, then runs AI Restore to reconstruct detail and suppress interpolation artifacts.
 3. **True one-click upscale later** — only when there is a stable host/document API that can create or resize the destination document without relying on private internals. Paint.NET 5.2's modern FileType system is useful infrastructure, but a FileType plugin is not a general document-resize command.
 
 ## Smart Transparency
@@ -77,18 +75,18 @@ Common/
     ├── Microsoft.ML.OnnxRuntime.dll
     ├── onnxruntime.dll
     └── model/
-        └── realesr-general-x4v3.onnx
+        ├── realesr-general-x4v3.onnx
+        ├── fbcnn_color_fp16.onnx
+        └── scunet_color_real_psnr_fp16.onnx
 Paint.NET-5.1/
 Paint.NET-5.2+/
 licenses/
 Install.bat
 ```
 
-Keep one downloadable `paintdotnet-ai.zip` unless Medium makes that unreasonable. A future Medium implementation may introduce profile-specific model subdirectories, but the same PR must then update `Install.bat`, runtime model resolution, CI packaging and portable-install instructions together. Until that code exists, do not document a different on-disk model path.
+The release stays one downloadable `paintdotnet-ai.zip`. The installer chooses the Paint.NET adapter and copies the complete shared runtime/model payload; there is no runtime model downloader.
 
-Likewise, Fast-only versus Fast+Medium **installation selection is only a future option**. The current installer chooses the Paint.NET adapter and copies the complete shared payload. If Medium materially increases install size, profile selection should be implemented before Medium models are added to the public package. No runtime model downloader.
-
-The package already ships separate adapters for **Paint.NET 5.1.x** and **Paint.NET 5.2+**, while sharing one ONNX Runtime/model payload.
+The package ships separate adapters for **Paint.NET 5.1.x** and **Paint.NET 5.2+**, while sharing one ONNX Runtime/model payload.
 
 ## Install
 
@@ -102,8 +100,10 @@ Portable Paint.NET users can create `Effects\Travny.PaintDotNet.AI`, copy everyt
 
 ## Model provenance
 
-The current packaged ONNX model is a reproducible export of the official Real-ESRGAN `realesr-general-x4v3` weights. CI downloads it from `CoderViking/realesr-general-x4v3-onnx` and requires SHA-256 `1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112` before packaging.
+CI pins and verifies every bundled model before packaging:
 
-Every Medium model must follow the same rule: upstream license reviewed, immutable source pinned, exact SHA-256 checked in CI, license text shipped, and no runtime download.
+- Real-ESRGAN `realesr-general-x4v3.onnx`: SHA-256 `1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112`.
+- FBCNN Color FP16: SHA-256 `1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922`.
+- SCUNet Color Real-PSNR FP16: SHA-256 `8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a`.
 
-Third-party license texts are shipped in `licenses/`.
+FBCNN and SCUNet upstream projects are Apache-2.0 licensed. Their license texts, plus ONNX Runtime and Real-ESRGAN notices, are shipped in `licenses/`. The DeJPEG Android application itself is only a model/behavior reference; its AGPL application code is not copied into this plugin.
