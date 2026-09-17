@@ -1,8 +1,12 @@
 using Microsoft.ML.OnnxRuntime;
+using Travny.PaintDotNet.AI;
 
-using var options = new SessionOptions();
-options.SetEpSelectionPolicy(ExecutionProviderDevicePolicy.MAX_PERFORMANCE);
+if (InferenceSessionOptions.Policy != ExecutionProviderDevicePolicy.MAX_PERFORMANCE)
+{
+    throw new InvalidDataException("Windows ML policy must prefer maximum performance.");
+}
 
+using SessionOptions options = InferenceSessionOptions.Create();
 string[] requiredFiles =
 [
     "Microsoft.Windows.AI.MachineLearning.dll",

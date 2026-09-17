@@ -20,14 +20,7 @@ internal sealed class ImageModelSession : IDisposable
 
     public ImageModelSession(string modelPath)
     {
-        var options = new SessionOptions
-        {
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
-            ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
-            InterOpNumThreads = 1,
-            IntraOpNumThreads = Math.Clamp(Environment.ProcessorCount / 2, 1, 4)
-        };
-
+        using SessionOptions options = InferenceSessionOptions.Create();
         session = new InferenceSession(modelPath, options);
         KeyValuePair<string, NodeMetadata> imageInput = session.InputMetadata
             .Single(pair => IsImageTensor(pair.Value));

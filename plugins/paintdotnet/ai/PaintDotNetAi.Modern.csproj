@@ -11,7 +11,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>Travny.PaintDotNet.AI.Modern</AssemblyName>
     <RootNamespace>Travny.PaintDotNet.AI</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <Deterministic>false</Deterministic>
     <NoWarn>MSB3277</NoWarn>
@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <Compile Include="src\*.cs" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="$(OnnxRuntimeVersion)" />
+    <PackageReference Include="Microsoft.Windows.AI.MachineLearning" Version="$(WindowsMLVersion)" />
   </ItemGroup>
 
   <ItemGroup>

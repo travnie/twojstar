@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="$(OnnxRuntimeVersion)" />
+    <PackageReference Include="Microsoft.Windows.AI.MachineLearning" Version="$(WindowsMLVersion)" />
   </ItemGroup>
 </Project>

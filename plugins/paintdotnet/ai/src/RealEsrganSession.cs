@@ -19,14 +19,7 @@ internal sealed class RealEsrganSession
 
     public RealEsrganSession(string modelPath)
     {
-        var options = new SessionOptions
-        {
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
-            ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
-            InterOpNumThreads = 1,
-            IntraOpNumThreads = Math.Clamp(Environment.ProcessorCount / 2, 1, 4)
-        };
-
+        using SessionOptions options = InferenceSessionOptions.Create();
         session = new InferenceSession(modelPath, options);
         inputName = session.InputMetadata.Keys.Single();
         outputName = session.OutputMetadata.Keys.Single();
@@ -36,8 +29,8 @@ internal sealed class RealEsrganSession
     {
         var tensor = new DenseTensor<float>(input, new[] { 1, 3, height, width });
 
-        // Paint.NET may request render regions in parallel. Keep the shared CPU
-        // session single-flight to avoid multiplying model working-set and threads.
+        // Paint.NET may request render regions in parallel. Keep the shared inference
+        // session single-flight to avoid multiplying model working-set and device work.
         lock (runGate)
         {
             if (cancelRequested())

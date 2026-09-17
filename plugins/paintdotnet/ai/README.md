@@ -26,6 +26,13 @@ Both effects reuse the same local ONNX Runtime, cancellation and bounded tile ca
 
 The models are not tiny: FBCNN is about 144 MB and SCUNet about 38 MB. They are still practical for local desktop inference, but the release ZIP is intentionally larger than the Fast-only prototype.
 
+## Acceleration
+
+- Windows ML `2.3.42` supplies the ONNX Runtime and bundled DirectML execution provider.
+- Sessions request `MAX_PERFORMANCE`, so capable Windows systems prefer their fastest available accelerator and fall back to CPU when needed.
+- The runtime stays self-contained: no execution-provider or model downloads happen while Paint.NET is running.
+- Windows ML requires Windows 10 19H1 (build 18362) or newer.
+
 ## Upscaling
 
 A normal Paint.NET effect renders into the current document bounds, so true 2x/4x document enlargement must not be faked inside an effect.
@@ -73,7 +80,9 @@ The **current** release layout remains the source of truth:
 Common/
 └── Travny.PaintDotNet.AI/
     ├── Microsoft.ML.OnnxRuntime.dll
+    ├── Microsoft.Windows.AI.MachineLearning.dll
     ├── onnxruntime.dll
+    ├── DirectML.dll
     └── model/
         ├── realesr-general-x4v3.onnx
         ├── fbcnn_color_fp16.onnx
@@ -106,4 +115,4 @@ CI pins and verifies every bundled model before packaging:
 - FBCNN Color FP16: SHA-256 `1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922`.
 - SCUNet Color Real-PSNR FP16: SHA-256 `8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a`.
 
-FBCNN and SCUNet upstream projects are Apache-2.0 licensed. Their license texts, plus ONNX Runtime and Real-ESRGAN notices, are shipped in `licenses/`. The DeJPEG Android application itself is only a model/behavior reference; its AGPL application code is not copied into this plugin.
+FBCNN and SCUNet upstream projects are Apache-2.0 licensed. Their license texts, ONNX Runtime and Real-ESRGAN notices, plus the Windows ML runtime license and third-party notices are shipped in `licenses/`. The DeJPEG Android application itself is only a model/behavior reference; its AGPL application code is not copied into this plugin.

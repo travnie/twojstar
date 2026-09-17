@@ -180,9 +180,15 @@ jobs:
             Where-Object { $_.FullName -match 'win-x64' } |
             Select-Object -First 1
           if (-not $native) { throw 'Windows x64 ONNX Runtime native library not found.' }
-          Copy-Item $native.FullName "$common/onnxruntime.dll"
+          $nativeDir = $native.Directory.FullName
+          $directMl = Join-Path $nativeDir 'DirectML.dll'
+          $windowsMl = Join-Path $nativeDir 'Microsoft.Windows.AI.MachineLearning.dll'
+          foreach ($runtimeFile in @($native.FullName, $directMl, $windowsMl)) {
+            if (-not (Test-Path $runtimeFile -PathType Leaf)) { throw "Windows ML runtime file missing: $runtimeFile" }
+            Copy-Item $runtimeFile $common
+          }
 
-          $providerShared = Get-ChildItem $native.Directory.FullName -Filter onnxruntime_providers_shared.dll -ErrorAction SilentlyContinue |
+          $providerShared = Get-ChildItem $nativeDir -Filter onnxruntime_providers_shared.dll -ErrorAction SilentlyContinue |
             Select-Object -First 1
           if ($providerShared) { Copy-Item $providerShared.FullName $common }
 
@@ -197,7 +203,9 @@ jobs:
             "$legacyPackage/Travny.PaintDotNet.AI.dll",
             "$modernPackage/Travny.PaintDotNet.AI.Modern.dll",
             "$common/Microsoft.ML.OnnxRuntime.dll",
+            "$common/Microsoft.Windows.AI.MachineLearning.dll",
             "$common/onnxruntime.dll",
+            "$common/DirectML.dll",
             "$common/model/realesr-general-x4v3.onnx",
             "$common/model/fbcnn_color_fp16.onnx",
             "$common/model/scunet_color_real_psnr_fp16.onnx"
@@ -211,7 +219,12 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $tfm with exit code $LASTEXITCODE" }
 
             Get-ChildItem $smoke -Recurse -File |
-              Where-Object { $_.Name -like 'Microsoft.ML.OnnxRuntime*.dll' -or $_.Name -like 'onnxruntime*.dll' } |
+              Where-Object {
+                $_.Name -like 'Microsoft.ML.OnnxRuntime*.dll' -or
+                $_.Name -like 'Microsoft.Windows.AI.MachineLearning*.dll' -or
+                $_.Name -like 'onnxruntime*.dll' -or
+                $_.Name -eq 'DirectML.dll'
+              } |
               Remove-Item -Force
             Remove-Item (Join-Path $smoke 'runtimes') -Recurse -Force -ErrorAction SilentlyContinue
 

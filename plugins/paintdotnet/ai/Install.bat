@@ -63,7 +63,9 @@ set "AI_OTHER=Travny.PaintDotNet.AI.dll"
 set "AI_COMMON=%~dp0Common\Travny.PaintDotNet.AI"
 if not exist "%AI_ADAPTER%" goto :incomplete
 if not exist "%AI_COMMON%\Microsoft.ML.OnnxRuntime.dll" goto :incomplete
+if not exist "%AI_COMMON%\Microsoft.Windows.AI.MachineLearning.dll" goto :incomplete
 if not exist "%AI_COMMON%\onnxruntime.dll" goto :incomplete
+if not exist "%AI_COMMON%\DirectML.dll" goto :incomplete
 if not exist "%AI_COMMON%\model\realesr-general-x4v3.onnx" goto :incomplete
 if not exist "%AI_COMMON%\model\fbcnn_color_fp16.onnx" goto :incomplete
 if not exist "%AI_COMMON%\model\scunet_color_real_psnr_fp16.onnx" goto :incomplete
