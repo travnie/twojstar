@@ -109,7 +109,14 @@ jobs:
       - name: Verify Windows ML DirectML payload
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
+        run: |
+          $smoke = Join-Path $env:RUNNER_TEMP 'windows-ml-smoke'
+          dotnet publish .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj `
+            -c Release -f net9.0-windows10.0.18362.0 -r win-x64 --self-contained false `
+            -o $smoke --nologo
+          if ($LASTEXITCODE -ne 0) { throw "Windows ML smoke publish failed with exit code $LASTEXITCODE" }
+          dotnet (Join-Path $smoke 'ExecutionProviderSmoke.dll')
+          if ($LASTEXITCODE -ne 0) { throw "Windows ML DirectML payload smoke failed with exit code $LASTEXITCODE" }
 
       - name: Download and verify Real-ESRGAN model
         working-directory: ${{ env.PLUGIN_DIR }}
