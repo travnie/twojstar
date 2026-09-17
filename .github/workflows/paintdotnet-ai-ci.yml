@@ -31,9 +31,9 @@ env:
   MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
   MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
   FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
-  FBCNN_SHA256: 172f6110577991fd5e9ce5b71d1780a79fe082df13b190d50d649cb4d668686b
+  FBCNN_SHA256: 1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922
   SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
-  SCUNET_SHA256: 7b7264f9b2a9bbcf21a551b7754891fca81c677983961ac6afbc8add7fce134f
+  SCUNET_SHA256: 8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a
 
 jobs:
   build:
