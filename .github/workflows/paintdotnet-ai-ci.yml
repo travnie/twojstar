@@ -109,7 +109,7 @@ jobs:
       - name: Verify Windows ML DirectML payload
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet run --project .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
 
       - name: Download and verify Real-ESRGAN model
         working-directory: ${{ env.PLUGIN_DIR }}
@@ -125,17 +125,17 @@ jobs:
       - name: Run model smoke test
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows -- .\model\realesr-general-x4v3.onnx
+        run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- .\model\realesr-general-x4v3.onnx
 
       - name: Build restoration model smoke harness
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
 
       - name: Run restoration math smoke test
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
 
       - name: Download and verify restoration models
         working-directory: ${{ env.PLUGIN_DIR }}
@@ -156,15 +156,15 @@ jobs:
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: |
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- dejpeg .\model\fbcnn_color_fp16.onnx
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- denoise .\model\scunet_color_real_psnr_fp16.onnx
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- dejpeg .\model\fbcnn_color_fp16.onnx
+          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- denoise .\model\scunet_color_real_psnr_fp16.onnx
 
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: |
-          $legacyBuild = Join-Path $PWD 'bin/Release/net9.0-windows'
-          $modernBuild = Join-Path $PWD 'bin/Release/net11.0-windows'
+          $legacyBuild = Join-Path $PWD 'bin/Release/net9.0-windows10.0.18362.0'
+          $modernBuild = Join-Path $PWD 'bin/Release/net11.0-windows10.0.18362.0'
           $dist = Join-Path $PWD 'dist'
           $package = Join-Path $dist 'package'
           $common = Join-Path $package 'Common/Travny.PaintDotNet.AI'
@@ -213,7 +213,7 @@ jobs:
             if (-not (Test-Path $required -PathType Leaf)) { throw "Package file missing: $required" }
           }
 
-          foreach ($tfm in @('net9.0-windows', 'net11.0-windows')) {
+          foreach ($tfm in @('net9.0-windows10.0.18362.0', 'net11.0-windows10.0.18362.0')) {
             $smoke = Join-Path $dist "runtime-smoke-$tfm"
             dotnet publish .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
             if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $tfm with exit code $LASTEXITCODE" }
