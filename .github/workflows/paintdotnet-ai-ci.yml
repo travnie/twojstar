@@ -127,10 +127,10 @@ jobs:
         shell: pwsh
         run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows --nologo
 
-      - name: Build restoration math smoke harness
+      - name: Run restoration math smoke test
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet build .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
 
       - name: Download and verify restoration models
         working-directory: ${{ env.PLUGIN_DIR }}
@@ -183,6 +183,8 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path "$common/model" | Out-Null
           Copy-Item .\model\realesr-general-x4v3.onnx "$common/model/"
+          Copy-Item .\model\fbcnn_color_fp16.onnx "$common/model/"
+          Copy-Item .\model\scunet_color_real_psnr_fp16.onnx "$common/model/"
           Copy-Item .\licenses "$common/licenses" -Recurse
           Copy-Item .\Install.bat "$package/Install.bat"
 
@@ -191,7 +193,9 @@ jobs:
             "$modernPackage/Travny.PaintDotNet.AI.Modern.dll",
             "$common/Microsoft.ML.OnnxRuntime.dll",
             "$common/onnxruntime.dll",
-            "$common/model/realesr-general-x4v3.onnx"
+            "$common/model/realesr-general-x4v3.onnx",
+            "$common/model/fbcnn_color_fp16.onnx",
+            "$common/model/scunet_color_real_psnr_fp16.onnx"
           )) {
             if (-not (Test-Path $required -PathType Leaf)) { throw "Package file missing: $required" }
           }
@@ -215,10 +219,10 @@ jobs:
           }
 
           @'
-          Paint.NET AI Restore
+          Paint.NET AI Restore / DeJPEG / Denoise
 
           Run Install.bat and select the installation type and Paint.NET version. It combines the matching
-          adapter with the shared ONNX Runtime, model and license files. Classic builds install
+          adapter with the shared ONNX Runtime, models and license files. Classic builds install
           to C:\Program Files\paint.net\Effects\Travny.PaintDotNet.AI (admin required).
           Microsoft Store builds fall back to Documents\Paint.NET App Files\Effects.
 
