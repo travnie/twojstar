@@ -209,7 +209,7 @@ internal sealed class ImageModelSession : IDisposable
         }
 
         int channels = metadata.Dimensions[1];
-        return channels == 3;
+        return channels == 3 || channels <= 0;
     }
 
     private static void ValidateElementType(TensorElementType elementType, string label)
