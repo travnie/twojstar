@@ -127,6 +127,11 @@ jobs:
         shell: pwsh
         run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows --nologo
 
+      - name: Build restoration math smoke harness
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: dotnet build .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
+
       - name: Download and verify restoration models
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
