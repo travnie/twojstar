@@ -9,5 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.AI.MachineLearning" Version="$(WindowsMLVersion)" />
     <Compile Include="..\..\src\ImageModelSession.cs" Link="ImageModelSession.cs" />
+    <Compile Include="..\..\src\InferenceSessionOptions.cs" Link="InferenceSessionOptions.cs" />
   </ItemGroup>
 </Project>
