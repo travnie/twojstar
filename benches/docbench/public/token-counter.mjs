@@ -7,10 +7,12 @@ const encodingLabel = document.querySelector("#encoding-label");
 
 if (editor && detailStatus) {
   const STORAGE_KEY = "docbench:token-count-enabled";
+  const BASIC_STATS_DELAY = 120;
+  const TOKEN_COUNT_DELAY = 360;
   const numberFormatter = new Intl.NumberFormat();
   const tokenizerAssets = globalThis.__docbenchTokenizerAssets || {};
-  const liteModuleUrl = tokenizerAssets.liteUrl || "./vendor/js-tiktoken/lite.js";
-  const rankModuleUrl = tokenizerAssets.rankUrl || "./vendor/js-tiktoken/ranks/o200k_base.js";
+  const liteModuleUrl = tokenizerAssets.liteUrl || new URL("./vendor/js-tiktoken/lite.js", import.meta.url).href;
+  const rankModuleUrl = tokenizerAssets.rankUrl || new URL("./vendor/js-tiktoken/ranks/o200k_base.js", import.meta.url).href;
 
   const style = document.createElement("style");
   style.textContent = `
@@ -100,10 +102,12 @@ if (editor && detailStatus) {
   counters.append(words, characters, bytes, tokenToggle, tokenValue);
   bar.append(counters);
 
-  let statsFrame = 0;
+  let statsTimer = 0;
   let tokenTimer = 0;
+  let statsRevision = 0;
   let tokenRevision = 0;
-  let encoderPromise = null;
+  let workerBlobUrl = "";
+  let analysisWorker = null;
 
   const formatNumber = (value) => numberFormatter.format(value);
 
@@ -114,52 +118,113 @@ if (editor && detailStatus) {
     };
   }
 
-  function updateBasicStats() {
-    statsFrame = 0;
-    const stats = countDocumentStats(editor.value, serializationOptions());
+  function renderBasicStats(stats) {
     words.textContent = `${formatNumber(stats.words)} word${stats.words === 1 ? "" : "s"}`;
     characters.textContent = `${formatNumber(stats.characters)} char${stats.characters === 1 ? "" : "s"}`;
     bytes.textContent = `${formatNumber(stats.bytes)} B`;
   }
 
-  function scheduleBasicStats() {
-    if (statsFrame) cancelAnimationFrame(statsFrame);
-    statsFrame = requestAnimationFrame(updateBasicStats);
-  }
-
-  async function getEncoder() {
-    if (!encoderPromise) {
-      encoderPromise = Promise.all([
-        import(liteModuleUrl),
-        import(rankModuleUrl),
-      ])
-        .then(([{ Tiktoken }, { default: o200kBase }]) => new Tiktoken(o200kBase))
-        .catch((error) => {
-          encoderPromise = null;
-          throw error;
-        });
+  function createAnalysisWorker() {
+    try {
+      const portableSource = globalThis.__docbenchTokenWorkerSource;
+      if (typeof portableSource === "string" && portableSource) {
+        workerBlobUrl = URL.createObjectURL(new Blob([portableSource], { type: "text/javascript" }));
+        return new Worker(workerBlobUrl, { type: "module", name: "docbench-document-stats" });
+      }
+      return new Worker(new URL("./token-counter-worker.mjs", import.meta.url), {
+        type: "module",
+        name: "docbench-document-stats",
+      });
+    } catch (error) {
+      console.warn("DocBench document worker unavailable", error);
+      return null;
     }
-    return encoderPromise;
   }
 
-  async function updateTokenCount(revision) {
+  function stopAnalysisWorker() {
+    analysisWorker?.terminate();
+    analysisWorker = null;
+    if (workerBlobUrl) {
+      URL.revokeObjectURL(workerBlobUrl);
+      workerBlobUrl = "";
+    }
+  }
+
+  function handleWorkerMessage(event) {
+    const result = event.data;
+    if (!result || typeof result !== "object") return;
+
+    if (result.type === "stats" && result.revision === statsRevision) {
+      renderBasicStats(result.stats);
+      return;
+    }
+
+    if (result.type === "tokens" && result.revision === tokenRevision && tokenCheckbox.checked) {
+      const count = result.count;
+      tokenValue.textContent = `${formatNumber(count)} token${count === 1 ? "" : "s"} · o200k`;
+      tokenValue.removeAttribute("aria-busy");
+      return;
+    }
+
+    if (result.type !== "error") return;
+    if (result.taskType === "stats" && result.revision === statsRevision) {
+      renderBasicStats(countDocumentStats(editor.value, serializationOptions()));
+    }
+    if (result.taskType === "tokens" && result.revision === tokenRevision) {
+      console.warn("DocBench token counter unavailable", result.message);
+      tokenValue.textContent = "token count unavailable";
+      tokenValue.removeAttribute("aria-busy");
+    }
+  }
+
+  analysisWorker = createAnalysisWorker();
+  analysisWorker?.addEventListener("message", handleWorkerMessage);
+  analysisWorker?.addEventListener("error", (error) => {
+    console.warn("DocBench document worker failed", error);
+    stopAnalysisWorker();
+    scheduleBasicStats(0);
+    if (tokenCheckbox.checked) {
+      tokenValue.textContent = "token count unavailable";
+      tokenValue.removeAttribute("aria-busy");
+    }
+  });
+
+  function updateBasicStats(revision) {
+    const text = editor.value;
+    const serialization = serializationOptions();
+    if (analysisWorker) {
+      analysisWorker.postMessage({ type: "stats", revision, text, serialization });
+      return;
+    }
+    if (revision === statsRevision) renderBasicStats(countDocumentStats(text, serialization));
+  }
+
+  function scheduleBasicStats(delay = BASIC_STATS_DELAY) {
+    statsRevision += 1;
+    clearTimeout(statsTimer);
+    const revision = statsRevision;
+    statsTimer = setTimeout(() => updateBasicStats(revision), delay);
+  }
+
+  function updateTokenCount(revision) {
+    if (revision !== tokenRevision || !tokenCheckbox.checked) return;
     tokenValue.textContent = "counting…";
     tokenValue.setAttribute("aria-busy", "true");
-    try {
-      const encoder = await getEncoder();
-      if (revision !== tokenRevision || !tokenCheckbox.checked) return;
-      const count = encoder.encode(editor.value).length;
-      if (revision !== tokenRevision || !tokenCheckbox.checked) return;
-      tokenValue.textContent = `${formatNumber(count)} token${count === 1 ? "" : "s"} · o200k`;
-    } catch (error) {
-      console.warn("DocBench token counter unavailable", error);
+    if (!analysisWorker) {
       tokenValue.textContent = "token count unavailable";
-    } finally {
-      if (revision === tokenRevision) tokenValue.removeAttribute("aria-busy");
+      tokenValue.removeAttribute("aria-busy");
+      return;
     }
+    analysisWorker.postMessage({
+      type: "tokens",
+      revision,
+      text: editor.value,
+      liteModuleUrl,
+      rankModuleUrl,
+    });
   }
 
-  function scheduleTokenCount(delay = 360) {
+  function scheduleTokenCount(delay = TOKEN_COUNT_DELAY) {
     tokenRevision += 1;
     clearTimeout(tokenTimer);
     if (!tokenCheckbox.checked) {
@@ -173,8 +238,8 @@ if (editor && detailStatus) {
   }
 
   function refreshCounters(delay = 0) {
-    scheduleBasicStats();
-    scheduleTokenCount(delay);
+    scheduleBasicStats(delay);
+    scheduleTokenCount(delay || TOKEN_COUNT_DELAY);
   }
 
   function storedTokenPreference() {
@@ -198,17 +263,21 @@ if (editor && detailStatus) {
     storeTokenPreference(tokenCheckbox.checked);
     scheduleTokenCount(0);
   });
-  editor.addEventListener("input", () => refreshCounters(360));
+  editor.addEventListener("input", () => {
+    scheduleBasicStats();
+    scheduleTokenCount();
+  });
   eolSelect?.addEventListener("change", () => refreshCounters(0));
   document.addEventListener("docbench:document-change", () => refreshCounters(0));
   if (encodingLabel) {
-    new MutationObserver(() => scheduleBasicStats()).observe(encodingLabel, {
+    new MutationObserver(() => scheduleBasicStats(0)).observe(encodingLabel, {
       childList: true,
       characterData: true,
       subtree: true,
     });
   }
+  addEventListener("pagehide", stopAnalysisWorker, { once: true });
 
-  updateBasicStats();
+  scheduleBasicStats(0);
   scheduleTokenCount(0);
 }
