@@ -163,8 +163,18 @@ jobs:
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: |
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- dejpeg .\model\fbcnn_color_fp16.onnx
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- denoise .\model\scunet_color_real_psnr_fp16.onnx
+          $cases = @(
+            @{ Kind = 'dejpeg'; Model = '.\model\fbcnn_color_fp16.onnx' },
+            @{ Kind = 'denoise'; Model = '.\model\scunet_color_real_psnr_fp16.onnx' }
+          )
+          foreach ($case in $cases) {
+            Write-Host "::group::Image model smoke: $($case.Kind)"
+            dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- $case.Kind $case.Model
+            $code = $LASTEXITCODE
+            Write-Host "$($case.Kind) exit code: $code"
+            Write-Host "::endgroup::"
+            if ($code -ne 0) { throw "$($case.Kind) smoke failed with exit code $code" }
+          }
 
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}

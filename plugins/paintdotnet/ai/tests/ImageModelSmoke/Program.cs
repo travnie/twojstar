@@ -15,7 +15,11 @@ bool expectsScalar = kind switch
     _ => throw new ArgumentException($"Unknown model kind: {kind}")
 };
 
+Console.WriteLine($"[{kind}] creating session: {modelPath}");
+Console.Out.Flush();
 using var session = new ImageModelSession(modelPath);
+Console.WriteLine($"[{kind}] session ready: scalar={session.RequiresScalarControl}, input={session.InputElementType}, output={session.OutputElementType}");
+Console.Out.Flush();
 if (session.RequiresScalarControl != expectsScalar)
 {
     throw new InvalidDataException(
@@ -26,6 +30,8 @@ const int width = 64;
 const int height = 64;
 float[] input = new float[3 * width * height];
 Array.Fill(input, 0.5f);
+Console.WriteLine($"[{kind}] checking pre-run cancellation");
+Console.Out.Flush();
 try
 {
     session.Run(input, width, height, expectsScalar ? 0.5f : null, () => true);
@@ -33,14 +39,20 @@ try
 }
 catch (OperationCanceledException)
 {
+    Console.WriteLine($"[{kind}] cancellation passed");
+    Console.Out.Flush();
 }
 
+Console.WriteLine($"[{kind}] starting inference");
+Console.Out.Flush();
 float[] output = session.Run(
     input,
     width,
     height,
     expectsScalar ? 0.5f : null,
     () => false);
+Console.WriteLine($"[{kind}] inference returned {output.Length} values");
+Console.Out.Flush();
 
 if (output.Length != input.Length)
 {
