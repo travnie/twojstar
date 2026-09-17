@@ -164,6 +164,7 @@ jobs:
         shell: pwsh
         run: |
           $cases = @(
+            @{ Kind = 'cpu-init'; Model = '.\model\fbcnn_color_fp16.onnx' },
             @{ Kind = 'dejpeg'; Model = '.\model\fbcnn_color_fp16.onnx' },
             @{ Kind = 'denoise'; Model = '.\model\scunet_color_real_psnr_fp16.onnx' }
           )

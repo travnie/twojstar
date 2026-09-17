@@ -1,3 +1,4 @@
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Travny.PaintDotNet.AI;
 
@@ -8,6 +9,17 @@ if (args.Length != 2)
 
 string kind = args[0];
 string modelPath = args[1];
+
+if (kind == "cpu-init")
+{
+    Console.WriteLine($"[cpu-init] creating plain CPU session: {modelPath}");
+    Console.Out.Flush();
+    using var cpuSession = new InferenceSession(modelPath);
+    Console.WriteLine($"[cpu-init] session ready: inputs={cpuSession.InputMetadata.Count}, outputs={cpuSession.OutputMetadata.Count}");
+    Console.Out.Flush();
+    return;
+}
+
 bool expectsScalar = kind switch
 {
     "dejpeg" => true,
