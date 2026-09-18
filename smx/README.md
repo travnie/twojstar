@@ -20,6 +20,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
   automatically, because auto-correcting a typo into `self_destruct` would be
   an impressively stupid feature.
 - Universal passthrough to the official v2 CLI for everything else.
+- Lazy tactical cards via `smx guide`: combat, boarding, trade, exploration,
+  industry and operations. Nothing is loaded until explicitly requested.
 
 ## Install
 
@@ -59,6 +61,9 @@ smx nearby
 smx missions --json
 smx sell-all --dry-run
 smx sell-all --keep fuel_cell,mission_widget
+smx guide combat
+smx guide --search warp
+smx guide combat --live
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -75,6 +80,23 @@ smx catalog type=ships
 3. **Conveniences may compose commands, not redefine mechanics.** Derived threat
    markers are explicitly heuristic.
 4. **No fuzzy auto-execution.** Typos get suggestions only.
+5. **Knowledge is lazy.** Local cards are packaged with `smx`, but only the requested
+   card or matching search lines are read. `--live` intentionally delegates to the
+   current server guide when freshness matters.
+
+## Tactical cards
+
+```bash
+smx guide                 # list tiny bundled cards
+smx guide combat          # load one card
+smx guide --search tackle # search matching lines only
+smx guide combat --json   # agent-friendly local payload
+smx guide combat --live   # ask the current SpaceMolt server guide instead
+```
+
+The cards are deliberately short reminders, not a frozen copy of the game manual.
+They cover high-value habits and point back to live v2 for mechanics likely to change.
+This keeps context small while still giving humans and agents a local field manual.
 
 ## Requirements
 

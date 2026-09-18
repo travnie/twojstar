@@ -10,6 +10,8 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Iterable
 
+from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
+
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
     "status": "get_status",
@@ -90,7 +92,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide"})
     return commands
 
 
@@ -346,6 +348,63 @@ def cmd_sell_all(backend: Backend, argv: list[str]) -> int:
     return 1 if failed else 0
 
 
+
+def cmd_guide(backend: Backend, argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx guide", add_help=True)
+    parser.add_argument("topic", nargs="?")
+    parser.add_argument("--list", action="store_true")
+    parser.add_argument("--search", metavar="TEXT")
+    parser.add_argument("--live", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    ns = parser.parse_args(argv)
+
+    if ns.list or (not ns.topic and not ns.search):
+        guides = list_guides()
+        if ns.json:
+            print(json.dumps(guides, indent=2, ensure_ascii=False))
+        else:
+            for row in guides:
+                live = f" · live: {row['live']}" if row["live"] else ""
+                print(f"{row['topic']:<12} {row['summary']}{live}")
+        return 0
+
+    if ns.search:
+        hits = search_guides(ns.search)
+        if ns.json:
+            print(json.dumps({"query": ns.search, "hits": hits}, indent=2, ensure_ascii=False))
+        else:
+            if not hits:
+                print(f'No local guide hits for "{ns.search}".')
+            for hit in hits:
+                print(f"{hit['topic']}:{hit['line']}: {hit['text']}")
+        return 0
+
+    topic = str(ns.topic).casefold()
+    if topic not in GUIDES:
+        matches = difflib.get_close_matches(topic, sorted(GUIDES), n=3, cutoff=0.55)
+        suffix = f" Did you mean: {', '.join(matches)}?" if matches else ""
+        print(f'smx: unknown guide "{topic}".{suffix}', file=sys.stderr)
+        return 2
+
+    if ns.live:
+        live_guide = GUIDES[topic]["live"]
+        if not live_guide:
+            print(f'smx: "{topic}" has no direct server guide; use the local card or live help.', file=sys.stderr)
+            return 2
+        result = backend.run(["get_guide", f"id={live_guide}"], json_output=ns.json)
+        if result.stdout:
+            sys.stdout.write(result.stdout)
+        if result.stderr:
+            sys.stderr.write(result.stderr)
+        return result.returncode
+
+    if ns.json:
+        print(guide_json(topic))
+    else:
+        print(load_guide(topic))
+    return 0
+
+
 def print_help() -> None:
     print(
         """smx — ergonomic companion shell for the official SpaceMolt v2 CLI
@@ -355,11 +414,13 @@ Usage:
   smx nearby [--json]           visible-threat summary from get_nearby
   smx missions [--json]         active + available missions
   smx sell-all [options]        sell current cargo through v2
+  smx guide [topic]              load a small local tactical card on demand
 
 Conveniences:
   status, ship, cargo, system, poi, map, skills, notifications
   kebab-case is accepted: get-map -> get_map
   failed typo commands get fuzzy suggestions, never auto-executed
+  guide --search TEXT finds narrow advice without dumping every card
 
 sell-all options:
   --dry-run                     preview only
@@ -408,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_sell_all(backend, rest)
     if command == "missions":
         return cmd_missions(backend, rest)
+    if command == "guide":
+        return cmd_guide(backend, rest)
     return _passthrough(backend, argv)
 
 
