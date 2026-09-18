@@ -27,32 +27,47 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
 
 ## Install
 
-Install the official SpaceMolt v2 client first and make sure `spacemolt` is on
-`PATH`. Then:
+### One-command local install
+
+The installers put **`smx` itself on your user PATH through pipx** and keep the
+official SpaceMolt backend inside smx's private state directory, so
+`spacemolt.exe` does not need another global PATH entry.
+
+Windows PowerShell:
+
+```powershell
+.\\install.ps1
+```
+
+Linux/macOS:
+
+```bash
+./install.sh
+```
+
+Use `-SkipBackend` on PowerShell or `--skip-backend` on POSIX if you already
+manage the official client yourself.
+
+After `pipx ensurepath`, open a new terminal once and check:
+
+```bash
+smx paths
+smx --help
+```
+
+### Manual install
+
+Install the official SpaceMolt v2 client and make sure `spacemolt` is on
+`PATH`, then:
 
 ```bash
 cd smx
 python -m pip install .
 ```
 
-Or with `pipx`:
+Or use `pipx install .`.
 
-```bash
-pipx install .
-```
-
-If the official binary has a different name or location:
-
-```bash
-SMX_BACKEND=/path/to/spacemolt smx status
-```
-
-PowerShell:
-
-```powershell
-$env:SMX_BACKEND = "C:\\Tools\\spacemolt.exe"
-smx status
-```
+If the official binary has a different name or location, set `SMX_BACKEND`.
 
 ## Examples
 
@@ -90,6 +105,9 @@ smx catalog type=ships
    current server guide when freshness matters.
 6. **MCP roles stay separate.** `mcp/docs` is for building and contract lookup;
    `mcp/v2?preset=full` is the recommended complete gameplay surface for agents.
+7. **Credentials stay in private app state.** When `SPACEMOLT_SESSION` is not
+   explicitly set, smx redirects the official client's plaintext session store away
+   from the working directory into smx's own state directory.
 
 ## Tactical cards
 
@@ -120,6 +138,34 @@ MCP should use the v2 `full` preset when complete tool access is wanted.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for the contract lookup flow and setup
 examples.
+
+## Local state and credentials
+
+The official v2 client stores account credentials in its session JSON. When it is
+called through `smx`, the default is redirected to a stable smx-owned location:
+
+| Platform | Default smx state |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\\smx` |
+| Linux | `$XDG_STATE_HOME/smx`, or `~/.local/state/smx` |
+| macOS | `~/Library/Application Support/smx` |
+
+The default session file is `spacemolt-session.json` inside that directory.
+The optional managed backend lives under `bin/` there as well.
+
+```bash
+smx paths
+smx paths --json
+```
+
+Overrides remain available:
+
+- `SMX_STATE_DIR` moves the whole smx state directory.
+- `SPACEMOLT_SESSION` wins over smx's default and points at an exact session file.
+- `SMX_BACKEND` wins over both the managed backend and PATH lookup.
+
+The official client stores credentials in plaintext and uses mode `0600` where
+the platform supports it. Do not commit or share the session JSON.
 
 ## Requirements
 

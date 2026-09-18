@@ -10,4 +10,5 @@ Keep this project thin.
 - Gameplay agents should use `https://game.spacemolt.com/mcp/v2?preset=full` when they need the complete MCP toolset.
 - Authority: live game state > docs MCP/current official v2 help > bundled local cards.
 - Bundled cards stay short and tactical. Do not copy the full manual/OpenAPI into the package.
+- Session credentials must stay outside repositories and ordinary working directories. Respect explicit `SPACEMOLT_SESSION`; otherwise use smx private state.
 - CI must not log in, mutate a real account, or require live SpaceMolt availability. Use unit/fake-backend tests.
