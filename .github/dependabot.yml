@@ -9,6 +9,15 @@ updates:
     groups:
       actions: { patterns: ["*"] }
 
+  - package-ecosystem: "pip"
+    directory: "/smx"
+    schedule:
+      interval: "weekly"
+      time: "21:37"
+      timezone: "Europe/Warsaw"
+    groups:
+      smx: { patterns: ["*"] }
+
   - package-ecosystem: "npm"
     directory: "/benches"
     schedule:
