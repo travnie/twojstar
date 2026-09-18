@@ -22,6 +22,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
 - Universal passthrough to the official v2 CLI for everything else.
 - Lazy tactical cards via `smx guide`: combat, boarding, trade, exploration,
   industry and operations. Nothing is loaded until explicitly requested.
+- `smx mcp` prints the canonical MCP profiles: docs for development and the
+  `full` v2 preset for gameplay agents.
 
 ## Install
 
@@ -64,6 +66,9 @@ smx sell-all --keep fuel_cell,mission_widget
 smx guide combat
 smx guide --search warp
 smx guide combat --live
+smx mcp
+smx mcp gameplay
+smx mcp docs --json
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -83,6 +88,8 @@ smx catalog type=ships
 5. **Knowledge is lazy.** Local cards are packaged with `smx`, but only the requested
    card or matching search lines are read. `--live` intentionally delegates to the
    current server guide when freshness matters.
+6. **MCP roles stay separate.** `mcp/docs` is for building and contract lookup;
+   `mcp/v2?preset=full` is the recommended complete gameplay surface for agents.
 
 ## Tactical cards
 
@@ -97,6 +104,22 @@ smx guide combat --live   # ask the current SpaceMolt server guide instead
 The cards are deliberately short reminders, not a frozen copy of the game manual.
 They cover high-value habits and point back to live v2 for mechanics likely to change.
 This keeps context small while still giving humans and agents a local field manual.
+
+## MCP profiles
+
+```bash
+smx mcp            # show both roles
+smx mcp gameplay   # https://game.spacemolt.com/mcp/v2?preset=full
+smx mcp docs       # https://game.spacemolt.com/mcp/docs
+```
+
+The docs MCP is a **development tool**, not a normal gameplay dependency. When
+changing wrappers, query its exact command contracts instead of guessing or
+copying the full OpenAPI catalog into this repo. An agent actually playing over
+MCP should use the v2 `full` preset when complete tool access is wanted.
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the contract lookup flow and setup
+examples.
 
 ## Requirements
 
