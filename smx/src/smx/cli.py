@@ -71,6 +71,8 @@ class Backend:
 
 
 def normalize_command(command: str) -> str:
+    if command.startswith("-"):
+        return command
     if "/" in command:
         group, action = command.split("/", 1)
         return f"{group.replace('-', '_')}/{action.replace('-', '_')}"
