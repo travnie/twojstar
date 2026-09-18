@@ -1,3 +1,4 @@
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Travny.PaintDotNet.AI;
 
@@ -8,6 +9,17 @@ if (args.Length != 2)
 
 string kind = args[0];
 string modelPath = args[1];
+
+if (kind == "cpu-init")
+{
+    Console.WriteLine($"[cpu-init] creating plain CPU session: {modelPath}");
+    Console.Out.Flush();
+    using var cpuSession = new InferenceSession(modelPath);
+    Console.WriteLine($"[cpu-init] session ready: inputs={cpuSession.InputMetadata.Count}, outputs={cpuSession.OutputMetadata.Count}");
+    Console.Out.Flush();
+    return;
+}
+
 bool expectsScalar = kind switch
 {
     "dejpeg" => true,
@@ -15,7 +27,15 @@ bool expectsScalar = kind switch
     _ => throw new ArgumentException($"Unknown model kind: {kind}")
 };
 
-using var session = new ImageModelSession(modelPath);
+string[] disabledOptimizers = kind == "denoise"
+    ? new[] { InferenceSessionOptions.SimplifiedLayerNormFusionOptimizer }
+    : Array.Empty<string>();
+
+Console.WriteLine($"[{kind}] creating session: {modelPath}");
+Console.Out.Flush();
+using var session = new ImageModelSession(modelPath, disabledOptimizers);
+Console.WriteLine($"[{kind}] session ready: scalar={session.RequiresScalarControl}, input={session.InputElementType}, output={session.OutputElementType}");
+Console.Out.Flush();
 if (session.RequiresScalarControl != expectsScalar)
 {
     throw new InvalidDataException(
@@ -26,6 +46,8 @@ const int width = 64;
 const int height = 64;
 float[] input = new float[3 * width * height];
 Array.Fill(input, 0.5f);
+Console.WriteLine($"[{kind}] checking pre-run cancellation");
+Console.Out.Flush();
 try
 {
     session.Run(input, width, height, expectsScalar ? 0.5f : null, () => true);
@@ -33,14 +55,20 @@ try
 }
 catch (OperationCanceledException)
 {
+    Console.WriteLine($"[{kind}] cancellation passed");
+    Console.Out.Flush();
 }
 
+Console.WriteLine($"[{kind}] starting inference");
+Console.Out.Flush();
 float[] output = session.Run(
     input,
     width,
     height,
     expectsScalar ? 0.5f : null,
     () => false);
+Console.WriteLine($"[{kind}] inference returned {output.Length} values");
+Console.Out.Flush();
 
 if (output.Length != input.Length)
 {

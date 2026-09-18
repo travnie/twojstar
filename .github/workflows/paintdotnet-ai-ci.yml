@@ -106,6 +106,18 @@ jobs:
           dotnet build .\PaintDotNetAi.csproj -c Release -p:PaintDotNetDir="$env:PDN_51_DIR" --nologo
           dotnet build .\PaintDotNetAi.Modern.csproj -c Release -p:PaintDotNetDir="$env:PDN_52_DIR" --nologo
 
+      - name: Verify Windows ML DirectML payload
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          $smoke = Join-Path $env:RUNNER_TEMP 'windows-ml-smoke'
+          dotnet publish .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj `
+            -c Release -f net9.0-windows10.0.18362.0 -r win-x64 --self-contained false `
+            -o $smoke --nologo
+          if ($LASTEXITCODE -ne 0) { throw "Windows ML smoke publish failed with exit code $LASTEXITCODE" }
+          dotnet (Join-Path $smoke 'ExecutionProviderSmoke.dll')
+          if ($LASTEXITCODE -ne 0) { throw "Windows ML DirectML payload smoke failed with exit code $LASTEXITCODE" }
+
       - name: Download and verify Real-ESRGAN model
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
@@ -120,17 +132,17 @@ jobs:
       - name: Run model smoke test
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows -- .\model\realesr-general-x4v3.onnx
+        run: dotnet run --project .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- .\model\realesr-general-x4v3.onnx
 
       - name: Build restoration model smoke harness
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet build .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
 
       - name: Run restoration math smoke test
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
-        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet run --project .\tests\RestorationMathSmoke\RestorationMathSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 --nologo
 
       - name: Download and verify restoration models
         working-directory: ${{ env.PLUGIN_DIR }}
@@ -151,15 +163,26 @@ jobs:
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: |
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- dejpeg .\model\fbcnn_color_fp16.onnx
-          dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows -- denoise .\model\scunet_color_real_psnr_fp16.onnx
+          $cases = @(
+            @{ Kind = 'cpu-init'; Model = '.\model\fbcnn_color_fp16.onnx' },
+            @{ Kind = 'dejpeg'; Model = '.\model\fbcnn_color_fp16.onnx' },
+            @{ Kind = 'denoise'; Model = '.\model\scunet_color_real_psnr_fp16.onnx' }
+          )
+          foreach ($case in $cases) {
+            Write-Host "::group::Image model smoke: $($case.Kind)"
+            dotnet run --project .\tests\ImageModelSmoke\ImageModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- $case.Kind $case.Model
+            $code = $LASTEXITCODE
+            Write-Host "$($case.Kind) exit code: $code"
+            Write-Host "::endgroup::"
+            if ($code -ne 0) { throw "$($case.Kind) smoke failed with exit code $code" }
+          }
 
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
         run: |
-          $legacyBuild = Join-Path $PWD 'bin/Release/net9.0-windows'
-          $modernBuild = Join-Path $PWD 'bin/Release/net11.0-windows'
+          $legacyBuild = Join-Path $PWD 'bin/Release/net9.0-windows10.0.18362.0'
+          $modernBuild = Join-Path $PWD 'bin/Release/net11.0-windows10.0.18362.0'
           $dist = Join-Path $PWD 'dist'
           $package = Join-Path $dist 'package'
           $common = Join-Path $package 'Common/Travny.PaintDotNet.AI'
@@ -175,9 +198,15 @@ jobs:
             Where-Object { $_.FullName -match 'win-x64' } |
             Select-Object -First 1
           if (-not $native) { throw 'Windows x64 ONNX Runtime native library not found.' }
-          Copy-Item $native.FullName "$common/onnxruntime.dll"
+          $nativeDir = $native.Directory.FullName
+          $directMl = Join-Path $nativeDir 'DirectML.dll'
+          $windowsMl = Join-Path $nativeDir 'Microsoft.Windows.AI.MachineLearning.dll'
+          foreach ($runtimeFile in @($native.FullName, $directMl, $windowsMl)) {
+            if (-not (Test-Path $runtimeFile -PathType Leaf)) { throw "Windows ML runtime file missing: $runtimeFile" }
+            Copy-Item $runtimeFile $common
+          }
 
-          $providerShared = Get-ChildItem $native.Directory.FullName -Filter onnxruntime_providers_shared.dll -ErrorAction SilentlyContinue |
+          $providerShared = Get-ChildItem $nativeDir -Filter onnxruntime_providers_shared.dll -ErrorAction SilentlyContinue |
             Select-Object -First 1
           if ($providerShared) { Copy-Item $providerShared.FullName $common }
 
@@ -192,7 +221,9 @@ jobs:
             "$legacyPackage/Travny.PaintDotNet.AI.dll",
             "$modernPackage/Travny.PaintDotNet.AI.Modern.dll",
             "$common/Microsoft.ML.OnnxRuntime.dll",
+            "$common/Microsoft.Windows.AI.MachineLearning.dll",
             "$common/onnxruntime.dll",
+            "$common/DirectML.dll",
             "$common/model/realesr-general-x4v3.onnx",
             "$common/model/fbcnn_color_fp16.onnx",
             "$common/model/scunet_color_real_psnr_fp16.onnx"
@@ -200,13 +231,20 @@ jobs:
             if (-not (Test-Path $required -PathType Leaf)) { throw "Package file missing: $required" }
           }
 
-          foreach ($tfm in @('net9.0-windows', 'net11.0-windows')) {
+          foreach ($tfm in @('net9.0-windows10.0.18362.0', 'net11.0-windows10.0.18362.0')) {
             $smoke = Join-Path $dist "runtime-smoke-$tfm"
             dotnet publish .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
-            if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $tfm with exit code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { throw "ModelSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
+            dotnet publish .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
+            if ($LASTEXITCODE -ne 0) { throw "ExecutionProviderSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
 
             Get-ChildItem $smoke -Recurse -File |
-              Where-Object { $_.Name -like 'Microsoft.ML.OnnxRuntime*.dll' -or $_.Name -like 'onnxruntime*.dll' } |
+              Where-Object {
+                $_.Name -like 'Microsoft.ML.OnnxRuntime*.dll' -or
+                $_.Name -like 'Microsoft.Windows.AI.MachineLearning*.dll' -or
+                $_.Name -like 'onnxruntime*.dll' -or
+                $_.Name -eq 'DirectML.dll'
+              } |
               Remove-Item -Force
             Remove-Item (Join-Path $smoke 'runtimes') -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -214,8 +252,10 @@ jobs:
             New-Item -ItemType Directory -Force -Path (Join-Path $smoke 'model') | Out-Null
             Copy-Item "$common/model/realesr-general-x4v3.onnx" (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
 
+            dotnet (Join-Path $smoke 'ExecutionProviderSmoke.dll')
+            if ($LASTEXITCODE -ne 0) { throw "Packaged EP smoke failed for $tfm with exit code $LASTEXITCODE" }
             dotnet (Join-Path $smoke 'ModelSmoke.dll') (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
-            if ($LASTEXITCODE -ne 0) { throw "Runtime smoke test failed for $tfm with exit code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { throw "Packaged model smoke failed for $tfm with exit code $LASTEXITCODE" }
           }
 
           @'

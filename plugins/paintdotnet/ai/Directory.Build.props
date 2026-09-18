@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
-    <OnnxRuntimeVersion>1.30.0</OnnxRuntimeVersion>
+    <WindowsMLVersion>2.3.42</WindowsMLVersion>
+    <WindowsSdkPackageVersion>10.0.26100.87</WindowsSdkPackageVersion>
   </PropertyGroup>
 </Project>
