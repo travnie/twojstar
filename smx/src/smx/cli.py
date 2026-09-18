@@ -12,6 +12,7 @@ from typing import Any, Iterable
 
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
 from .mcp_profiles import PROFILES, profiles_json
+from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, session_path, state_dir
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
@@ -36,7 +37,7 @@ class BackendResult:
 
 class Backend:
     def __init__(self, binary: str | None = None) -> None:
-        self.binary = binary or os.environ.get("SMX_BACKEND", "spacemolt")
+        self.binary = resolve_backend(binary)
 
     def run(self, args: list[str], *, json_output: bool = False) -> BackendResult:
         command = [self.binary, *args]
@@ -44,6 +45,10 @@ class Backend:
             command.append("--json")
         env = os.environ.copy()
         env.setdefault("NO_COLOR", "1")
+        if "SPACEMOLT_SESSION" not in env:
+            state = state_dir(env)
+            ensure_private_state_dir(state)
+            env["SPACEMOLT_SESSION"] = str(session_path(env))
         try:
             proc = subprocess.run(command, capture_output=True, text=True, env=env, check=False)
         except FileNotFoundError:
@@ -93,7 +98,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths"})
     return commands
 
 
@@ -431,6 +436,28 @@ def cmd_mcp(argv: list[str]) -> int:
     return 0
 
 
+
+def cmd_paths(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx paths", add_help=True)
+    parser.add_argument("--json", action="store_true")
+    ns = parser.parse_args(argv)
+
+    payload = {
+        "state_dir": str(state_dir()),
+        "session_file": str(session_path()),
+        "managed_backend": str(managed_backend_path()),
+        "resolved_backend": resolve_backend(),
+    }
+    if ns.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"state     {payload['state_dir']}")
+        print(f"session   {payload['session_file']}")
+        print(f"backend   {payload['resolved_backend']}")
+        print(f"managed   {payload['managed_backend']}")
+    return 0
+
+
 def print_help() -> None:
     print(
         """smx — ergonomic companion shell for the official SpaceMolt v2 CLI
@@ -441,7 +468,8 @@ Usage:
   smx missions [--json]         active + available missions
   smx sell-all [options]        sell current cargo through v2
   smx guide [topic]             load a small local tactical card on demand
-  smx mcp [gameplay|docs]        print canonical MCP endpoints and roles
+  smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
+  smx paths                       show backend and private state locations
 
 Conveniences:
   status, ship, cargo, system, poi, map, skills, notifications
@@ -456,6 +484,8 @@ sell-all options:
 
 Environment:
   SMX_BACKEND=/path/to/spacemolt  override the official client executable
+  SMX_STATE_DIR=/path/to/state      override smx private state directory
+  SPACEMOLT_SESSION=/path/file.json override the official session file
 """
     )
 
@@ -500,6 +530,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_guide(backend, rest)
     if command == "mcp":
         return cmd_mcp(rest)
+    if command == "paths":
+        return cmd_paths(rest)
     return _passthrough(backend, argv)
 
 
