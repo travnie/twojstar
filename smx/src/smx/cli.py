@@ -43,11 +43,13 @@ class Backend:
         env.setdefault("NO_COLOR", "1")
         try:
             proc = subprocess.run(command, capture_output=True, text=True, env=env, check=False)
-        except FileNotFoundError as exc:
-            raise RuntimeError(
-                f"SpaceMolt v2 CLI not found: {self.binary!r}. Install SpaceMolt/client-v2 "
-                "or set SMX_BACKEND to its executable path."
-            ) from exc
+        except FileNotFoundError:
+            return BackendResult(
+                127,
+                "",
+                f"smx: SpaceMolt v2 CLI not found: {self.binary!r}. Install SpaceMolt/client-v2 "
+                "or set SMX_BACKEND to its executable path.\n",
+            )
         return BackendResult(proc.returncode, proc.stdout, proc.stderr)
 
     def json(self, args: list[str]) -> tuple[BackendResult, Any | None]:
