@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
+from .mcp_profiles import PROFILES, profiles_json
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
@@ -92,7 +93,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp"})
     return commands
 
 
@@ -405,6 +406,31 @@ def cmd_guide(backend: Backend, argv: list[str]) -> int:
     return 0
 
 
+
+def cmd_mcp(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx mcp", add_help=True)
+    parser.add_argument("profile", nargs="?", choices=sorted(PROFILES))
+    parser.add_argument("--json", action="store_true")
+    ns = parser.parse_args(argv)
+
+    if ns.json:
+        print(profiles_json(ns.profile))
+        return 0
+
+    if ns.profile:
+        profile = PROFILES[ns.profile]
+        role = "gameplay" if profile["runtime"] else "development only"
+        print(f"{ns.profile}: {profile['endpoint']}")
+        print(f"{profile['purpose']} ({role})")
+        return 0
+
+    print("gameplay  " + PROFILES["gameplay"]["endpoint"])
+    print("          complete v2 MCP tool set for playing")
+    print("docs      " + PROFILES["docs"]["endpoint"])
+    print("          read-only contract docs for developing smx; not a gameplay dependency")
+    return 0
+
+
 def print_help() -> None:
     print(
         """smx — ergonomic companion shell for the official SpaceMolt v2 CLI
@@ -414,7 +440,8 @@ Usage:
   smx nearby [--json]           visible-threat summary from get_nearby
   smx missions [--json]         active + available missions
   smx sell-all [options]        sell current cargo through v2
-  smx guide [topic]              load a small local tactical card on demand
+  smx guide [topic]             load a small local tactical card on demand
+  smx mcp [gameplay|docs]        print canonical MCP endpoints and roles
 
 Conveniences:
   status, ship, cargo, system, poi, map, skills, notifications
@@ -471,6 +498,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_missions(backend, rest)
     if command == "guide":
         return cmd_guide(backend, rest)
+    if command == "mcp":
+        return cmd_mcp(rest)
     return _passthrough(backend, argv)
 
 
