@@ -4,22 +4,26 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$usePyLauncher = $null -ne (Get-Command py -ErrorAction SilentlyContinue)
+if (-not $usePyLauncher -and -not (Get-Command python -ErrorAction SilentlyContinue)) {
+    throw "Python 3 not found."
+}
+
 function Invoke-Python {
-    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
-    if (Get-Command py -ErrorAction SilentlyContinue) {
-        & py -3 @Arguments
-    } elseif (Get-Command python -ErrorAction SilentlyContinue) {
-        & python @Arguments
+    param([string[]]$PythonArgs)
+
+    if ($usePyLauncher) {
+        & py -3 @PythonArgs
     } else {
-        throw "Python 3 not found."
+        & python @PythonArgs
     }
     if ($LASTEXITCODE -ne 0) { throw "Python command failed." }
 }
 
 Write-Host "Installing smx with pipx..."
-Invoke-Python -m pip install --user --upgrade pipx
-Invoke-Python -m pipx ensurepath
-Invoke-Python -m pipx install --force $PSScriptRoot
+Invoke-Python @("-m", "pip", "install", "--user", "--upgrade", "pipx")
+Invoke-Python @("-m", "pipx", "ensurepath")
+Invoke-Python @("-m", "pipx", "install", "--force", $PSScriptRoot)
 
 if (-not $SkipBackend) {
     if ($env:PROCESSOR_ARCHITECTURE -notin @("AMD64", "x86_64")) {
