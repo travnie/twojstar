@@ -29,7 +29,8 @@ The models are not tiny: FBCNN is about 144 MB and SCUNet about 38 MB. They are 
 ## Acceleration
 
 - Windows ML `2.3.42` supplies the ONNX Runtime and bundled DirectML execution provider.
-- Sessions request `MAX_PERFORMANCE`, so capable Windows systems prefer their fastest available accelerator and fall back to CPU when needed.
+- Sessions explicitly select a non-virtual discrete DirectML GPU when one is available; otherwise they stay on the CPU path.
+- SCUNet disables only ONNX Runtime's `SimplifiedLayerNormFusion` optimizer because ORT 1.27 can corrupt this model during graph initialization; all other graph optimizations remain enabled.
 - The runtime stays self-contained: no execution-provider or model downloads happen while Paint.NET is running.
 - Windows ML requires Windows 10 19H1 (build 18362) or newer.
 

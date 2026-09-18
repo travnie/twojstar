@@ -18,9 +18,9 @@ internal sealed class ImageModelSession : IDisposable
     private readonly TensorElementType scalarElementType;
     private readonly object runGate = new();
 
-    public ImageModelSession(string modelPath)
+    public ImageModelSession(string modelPath, params string[] disabledOptimizers)
     {
-        using SessionOptions options = InferenceSessionOptions.Create();
+        using SessionOptions options = InferenceSessionOptions.Create(disabledOptimizers);
         session = new InferenceSession(modelPath, options);
         KeyValuePair<string, NodeMetadata> imageInput = session.InputMetadata
             .Single(pair => IsImageTensor(pair.Value));

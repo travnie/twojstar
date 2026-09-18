@@ -10,7 +10,9 @@ public sealed class AiDenoiseEffect : ImageRestorationEffectBase
     private const string ModelFileName = "scunet_color_real_psnr_fp16.onnx";
 
     private static readonly Lazy<ImageModelSession> SharedSession = new(
-        () => new ImageModelSession(ModelPath.Resolve(typeof(AiDenoiseEffect), ModelFileName)),
+        () => new ImageModelSession(
+            ModelPath.Resolve(typeof(AiDenoiseEffect), ModelFileName),
+            InferenceSessionOptions.SimplifiedLayerNormFusionOptimizer),
         LazyThreadSafetyMode.ExecutionAndPublication);
 
     public AiDenoiseEffect()

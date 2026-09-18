@@ -27,9 +27,13 @@ bool expectsScalar = kind switch
     _ => throw new ArgumentException($"Unknown model kind: {kind}")
 };
 
+string[] disabledOptimizers = kind == "denoise"
+    ? new[] { InferenceSessionOptions.SimplifiedLayerNormFusionOptimizer }
+    : Array.Empty<string>();
+
 Console.WriteLine($"[{kind}] creating session: {modelPath}");
 Console.Out.Flush();
-using var session = new ImageModelSession(modelPath);
+using var session = new ImageModelSession(modelPath, disabledOptimizers);
 Console.WriteLine($"[{kind}] session ready: scalar={session.RequiresScalarControl}, input={session.InputElementType}, output={session.OutputElementType}");
 Console.Out.Flush();
 if (session.RequiresScalarControl != expectsScalar)
