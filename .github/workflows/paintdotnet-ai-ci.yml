@@ -234,7 +234,9 @@ jobs:
           foreach ($tfm in @('net9.0-windows10.0.18362.0', 'net11.0-windows10.0.18362.0')) {
             $smoke = Join-Path $dist "runtime-smoke-$tfm"
             dotnet publish .\tests\ModelSmoke\ModelSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
-            if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $tfm with exit code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { throw "ModelSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
+            dotnet publish .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
+            if ($LASTEXITCODE -ne 0) { throw "ExecutionProviderSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
 
             Get-ChildItem $smoke -Recurse -File |
               Where-Object {
@@ -250,8 +252,10 @@ jobs:
             New-Item -ItemType Directory -Force -Path (Join-Path $smoke 'model') | Out-Null
             Copy-Item "$common/model/realesr-general-x4v3.onnx" (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
 
+            dotnet (Join-Path $smoke 'ExecutionProviderSmoke.dll')
+            if ($LASTEXITCODE -ne 0) { throw "Packaged EP smoke failed for $tfm with exit code $LASTEXITCODE" }
             dotnet (Join-Path $smoke 'ModelSmoke.dll') (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
-            if ($LASTEXITCODE -ne 0) { throw "Runtime smoke test failed for $tfm with exit code $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { throw "Packaged model smoke failed for $tfm with exit code $LASTEXITCODE" }
           }
 
           @'
