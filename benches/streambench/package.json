@@ -18,10 +18,10 @@
     "preview:worker": "wrangler versions upload"
   },
   "dependencies": {
-    "hls.js": "1.7.2"
+    "hls.js": "1.7.3"
   },
   "devDependencies": {
     "typescript": "7.0.2",
-    "wrangler": "^4.131.0"
+    "wrangler": "^4.131.2"
   }
 }
