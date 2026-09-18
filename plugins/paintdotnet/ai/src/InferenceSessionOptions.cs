@@ -31,6 +31,7 @@ internal static class InferenceSessionOptions
         OrtEpDevice? directMlDevice = FindDirectMlDiscreteGpu(env.GetEpDevices());
         if (directMlDevice is not null)
         {
+            options.EnableMemoryPattern = false;
             options.AppendExecutionProvider(
                 env,
                 new[] { directMlDevice },
