@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spacemolt-smx"
+version = "0.1.0"
+description = "Ergonomic companion shell for the official SpaceMolt v2 CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "travnie" }]
+keywords = ["spacemolt", "cli", "game", "agent"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: ISC License (ISCL)",
+]
+
+[project.scripts]
+smx = "smx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
