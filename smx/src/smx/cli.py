@@ -524,7 +524,7 @@ def cmd_profile(argv: list[str]) -> int:
     if ns.action == "use":
         known = {row["name"] for row in list_profiles()}
         if name not in known:
-            print(f'smx: profile "{name}" does not exist; run \`smx profile add {name}\` first.', file=sys.stderr)
+            print(f'smx: profile "{name}" does not exist; run `smx profile add {name}` first.', file=sys.stderr)
             return 2
         set_default_profile(name)
         print(f"default profile: {name}")
