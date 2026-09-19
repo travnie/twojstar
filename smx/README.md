@@ -22,8 +22,10 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
 - Universal passthrough to the official v2 CLI for everything else.
 - Lazy tactical cards via `smx guide`: combat, boarding, trade, exploration,
   industry and operations. Nothing is loaded until explicitly requested.
-- `smx mcp` prints the canonical MCP profiles: docs for development and the
+- `smx mcp` prints the canonical MCP connection profiles: docs for development and the
   `full` v2 preset for gameplay agents.
+- Isolated gameplay profiles let several players/agents stay logged in at once without
+  racing on the official client's single `activeAccount` field.
 
 ## Install
 
@@ -84,6 +86,9 @@ smx guide combat --live
 smx mcp
 smx mcp gameplay
 smx mcp docs --json
+smx profiles
+smx -p gremlin status
+smx -p claude status
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -108,6 +113,51 @@ smx catalog type=ships
 7. **Credentials stay in private app state.** When `SPACEMOLT_SESSION` is not
    explicitly set, smx redirects the official client's plaintext session store away
    from the working directory into smx's own state directory.
+8. **Parallel players do not share `activeAccount`.** Each smx gameplay profile points
+   the official client at a separate session file; the backend and game API remain shared.
+
+## Parallel gameplay profiles
+
+The official client can store several accounts in one file, but that file still has one
+shared `activeAccount`. That is fine for a human switching accounts and awkward for two
+agents running at the same time.
+
+`smx` can instead give every agent its own official-client session store:
+
+```text
+smx/
+└── profiles/
+    ├── gremlin/session.json
+    └── claude/session.json
+```
+
+Common commands:
+
+```bash
+smx profile migrate gremlin      # move the old flat session and make it default
+smx profile add claude
+smx profile login claude ClaudeBot
+smx profiles
+
+smx status                       # current default profile
+smx -p gremlin status
+smx -p claude status
+```
+
+`smx profile login` prompts for the password without putting it in shell history.
+For automation, `--password-stdin` is available. Use `smx profile use NAME` to choose
+the default profile, or set `SMX_PROFILE=NAME` per agent/process.
+
+Each profile gets a separate `SPACEMOLT_SESSION` path, so processes can run concurrently
+without changing each other's active account. An explicitly supplied
+`SPACEMOLT_SESSION` still wins over profile selection.
+
+Removing a profile deletes its stored credentials and therefore requires explicit
+confirmation:
+
+```bash
+smx profile remove claude --yes
+```
 
 ## Tactical cards
 
@@ -150,8 +200,9 @@ called through `smx`, the default is redirected to a stable smx-owned location:
 | Linux | `$XDG_STATE_HOME/smx`, or `~/.local/state/smx` |
 | macOS | `~/Library/Application Support/smx` |
 
-The default session file is `spacemolt-session.json` inside that directory.
-The optional managed backend lives under `bin/` there as well.
+Before profiles are configured, the legacy/default session file is
+`spacemolt-session.json` inside that directory. Gameplay profiles use
+`profiles/<name>/session.json`. The optional managed backend remains shared under `bin/`.
 
 ```bash
 smx paths
@@ -160,6 +211,7 @@ smx paths --json
 
 Overrides remain available:
 
+- `SMX_PROFILE` selects a gameplay profile for the current process/agent.
 - `SMX_STATE_DIR` moves the whole smx state directory.
 - `SPACEMOLT_SESSION` wins over smx's default and points at an exact session file.
 - `SMX_BACKEND` wins over both the managed backend and PATH lookup.
