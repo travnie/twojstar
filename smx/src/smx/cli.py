@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import getpass
 import json
 import os
 import re
@@ -12,7 +13,17 @@ from typing import Any, Iterable
 
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
 from .mcp_profiles import PROFILES, profiles_json
-from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, session_path, state_dir
+from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
+from .profiles import (
+    add_profile,
+    canonical_profile,
+    default_profile,
+    list_profiles,
+    migrate_legacy_session,
+    remove_profile,
+    selected_session_path,
+    set_default_profile,
+)
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
@@ -36,8 +47,9 @@ class BackendResult:
 
 
 class Backend:
-    def __init__(self, binary: str | None = None) -> None:
+    def __init__(self, binary: str | None = None, profile: str | None = None) -> None:
         self.binary = resolve_backend(binary)
+        self.profile = canonical_profile(profile) if profile else None
 
     def run(self, args: list[str], *, json_output: bool = False) -> BackendResult:
         command = [self.binary, *args]
@@ -46,9 +58,9 @@ class Backend:
         env = os.environ.copy()
         env.setdefault("NO_COLOR", "1")
         if "SPACEMOLT_SESSION" not in env:
-            state = state_dir(env)
-            ensure_private_state_dir(state)
-            env["SPACEMOLT_SESSION"] = str(session_path(env))
+            session = selected_session_path(self.profile, env)
+            ensure_private_state_dir(session.parent)
+            env["SPACEMOLT_SESSION"] = str(session)
         try:
             proc = subprocess.run(command, capture_output=True, text=True, env=env, check=False)
         except FileNotFoundError:
@@ -100,7 +112,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles"})
     return commands
 
 
@@ -439,20 +451,146 @@ def cmd_mcp(argv: list[str]) -> int:
 
 
 
-def cmd_paths(argv: list[str]) -> int:
+
+def extract_global_profile(argv: list[str]) -> tuple[str | None, list[str]]:
+    if not argv:
+        return None, argv
+    token = argv[0]
+    if token in {"-p", "--profile"}:
+        if len(argv) < 2:
+            raise ValueError(f"{token} requires a profile name")
+        return canonical_profile(argv[1]), argv[2:]
+    if token.startswith("--profile="):
+        return canonical_profile(token.split("=", 1)[1]), argv[1:]
+    return None, argv
+
+
+def cmd_profiles(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx profiles", add_help=True)
+    parser.add_argument("--json", action="store_true")
+    ns = parser.parse_args(argv)
+    rows = list_profiles()
+    if ns.json:
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+        return 0
+    if not rows:
+        print("No smx profiles yet.")
+        return 0
+    for row in rows:
+        marker = "*" if row["default"] else " "
+        session = "session" if row["session"] else "empty"
+        print(f"{marker} {row['name']:<16} {session}")
+    return 0
+
+
+def cmd_profile(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx profile", add_help=True)
+    sub = parser.add_subparsers(dest="action", required=True)
+
+    add = sub.add_parser("add", help="create an isolated profile")
+    add.add_argument("name")
+    add.add_argument("--use", action="store_true", help="make it the default profile")
+
+    use = sub.add_parser("use", help="set the default profile")
+    use.add_argument("name")
+
+    login = sub.add_parser("login", help="login into one isolated profile")
+    login.add_argument("name")
+    login.add_argument("username")
+    login.add_argument("--use", action="store_true", help="make it the default profile")
+    login.add_argument("--password-stdin", action="store_true")
+
+    migrate = sub.add_parser("migrate", help="move the old flat session into a profile")
+    migrate.add_argument("name")
+
+    remove = sub.add_parser("remove", help="delete a profile and its session")
+    remove.add_argument("name")
+    remove.add_argument("--yes", action="store_true", help="confirm credential/session deletion")
+
+    ns = parser.parse_args(argv)
+    try:
+        name = canonical_profile(ns.name)
+    except ValueError as exc:
+        print(f"smx: {exc}", file=sys.stderr)
+        return 2
+
+    if ns.action == "add":
+        path = add_profile(name)
+        if ns.use:
+            set_default_profile(name)
+        print(f"{name}: {path}")
+        return 0
+
+    if ns.action == "use":
+        known = {row["name"] for row in list_profiles()}
+        if name not in known:
+            print(f'smx: profile "{name}" does not exist; run `smx profile add {name}` first.', file=sys.stderr)
+            return 2
+        set_default_profile(name)
+        print(f"default profile: {name}")
+        return 0
+
+    if ns.action == "login":
+        add_profile(name)
+        if ns.password_stdin:
+            password = sys.stdin.readline().rstrip("\r\n")
+        else:
+            password = getpass.getpass(f"SpaceMolt password for {ns.username}: ")
+        if not password:
+            print("smx: empty password refused.", file=sys.stderr)
+            return 2
+        backend = Backend(profile=name)
+        result = backend.run(["login", ns.username, password])
+        if result.stdout:
+            sys.stdout.write(result.stdout)
+        if result.stderr:
+            sys.stderr.write(result.stderr)
+        if result.returncode == 0 and ns.use:
+            set_default_profile(name)
+        return result.returncode
+
+    if ns.action == "migrate":
+        try:
+            destination = migrate_legacy_session(name)
+        except (ValueError, FileNotFoundError, FileExistsError) as exc:
+            print(f"smx: {exc}", file=sys.stderr)
+            return 2
+        print(f"migrated legacy session -> {destination}")
+        print(f"default profile: {name}")
+        return 0
+
+    if ns.action == "remove":
+        if not ns.yes:
+            print("smx: refusing to delete profile credentials without --yes.", file=sys.stderr)
+            return 2
+        try:
+            remove_profile(name)
+        except FileNotFoundError as exc:
+            print(f"smx: {exc}", file=sys.stderr)
+            return 2
+        print(f"removed profile: {name}")
+        return 0
+
+    return 2
+
+
+def cmd_paths(argv: list[str], profile: str | None = None) -> int:
     parser = argparse.ArgumentParser(prog="smx paths", add_help=True)
     parser.add_argument("--json", action="store_true")
     ns = parser.parse_args(argv)
 
+    selected = profile or default_profile()
     payload = {
+        "profile": selected,
         "state_dir": str(state_dir()),
-        "session_file": str(session_path()),
+        "session_file": str(selected_session_path(profile)),
         "managed_backend": str(managed_backend_path()),
         "resolved_backend": resolve_backend(),
     }
     if ns.json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
+        print(f"profile   {payload['profile'] or '(legacy/default)'}")
         print(f"state     {payload['state_dir']}")
         print(f"session   {payload['session_file']}")
         print(f"backend   {payload['resolved_backend']}")
@@ -465,13 +603,16 @@ def print_help() -> None:
         """smx — ergonomic companion shell for the official SpaceMolt v2 CLI
 
 Usage:
-  smx <command> [args...]        pass through to `spacemolt`
+  smx [-p PROFILE] <command> [args...]  run with an isolated gameplay profile
+  smx <command> [args...]               pass through to `spacemolt`
   smx nearby [--json]           visible-threat summary from get_nearby
   smx missions [--json]         active + available missions
   smx sell-all [options]        sell current cargo through v2
   smx guide [topic]             load a small local tactical card on demand
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
-  smx paths                       show backend and private state locations
+  smx paths                      show backend, profile and state locations
+  smx profiles                   list isolated gameplay profiles
+  smx profile <action>           add/use/login/migrate/remove profiles
 
 Conveniences:
   status, ship, cargo, system, poi, map, skills, notifications
@@ -485,6 +626,7 @@ sell-all options:
   --json                        machine-readable aggregate output
 
 Environment:
+  SMX_PROFILE=name                  choose the gameplay profile by default
   SMX_BACKEND=/path/to/spacemolt  override the official client executable
   SMX_STATE_DIR=/path/to/state      override smx private state directory
   SPACEMOLT_SESSION=/path/file.json override the official session file
@@ -515,11 +657,16 @@ def _passthrough(backend: Backend, argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        profile, argv = extract_global_profile(argv)
+    except ValueError as exc:
+        print(f"smx: {exc}", file=sys.stderr)
+        return 2
     if not argv or argv[0] in {"-h", "--help", "help"} and len(argv) == 1:
         print_help()
         return 0
 
-    backend = Backend()
+    backend = Backend(profile=profile)
     command = argv[0]
     rest = argv[1:]
     if command in {"nearby", "near"}:
@@ -533,7 +680,11 @@ def main(argv: list[str] | None = None) -> int:
     if command == "mcp":
         return cmd_mcp(rest)
     if command == "paths":
-        return cmd_paths(rest)
+        return cmd_paths(rest, profile)
+    if command == "profiles":
+        return cmd_profiles(rest)
+    if command == "profile":
+        return cmd_profile(rest)
     return _passthrough(backend, argv)
 
 

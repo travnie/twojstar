@@ -1,9 +1,15 @@
 import unittest
 
-from smx.cli import assess_threat, extract_cargo_items, normalize_command, parse_help_commands, suggest
+from smx.cli import assess_threat, extract_cargo_items, extract_global_profile, normalize_command, parse_help_commands, suggest
 
 
 class CliTests(unittest.TestCase):
+
+    def test_extracts_global_profile_before_command(self):
+        profile, argv = extract_global_profile(["-p", "Gremlin", "status"])
+        self.assertEqual(profile, "gremlin")
+        self.assertEqual(argv, ["status"])
+
     def test_normalizes_kebab_case(self):
         self.assertEqual(normalize_command("get-map"), "get_map")
         self.assertEqual(normalize_command("market/view-market"), "market/view_market")
