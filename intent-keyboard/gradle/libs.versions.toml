@@ -1,11 +1,11 @@
 [versions]
-androidGradlePlugin = "9.4.0"
+androidGradlePlugin = "9.4.1"
 androidCompileSdk = "37"
 androidMinSdk = "26"
 coroutines = "1.11.0"
 junit4 = "4.13.2"
-ktor = "3.5.2"
-litertLm = "0.17.0"
+ktor = "3.6.0"
+litertLm = "0.17.1"
 serialization = "1.11.0"
 
 [libraries]
