@@ -508,7 +508,11 @@ def cmd_profile(argv: list[str]) -> int:
     remove.add_argument("--yes", action="store_true", help="confirm credential/session deletion")
 
     ns = parser.parse_args(argv)
-    name = canonical_profile(ns.name)
+    try:
+        name = canonical_profile(ns.name)
+    except ValueError as exc:
+        print(f"smx: {exc}", file=sys.stderr)
+        return 2
 
     if ns.action == "add":
         path = add_profile(name)
