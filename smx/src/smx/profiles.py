@@ -50,7 +50,7 @@ def default_profile(env: Mapping[str, str] | None = None, **kwargs: object) -> s
     if override:
         return canonical_profile(override)
     value = _read_config(env, **kwargs).get("default")
-    return canonical_profile(value) if value else None
+    return canonical_profile(value) if isinstance(value, str) and value else None
 
 
 def selected_session_path(
