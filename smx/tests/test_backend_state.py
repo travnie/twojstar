@@ -54,7 +54,7 @@ class BackendStateTests(unittest.TestCase):
 
             self.assertEqual(
                 captured["env"]["SPACEMOLT_SESSION"],
-                str(state / "profiles" / "claude" / "session.json"),
+                str((state / "profiles" / "claude" / "session.json").resolve()),
             )
 
     def test_explicit_session_path_is_preserved(self):
