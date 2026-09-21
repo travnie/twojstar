@@ -76,7 +76,7 @@ def _is_docked(location: dict[str, Any], ship: dict[str, Any]) -> bool:
     docked = ship.get("docked")
     if isinstance(docked, bool):
         return docked
-    return bool(_text(location, "docked_at", "station_id", "base_id"))
+    return bool(_text(location, "docked_at"))
 
 
 def _state(location: dict[str, Any], ship: dict[str, Any], docked: bool) -> str:
