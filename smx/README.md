@@ -31,7 +31,7 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
 - `smx watch` safely refreshes read-only official commands; `--fields` projects only the
   JSON paths an agent actually needs.
 - `smx doctor` diagnoses local backend/profile state, while `smx backend check/update`
-  can verify and replace the managed official CLI from signed GitHub release metadata.
+  can verify and replace the managed official CLI from official GitHub release metadata.
 
 ## Install
 
