@@ -1,0 +1,95 @@
+---
+# Manual one-off runner for repo maintenance, experiments and heavy jobs.
+#
+# Examples:
+#   gh workflow run adhoc-runner.yml -f command='npm test'
+#   gh workflow run adhoc-runner.yml -f working_directory=weather-feed -f command='npm ci && npm test'
+#   gh workflow run adhoc-runner.yml -f use_pat=true -f command='gh auth setup-git && git push'
+#
+# Never pass secrets through workflow inputs. Use repository/org secrets instead.
+# GH_PAT is exposed only when use_pat=true; otherwise the job gets the normal
+# read-only GITHUB_TOKEN.
+#
+# This deliberately stays generic so one-off work does not leave a graveyard
+# of disposable workflow files behind.
+
+name: Ad hoc runner
+
+on: # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Command or multi-line shell script to run
+        required: true
+        type: string
+      working_directory:
+        description: Working directory inside the checkout
+        required: false
+        default: .
+        type: string
+      checkout_ref:
+        description: Branch, tag or SHA to check out; empty = selected workflow ref
+        required: false
+        type: string
+      use_pat:
+        description: Expose GH_PAT as GH_TOKEN for write/cross-repo operations
+        required: false
+        default: false
+        type: boolean
+      artifact_path:
+        description: Optional file/directory/glob to upload after the command
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: Run ad hoc task
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run with GITHUB_TOKEN
+        if: inputs.use_pat != true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_COMMAND: ${{ inputs.command }}
+          WORKDIR: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          cd "$WORKDIR"
+          bash -euo pipefail -c "$RUN_COMMAND"
+
+      - name: Run with GH_PAT
+        if: inputs.use_pat == true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          RUN_COMMAND: ${{ inputs.command }}
+          WORKDIR: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GH_PAT is not available to this workflow." >&2
+            exit 1
+          fi
+          cd "$WORKDIR"
+          bash -euo pipefail -c "$RUN_COMMAND"
+
+      - name: Upload requested artifact
+        if: ${{ always() && inputs.artifact_path != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: adhoc-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ inputs.artifact_path }}
+          if-no-files-found: warn
+          retention-days: 7
