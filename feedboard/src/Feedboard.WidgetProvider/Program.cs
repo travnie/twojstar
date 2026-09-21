@@ -39,6 +39,7 @@ public static class Program
 
         Console.WriteLine("Feedboard widget provider");
         Console.WriteLine("  feeds list");
+        Console.WriteLine("  feeds diagnose");
         Console.WriteLine("  feeds add <url>");
         Console.WriteLine("  feeds import <file.opml>");
         Console.WriteLine("  feeds export <file.opml>");
@@ -85,6 +86,34 @@ public static class Program
                 foreach (var source in await store.LoadAsync())
                 {
                     Console.WriteLine($"{(source.Enabled ? "[x]" : "[ ]")} {source.Title ?? source.Url}  {source.Url}");
+                }
+                break;
+
+            case "diagnose":
+                var diagnosticSources = (await store.LoadAsync()).Where(source => source.Enabled).ToList();
+                if (diagnosticSources.Count == 0)
+                {
+                    Console.WriteLine("No enabled feeds.");
+                    break;
+                }
+
+                var client = new FeedClient();
+                Console.WriteLine($"Refreshing {diagnosticSources.Count} enabled feed(s)…");
+                await client.LoadAsync(diagnosticSources);
+                var diagnostics = client.GetDiagnostics(diagnosticSources)
+                    .ToDictionary(status => status.FeedUrl, StringComparer.Ordinal);
+
+                foreach (var source in diagnosticSources)
+                {
+                    if (!diagnostics.TryGetValue(source.Url, out var status)) continue;
+                    var health = status.FailureCount > 0
+                        ? $"retry x{status.FailureCount}"
+                        : status.LastSuccessAt is not null ? "ok" : "no data";
+                    var refreshed = status.LastSuccessAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
+                    var retry = status.RetryAfter?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
+                    var validators = $"{(status.HasEntityTag ? "etag" : "-")}/{(status.LastModified is not null ? "last-modified" : "-")}";
+                    Console.WriteLine($"{health,-10} cached={status.CachedArticleCount,-2} last={refreshed} retry={retry} http={validators}  {source.Title ?? source.Url}");
+                    Console.WriteLine($"           {source.Url}");
                 }
                 break;
 
