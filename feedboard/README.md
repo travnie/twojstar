@@ -14,7 +14,7 @@ Feedboard should feel like the missing free feed widget in Windows 11:
 - first click expands an article in-place; clicking the expanded article opens the source
 - per-widget feed selection
 - unread/read state with unread-first ordering
-- WinUI settings for adding, renaming, removing, enabling and disabling feeds, refresh interval and OPML import/export
+- WinUI settings for adding, renaming, removing, enabling and disabling feeds, refresh interval, OPML import/export and versioned local backup/restore
 - conditional HTTP cache, transient-error backoff and duplicate suppression
 - compact feed retry/error status while cached headlines remain usable
 - local storage, no account and no backend
@@ -98,7 +98,7 @@ Phase 2 can now focus on higher-level product polish rather than missing foundat
 1. **Done:** feed discovery and validation from normal website URLs, with useful add-feed errors instead of requiring a direct feed URL.
 2. Settings UX polish: custom feed names, stable-identity feed URL editing and live feed health tests are available. The provider CLI now has live cache/refresh diagnostics via `feeds diagnose`; a dedicated Settings diagnostics panel remains optional follow-up work.
 3. Better article controls where the widget surface allows them, including explicit read/unread actions and richer expanded metadata.
-4. Local backup/restore and, if useful, a persistent cross-process diagnostics snapshot without introducing an account or backend.
+4. **Done:** versioned local backup/restore for subscriptions and durable settings. A persistent cross-process diagnostics snapshot remains optional follow-up work if the live CLI diagnostics prove insufficient.
 5. Production packaging/release readiness, including stable identity/signing and Store-oriented metadata when the app is ready for distribution.
 
 ## References
