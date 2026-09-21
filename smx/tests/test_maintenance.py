@@ -160,6 +160,7 @@ class MaintenanceTests(unittest.TestCase):
             asset=ReleaseAsset(
                 name="spacemolt-client-v2-linux-x64",
                 url="https://github.com/SpaceMolt/client-v2/releases/download/v1.5.65/spacemolt-client-v2-linux-x64",
+                digest="sha256:" + "1" * 64,
             ),
         )
 
