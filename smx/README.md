@@ -26,6 +26,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
   `full` v2 preset for gameplay agents.
 - Isolated gameplay profiles let several players/agents stay logged in at once without
   racing on the official client's single `activeAccount` field.
+- `smx fleet` reads every profile in parallel; `smx fleet check` is a watchdog-friendly
+  dock-safety check that exits non-zero on undocked or broken profiles.
 
 ## Install
 
@@ -89,6 +91,8 @@ smx mcp docs --json
 smx profiles
 smx -p gremlin status
 smx -p claude status
+smx fleet
+smx fleet check
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -158,6 +162,26 @@ confirmation:
 ```bash
 smx profile remove claude --yes
 ```
+
+## Fleet status
+
+Gameplay profiles can be inspected together without switching the shared active account:
+
+```bash
+smx fleet
+smx fleet --json
+smx fleet --only-undocked
+smx fleet check
+```
+
+`fleet` calls the official `get_status --json` independently for each stored profile
+and presents a compact read-only summary. Collection is concurrent because each smx
+profile has its own session file.
+
+`fleet check` exits with status 1 if any configured profile fails to report status or is
+not docked. This makes it suitable for simple watchdogs before ending an agent session.
+An explicit process-wide `SPACEMOLT_SESSION` is refused for fleet mode because it would
+defeat profile isolation.
 
 ## Tactical cards
 

@@ -8,9 +8,11 @@ import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Iterable
 
+from .fleet import error_status, fleet_check_ok, render_fleet, status_from_payload
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
 from .mcp_profiles import PROFILES, profiles_json
 from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
@@ -112,7 +114,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet"})
     return commands
 
 
@@ -426,6 +428,87 @@ def cmd_guide(backend: Backend, argv: list[str]) -> int:
 
 
 
+
+def _fleet_profile_status(profile: str):
+    backend = Backend(profile=profile)
+    result, payload = backend.json(["get_status"])
+    if result.returncode != 0:
+        return error_status(profile, result.stderr or result.stdout or f"backend exited {result.returncode}")
+    if payload is None:
+        return error_status(profile, "backend returned no JSON status payload")
+    return status_from_payload(profile, payload)
+
+
+def cmd_fleet(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx fleet", add_help=True)
+    parser.add_argument("action", nargs="?", choices=("status", "check"), default="status")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--only-undocked", action="store_true")
+    ns = parser.parse_args(argv)
+
+    if os.environ.get("SPACEMOLT_SESSION"):
+        print(
+            "smx: fleet needs isolated profile sessions; unset SPACEMOLT_SESSION and use smx profiles.",
+            file=sys.stderr,
+        )
+        return 2
+
+    profile_rows = list_profiles()
+    if not profile_rows:
+        payload = {"ok": False, "profiles": [], "error": "no smx profiles configured"}
+        if ns.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print("No smx profiles configured.")
+        return 1 if ns.action == "check" else 0
+
+    rows_by_name = {}
+    runnable = []
+    for profile in profile_rows:
+        name = str(profile["name"])
+        if not profile.get("session"):
+            rows_by_name[name] = error_status(name, "profile has no session")
+        else:
+            runnable.append(name)
+
+    if runnable:
+        workers = min(8, len(runnable))
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="smx-fleet") as pool:
+            futures = {pool.submit(_fleet_profile_status, name): name for name in runnable}
+            for future in as_completed(futures):
+                name = futures[future]
+                try:
+                    rows_by_name[name] = future.result()
+                except Exception as exc:
+                    rows_by_name[name] = error_status(name, f"status collection failed: {exc}")
+
+    rows = [rows_by_name[str(profile["name"])] for profile in profile_rows]
+    ok = fleet_check_ok(rows)
+    shown = [row for row in rows if not row.docked or not row.ok] if ns.only_undocked else rows
+
+    if ns.json:
+        print(
+            json.dumps(
+                {"ok": ok, "profiles": [row.as_dict() for row in shown]},
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        if shown:
+            print(render_fleet(shown))
+        elif ns.only_undocked:
+            print("All profiles are docked.")
+        if ns.action == "check":
+            docked = sum(1 for row in rows if row.ok and row.docked)
+            print(f"\nfleet check: {docked}/{len(rows)} docked" + (" ✓" if ok else " ✗"))
+
+    if ns.action == "check" and not ok:
+        return 1
+    return 0
+
+
+
 def cmd_mcp(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="smx mcp", add_help=True)
     parser.add_argument("profile", nargs="?", choices=sorted(PROFILES))
@@ -612,6 +695,7 @@ Usage:
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
   smx paths                      show backend, profile and state locations
   smx profiles                   list isolated gameplay profiles
+  smx fleet [check]               show/check every gameplay profile
   smx profile <action>           add/use/login/migrate/remove profiles
 
 Conveniences:
@@ -679,6 +763,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_guide(backend, rest)
     if command == "mcp":
         return cmd_mcp(rest)
+    if command == "fleet":
+        return cmd_fleet(rest)
     if command == "paths":
         return cmd_paths(rest, profile)
     if command == "profiles":
