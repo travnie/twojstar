@@ -17,8 +17,109 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: Select CodeQL languages
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      languages: ${{ steps.filter.outputs.languages }}
+      has_no_build: ${{ steps.filter.outputs.has_no_build }}
+      swift: ${{ steps.filter.outputs.swift }}
+    steps:
+      - name: Checkout history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Match changed files
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          actions=false
+          cpp=false
+          csharp=false
+          javascript=false
+          swift=false
+
+          if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            actions=true
+            cpp=true
+            csharp=true
+            javascript=true
+            swift=true
+          else
+            base="$BEFORE_SHA"
+            if [[ "$EVENT_NAME" == "pull_request" ]]; then
+              base="$BASE_SHA"
+            fi
+            head="$HEAD_SHA"
+
+            if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+              base="$(git rev-parse "$head^" 2>/dev/null || printf '%s' "$head")"
+            fi
+
+            while IFS= read -r file; do
+              case "$file" in
+                .github/workflows/*|.github/actions/*|action.yml|action.yaml)
+                  actions=true
+                  ;;
+              esac
+
+              case "$file" in
+                *.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp|*.hxx|CMakeLists.txt|*.cmake)
+                  cpp=true
+                  ;;
+              esac
+
+              case "$file" in
+                *.cs|*.csproj|*.sln|*.slnx|*.props|*.targets|global.json)
+                  csharp=true
+                  ;;
+              esac
+
+              case "$file" in
+                *.js|*.mjs|*.cjs|*.jsx|*.ts|*.tsx|*/package.json|*/package-lock.json|*/pnpm-lock.yaml|*/yarn.lock|*/tsconfig*.json)
+                  javascript=true
+                  ;;
+              esac
+
+              case "$file" in
+                intent-keyboard/core/*|intent-keyboard/core/**|intent-keyboard/platforms/ios/*|intent-keyboard/platforms/ios/**|intent-keyboard/build.gradle.kts|intent-keyboard/settings.gradle.kts|intent-keyboard/gradle.properties|intent-keyboard/gradle/*|intent-keyboard/gradle/**|intent-keyboard/gradlew|intent-keyboard/gradlew.bat)
+                  swift=true
+                  ;;
+              esac
+            done < <(git diff --name-only "$base" "$head")
+          fi
+
+          languages=()
+          "$actions" && languages+=('"actions"')
+          "$cpp" && languages+=('"c-cpp"')
+          "$csharp" && languages+=('"csharp"')
+          "$javascript" && languages+=('"javascript-typescript"')
+
+          joined="$(IFS=,; printf '%s' "${languages[*]-}")"
+          if (( ${#languages[@]} > 0 )); then
+            has_no_build=true
+          else
+            has_no_build=false
+          fi
+
+          echo "languages=[$joined]" >> "$GITHUB_OUTPUT"
+          echo "has_no_build=$has_no_build" >> "$GITHUB_OUTPUT"
+          echo "swift=$swift" >> "$GITHUB_OUTPUT"
+
   no-build:
     name: Analyze (${{ matrix.language }})
+    needs: changes
+    if: needs.changes.outputs.has_no_build == 'true'
     runs-on: ubuntu-slim
     timeout-minutes: 20
     permissions:
@@ -29,11 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language:
-          - actions
-          - c-cpp
-          - csharp
-          - javascript-typescript
+        language: ${{ fromJSON(needs.changes.outputs.languages) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,6 +152,8 @@ jobs:
   # while build-mode none does not analyze Kotlin. Restore it with 2.27.1+.
   swift:
     name: Analyze (swift)
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
     runs-on: macos-latest
     timeout-minutes: 35
     permissions:
