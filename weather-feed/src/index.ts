@@ -6,7 +6,7 @@ import {
 } from "./feed";
 import {
   type Env, fetchImgwStation, fetchImgwWarnings, fetchOpenMeteo,
-  fetchOpenMeteoAirQuality, fetchOpenWeather, fetchVisualCrossing,
+  fetchOpenMeteoAirQuality, fetchOpenWeather, fetchVisualCrossing, fetchXweather,
 } from "./sources";
 import type {
   AirQuality, CurrentState, DayEnsemble, Ensemble, FeedEntry, Reading, SourceId, Warning,
@@ -63,7 +63,7 @@ Description: Complete LLM-oriented guide to the TRAVNY multi-source weather serv
 
 ## Dashboard
 
-The service combines Open-Meteo, OpenWeather, Visual Crossing and IMGW data where available. The dashboard presents an ensemble rather than pretending one provider is authoritative. It includes current temperature, feels-like temperature, humidity, wind, conditions, air quality, pollen and active IMGW warnings.
+The service combines Open-Meteo, OpenWeather, Visual Crossing, Vaisala Xweather and IMGW data where available. The dashboard presents an ensemble rather than pretending one provider is authoritative. It includes current temperature, feels-like temperature, humidity, wind, conditions, air quality, pollen and active IMGW warnings.
 
 ## Public data
 
@@ -96,7 +96,7 @@ const K = {
   pendingForecast: "pending:forecast",
 } as const;
 
-const POINT_SOURCES: readonly SourceId[] = ["openmeteo", "openweather", "visualcrossing"];
+const POINT_SOURCES: readonly SourceId[] = ["openmeteo", "openweather", "visualcrossing", "xweather"];
 type LastGood = Partial<Record<SourceId, { reading: Reading; storedAt: number }>>;
 interface CycleStatus {
   ok: boolean;
@@ -165,16 +165,17 @@ async function completePendingForecast(env: Env): Promise<boolean> {
 
 async function runCurrent(env: Env): Promise<void> {
   await completePendingCurrent(env);
-  const [om, ow, vc, air, warningFetch, station] = await Promise.all([
+  const [om, ow, vc, xw, air, warningFetch, station] = await Promise.all([
     fetchOpenMeteo().catch(asNull("openmeteo")),
     fetchOpenWeather(env).catch(asNull("openweather")),
     fetchVisualCrossing(env).catch(asNull("visualcrossing")),
+    fetchXweather(env, "current").catch(asNull("xweather")),
     fetchOpenMeteoAirQuality().catch(asNull("airquality")),
     fetchImgwWarnings().catch(asNull("imgw-warnings")),
     fetchImgwStation(CONFIG.imgwStation).catch(asNull("imgw-station")),
   ]);
 
-  const liveReadings = [om?.current, ow?.current, vc?.current]
+  const liveReadings = [om?.current, ow?.current, vc?.current, xw?.current]
     .filter((r): r is Reading => r != null);
 
   const now = Date.now();
@@ -266,13 +267,15 @@ async function runCurrent(env: Env): Promise<void> {
 
 async function runForecast(env: Env): Promise<void> {
   await completePendingForecast(env);
-  const [om, ow, vc] = await Promise.all([
+  const [om, ow, vc, xw] = await Promise.all([
     fetchOpenMeteo().catch(asNull("openmeteo")),
     fetchOpenWeather(env).catch(asNull("openweather")),
     fetchVisualCrossing(env).catch(asNull("visualcrossing")),
+    fetchXweather(env, "forecast").catch(asNull("xweather")),
   ]);
 
-  const perSource = [om?.days ?? [], ow?.days ?? [], vc?.days ?? []].filter((d) => d.length > 0);
+  const perSource = [om?.days ?? [], ow?.days ?? [], vc?.days ?? [], xw?.days ?? []]
+    .filter((d) => d.length > 0);
   if (perSource.length === 0) {
     log("warn", { msg: "no forecast sources" });
     const status: CycleStatus = { ok: false, completedAt: new Date().toISOString(), message: "no forecast sources" };
@@ -288,7 +291,7 @@ async function runForecast(env: Env): Promise<void> {
     await env.WEATHER_KV.put(K.pendingForecast, JSON.stringify(pending));
     await completePendingForecast(env);
   }
-  const sources = [om, ow, vc]
+  const sources = [om, ow, vc, xw]
     .flatMap((result) => result?.days[0]?.source ? [result.days[0].source] : []);
   const status: CycleStatus = { ok: true, completedAt: new Date().toISOString(), sources };
   await env.WEATHER_KV.put(K.statusForecast, JSON.stringify(status));
