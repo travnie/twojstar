@@ -94,6 +94,8 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /rel="alternate" type="text\/plain" href="\/llms\.txt"/);
   assert.match(html, /rel="describedby" href="\/llms\.txt"/);
   assert.match(html, /application\/ld\+json/);
+  assert.match(html, /Powered by Vaisala Xweather/);
+  assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
   assert.match(html, /href="https:\/\/trfny\.com\/"/);
 });
 
