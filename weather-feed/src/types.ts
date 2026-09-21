@@ -6,7 +6,7 @@ export type Condition =
   | "rain" | "snow" | "storm" | "unknown";
 
 // Point-forecast sources that get blended into the ensemble.
-export type SourceId = "openmeteo" | "openweather" | "visualcrossing";
+export type SourceId = "openmeteo" | "openweather" | "visualcrossing" | "xweather";
 
 export interface Reading {
   source: SourceId;

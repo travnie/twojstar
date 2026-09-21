@@ -7,6 +7,9 @@ export interface Env {
   WEATHER_KV: KVNamespace;
   OPENWEATHER_KEY?: string;
   VISUALCROSSING_KEY?: string;
+  XWEATHER_API_KEY?: string;
+  XWEATHER_CLIENT_ID?: string;
+  XWEATHER_CLIENT_SECRET?: string;
 }
 
 // ── shared fetch helper (resilient: timeout + retry/backoff + status check) ──
@@ -28,7 +31,7 @@ async function getJson(url: string): Promise<unknown | null> {
       lastErr = e;
     }
   }
-  throw lastErr ?? new Error(`getJson exhausted: ${url}`);
+  throw lastErr ?? new Error("getJson exhausted");
 }
 
 function num(v: unknown): number | null {
@@ -72,6 +75,18 @@ function vcCond(icon: unknown): Condition {
   if (s.includes("fog")) return "fog";
   if (s.includes("cloud") || s === "wind") return "clouds";
   if (s.includes("clear")) return "clear";
+  return "unknown";
+}
+
+function xwCond(value: unknown): Condition {
+  const s = String(value ?? "").toLowerCase();
+  if (s.includes("thunder") || s.includes("storm")) return "storm";
+  if (s.includes("snow") || s.includes("sleet")) return "snow";
+  if (s.includes("drizzle")) return "drizzle";
+  if (s.includes("rain") || s.includes("shower") || s.includes("freezing")) return "rain";
+  if (s.includes("fog") || s.includes("mist") || s.includes("haze")) return "fog";
+  if (s.includes("clear") || s.includes("sunny") || s.includes("fair")) return "clear";
+  if (s.includes("cloud") || s.includes("overcast")) return "clouds";
   return "unknown";
 }
 
@@ -266,6 +281,106 @@ export async function fetchVisualCrossing(env: Env): Promise<{ current: Reading 
       });
     }
   }
+  return { current, days };
+}
+
+
+// ── Vaisala Xweather Weather API (keyed) ───────────────────────────────
+type XweatherMode = "current" | "forecast" | "both";
+
+function xweatherCredentials(env: Env): { clientId: string; clientSecret: string } | null {
+  const clientId = env.XWEATHER_CLIENT_ID?.trim();
+  const clientSecret = env.XWEATHER_CLIENT_SECRET?.trim();
+  if (clientId && clientSecret) return { clientId, clientSecret };
+
+  // Convenience form used by Xweather MCP/bearer auth: client_id_client_secret.
+  const combined = env.XWEATHER_API_KEY?.trim();
+  if (!combined) return null;
+  const separator = combined.indexOf("_");
+  if (
+    separator <= 0
+    || separator === combined.length - 1
+    || separator !== combined.lastIndexOf("_")
+  ) return null;
+  return {
+    clientId: combined.slice(0, separator),
+    clientSecret: combined.slice(separator + 1),
+  };
+}
+
+function xweatherUrl(endpoint: "conditions" | "forecasts", env: Env): string | null {
+  const credentials = xweatherCredentials(env);
+  if (!credentials) return null;
+  const u = new URL(`https://data.api.xweather.com/${endpoint}/${CONFIG.lat},${CONFIG.lon}`);
+  u.searchParams.set("client_id", credentials.clientId);
+  u.searchParams.set("client_secret", credentials.clientSecret);
+  if (endpoint === "forecasts") {
+    u.searchParams.set("filter", "day");
+    u.searchParams.set("plimit", String(CONFIG.forecastDays));
+  }
+  return u.toString();
+}
+
+function xweatherPeriods(data: unknown): Record<string, unknown>[] {
+  if (!isObj(data) || data["success"] !== true || !Array.isArray(data["response"])) return [];
+  const location = (data["response"] as unknown[]).find(isObj);
+  if (!location || !Array.isArray(location["periods"])) return [];
+  return (location["periods"] as unknown[]).filter(isObj);
+}
+
+export async function fetchXweather(
+  env: Env,
+  mode: XweatherMode = "both",
+): Promise<{ current: Reading | null; days: DayForecast[] }> {
+  const currentUrl = mode === "forecast" ? null : xweatherUrl("conditions", env);
+  const forecastUrl = mode === "current" ? null : xweatherUrl("forecasts", env);
+  if (!currentUrl && !forecastUrl) return { current: null, days: [] };
+
+  const [currentResult, forecastResult] = await Promise.allSettled([
+    currentUrl ? getJson(currentUrl) : Promise.resolve(null),
+    forecastUrl ? getJson(forecastUrl) : Promise.resolve(null),
+  ]);
+
+  let current: Reading | null = null;
+  const currentData = currentResult.status === "fulfilled" ? currentResult.value : null;
+  const c = xweatherPeriods(currentData)[0];
+  if (c) {
+    const timestamp = num(c["timestamp"]);
+    current = {
+      source: "xweather",
+      tempC: num(c["tempC"]),
+      feelsC: num(c["feelslikeC"]),
+      humidity: num(c["humidity"]),
+      pressureHpa: num(c["pressureMB"]),
+      windMs: num(c["windSpeedMPS"]),
+      windDir: num(c["windDirDEG"]),
+      precipMm: num(c["precipMM"]) ?? 0,
+      uvIndex: num(c["uvi"]),
+      condition: xwCond(c["weatherPrimary"] ?? c["icon"]),
+      observedAt: typeof c["dateTimeISO"] === "string"
+        ? c["dateTimeISO"]
+        : timestamp === null ? new Date().toISOString() : new Date(timestamp * 1000).toISOString(),
+    };
+  }
+
+  const days: DayForecast[] = [];
+  const forecastData = forecastResult.status === "fulfilled" ? forecastResult.value : null;
+  for (const period of xweatherPeriods(forecastData).slice(0, CONFIG.forecastDays)) {
+    const iso = typeof period["dateTimeISO"] === "string" ? period["dateTimeISO"] : "";
+    const date = iso.slice(0, 10);
+    if (!date) continue;
+    days.push({
+      source: "xweather",
+      date,
+      tMaxC: num(period["maxTempC"]),
+      tMinC: num(period["minTempC"]),
+      precipMm: num(period["precipMM"]) ?? 0,
+      precipProb: num(period["pop"]),
+      uvIndexMax: num(period["uvi"]),
+      condition: xwCond(period["weatherPrimary"] ?? period["icon"]),
+    });
+  }
+
   return { current, days };
 }
 
