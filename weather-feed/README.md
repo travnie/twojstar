@@ -8,7 +8,7 @@ of identical readings.
 
 ## What it does
 
-- Three point sources are normalized and reduced to median + spread.
+- Up to four point sources are normalized and reduced to median + spread.
 - IMGW meteo warnings are filtered to powiat chrzanowski (TERYT `1203`);
   hydro warnings are filtered to małopolskie.
 - A partial IMGW outage preserves the last known warnings for the failed
@@ -46,6 +46,14 @@ The request path is read-only. KV writes happen only during scheduled cycles.
 npm install
 wrangler secret put OPENWEATHER_KEY
 wrangler secret put VISUALCROSSING_KEY
+
+# Xweather Weather API: preferred explicit pair
+wrangler secret put XWEATHER_CLIENT_ID
+wrangler secret put XWEATHER_CLIENT_SECRET
+
+# Or a single combined value: client_id_client_secret
+wrangler secret put XWEATHER_API_KEY
+
 npm run check
 wrangler deploy
 ```
@@ -55,8 +63,10 @@ For a new environment, create a separate namespace with
 `wrangler kv namespace create WEATHER_KV` and replace `kv_namespaces[0].id`
 with the returned ID before deploying.
 
-Open-Meteo and IMGW need no key. Without keyed providers the Worker continues
-in degraded single-source mode.
+Open-Meteo and IMGW need no key. Xweather requires a client ID + client secret;
+`XWEATHER_API_KEY` is accepted as the combined `client_id_client_secret` form.
+Without keyed providers the Worker continues in degraded single-source mode.
+The public page includes the attribution required when Xweather data is displayed.
 
 ## Tests
 
