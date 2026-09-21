@@ -15,6 +15,7 @@ from typing import Any, Iterable
 
 from .fleet import error_status, fleet_check_ok, render_fleet, status_from_payload
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
+from .maintenance import backend_status, doctor_report, install_latest_backend
 from .mcp_profiles import PROFILES, profiles_json
 from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
 from .projection import parse_fields, project_fields
@@ -116,7 +117,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch", "doctor", "backend"})
     return commands
 
 
@@ -511,6 +512,94 @@ def cmd_fleet(argv: list[str]) -> int:
 
 
 
+
+def _print_check_rows(checks: list[dict[str, Any]]) -> None:
+    for check in checks:
+        if check.get("warning"):
+            marker = "!"
+        else:
+            marker = "✓" if check.get("ok") else "✗"
+        print(f"{marker} {check.get('name', 'check')}: {check.get('detail', '')}")
+
+
+def cmd_doctor(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx doctor", add_help=True)
+    parser.add_argument("--online", action="store_true", help="also check latest official backend release")
+    parser.add_argument("--json", action="store_true")
+    ns = parser.parse_args(argv)
+
+    try:
+        report = doctor_report(online=ns.online)
+    except Exception as exc:
+        print(f"smx: doctor failed: {exc}", file=sys.stderr)
+        return 1
+
+    if ns.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        _print_check_rows(report["checks"])
+        backend = report["backend"]
+        if ns.online and backend.get("latest"):
+            suffix = "update available" if backend.get("update_available") else "current"
+            print(f"  official backend: {backend.get('current') or '?'} -> {backend['latest']} ({suffix})")
+    return 0 if report.get("healthy") else 1
+
+
+def cmd_backend(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smx backend", add_help=True)
+    sub = parser.add_subparsers(dest="action", required=True)
+
+    status = sub.add_parser("status", help="show active/managed backend without network access")
+    status.add_argument("--json", action="store_true")
+
+    check = sub.add_parser("check", help="compare backend with the latest official release")
+    check.add_argument("--json", action="store_true")
+
+    update = sub.add_parser("update", help="download and verify the latest official managed backend")
+    update.add_argument("--json", action="store_true")
+
+    ns = parser.parse_args(argv)
+
+    try:
+        if ns.action in {"status", "check"}:
+            payload = backend_status(online=ns.action == "check")
+            if ns.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(f"active    {payload['resolved']}")
+                print(f"managed   {payload['managed']}")
+                print(f"version   {payload.get('current') or '?'}")
+                if payload.get("error"):
+                    print(f"error     {payload['error']}")
+                if ns.action == "check":
+                    print(f"latest    {payload.get('latest') or '?'}")
+                    print(f"update    {'yes' if payload.get('update_available') else 'no'}")
+            return 0 if not payload.get("error") else 1
+
+        if ns.action == "update":
+            payload = install_latest_backend()
+            if ns.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                if payload.get("updated"):
+                    previous = payload.get("previous") or "missing"
+                    print(f"updated official backend: {previous} -> {payload['current']}")
+                    print(f"path: {payload['path']}")
+                    print(f"verified: {payload.get('digest') or 'sha256'}")
+                else:
+                    print(f"official backend already current: {payload['current']}")
+                    print(f"path: {payload['path']}")
+                if os.environ.get("SMX_BACKEND"):
+                    print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
+            return 0
+    except Exception as exc:
+        print(f"smx: backend {ns.action} failed: {exc}", file=sys.stderr)
+        return 1
+
+    return 2
+
+
+
 def cmd_mcp(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="smx mcp", add_help=True)
     parser.add_argument("profile", nargs="?", choices=sorted(PROFILES))
@@ -870,6 +959,8 @@ Usage:
   smx profiles                   list isolated gameplay profiles
   smx fleet [check]               show/check every gameplay profile
   smx watch [options] <command>     refresh a read-only command safely
+  smx doctor [--online]              diagnose local smx/backend/profile state
+  smx backend <status|check|update>   inspect or update official managed CLI
   smx profile <action>           add/use/login/migrate/remove profiles
 
 Conveniences:
@@ -930,7 +1021,7 @@ def main(argv: list[str] | None = None) -> int:
     backend = Backend(profile=profile)
     command = argv[0]
     rest = argv[1:]
-    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch"}
+    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch", "doctor", "backend"}
     if fields and command in local_commands:
         print("smx: --fields is supported for official passthrough commands; use the local command's own --json option otherwise.", file=sys.stderr)
         return 2
@@ -954,6 +1045,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_profile(rest)
     if command == "watch":
         return cmd_watch(backend, rest)
+    if command == "doctor":
+        return cmd_doctor(rest)
+    if command == "backend":
+        return cmd_backend(rest)
     return _passthrough(backend, argv, fields)
 
 
