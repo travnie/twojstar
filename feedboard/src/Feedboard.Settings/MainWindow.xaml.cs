@@ -369,6 +369,74 @@ public sealed partial class MainWindow : Window
             StatusText.Text = "OPML exported.";
         });
     }
+
+    private async void Backup_Click(object sender, RoutedEventArgs e)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            var picker = new FileSavePicker { SuggestedFileName = "feedboard-backup" };
+            picker.FileTypeChoices.Add("Feedboard backup", new[] { ".json" });
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            var file = await picker.PickSaveFileAsync();
+            if (file is null) return;
+
+            var feeds = await _store.LoadAsync();
+            var settings = await _settingsStore.LoadAsync();
+            await File.WriteAllTextAsync(file.Path, FeedboardBackup.Export(feeds, settings));
+            StatusText.Text = $"Backup saved: {feeds.Count} feed(s).";
+        });
+    }
+
+    private async void Restore_Click(object sender, RoutedEventArgs e)
+    {
+        await RunUiOperationAsync(async () =>
+        {
+            var picker = new FileOpenPicker();
+            picker.FileTypeFilter.Add(".json");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            var file = await picker.PickSingleFileAsync();
+            if (file is null) return;
+
+            var backup = FeedboardBackup.Import(await File.ReadAllTextAsync(file.Path));
+            var root = (Content as FrameworkElement)?.XamlRoot;
+            if (root is null) throw new InvalidOperationException("Settings window is not ready.");
+
+            var dialog = new ContentDialog
+            {
+                Title = "Restore Feedboard backup?",
+                Content = $"This replaces the current feed list with {backup.Feeds.Count} feed(s) and sets refresh to {backup.Settings.RefreshIntervalMinutes} minutes.",
+                PrimaryButtonText = "Restore",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = root
+            };
+            if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary) return;
+
+            var previousFeeds = await _store.LoadAsync();
+            var previousSettings = await _settingsStore.LoadAsync();
+            try
+            {
+                await _store.ReplaceAsync(backup.Feeds);
+                await _settingsStore.SetRefreshIntervalAsync(backup.Settings.RefreshIntervalMinutes);
+            }
+            catch
+            {
+                try
+                {
+                    await _store.ReplaceAsync(previousFeeds);
+                    await _settingsStore.SetRefreshIntervalAsync(previousSettings.RefreshIntervalMinutes);
+                }
+                catch
+                {
+                    // Preserve the original restore failure; Reload exposes any partial state.
+                }
+                throw;
+            }
+
+            await ReloadAsync();
+            StatusText.Text = $"Backup restored: {backup.Feeds.Count} feed(s).";
+        });
+    }
 }
 
 public sealed class FeedRow : INotifyPropertyChanged

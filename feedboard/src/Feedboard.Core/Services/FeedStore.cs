@@ -53,6 +53,20 @@ public sealed class FeedStore
         }, cancellationToken);
     }
 
+    public async Task ReplaceAsync(IEnumerable<FeedSource> sources, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        var replacement = NormalizeSources(sources);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var processLock = await AcquireProcessLockAsync(cancellationToken);
+            await WriteSourcesAsync(Ordered(replacement), cancellationToken);
+        }
+        finally { _gate.Release(); }
+    }
+
     public Task RemoveAsync(string id, CancellationToken cancellationToken = default) =>
         MutateAsync(byUrl =>
         {
