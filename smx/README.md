@@ -30,6 +30,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
   dock-safety check that exits non-zero on undocked or broken profiles.
 - `smx watch` safely refreshes read-only official commands; `--fields` projects only the
   JSON paths an agent actually needs.
+- `smx doctor` diagnoses local backend/profile state, while `smx backend check/update`
+  can verify and replace the managed official CLI from official GitHub release metadata.
 
 ## Install
 
@@ -97,6 +99,10 @@ smx fleet
 smx fleet check
 smx --fields player.username,ship.fuel status
 smx watch status --count 3 --interval 5
+smx doctor
+smx doctor --online
+smx backend check
+smx backend update
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -217,6 +223,41 @@ of being repeated accidentally.
 Use `--` before official command arguments if they collide with watch's own
 `--interval`, `--count`, or `--fields` options.
 
+## Doctor and managed backend updates
+
+Local diagnostics stay offline by default:
+
+```bash
+smx doctor
+smx doctor --json
+smx backend status
+```
+
+Use an explicit online check when release freshness matters:
+
+```bash
+smx doctor --online
+smx backend check
+```
+
+The managed backend updater only targets official `SpaceMolt/client-v2` GitHub releases:
+
+```bash
+smx backend update
+```
+
+Before replacing `<smx-state>/bin/spacemolt[.exe]`, smx:
+
+1. selects the release asset for the current OS/architecture,
+2. requires the release asset's published SHA-256 digest,
+3. downloads to a temporary file,
+4. verifies size and SHA-256,
+5. executes the temporary client with `--version`,
+6. only then atomically replaces the managed backend.
+
+If `SMX_BACKEND` is explicitly set, updating the managed backend does not override that
+selection and smx prints a warning.
+
 ## Tactical cards
 
 ```bash
@@ -287,6 +328,8 @@ the platform supports it. Do not commit or share the session JSON.
 ## Inspiration
 
 The UX is inspired by [`vcarl/sm-cli`](https://github.com/vcarl/sm-cli),
-particularly its `sell-all`, tactical nearby view, forgiving command names and
-agent-friendly JSON workflow. This implementation is new code and targets the
-official v2 client instead of duplicating the v1 API layer.
+[`CoinAnole/spacemolt-cli`](https://github.com/CoinAnole/spacemolt-cli), and
+[`rsned/spacemolt`](https://github.com/rsned/spacemolt). Ideas such as safe watch loops,
+compact projections, fleet observability, and backend maintenance are adapted to smx's
+thin-wrapper design. This implementation is new code and keeps the official v2 client as
+the source of truth instead of duplicating its API/auth/session stack.
