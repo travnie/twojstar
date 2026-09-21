@@ -180,5 +180,25 @@ class MaintenanceTests(unittest.TestCase):
             self.assertEqual(result["reason"], "already current")
 
 
+    def test_install_refuses_release_without_sha256(self):
+        release = ReleaseInfo(
+            version="1.5.65",
+            tag="v1.5.65",
+            asset=ReleaseAsset(
+                name="spacemolt-client-v2-linux-x64",
+                url="https://github.com/SpaceMolt/client-v2/releases/download/v1.5.65/spacemolt-client-v2-linux-x64",
+                digest=None,
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            with self.assertRaises(RuntimeError):
+                install_latest_backend(
+                    destination=destination,
+                    release=release,
+                    opener=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("download should not run")),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
