@@ -49,12 +49,15 @@ The provider executable also keeps command-line feed management for development 
 
 ```powershell
 Feedboard.WidgetProvider.exe feeds list
+Feedboard.WidgetProvider.exe feeds diagnose
 Feedboard.WidgetProvider.exe feeds add https://example.com/feed.xml
 Feedboard.WidgetProvider.exe feeds import subscriptions.opml
 Feedboard.WidgetProvider.exe feeds export subscriptions.opml
 ```
 
 Feed definitions are stored in `%LOCALAPPDATA%\Feedboard\feeds.json`.
+
+`feeds diagnose` performs one bounded refresh of every enabled feed and prints the provider's resulting in-memory diagnostics: cached article count, failure/backoff state, last successful refresh, retry time and HTTP validator availability (ETag / Last-Modified). It is a live troubleshooting command; it does not pretend the separate Settings process can inspect the already-running widget provider's private memory.
 
 ## MSIX package
 
@@ -93,9 +96,9 @@ The original five implementation passes are now complete:
 Phase 2 can now focus on higher-level product polish rather than missing foundations:
 
 1. **Done:** feed discovery and validation from normal website URLs, with useful add-feed errors instead of requiring a direct feed URL.
-2. Settings UX polish: custom feed names, stable-identity feed URL editing and live feed health tests are available; next add deeper cache/refresh diagnostics.
+2. Settings UX polish: custom feed names, stable-identity feed URL editing and live feed health tests are available. The provider CLI now has live cache/refresh diagnostics via `feeds diagnose`; a dedicated Settings diagnostics panel remains optional follow-up work.
 3. Better article controls where the widget surface allows them, including explicit read/unread actions and richer expanded metadata.
-4. Local backup/restore and diagnostics for cache/feed state without introducing an account or backend.
+4. Local backup/restore and, if useful, a persistent cross-process diagnostics snapshot without introducing an account or backend.
 5. Production packaging/release readiness, including stable identity/signing and Store-oriented metadata when the app is ready for distribution.
 
 ## References
