@@ -8,7 +8,6 @@ import re
 import shutil
 import stat
 import subprocess
-import sys
 import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -204,6 +203,8 @@ def install_latest_backend(
 ) -> dict[str, Any]:
     destination = destination or managed_backend_path()
     release = release or fetch_latest_release(opener=opener)
+    if not release.asset.digest or not release.asset.digest.casefold().startswith("sha256:"):
+        raise RuntimeError(f"release asset {release.asset.name} has no SHA-256 digest; refusing update")
 
     current: str | None = None
     if destination.is_file():
