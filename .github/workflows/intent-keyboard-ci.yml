@@ -21,7 +21,73 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Select Intent Keyboard jobs
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      core_android: ${{ steps.filter.outputs.core_android }}
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Match changed files
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          core_android=false
+          ios=false
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            core_android=true
+            ios=true
+          else
+            base="$BEFORE_SHA"
+            if [[ "$EVENT_NAME" == "pull_request" ]]; then
+              base="$BASE_SHA"
+            fi
+            head="$HEAD_SHA"
+
+            if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+              base="$(git rev-parse "$head^" 2>/dev/null || printf '%s' "$head")"
+            fi
+
+            while IFS= read -r changed; do
+              case "$changed" in
+                .github/workflows/intent-keyboard-ci.yml)
+                  core_android=true
+                  ios=true
+                  ;;
+                intent-keyboard/core/*|intent-keyboard/platforms/android/*|intent-keyboard/platforms/desktop/*)
+                  core_android=true
+                  ;;
+                intent-keyboard/core/*|intent-keyboard/platforms/ios/*)
+                  ios=true
+                  ;;
+                intent-keyboard/build.gradle.kts|intent-keyboard/settings.gradle.kts|intent-keyboard/gradle.properties|intent-keyboard/gradle/*|intent-keyboard/gradlew|intent-keyboard/gradlew.bat)
+                  core_android=true
+                  ios=true
+                  ;;
+              esac
+            done < <(git diff --name-only "$base" "$head")
+          fi
+
+          echo "core_android=$core_android" >> "$GITHUB_OUTPUT"
+          echo "ios=$ios" >> "$GITHUB_OUTPUT"
+
   core-and-android:
+    needs: changes
+    if: needs.changes.outputs.core_android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -64,6 +130,8 @@ jobs:
           if-no-files-found: error
 
   ios:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     timeout-minutes: 25
     defaults:
