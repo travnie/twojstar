@@ -44,7 +44,7 @@ class FleetCliTests(unittest.TestCase):
             return BackendResult(0, "", ""), payload
 
         stdout = io.StringIO()
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {"SPACEMOLT_SESSION": ""}, clear=False):
             with patch("smx.cli.list_profiles", return_value=profiles):
                 with patch("smx.cli.Backend.json", new=fake_json):
                     with redirect_stdout(stdout):
@@ -70,7 +70,7 @@ class FleetCliTests(unittest.TestCase):
             )
 
         stdout = io.StringIO()
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {"SPACEMOLT_SESSION": ""}, clear=False):
             with patch("smx.cli.list_profiles", return_value=profiles):
                 with patch("smx.cli.Backend.json", new=fake_json):
                     with redirect_stdout(stdout):
