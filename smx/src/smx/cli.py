@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -16,6 +17,7 @@ from .fleet import error_status, fleet_check_ok, render_fleet, status_from_paylo
 from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
 from .mcp_profiles import PROFILES, profiles_json
 from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
+from .projection import parse_fields, project_fields
 from .profiles import (
     add_profile,
     canonical_profile,
@@ -114,7 +116,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch"})
     return commands
 
 
@@ -535,6 +537,177 @@ def cmd_mcp(argv: list[str]) -> int:
 
 
 
+
+def extract_smx_globals(argv: list[str]) -> tuple[str | None, list[str], list[str]]:
+    profile: str | None = None
+    field_values: list[str] = []
+    rest = list(argv)
+
+    while rest:
+        token = rest[0]
+        if token in {"-p", "--profile"}:
+            if len(rest) < 2:
+                raise ValueError(f"{token} requires a profile name")
+            profile = canonical_profile(rest[1])
+            rest = rest[2:]
+            continue
+        if token.startswith("--profile="):
+            profile = canonical_profile(token.split("=", 1)[1])
+            rest = rest[1:]
+            continue
+        if token in {"--fields", "--field"}:
+            if len(rest) < 2:
+                raise ValueError(f"{token} requires a field path")
+            field_values.append(rest[1])
+            rest = rest[2:]
+            continue
+        if token.startswith("--fields=") or token.startswith("--field="):
+            field_values.append(token.split("=", 1)[1])
+            rest = rest[1:]
+            continue
+        break
+
+    return profile, parse_fields(field_values), rest
+
+
+def _project_backend_payload(backend: Backend, args: list[str], fields: list[str]) -> int:
+    result, payload = backend.json(args)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr or result.stdout)
+        return result.returncode
+    if payload is None:
+        print("smx: backend returned no JSON payload to project.", file=sys.stderr)
+        return 1
+
+    projected, missing = project_fields(payload, fields)
+    if missing:
+        print(f"smx: fields not found: {', '.join(missing)}", file=sys.stderr)
+        return 2
+    print(json.dumps(projected, indent=2, ensure_ascii=False))
+    return 0
+
+
+WATCH_SAFE_EXACT = {"accounts", "catalog", "help"}
+WATCH_SAFE_PREFIXES = ("get_", "list_", "view_", "find_", "search_")
+
+
+def watch_command_is_read_only(command: str) -> bool:
+    normalized = ALIASES.get(normalize_command(command), normalize_command(command))
+    action = normalized.split("/", 1)[-1]
+    return normalized in WATCH_SAFE_EXACT or action in WATCH_SAFE_EXACT or action.startswith(WATCH_SAFE_PREFIXES)
+
+
+def _parse_watch_args(argv: list[str]) -> tuple[float, int | None, list[str], list[str]]:
+    interval = 10.0
+    count: int | None = None
+    field_values: list[str] = []
+    command_args: list[str] = []
+    i = 0
+    passthrough = False
+
+    while i < len(argv):
+        token = argv[i]
+        if passthrough:
+            command_args.append(token)
+            i += 1
+            continue
+        if token == "--":
+            passthrough = True
+            i += 1
+            continue
+        if token in {"-n", "--interval"}:
+            if i + 1 >= len(argv):
+                raise ValueError(f"{token} requires seconds")
+            interval = float(argv[i + 1])
+            i += 2
+            continue
+        if token.startswith("--interval="):
+            interval = float(token.split("=", 1)[1])
+            i += 1
+            continue
+        if token in {"-c", "--count"}:
+            if i + 1 >= len(argv):
+                raise ValueError(f"{token} requires a positive integer")
+            count = int(argv[i + 1])
+            i += 2
+            continue
+        if token.startswith("--count="):
+            count = int(token.split("=", 1)[1])
+            i += 1
+            continue
+        if token in {"--fields", "--field"}:
+            if i + 1 >= len(argv):
+                raise ValueError(f"{token} requires a field path")
+            field_values.append(argv[i + 1])
+            i += 2
+            continue
+        if token.startswith("--fields=") or token.startswith("--field="):
+            field_values.append(token.split("=", 1)[1])
+            i += 1
+            continue
+        command_args.append(token)
+        i += 1
+
+    if interval < 1:
+        raise ValueError("watch interval must be at least 1 second")
+    if count is not None and count < 1:
+        raise ValueError("watch count must be at least 1")
+    if not command_args:
+        raise ValueError("watch requires a read-only command")
+    return interval, count, parse_fields(field_values), command_args
+
+
+def cmd_watch(backend: Backend, argv: list[str]) -> int:
+    try:
+        interval, count, fields, command_args = _parse_watch_args(argv)
+    except (TypeError, ValueError) as exc:
+        print(f"smx: {exc}", file=sys.stderr)
+        return 2
+
+    command = command_args[0]
+    normalized = ALIASES.get(normalize_command(command), normalize_command(command))
+    official_args = [normalized, *command_args[1:]]
+    if not watch_command_is_read_only(command):
+        print(
+            f'smx: refusing to watch potentially mutating command "{command}". '
+            "Use watch only with read-only get/list/view/find/search commands.",
+            file=sys.stderr,
+        )
+        return 2
+
+    iteration = 0
+    try:
+        while True:
+            iteration += 1
+            if iteration > 1:
+                if sys.stdout.isatty():
+                    print("\x1b[2J\x1b[H", end="")
+                else:
+                    print(f"\n--- refresh {iteration} ---")
+
+            if fields:
+                rc = _project_backend_payload(backend, official_args, fields)
+                if rc != 0:
+                    return rc
+            else:
+                result = backend.run(official_args)
+                if result.stdout:
+                    sys.stdout.write(result.stdout)
+                    if not result.stdout.endswith("\n"):
+                        print()
+                if result.stderr:
+                    sys.stderr.write(result.stderr)
+                if result.returncode != 0:
+                    return result.returncode
+
+            if count is not None and iteration >= count:
+                return 0
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return 130
+
+
+
 def extract_global_profile(argv: list[str]) -> tuple[str | None, list[str]]:
     if not argv:
         return None, argv
@@ -696,12 +869,14 @@ Usage:
   smx paths                      show backend, profile and state locations
   smx profiles                   list isolated gameplay profiles
   smx fleet [check]               show/check every gameplay profile
+  smx watch [options] <command>     refresh a read-only command safely
   smx profile <action>           add/use/login/migrate/remove profiles
 
 Conveniences:
   status, ship, cargo, system, poi, map, skills, notifications
   kebab-case is accepted: get-map -> get_map
   failed typo commands get fuzzy suggestions, never auto-executed
+  --fields a,b projects selected JSON paths from official command output
   guide --search TEXT finds narrow advice without dumping every card
 
 sell-all options:
@@ -718,9 +893,11 @@ Environment:
     )
 
 
-def _passthrough(backend: Backend, argv: list[str]) -> int:
+def _passthrough(backend: Backend, argv: list[str], fields: list[str] | None = None) -> int:
     command = normalize_command(argv[0])
     command = ALIASES.get(command, command)
+    if fields:
+        return _project_backend_payload(backend, [command, *argv[1:]], fields)
     result = backend.run([command, *argv[1:]])
     if result.stdout:
         sys.stdout.write(result.stdout)
@@ -742,7 +919,7 @@ def _passthrough(backend: Backend, argv: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
-        profile, argv = extract_global_profile(argv)
+        profile, fields, argv = extract_smx_globals(argv)
     except ValueError as exc:
         print(f"smx: {exc}", file=sys.stderr)
         return 2
@@ -753,6 +930,10 @@ def main(argv: list[str] | None = None) -> int:
     backend = Backend(profile=profile)
     command = argv[0]
     rest = argv[1:]
+    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch"}
+    if fields and command in local_commands:
+        print("smx: --fields is supported for official passthrough commands; use the local command's own --json option otherwise.", file=sys.stderr)
+        return 2
     if command in {"nearby", "near"}:
         return cmd_nearby(backend, rest)
     if command in {"sell-all", "sellall"}:
@@ -771,7 +952,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_profiles(rest)
     if command == "profile":
         return cmd_profile(rest)
-    return _passthrough(backend, argv)
+    if command == "watch":
+        return cmd_watch(backend, rest)
+    return _passthrough(backend, argv, fields)
 
 
 if __name__ == "__main__":

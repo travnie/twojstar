@@ -28,6 +28,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
   racing on the official client's single `activeAccount` field.
 - `smx fleet` reads every profile in parallel; `smx fleet check` is a watchdog-friendly
   dock-safety check that exits non-zero on undocked or broken profiles.
+- `smx watch` safely refreshes read-only official commands; `--fields` projects only the
+  JSON paths an agent actually needs.
 
 ## Install
 
@@ -93,6 +95,8 @@ smx -p gremlin status
 smx -p claude status
 smx fleet
 smx fleet check
+smx --fields player.username,ship.fuel status
+smx watch status --count 3 --interval 5
 
 # Anything unknown to smx goes straight to the official v2 client:
 smx drone/list
@@ -182,6 +186,36 @@ profile has its own session file.
 not docked. This makes it suitable for simple watchdogs before ending an agent session.
 An explicit process-wide `SPACEMOLT_SESSION` is refused for fleet mode because it would
 defeat profile isolation.
+
+## Watch and field projection
+
+Project selected paths from any official passthrough command without teaching smx a second
+response model:
+
+```bash
+smx --fields player.username,ship.fuel,ship.cargo_used status
+smx -p gremlin --fields player.username,location.system_name status
+```
+
+Projection asks the official client for `--json`, unwraps `structuredContent`, and fails
+explicitly when a requested path is missing. The output is a compact JSON object keyed by
+the requested paths.
+
+For live terminal monitoring:
+
+```bash
+smx watch status
+smx watch status --interval 5
+smx watch status --count 6 --fields player.username,ship.fuel
+```
+
+`watch` is deliberately conservative. It only accepts commands that look read-only
+(`get_*`, `list_*`, `view_*`, `find_*`, `search_*`, plus a few local reference
+commands). Mutating commands such as `mine`, `sell`, or `travel` are refused instead
+of being repeated accidentally.
+
+Use `--` before official command arguments if they collide with watch's own
+`--interval`, `--count`, or `--fields` options.
 
 ## Tactical cards
 
