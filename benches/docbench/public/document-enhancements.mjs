@@ -16,6 +16,7 @@ const openButton = $("#open-button");
 const newButton = $("#new-button");
 const saveButton = $("#save-button");
 const downloadButton = $("#download-button");
+const printButton = $("#print-button");
 const formatButton = $("#format-button");
 const validateButton = $("#validate-button");
 const dropZone = $("#drop-zone");
@@ -1103,6 +1104,21 @@ saveButton.addEventListener("click", (event) => {
 }, true);
 
 downloadButton.addEventListener("click", () => downloadDocument());
+
+function printDocument() {
+  const details = [...preview.querySelectorAll("details")];
+  const openState = details.map((item) => item.open);
+  details.forEach((item) => { item.open = true; });
+  document.body.dataset.printWorkspace = "document";
+  try {
+    globalThis.print();
+  } finally {
+    delete document.body.dataset.printWorkspace;
+    details.forEach((item, index) => { item.open = openState[index]; });
+  }
+}
+
+printButton.addEventListener("click", printDocument);
 
 fileInput.addEventListener("change", (event) => {
   const file = fileInput.files?.[0];

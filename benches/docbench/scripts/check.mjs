@@ -58,6 +58,10 @@ for (const capability of [
     throw new Error(`Document workspace is missing ${capability} support.`);
   }
 }
+if (!documentEnhancements.includes("printDocument")
+  || !documentEnhancements.includes('document.body.dataset.printWorkspace = "document"')) {
+  throw new Error("Document workspace is missing local print support.");
+}
 if (!documentEnhancements.includes("MAX_TREE_NODES")) {
   throw new Error("Structured previews must keep a bounded tree renderer.");
 }
@@ -135,6 +139,12 @@ for (const metadataCoreGuard of [
 }
 
 const pdfApp = await readFile("public/pdf-app.mjs", "utf8");
+if (!pdfApp.includes("openPdfToPrint")
+  || !pdfApp.includes("buildPdfOutput(snapshot, snapshot.plan, snapshot.outline)")
+  || !pdfApp.includes("URL.revokeObjectURL(url)")) {
+  throw new Error("PDF workspace is missing verified print-ready export support.");
+}
+
 for (const exportGuard of [
   "extractSelectedPage",
   "splitAllPages",
@@ -168,6 +178,16 @@ if (!workerSource.includes('if (asset.ok && headers.get("content-type")?.include
 }
 
 const html = await readFile("public/index.html", "utf8");
+for (const printUiGuard of ["print-button", "pdf-print-button"]) {
+  if (!html.includes(printUiGuard)) {
+    throw new Error(`Doc Bench print UI is missing guard: ${printUiGuard}`);
+  }
+}
+const styles = await readFile("public/styles.css", "utf8");
+if (!styles.includes("@media print") || !styles.includes('body[data-print-workspace="document"]')) {
+  throw new Error("Document print stylesheet is missing.");
+}
+
 for (const metadataUiGuard of [
   "pdf-metadata-panel",
   "pdf-meta-title",

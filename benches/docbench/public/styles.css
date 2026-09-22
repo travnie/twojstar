@@ -1034,3 +1034,63 @@ footer a:hover {
     --muted: #b4bdc9;
   }
 }
+
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  body[data-print-workspace="document"] {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body[data-print-workspace="document"] .hero,
+  body[data-print-workspace="document"] .mode-tabs,
+  body[data-print-workspace="document"] .toolbar,
+  body[data-print-workspace="document"] .editor-panel,
+  body[data-print-workspace="document"] #detail-status,
+  body[data-print-workspace="document"] footer {
+    display: none !important;
+  }
+
+  body[data-print-workspace="document"] .app-shell {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body[data-print-workspace="document"] #document-workspace {
+    display: block !important;
+  }
+
+  body[data-print-workspace="document"] #pdf-workspace {
+    display: none !important;
+  }
+
+  body[data-print-workspace="document"] .editor-grid {
+    display: block;
+  }
+
+  body[data-print-workspace="document"] .preview-panel {
+    border: 0;
+    box-shadow: none;
+    background: #fff !important;
+    color: #000 !important;
+    overflow: visible;
+  }
+
+  body[data-print-workspace="document"] .preview-panel .panel-header,
+  body[data-print-workspace="document"] #preview {
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  body[data-print-workspace="document"] #preview {
+    max-height: none;
+    overflow: visible;
+    print-color-adjust: exact;
+  }
+}
