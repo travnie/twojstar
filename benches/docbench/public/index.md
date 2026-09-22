@@ -14,7 +14,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 
 ## PDFs
 
-- Convert DOCX to PDF locally, then continue editing the converted PDF in the same workspace.\n- Preview PDFs locally.
+- Convert DOCX to PDF locally, then continue editing the converted PDF in the same workspace.
+- Export the current PDF to DOCX with page order and text preserved; PDF bookmarks become Word headings/bookmarks.
+- Preview PDFs locally.
 - Merge files and reorder or delete pages.
 - Inspect and edit bookmark trees while remapping targets after page changes.
 - Apply lossless optimization, optional lossy image recompression and Fast Web View.

@@ -14,6 +14,7 @@ for (const path of [
   "public/webmcp.js",
   "public/pdf-app.mjs",
   "public/pdf-core.mjs",
+  "public/pdf-to-docx.mjs",
   "public/docx-converter.mjs",
   "public/fonts.css",
   "public/styles.css",
@@ -156,6 +157,19 @@ for (const metadataCoreGuard of [
   }
 }
 
+const pdfToDocx = await readFile("public/pdf-to-docx.mjs", "utf8");
+for (const docxGuard of [
+  "convertPdfStateToDocx",
+  "w:bookmarkStart",
+  "Heading${heading.depth}",
+  "getTextContent",
+  "zipSync",
+]) {
+  if (!pdfToDocx.includes(docxGuard)) {
+    throw new Error(`PDF to DOCX converter is missing guard: ${docxGuard}`);
+  }
+}
+
 const pdfApp = await readFile("public/pdf-app.mjs", "utf8");
 const docxConverter = await readFile("public/docx-converter.mjs", "utf8");
 for (const docxGuard of [
@@ -222,6 +236,10 @@ for (const jsonUiGuard of [
   if (!html.includes(jsonUiGuard)) {
     throw new Error(`Doc Bench JSON UI is missing guard: ${jsonUiGuard}`);
   }
+}
+
+if (!html.includes('id="pdf-to-docx-button"')) {
+  throw new Error("Doc Bench PDF to DOCX control is missing.");
 }
 
 for (const printUiGuard of ["print-button", "pdf-print-button"]) {
@@ -312,6 +330,7 @@ for (const leaked of [
   "/webmcp.js",
   "/pdf-app.mjs",
   "/pdf-core.mjs",
+  "/pdf-to-docx.mjs",
   "/fonts.css",
   "/styles.css",
   "/document-enhancements.css",
@@ -349,6 +368,9 @@ if (!portable.includes("__docbenchDocxAssets") || !portable.includes("convertToP
   throw new Error("Portable build is missing DOCX conversion runtime.");
 }
 if (!portable.includes("PDFLib")) throw new Error("Portable build is missing PDF mutation runtime");
+if (!portable.includes("convertPdfStateToDocx")) {
+  throw new Error("Portable build is missing PDF to DOCX conversion support");
+}
 if (!portable.includes("ZipPassThrough")) throw new Error("Portable build is missing ZIP runtime");
 if (!portable.includes("pdf-meta-title") || !portable.includes("replacePdfMetadata")) {
   throw new Error("Portable build is missing PDF metadata editor support");

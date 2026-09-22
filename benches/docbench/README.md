@@ -9,12 +9,12 @@ rendered preview, JSON-family/YAML/XML get collapsible tree views, and supported
 browsers can save changes directly back to a chosen local file. Download remains
 available as the portable fallback.
 
-PDF tools cover local DOCX→PDF conversion, preview, merge, page deletion/reordering, single-page
+PDF tools cover local DOCX→PDF conversion, structure-first PDF→DOCX export, preview, merge, page deletion/reordering, single-page
 extraction, split-to-ZIP, bookmark, document-metadata and embedded-file editing,
 lossless optimization, optional lossy image recompression and Fast Web View. Bookmark
 trees, metadata and attachments are rebuilt or preserved as needed and verified
 before every PDF download. Metadata edits keep trailer Info and XMP consistent; PDF/A XMP keeps
-foreign extension blocks intact.
+foreign extension blocks intact. PDF→DOCX extracts text in the current page order and maps the edited PDF bookmark tree to Word Heading 1–6 styles plus Word bookmarks; it is structural rather than pixel-perfect layout conversion.
 
 ## Local
 
