@@ -29,6 +29,7 @@ const [
   jsonParser,
   jsonScanner,
   pdfCore,
+  pdfToDocx,
   pdfApp,
   docxConverter,
   docxIndex,
@@ -70,6 +71,7 @@ const [
   readFile("public/vendor/jsonc-parser/impl/parser.js", "utf8"),
   readFile("public/vendor/jsonc-parser/impl/scanner.js", "utf8"),
   readFile("public/pdf-core.mjs", "utf8"),
+  readFile("public/pdf-to-docx.mjs", "utf8"),
   readFile("public/pdf-app.mjs", "utf8"),
   readFile("public/docx-converter.mjs", "utf8"),
   readFile("public/vendor/docx-to-pdf/index.js", "utf8"),
@@ -157,10 +159,16 @@ const qpdfModuleUrl = dataUrl(
   `export { createBrowserQpdfRunner as createQpdfRunner } from ${JSON.stringify(qpdfBrowserRunnerUrl)};`,
 );
 const pdfCoreUrl = dataUrl("text/javascript", pdfCore);
-const pdfAppPortable = pdfApp.replace(
-  'from "./pdf-core.mjs";',
-  `from ${JSON.stringify(pdfCoreUrl)};`,
-);
+const pdfToDocxUrl = dataUrl("text/javascript", pdfToDocx);
+const pdfAppPortable = pdfApp
+  .replace(
+    'from "./pdf-core.mjs";',
+    `from ${JSON.stringify(pdfCoreUrl)};`,
+  )
+  .replace(
+    'from "./pdf-to-docx.mjs";',
+    `from ${JSON.stringify(pdfToDocxUrl)};`,
+  );
 
 const assets = {
   pdfModuleUrl: dataUrl("text/javascript", pdfJs),

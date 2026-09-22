@@ -16,6 +16,7 @@ import {
   verifyPdfMetadata,
   replacePdfOutline,
 } from "./pdf-core.mjs";
+import { convertPdfStateToDocx } from "./pdf-to-docx.mjs";
 
 const $ = (selector) => document.querySelector(selector);
 const pdfInput = $("#pdf-input");
@@ -27,6 +28,7 @@ const pdfStatus = $("#pdf-status");
 const pdfFilename = $("#pdf-filename");
 const saveButton = $("#pdf-save-button");
 const printButton = $("#pdf-print-button");
+const docxExportButton = $("#pdf-to-docx-button");
 const extractButton = $("#pdf-extract-page");
 const splitButton = $("#pdf-split-all");
 const removeButton = $("#pdf-remove-page");
@@ -218,6 +220,9 @@ function mergeAppendedOutlines(oldSourceCount, oldOutline) {
 let openFilesTail = Promise.resolve();
 
 function openFiles(files, append) {
+  if (state.exporting) {
+    return Promise.reject(new Error("Finish the current PDF operation before opening another file."));
+  }
   const selected = [...files];
   if (!selected.length) return Promise.resolve();
   const operation = openFilesTail.then(() => openFilesSerial(selected, append));
@@ -462,6 +467,7 @@ function updateControls() {
   const busy = state.exporting;
   saveButton.disabled = busy || !state.plan.length;
   printButton.disabled = busy || !state.plan.length;
+  docxExportButton.disabled = busy || !state.plan.length;
   extractButton.disabled = busy || !hasPage;
   splitButton.disabled = busy || state.plan.length <= 1;
   removeButton.disabled = busy || !hasPage || state.plan.length <= 1;
@@ -1012,6 +1018,31 @@ function createStoredZip(zipApi) {
   };
 }
 
+async function exportPdfToDocx() {
+  if (!state.plan.length || state.exporting) return;
+  setExportBusy(true);
+  setStatus("Converting current PDF to DOCX locally…");
+  try {
+    const bytes = await convertPdfStateToDocx({
+      sources: state.sources,
+      plan: state.plan,
+      outline: state.outline,
+      metadata: state.metadata,
+    });
+    const filename = `${outputBaseName({ sources: state.sources })}-docbench.docx`;
+    downloadBytes(
+      bytes,
+      filename,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    setStatus(`Saved DOCX · ${state.plan.length} pages · ${formatPdfSize(bytes.byteLength)}`);
+  } catch (error) {
+    showError(error);
+  } finally {
+    setExportBusy(false);
+  }
+}
+
 async function openPdfToPrint() {
   if (!state.plan.length || state.exporting) return;
   const printWindow = globalThis.open("", "_blank");
@@ -1115,6 +1146,7 @@ async function splitAllPages() {
 
 $("#pdf-open-button").addEventListener("click", () => pdfInput.click());
 $("#pdf-add-button").addEventListener("click", () => addPdfInput.click());
+docxExportButton.addEventListener("click", exportPdfToDocx);
 pdfInput.addEventListener("change", async () => {
   try { await openFiles(pdfInput.files || [], false); } catch (error) { showError(error); }
   pdfInput.value = "";
