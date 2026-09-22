@@ -18,6 +18,8 @@ const saveButton = $("#save-button");
 const downloadButton = $("#download-button");
 const printButton = $("#print-button");
 const formatButton = $("#format-button");
+const minifyButton = $("#minify-button");
+const repairButton = $("#repair-button");
 const validateButton = $("#validate-button");
 const dropZone = $("#drop-zone");
 const documentWorkspace = $("#document-workspace");
@@ -30,15 +32,31 @@ const extensionToFormat = {
   md: "md",
   markdown: "md",
   json: "json",
+  jsonc: "jsonc",
+  json5: "json5",
+  jsonl: "jsonl",
+  ndjson: "jsonl",
   yml: "yaml",
   yaml: "yaml",
   xml: "xml",
 };
-const preferredExtension = { txt: "txt", md: "md", json: "json", yaml: "yaml", xml: "xml" };
+const preferredExtension = {
+  txt: "txt",
+  md: "md",
+  json: "json",
+  jsonc: "jsonc",
+  json5: "json5",
+  jsonl: "jsonl",
+  yaml: "yaml",
+  xml: "xml",
+};
 const mimeByFormat = {
   txt: "text/plain;charset=utf-8",
   md: "text/markdown;charset=utf-8",
   json: "application/json;charset=utf-8",
+  jsonc: "application/json;charset=utf-8",
+  json5: "application/json5;charset=utf-8",
+  jsonl: "application/x-ndjson;charset=utf-8",
   yaml: "application/yaml;charset=utf-8",
   xml: "application/xml;charset=utf-8",
 };
@@ -48,7 +66,9 @@ const pickerTypes = [
     accept: {
       "text/plain": [".txt"],
       "text/markdown": [".md", ".markdown"],
-      "application/json": [".json"],
+      "application/json": [".json", ".jsonc"],
+      "application/json5": [".json5"],
+      "application/x-ndjson": [".jsonl", ".ndjson"],
       "application/yaml": [".yml", ".yaml"],
       "application/xml": [".xml"],
     },
@@ -202,11 +222,21 @@ function renderParseError(error) {
 }
 
 function updateFormatButton() {
-  const enabled = ["json", "yaml", "xml"].includes(formatSelect.value);
+  const format = formatSelect.value;
+  const enabled = ["json", "jsonc", "json5", "jsonl", "yaml", "xml"].includes(format);
+  const jsonFamily = ["json", "jsonc", "json5", "jsonl"].includes(format);
   formatButton.disabled = !enabled;
   formatButton.title = enabled
     ? "Normalize indentation and layout"
-    : "Auto-format is available for JSON, YAML and XML";
+    : "Auto-format is available for structured text formats";
+  minifyButton.disabled = !jsonFamily;
+  minifyButton.title = jsonFamily
+    ? "Remove non-essential whitespace from the current JSON-family document"
+    : "Minify is available for JSON-family formats";
+  repairButton.disabled = !jsonFamily;
+  repairButton.title = jsonFamily
+    ? "Repair malformed input and convert it to strict JSON"
+    : "Repair is available for JSON-family formats";
 }
 
 function scalarText(value) {
@@ -407,12 +437,13 @@ function appendJsonScalar(parent, key, node, source) {
   parent.append(row);
 }
 
-function renderJsonTree(source) {
+function renderJsonTree(source, {
+  allowTrailingComma = false,
+  disallowComments = true,
+  label = "JSON",
+} = {}) {
   const errors = [];
-  const root = parseTree(source, errors, {
-    allowTrailingComma: false,
-    disallowComments: true,
-  });
+  const root = parseTree(source, errors, { allowTrailingComma, disallowComments });
   if (!root || errors.length) return null;
 
   const fragment = document.createDocumentFragment();
@@ -437,7 +468,7 @@ function renderJsonTree(source) {
     const summary = document.createElement("summary");
     const keyNode = document.createElement("span");
     keyNode.className = "tree-key";
-    keyNode.textContent = key === null ? "JSON" : String(key);
+    keyNode.textContent = key === null ? label : String(key);
     const metaNode = document.createElement("span");
     metaNode.className = "tree-meta";
     const count = node.children?.length || 0;
@@ -468,6 +499,315 @@ function renderJsonTree(source) {
   renderNode(fragment, null, root, 0);
   if (truncated) appendTreeLimit(fragment);
   return fragment;
+}
+
+function renderValueTree(value, label = "JSON5") {
+  const fragment = document.createDocumentFragment();
+  let nodes = 0;
+  let truncated = false;
+
+  function renderNode(parent, key, item, depth) {
+    if (nodes >= MAX_TREE_NODES) {
+      truncated = true;
+      return;
+    }
+    nodes += 1;
+    if (item === null || typeof item !== "object") {
+      appendScalar(parent, key, item);
+      return;
+    }
+
+    const entries = Array.isArray(item)
+      ? item.map((child, index) => [index, child])
+      : Object.entries(item);
+    const details = document.createElement("details");
+    details.className = "tree-node";
+    details.open = depth < 2;
+    const summary = document.createElement("summary");
+    const keyNode = document.createElement("span");
+    keyNode.className = "tree-key";
+    keyNode.textContent = key === null ? label : String(key);
+    const metaNode = document.createElement("span");
+    metaNode.className = "tree-meta";
+    metaNode.textContent = Array.isArray(item)
+      ? `Array(${entries.length})`
+      : `Object(${entries.length})`;
+    summary.append(keyNode, metaNode);
+    details.append(summary);
+
+    const children = document.createElement("div");
+    children.className = "tree-children";
+    for (const [childKey, child] of entries) {
+      renderNode(children, childKey, child, depth + 1);
+      if (truncated) break;
+    }
+    details.append(children);
+    parent.append(details);
+  }
+
+  renderNode(fragment, null, value, 0);
+  if (truncated) appendTreeLimit(fragment);
+  return fragment;
+}
+
+function json5Error(error) {
+  const line = Number(error?.lineNumber);
+  const column = Number(error?.columnNumber);
+  if (Number.isFinite(line) && Number.isFinite(column)) {
+    return { message: error.message, position: { line, column } };
+  }
+  const match = String(error?.message || "").match(/at\s+(\d+):(\d+)/);
+  return {
+    message: error?.message || "Invalid JSON5.",
+    position: match ? { line: Number(match[1]), column: Number(match[2]) } : null,
+  };
+}
+
+function renderJsonlTree(source) {
+  const fragment = document.createDocumentFragment();
+  const lines = source.split("\n");
+  let records = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    const errors = [];
+    parseTree(line, errors, { allowTrailingComma: false, disallowComments: true });
+    if (errors.length) {
+      return {
+        error: {
+          message: `Invalid JSON on record ${records + 1}.`,
+          position: {
+            line: index + 1,
+            column: errors[0].offset + 1,
+          },
+        },
+      };
+    }
+    const tree = renderJsonTree(line, { label: `Record ${records + 1}` });
+    if (!tree) {
+      return {
+        error: {
+          message: `Invalid JSON on record ${records + 1}.`,
+          position: { line: index + 1, column: 1 },
+        },
+      };
+    }
+    fragment.append(tree);
+    records += 1;
+  }
+  return { fragment, records };
+}
+
+function tokenizeJsonSource(source) {
+  const tokens = [];
+  for (let index = 0; index < source.length;) {
+    const char = source[index];
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      const start = index++;
+      let escaped = false;
+      while (index < source.length) {
+        const current = source[index++];
+        if (escaped) escaped = false;
+        else if (current === "\\") escaped = true;
+        else if (current === '"') break;
+      }
+      tokens.push({ type: "value", text: source.slice(start, index) });
+      continue;
+    }
+    if (char === "/" && source[index + 1] === "/") {
+      const start = index;
+      index += 2;
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") index += 1;
+      tokens.push({ type: "line-comment", text: source.slice(start, index) });
+      continue;
+    }
+    if (char === "/" && source[index + 1] === "*") {
+      const start = index;
+      index += 2;
+      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) index += 1;
+      index = Math.min(source.length, index + 2);
+      tokens.push({ type: "block-comment", text: source.slice(start, index) });
+      continue;
+    }
+    if ("{}[],:".includes(char)) {
+      tokens.push({ type: char, text: char });
+      index += 1;
+      continue;
+    }
+    const start = index;
+    while (index < source.length) {
+      const current = source[index];
+      if (/\s/.test(current) || "{}[],:".includes(current)) break;
+      if (current === "/" && ["/", "*"].includes(source[index + 1])) break;
+      index += 1;
+    }
+    tokens.push({ type: "value", text: source.slice(start, index) });
+  }
+  return tokens;
+}
+
+function validateJsonSource(source, { allowComments = false, allowTrailingComma = false } = {}) {
+  const errors = [];
+  const root = parseTree(source, errors, {
+    allowTrailingComma,
+    disallowComments: !allowComments,
+  });
+  if (!root || errors.length) {
+    const first = errors[0];
+    const error = new Error("Invalid JSON-family document.");
+    error.position = first ? positionFromOffset(source, first.offset) : null;
+    throw error;
+  }
+}
+
+function rewriteJsonWhitespace(source, {
+  compact = false,
+  allowComments = false,
+  allowTrailingComma = false,
+} = {}) {
+  validateJsonSource(source, { allowComments, allowTrailingComma });
+  const tokens = tokenizeJsonSource(source);
+  if (compact) {
+    let output = "";
+    for (const token of tokens) {
+      if (token.type === "line-comment") {
+        output += token.text.trimEnd();
+        output += "\n";
+      } else {
+        output += token.text;
+      }
+    }
+    return output.trim() + "\n";
+  }
+
+  let output = "";
+  let indent = 0;
+  let lineStart = true;
+  let previous = null;
+  const padding = () => "  ".repeat(Math.max(0, indent));
+  const append = (text) => {
+    if (lineStart) {
+      output += padding();
+      lineStart = false;
+    }
+    output += text;
+  };
+  const newline = () => {
+    output = output.replace(/[ \t]+$/g, "");
+    if (!output.endsWith("\n")) output += "\n";
+    lineStart = true;
+  };
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const next = tokens[index + 1];
+    if (token.type === "{" || token.type === "[") {
+      append(token.text);
+      indent += 1;
+      if (next && !((token.type === "{" && next.type === "}") || (token.type === "[" && next.type === "]"))) {
+        newline();
+      }
+    } else if (token.type === "}" || token.type === "]") {
+      indent = Math.max(0, indent - 1);
+      if (previous && previous.type !== "{" && previous.type !== "[" && !lineStart) newline();
+      append(token.text);
+    } else if (token.type === ",") {
+      append(",");
+      newline();
+    } else if (token.type === ":") {
+      append(": ");
+    } else if (token.type === "line-comment") {
+      if (!lineStart && !/[ \t]$/.test(output)) output += " ";
+      append(token.text.trimEnd());
+      newline();
+    } else if (token.type === "block-comment") {
+      if (!lineStart && !/[ \t]$/.test(output)) output += " ";
+      append(token.text);
+      if (next && ![",", "}", "]", ":"].includes(next.type)) output += " ";
+    } else {
+      append(token.text);
+    }
+    previous = token;
+  }
+  return output.trimEnd() + "\n";
+}
+
+function formatJsonl(source, compact = false) {
+  const output = [];
+  const lines = source.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    try {
+      output.push(rewriteJsonWhitespace(line, { compact }).trim());
+    } catch (error) {
+      error.position = {
+        line: index + 1,
+        column: error.position?.column || 1,
+      };
+      throw error;
+    }
+  }
+  return output.join("\n") + (output.length ? "\n" : "");
+}
+
+function normalizeJson5(source, compact = false) {
+  const json5 = globalThis.JSON5;
+  if (!json5?.parse || !json5?.stringify) throw new Error("JSON5 runtime is unavailable.");
+  const value = json5.parse(source);
+  return json5.stringify(value, null, compact ? 0 : 2) + "\n";
+}
+
+function updateFilenameForStrictJson() {
+  state.handle = null;
+  const base = (state.filename || filenameLabel.textContent || "document")
+    .replace(/\.(?:jsonc|json5|jsonl|ndjson|json)$/i, "");
+  state.filename = `${base || "document"}.json`;
+  filenameLabel.textContent = state.filename;
+  formatSelect.value = "json";
+  updateFormatButton();
+  updateSaveButton();
+}
+
+function repairJsonDocument() {
+  const repair = globalThis.JSONRepair?.jsonrepair;
+  if (typeof repair !== "function") throw new Error("JSON repair runtime is unavailable.");
+  const repaired = repair(editor.value);
+  editor.value = rewriteJsonWhitespace(repaired);
+  state.documentRevision += 1;
+  state.mixedEol = false;
+  updateFilenameForStrictJson();
+  renderEnhancedPreview();
+  setStatus("good", "Repaired → strict JSON");
+}
+
+function transformJsonFamily(mode) {
+  const format = formatSelect.value;
+  const compact = mode === "minify";
+  if (format === "json") {
+    editor.value = rewriteJsonWhitespace(editor.value, { compact });
+  } else if (format === "jsonc") {
+    editor.value = rewriteJsonWhitespace(editor.value, {
+      compact,
+      allowComments: true,
+      allowTrailingComma: true,
+    });
+  } else if (format === "json5") {
+    editor.value = normalizeJson5(editor.value, compact);
+  } else if (format === "jsonl") {
+    editor.value = formatJsonl(editor.value, compact);
+  } else {
+    return false;
+  }
+  state.documentRevision += 1;
+  state.mixedEol = false;
+  renderEnhancedPreview();
+  setStatus("good", compact ? "Minified" : "Formatted");
+  return true;
 }
 
 function xmlParserError(doc) {
@@ -846,19 +1186,52 @@ function renderEnhancedPreview() {
     updateMeta();
     return;
   }
-  if (format === "json") {
-    const tree = renderJsonTree(editor.value);
+  if (format === "json" || format === "jsonc") {
+    const jsonc = format === "jsonc";
+    const options = {
+      allowTrailingComma: jsonc,
+      disallowComments: !jsonc,
+      label: jsonc ? "JSONC" : "JSON",
+    };
+    const tree = renderJsonTree(editor.value, options);
     if (!tree) {
       const errors = [];
-      parseTree(editor.value, errors, { allowTrailingComma: false, disallowComments: true });
+      parseTree(editor.value, errors, options);
       const position = errors[0] ? positionFromOffset(editor.value, errors[0].offset) : null;
-      renderParseError({ message: "Invalid JSON.", position });
+      renderParseError({ message: jsonc ? "Invalid JSONC." : "Invalid JSON.", position });
       updateMeta();
       return;
     }
-    setPreviewMode("tree", "JSON tree");
+    setPreviewMode("tree", jsonc ? "JSONC tree" : "JSON tree");
     preview.replaceChildren(tree);
     setStatus("good", "Valid · tree");
+    updateMeta();
+    return;
+  }
+  if (format === "json5") {
+    try {
+      const json5 = globalThis.JSON5;
+      if (!json5?.parse) throw new Error("JSON5 runtime is unavailable.");
+      const value = json5.parse(editor.value);
+      setPreviewMode("tree", "JSON5 tree");
+      preview.replaceChildren(renderValueTree(value, "JSON5"));
+      setStatus("good", "Valid · tree");
+    } catch (error) {
+      renderParseError(json5Error(error));
+    }
+    updateMeta();
+    return;
+  }
+  if (format === "jsonl") {
+    const result = renderJsonlTree(editor.value);
+    if (result.error) {
+      renderParseError(result.error);
+      updateMeta();
+      return;
+    }
+    setPreviewMode("tree", "JSONL records");
+    preview.replaceChildren(result.fragment);
+    setStatus("good", `Valid · ${result.records} record${result.records === 1 ? "" : "s"}`);
     updateMeta();
     return;
   }
@@ -1206,6 +1579,56 @@ eolSelect.addEventListener("change", () => {
   state.eol = eolSelect.value;
   setTimeout(updateMeta, 0);
 });
+function renderJsonTransformError(error) {
+  const format = formatSelect.value;
+  if (error?.position) {
+    renderParseError({ message: error.message, position: error.position });
+  } else if (format === "json5") {
+    renderParseError(json5Error(error));
+  } else {
+    const offset = Number(String(error?.message || "").match(/position\s+(\d+)/i)?.[1]);
+    renderParseError({
+      message: error?.message || "JSON transform failed.",
+      position: Number.isFinite(offset) ? positionFromOffset(editor.value, offset) : null,
+    });
+  }
+  updateMeta();
+}
+
+formatButton.addEventListener("click", (event) => {
+  if (!["jsonc", "json5", "jsonl"].includes(formatSelect.value)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  try {
+    transformJsonFamily("format");
+  } catch (error) {
+    renderJsonTransformError(error);
+  }
+}, true);
+
+minifyButton.addEventListener("click", () => {
+  try {
+    transformJsonFamily("minify");
+  } catch (error) {
+    renderJsonTransformError(error);
+  }
+});
+
+repairButton.addEventListener("click", () => {
+  try {
+    repairJsonDocument();
+  } catch (error) {
+    renderJsonTransformError(error);
+  }
+});
+
+validateButton.addEventListener("click", (event) => {
+  if (!["jsonc", "json5", "jsonl"].includes(formatSelect.value)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  renderEnhancedPreview();
+}, true);
+
 formatButton.addEventListener("click", () => {
   state.documentRevision += 1;
   queueMicrotask(() => {

@@ -67,6 +67,9 @@
               <option value="txt">TXT</option>
               <option value="md">Markdown</option>
               <option value="json">JSON</option>
+              <option value="jsonc">JSONC</option>
+              <option value="json5">JSON5</option>
+              <option value="jsonl">JSONL / NDJSON</option>
               <option value="yaml">YAML</option>
               <option value="xml">XML</option>
             </select>
@@ -83,6 +86,8 @@
           <button id="validate-button" class="button compact" type="button">Validate</button>
           <button id="inspect-button" class="button compact" type="button">Inspect</button>
           <button id="format-button" class="button compact" type="button">Auto-format</button>
+          <button id="minify-button" class="button compact" type="button" disabled>Minify</button>
+          <button id="repair-button" class="button compact" type="button" disabled>Repair → JSON</button>
           <button id="copy-button" class="button compact" type="button">Copy</button>
           <button id="save-button" class="button compact primary" type="button" aria-keyshortcuts="Control+S Meta+S">Save</button>
           <button id="download-button" class="button compact" type="button">Download</button>
@@ -271,6 +276,8 @@
 <script src="/i18n.js"></script>
 <script src="/vendor/js-yaml.min.js"></script>
   <script src="/vendor/marked.umd.js"></script>
+  <script src="/vendor/json5.min.js"></script>
+  <script src="/vendor/jsonrepair.min.js"></script>
   <script src="/vendor/pdf-lib.min.js"></script>
   <script src="/vendor/fflate.min.js"></script>
   <script src="/app.js"></script>

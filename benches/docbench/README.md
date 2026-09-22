@@ -3,9 +3,9 @@
 Local-first document toolbox in the Bench family. Files are processed in the
 browser and are not uploaded.
 
-Documents cover TXT, Markdown, JSON, YAML/YML and XML editing, UTF-8 BOM and
+Documents cover TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML editing, UTF-8 BOM and
 line-ending handling, validation and explicit formatting. Markdown gets a safe
-rendered preview, JSON/YAML/XML get collapsible tree views, and supported
+rendered preview, JSON-family/YAML/XML get collapsible tree views, and supported
 browsers can save changes directly back to a chosen local file. Download remains
 available as the portable fallback.
 

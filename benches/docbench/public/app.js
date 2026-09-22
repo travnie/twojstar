@@ -15,10 +15,14 @@
 
   const state = { filename: "untitled.txt", bom: false, mixedEol: false };
   const extensionToFormat = {
-    txt: "txt", md: "md", markdown: "md", json: "json",
+    txt: "txt", md: "md", markdown: "md", json: "json", jsonc: "jsonc",
+    json5: "json5", jsonl: "jsonl", ndjson: "jsonl",
     yml: "yaml", yaml: "yaml", xml: "xml",
   };
-  const preferredExtension = { txt: "txt", md: "md", json: "json", yaml: "yml", xml: "xml" };
+  const preferredExtension = {
+    txt: "txt", md: "md", json: "json", jsonc: "jsonc",
+    json5: "json5", jsonl: "jsonl", yaml: "yml", xml: "xml",
+  };
 
   function detectEol(raw) {
     const crlf = (raw.match(/\r\n/g) || []).length;

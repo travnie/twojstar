@@ -9,6 +9,8 @@ const [
   i18n,
   yaml,
   marked,
+  json5,
+  jsonrepair,
   pdfLib,
   fflate,
   app,
@@ -44,6 +46,8 @@ const [
   readFile("public/i18n.js", "utf8"),
   readFile("public/vendor/js-yaml.min.js", "utf8"),
   readFile("public/vendor/marked.umd.js", "utf8"),
+  readFile("public/vendor/json5.min.js", "utf8"),
+  readFile("public/vendor/jsonrepair.min.js", "utf8"),
   readFile("public/vendor/pdf-lib.min.js", "utf8"),
   readFile("public/vendor/fflate.min.js", "utf8"),
   readFile("public/app.js", "utf8"),
@@ -183,6 +187,14 @@ const portable = html
   .replace(
     '<script src="/vendor/marked.umd.js"></script>',
     `<script>${safeScript(marked)}</script>`,
+  )
+  .replace(
+    '<script src="/vendor/json5.min.js"></script>',
+    `<script>${safeScript(json5)}</script>`,
+  )
+  .replace(
+    '<script src="/vendor/jsonrepair.min.js"></script>',
+    `<script>${safeScript(jsonrepair)}</script>`,
   )
   .replace(
     '<script src="/vendor/pdf-lib.min.js"></script>',
