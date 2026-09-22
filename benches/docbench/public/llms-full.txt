@@ -6,7 +6,7 @@ Description: Complete LLM-oriented description of the local-first Doc Bench docu
 
 ## Document workspace
 
-Doc Bench edits TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML. It validates and formats structured formats, can minify or explicitly repair JSON-family documents, renders Markdown safely, inspects structured data in tree views, preserves or deliberately changes UTF-8 BOM state, and preserves LF, CRLF or CR line endings. Supported browsers can save directly back to a selected local file; download is the portable fallback.
+Doc Bench edits TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML. It validates and formats structured formats, can minify or explicitly repair JSON-family documents, renders Markdown safely, inspects structured data in tree views, preserves or deliberately changes UTF-8 BOM state, and preserves LF, CRLF or CR line endings. Multiple TXT and Markdown files can be merged locally in picker order into a new editable document; mixed TXT/Markdown input produces Markdown. The merge result is deliberately detached from source file handles so Save chooses a new target instead of overwriting a source file. Supported browsers can save directly back to a selected local file; download is the portable fallback.
 
 ## PDF workspace
 
