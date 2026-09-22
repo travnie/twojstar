@@ -30,6 +30,7 @@
   ["Plain text", "Zwykły tekst"],
   ["Open PDF", "Otwórz PDF"],
   ["Add PDF", "Dodaj PDF"],
+  ["DOCX → PDF", "DOCX → PDF"],
   ["← Move", "← Przenieś"],
   ["Move →", "Przenieś →"],
   ["Extract page", "Wyodrębnij stronę"],

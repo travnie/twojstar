@@ -14,7 +14,7 @@ Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY
 
 ## PDF tools
 
-- Preview PDFs locally.
+- Convert DOCX to PDF locally in WebAssembly and open the result in the PDF workspace.\n- Preview PDFs locally.
 - Merge files and reorder or delete pages.
 - Inspect, add, edit, move and remove bookmark trees.
 - Preserve and remap bookmark targets when pages change.

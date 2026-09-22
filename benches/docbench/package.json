@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node ../scripts/sync-i18n.mjs docbench && node ../scripts/sync-webmcp.mjs docbench && node scripts/vendor.mjs && node scripts/portable.mjs",
     "typecheck": "wrangler types && tsc --noEmit",
-    "check": "npm run build && npm run typecheck && node --check public/app.js && node --check public/webmcp-lifecycle.js && node --check public/webmcp.js && node --check public/document-enhancements.mjs && node --check public/text-inspector-core.js && node --check public/text-inspector.js && node --check public/token-counter.mjs && node --check public/token-counter-worker.mjs && node scripts/check.mjs && node tests/document-preview.test.mjs && node tests/text-inspector.test.js && node tests/token-counter.test.mjs && node tests/token-counter-worker.test.mjs && node tests/pdf-core.test.mjs && node tests/pdf-attachment-review.test.mjs && wrangler deploy --dry-run",
+    "check": "npm run build && npm run typecheck && node --check public/app.js && node --check public/webmcp-lifecycle.js && node --check public/webmcp.js && node --check public/document-enhancements.mjs && node --check public/text-inspector-core.js && node --check public/text-inspector.js && node --check public/token-counter.mjs && node --check public/token-counter-worker.mjs && node --check public/docx-converter.mjs && node scripts/check.mjs && node tests/document-preview.test.mjs && node tests/docx-conversion.test.mjs && node tests/text-inspector.test.js && node tests/token-counter.test.mjs && node tests/token-counter-worker.test.mjs && node tests/pdf-core.test.mjs && node tests/pdf-attachment-review.test.mjs && wrangler deploy --dry-run",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
@@ -24,7 +24,8 @@
     "pdfjs-dist": "6.3.289",
     "qpdf-run": "0.2.1",
     "json5": "2.2.3",
-    "jsonrepair": "3.15.0"
+    "jsonrepair": "3.15.0",
+    "docx-to-pdf-wasm": "0.1.0"
   },
   "devDependencies": {
     "typescript": "7.0.2",

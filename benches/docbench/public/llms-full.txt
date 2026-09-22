@@ -10,7 +10,7 @@ Doc Bench edits TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XM
 
 ## PDF workspace
 
-PDF operations run locally in the browser. The application can preview and merge PDFs, reorder or delete pages, inspect and edit nested bookmark trees, preserve or remap bookmark destinations after page operations, optimize PDFs losslessly, optionally recompress images, enable Fast Web View and verify rebuilt output before download.
+PDF operations run locally in the browser. The application can convert DOCX to PDF in WebAssembly, then preview and merge PDFs, reorder or delete pages, inspect and edit nested bookmark trees, preserve or remap bookmark destinations after page operations, optimize PDFs losslessly, optionally recompress images, enable Fast Web View and verify rebuilt output before download.
 
 ## Privacy and portability
 

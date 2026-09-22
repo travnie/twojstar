@@ -26,6 +26,18 @@ await cp(
 );
 await cp(dep("fflate/umd/index.js"), "public/vendor/fflate.min.js");
 
+await mkdir("public/vendor/docx-to-pdf", { recursive: true });
+for (const file of ["index.js", "convert.js"]) {
+  await cp(
+    dep(`docx-to-pdf-wasm/build/${file}`),
+    `public/vendor/docx-to-pdf/${file}`,
+  );
+}
+await cp(
+  dep("docx-to-pdf-wasm/build/docx-to-pdf.wasm"),
+  "public/vendor/docx-to-pdf/docx-to-pdf.wasm",
+);
+
 await mkdir("public/vendor/jsonc-parser/impl", { recursive: true });
 await cp(
   dep("jsonc-parser/lib/esm/impl/scanner.js"),

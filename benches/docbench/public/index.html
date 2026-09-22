@@ -121,6 +121,8 @@
           <button id="pdf-add-button" class="button compact" type="button">Add PDF</button>
           <input id="pdf-input" type="file" hidden accept="application/pdf,.pdf">
           <input id="pdf-add-input" type="file" hidden multiple accept="application/pdf,.pdf">
+          <button id="docx-to-pdf-button" class="button compact" type="button">DOCX → PDF</button>
+          <input id="docx-to-pdf-input" type="file" hidden accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx">
         </div>
         <div class="toolbar-group page-action-group">
           <button id="pdf-move-left" class="button compact" type="button" disabled>← Move</button>
@@ -286,6 +288,7 @@
   <script src="/text-inspector.js"></script>
   <script src="/webmcp-lifecycle.js"></script>
   <script src="/webmcp.js"></script>
+  <script type="module" src="/docx-converter.mjs"></script>
   <script type="module" src="/pdf-app.mjs"></script>
 </body>
 </html>
