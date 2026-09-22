@@ -26,6 +26,7 @@ const previewCanvas = $("#pdf-preview-canvas");
 const pdfStatus = $("#pdf-status");
 const pdfFilename = $("#pdf-filename");
 const saveButton = $("#pdf-save-button");
+const printButton = $("#pdf-print-button");
 const extractButton = $("#pdf-extract-page");
 const splitButton = $("#pdf-split-all");
 const removeButton = $("#pdf-remove-page");
@@ -460,6 +461,7 @@ function updateControls() {
   const hasPage = Boolean(selectedEntry());
   const busy = state.exporting;
   saveButton.disabled = busy || !state.plan.length;
+  printButton.disabled = busy || !state.plan.length;
   extractButton.disabled = busy || !hasPage;
   splitButton.disabled = busy || state.plan.length <= 1;
   removeButton.disabled = busy || !hasPage || state.plan.length <= 1;
@@ -1010,6 +1012,34 @@ function createStoredZip(zipApi) {
   };
 }
 
+async function openPdfToPrint() {
+  if (!state.plan.length || state.exporting) return;
+  const printWindow = globalThis.open("", "_blank");
+  if (!printWindow) {
+    showError(new Error("Allow pop-ups to open the print-ready PDF."));
+    return;
+  }
+  printWindow.document.title = "Preparing PDF…";
+  printWindow.document.body.textContent = "Building the current PDF locally…";
+
+  const snapshot = exportSnapshot();
+  setExportBusy(true);
+  setStatus("Building print-ready PDF locally…");
+  try {
+    const result = await buildPdfOutput(snapshot, snapshot.plan, snapshot.outline);
+    const blob = new Blob([result.bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    printWindow.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+    printWindow.location.replace(url);
+    setStatus(`Opened print-ready PDF · ${formatPdfSize(result.bytes.byteLength)}`);
+  } catch (error) {
+    printWindow.close();
+    showError(error);
+  } finally {
+    setExportBusy(false);
+  }
+}
+
 async function savePdf() {
   if (!state.plan.length || state.exporting) return;
   const snapshot = exportSnapshot();
@@ -1099,6 +1129,7 @@ removeButton.addEventListener("click", removeSelectedPage);
 extractButton.addEventListener("click", extractSelectedPage);
 splitButton.addEventListener("click", splitAllPages);
 saveButton.addEventListener("click", savePdf);
+printButton.addEventListener("click", openPdfToPrint);
 attachmentAdd.addEventListener("click", () => attachmentInput.click());
 attachmentInput.addEventListener("change", async () => {
   try { await addAttachmentFiles(attachmentInput.files || []); } catch (error) { showError(error); }
