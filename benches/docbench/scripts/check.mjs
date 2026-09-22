@@ -14,6 +14,7 @@ for (const path of [
   "public/webmcp.js",
   "public/pdf-app.mjs",
   "public/pdf-core.mjs",
+  "public/docx-converter.mjs",
   "public/fonts.css",
   "public/styles.css",
   "public/fonts/space-grotesk-latin-ext.woff2",
@@ -30,6 +31,9 @@ for (const path of [
   "public/vendor/jsonc-parser/impl/scanner.js",
   "public/vendor/pdf-lib.min.js",
   "public/vendor/fflate.min.js",
+  "public/vendor/docx-to-pdf/index.js",
+  "public/vendor/docx-to-pdf/convert.js",
+  "public/vendor/docx-to-pdf/docx-to-pdf.wasm",
   "public/vendor/pdfjs/pdf.mjs",
   "public/vendor/pdfjs/pdf.worker.mjs",
   "public/vendor/qpdf-run/index.js",
@@ -153,6 +157,20 @@ for (const metadataCoreGuard of [
 }
 
 const pdfApp = await readFile("public/pdf-app.mjs", "utf8");
+const docxConverter = await readFile("public/docx-converter.mjs", "utf8");
+for (const docxGuard of [
+  "MAX_DOCX_BYTES = 32 * 1024 * 1024",
+  "WebAssembly.compile",
+  "convertToPdf",
+  "docbench:open-pdf-bytes",
+]) {
+  if (!docxConverter.includes(docxGuard)) {
+    throw new Error(`DOCX converter is missing guard: ${docxGuard}`);
+  }
+}
+if (!pdfApp.includes("docbench:open-pdf-bytes") || !pdfApp.includes("countOutlineItems")) {
+  throw new Error("PDF workspace is missing the DOCX conversion bridge.");
+}
 if (!pdfApp.includes("openPdfToPrint")
   || !pdfApp.includes("buildPdfOutput(snapshot, snapshot.plan, snapshot.outline)")
   || !pdfApp.includes("URL.revokeObjectURL(url)")) {
@@ -214,6 +232,16 @@ for (const printUiGuard of ["print-button", "pdf-print-button"]) {
 const styles = await readFile("public/styles.css", "utf8");
 if (!styles.includes("@media print") || !styles.includes('body[data-print-workspace="document"]')) {
   throw new Error("Document print stylesheet is missing.");
+}
+
+for (const docxUiGuard of [
+  'id="docx-to-pdf-button"',
+  'id="docx-to-pdf-input"',
+  '/docx-converter.mjs',
+]) {
+  if (!html.includes(docxUiGuard)) {
+    throw new Error(`Doc Bench DOCX UI is missing guard: ${docxUiGuard}`);
+  }
 }
 
 for (const metadataUiGuard of [
@@ -316,6 +344,9 @@ for (const toolName of ["read_document", "set_document_text", "validate_document
 }
 if (!portable.includes("showSaveFilePicker") || !portable.includes("createWritable")) {
   throw new Error("Portable build is missing direct-save support");
+}
+if (!portable.includes("__docbenchDocxAssets") || !portable.includes("convertToPdf")) {
+  throw new Error("Portable build is missing DOCX conversion runtime.");
 }
 if (!portable.includes("PDFLib")) throw new Error("Portable build is missing PDF mutation runtime");
 if (!portable.includes("ZipPassThrough")) throw new Error("Portable build is missing ZIP runtime");

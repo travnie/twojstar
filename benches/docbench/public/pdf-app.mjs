@@ -1199,6 +1199,30 @@ bookmarkItalic.addEventListener("change", () => {
 bookmarkOpen.addEventListener("change", () => {
   mutateSelectedBookmark((bookmark) => { bookmark.open = bookmarkOpen.checked; });
 });
+function countOutlineItems(items = state.outline) {
+  return items.reduce(
+    (total, item) => total + 1 + countOutlineItems(item.children || []),
+    0,
+  );
+}
+
+document.addEventListener("docbench:open-pdf-bytes", (event) => {
+  const { bytes, filename, sourceName, sourceKind } = event.detail || {};
+  if (!(bytes instanceof Uint8Array) || !filename) return;
+  event.preventDefault();
+
+  const file = new File([bytes], filename, { type: "application/pdf" });
+  void openFiles([file], false)
+    .then(() => {
+      if (sourceKind !== "docx") return;
+      const bookmarks = countOutlineItems();
+      setStatus(
+        `Converted ${sourceName || "DOCX"} · ${state.plan.length} page${state.plan.length === 1 ? "" : "s"} · ${bookmarks} bookmark${bookmarks === 1 ? "" : "s"}`,
+      );
+    })
+    .catch(showError);
+});
+
 window.addEventListener("beforeunload", () => state.qpdfRunner?.destroy?.());
 
 updateCompressionControls();

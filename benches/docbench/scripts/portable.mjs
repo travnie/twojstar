@@ -30,6 +30,10 @@ const [
   jsonScanner,
   pdfCore,
   pdfApp,
+  docxConverter,
+  docxIndex,
+  docxConvert,
+  docxWasm,
   pdfJs,
   pdfWorker,
   qpdfBrowserRunner,
@@ -67,6 +71,10 @@ const [
   readFile("public/vendor/jsonc-parser/impl/scanner.js", "utf8"),
   readFile("public/pdf-core.mjs", "utf8"),
   readFile("public/pdf-app.mjs", "utf8"),
+  readFile("public/docx-converter.mjs", "utf8"),
+  readFile("public/vendor/docx-to-pdf/index.js", "utf8"),
+  readFile("public/vendor/docx-to-pdf/convert.js", "utf8"),
+  readFile("public/vendor/docx-to-pdf/docx-to-pdf.wasm"),
   readFile("public/vendor/pdfjs/pdf.mjs", "utf8"),
   readFile("public/vendor/pdfjs/pdf.worker.mjs", "utf8"),
   readFile("public/vendor/qpdf-run/browserRunner.js", "utf8"),
@@ -168,6 +176,19 @@ const portablePdfScripts = [
   `<script type="module">${safeScript(pdfAppPortable)}</script>`,
 ].join("\n");
 
+const docxConvertUrl = dataUrl("text/javascript", docxConvert);
+const docxIndexPortable = docxIndex
+  .replaceAll('"./convert.js"', JSON.stringify(docxConvertUrl))
+  .replaceAll("'./convert.js'", JSON.stringify(docxConvertUrl));
+const docxAssets = {
+  moduleUrl: dataUrl("text/javascript", docxIndexPortable),
+  wasmUrl: dataUrl("application/wasm", docxWasm),
+};
+const portableDocxScripts = [
+  `<script>globalThis.__docbenchDocxAssets=${JSON.stringify(docxAssets)}</script>`,
+  `<script type="module">${safeScript(docxConverter)}</script>`,
+].join("\n");
+
 const portable = html
   .replace(
     '<link rel="stylesheet" href="/fonts.css">',
@@ -216,6 +237,7 @@ const portable = html
   )
   .replace('<script src="/webmcp-lifecycle.js"></script>', `<script>${safeScript(webmcpLifecycle)}</script>`)
   .replace('<script src="/webmcp.js"></script>', `<script>${safeScript(webmcp)}</script>`)
+  .replace('<script type="module" src="/docx-converter.mjs"></script>', portableDocxScripts)
   .replace('<script type="module" src="/pdf-app.mjs"></script>', portablePdfScripts)
   .replace('<link rel="manifest" href="/site.webmanifest">', "")
   .replace('<link rel="canonical" href="https://docbench.travny.workers.dev/">', "")

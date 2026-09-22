@@ -53,6 +53,15 @@ automatically.
 Used locally to package split-page PDF exports into a single ZIP archive. PDF
 entries are stored without a second compression pass.
 
+## docx-to-pdf-wasm
+
+- Package: `docx-to-pdf-wasm` 0.1.0
+- Project: https://github.com/fforres/cloudflare-worker-docx-to-pdf-wasm
+- License: MIT
+
+Used for local DOCX-to-PDF conversion in WebAssembly. Doc Bench enforces the
+converter's 32 MiB input safety limit before invoking WASM.
+
 ## PDF.js
 
 - Package: `pdfjs-dist` 6.2.108
