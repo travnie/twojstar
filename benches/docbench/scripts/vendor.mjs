@@ -13,6 +13,14 @@ await cp(
   "public/vendor/marked.umd.js",
 );
 await cp(
+  dep("json5/dist/index.min.js"),
+  "public/vendor/json5.min.js",
+);
+await cp(
+  dep("jsonrepair/lib/umd/jsonrepair.min.js"),
+  "public/vendor/jsonrepair.min.js",
+);
+await cp(
   dep("@cantoo/pdf-lib/dist/pdf-lib.min.js"),
   "public/vendor/pdf-lib.min.js",
 );

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import jsoncParser from "jsonc-parser";
+import JSON5 from "json5";
+import { jsonrepair } from "jsonrepair";
 import * as yaml from "js-yaml";
 
 const { parseTree } = jsoncParser;
@@ -31,6 +33,44 @@ assert.equal(lexeme(propertyValue("huge")), "9007199254740993");
 assert.equal(lexeme(propertyValue("exponent")), "1e400");
 assert.equal(lexeme(propertyValue("escaped")), '"\\u0061"');
 assert.notEqual(JSON.parse(source).huge.toString(), lexeme(propertyValue("huge")));
+
+const jsoncSource = `{
+  // comment survives JSONC validation
+  "huge": 9007199254740993,
+}`;
+const jsoncErrors = [];
+const jsoncRoot = parseTree(jsoncSource, jsoncErrors, {
+  allowTrailingComma: true,
+  disallowComments: false,
+});
+assert.ok(jsoncRoot);
+assert.deepEqual(jsoncErrors, []);
+const jsoncHuge = jsoncRoot.children.find((node) => node.children?.[0]?.value === "huge").children[1];
+assert.equal(
+  jsoncSource.slice(jsoncHuge.offset, jsoncHuge.offset + jsoncHuge.length),
+  "9007199254740993",
+);
+
+const json5Value = JSON5.parse("{unquoted: 'value', trailing: [1, 2,], hex: 0x10}");
+assert.equal(json5Value.unquoted, "value");
+assert.deepEqual(json5Value.trailing, [1, 2]);
+assert.equal(json5Value.hex, 16);
+
+const repaired = jsonrepair("{name: 'John', active: True,}");
+assert.deepEqual(JSON.parse(repaired), { name: "John", active: true });
+
+const repairedNdjson = jsonrepair('{"id":1}\n{"id":2}');
+assert.deepEqual(JSON.parse(repairedNdjson), [{ id: 1 }, { id: 2 }]);
+
+for (const record of ['{"id":1}', '{"id":2,"large":9007199254740993}']) {
+  const recordErrors = [];
+  const recordTree = parseTree(record, recordErrors, {
+    allowTrailingComma: false,
+    disallowComments: true,
+  });
+  assert.ok(recordTree);
+  assert.deepEqual(recordErrors, []);
+}
 
 const yamlSource = [
   "defaults: &d",

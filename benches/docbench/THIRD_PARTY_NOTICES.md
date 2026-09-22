@@ -17,6 +17,23 @@ Used for YAML 1.2/1.1 parsing, validation and explicit formatting.
 Used to build the JSON preview tree from source offsets so scalar lexemes stay
 exact, including integers outside JavaScript's safe numeric range.
 
+## JSON5
+
+- Package: `json5` 2.2.3
+- Project: https://github.com/json5/json5
+- License: MIT
+
+Used for local JSON5 parsing and normalization.
+
+## jsonrepair
+
+- Package: `jsonrepair` 3.15.0
+- Project: https://github.com/josdejong/jsonrepair
+- License: ISC
+
+Used only when the user explicitly requests repair of malformed JSON-family
+documents. Repair converts input toward strict JSON.
+
 ## Marked
 
 - Package: `marked` 18.0.11

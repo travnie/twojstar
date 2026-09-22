@@ -22,7 +22,9 @@
     "jsonc-parser": "3.3.1",
     "marked": "18.0.13",
     "pdfjs-dist": "6.3.289",
-    "qpdf-run": "0.2.1"
+    "qpdf-run": "0.2.1",
+    "json5": "2.2.3",
+    "jsonrepair": "3.15.0"
   },
   "devDependencies": {
     "typescript": "7.0.2",

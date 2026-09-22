@@ -17,6 +17,8 @@
   ["Validate", "Sprawdź"],
   ["Inspect", "Analizuj"],
   ["Auto-format", "Formatuj automatycznie"],
+  ["Minify", "Minifikuj"],
+  ["Repair → JSON", "Napraw → JSON"],
   ["Copy", "Kopiuj"],
   ["Save", "Zapisz"],
   ["Save as…", "Zapisz jako…"],

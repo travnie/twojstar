@@ -24,6 +24,8 @@ for (const path of [
   "public/fonts/space-mono-latin-700.woff2",
   "public/vendor/js-yaml.min.js",
   "public/vendor/marked.umd.js",
+  "public/vendor/json5.min.js",
+  "public/vendor/jsonrepair.min.js",
   "public/vendor/jsonc-parser/impl/parser.js",
   "public/vendor/jsonc-parser/impl/scanner.js",
   "public/vendor/pdf-lib.min.js",
@@ -61,6 +63,18 @@ for (const capability of [
 if (!documentEnhancements.includes("printDocument")
   || !documentEnhancements.includes('document.body.dataset.printWorkspace = "document"')) {
   throw new Error("Document workspace is missing local print support.");
+}
+for (const jsonCapability of [
+  "renderJsonlTree",
+  "normalizeJson5",
+  "repairJsonDocument",
+  "rewriteJsonWhitespace",
+  'allowTrailingComma: true',
+  "disallowComments: !allowComments",
+]) {
+  if (!documentEnhancements.includes(jsonCapability)) {
+    throw new Error(`JSON-family support is missing: ${jsonCapability}`);
+  }
 }
 if (!documentEnhancements.includes("MAX_TREE_NODES")) {
   throw new Error("Structured previews must keep a bounded tree renderer.");
@@ -178,6 +192,20 @@ if (!workerSource.includes('if (asset.ok && headers.get("content-type")?.include
 }
 
 const html = await readFile("public/index.html", "utf8");
+for (const jsonUiGuard of [
+  'option value="jsonc"',
+  'option value="json5"',
+  'option value="jsonl"',
+  'id="minify-button"',
+  'id="repair-button"',
+  '/vendor/json5.min.js',
+  '/vendor/jsonrepair.min.js',
+]) {
+  if (!html.includes(jsonUiGuard)) {
+    throw new Error(`Doc Bench JSON UI is missing guard: ${jsonUiGuard}`);
+  }
+}
+
 for (const printUiGuard of ["print-button", "pdf-print-button"]) {
   if (!html.includes(printUiGuard)) {
     throw new Error(`Doc Bench print UI is missing guard: ${printUiGuard}`);
@@ -275,6 +303,8 @@ if (!portable.includes("Space Grotesk") || !portable.includes("Space Mono")) {
 }
 if (!portable.includes("jsyaml")) throw new Error("Portable build is missing YAML runtime");
 if (!portable.includes("marked")) throw new Error("Portable build is missing Markdown runtime");
+if (!portable.includes("JSON5")) throw new Error("Portable build is missing JSON5 runtime");
+if (!portable.includes("JSONRepair")) throw new Error("Portable build is missing JSON repair runtime");
 if (!portable.includes("parseTree")) throw new Error("Portable build is missing JSON tree runtime");
 if (!portable.includes("Text safety inspection") || !portable.includes("inspect-button")) {
   throw new Error("Portable build is missing text inspector support.");

@@ -6,9 +6,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 
 ## Documents
 
-- Edit TXT, Markdown, JSON, YAML/YML and XML.
-- Validate and format structured text.
-- Inspect Markdown, JSON, YAML and XML with richer previews.
+- Edit TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML.
+- Validate and format structured text, plus minify or explicitly repair JSON-family documents.
+- Inspect Markdown, JSON-family formats, YAML and XML with richer previews.
 - Preserve UTF-8 BOM and LF, CRLF or CR line endings unless deliberately changed.
 - Save back to a selected local file in supported browsers or download the result.
 
