@@ -6,6 +6,7 @@ for (const path of [
   "public/llms.txt",
   "public/llms-full.txt",
   "public/app.js",
+  "public/document-merge.mjs",
   "public/document-enhancements.mjs",
   "public/document-enhancements.css",
   "public/text-inspector-core.js",
@@ -46,6 +47,18 @@ for (const path of [
   "public/portable.html",
 ]) {
   await access(path);
+}
+
+const documentMerge = await readFile("public/document-merge.mjs", "utf8");
+for (const mergeGuard of [
+  "mergeTextDocuments",
+  "isMergeTextFilename",
+  '"merged.md"',
+  '"merged.txt"',
+]) {
+  if (!documentMerge.includes(mergeGuard)) {
+    throw new Error(`Document merge core is missing guard: ${mergeGuard}`);
+  }
 }
 
 const documentEnhancements = await readFile(
@@ -131,6 +144,9 @@ for (const fidelityGuard of [
   "PROCESSING_INSTRUCTION_NODE",
   "DOCUMENT_TYPE_NODE",
   'statusBadge.dataset.formatResult === "failed"',
+  "mergeSelectedFiles",
+  "MAX_MERGE_FILES = 100",
+  "MAX_MERGE_BYTES = 64 * 1024 * 1024",
 ]) {
   if (!documentEnhancements.includes(fidelityGuard)) {
     throw new Error(`Structured preview is missing fidelity guard: ${fidelityGuard}`);
@@ -224,6 +240,15 @@ if (!workerSource.includes('if (asset.ok && headers.get("content-type")?.include
 }
 
 const html = await readFile("public/index.html", "utf8");
+for (const mergeUiGuard of [
+  'id="merge-files-button"',
+  'id="merge-files-input"',
+  'multiple accept=".txt,.md,.markdown,text/plain,text/markdown"',
+]) {
+  if (!html.includes(mergeUiGuard)) {
+    throw new Error(`Doc Bench text merge UI is missing guard: ${mergeUiGuard}`);
+  }
+}
 for (const jsonUiGuard of [
   'option value="jsonc"',
   'option value="json5"',
@@ -322,6 +347,7 @@ for (const leaked of [
   "/fonts/",
   "/app.js",
   "/document-enhancements.mjs",
+  "/document-merge.mjs",
   "/text-inspector.js",
   "/text-inspector-core.js",
   "webmcp-lifecycle.js",
@@ -363,6 +389,9 @@ for (const toolName of ["read_document", "set_document_text", "validate_document
 }
 if (!portable.includes("showSaveFilePicker") || !portable.includes("createWritable")) {
   throw new Error("Portable build is missing direct-save support");
+}
+if (!portable.includes("mergeTextDocuments") || !portable.includes("merge-files-button")) {
+  throw new Error("Portable build is missing TXT/Markdown merge support");
 }
 if (!portable.includes("__docbenchDocxAssets") || !portable.includes("convertToPdf")) {
   throw new Error("Portable build is missing DOCX conversion runtime.");

@@ -14,6 +14,7 @@ const [
   pdfLib,
   fflate,
   app,
+  documentMerge,
   documentEnhancements,
   inspectorCore,
   inspector,
@@ -56,6 +57,7 @@ const [
   readFile("public/vendor/pdf-lib.min.js", "utf8"),
   readFile("public/vendor/fflate.min.js", "utf8"),
   readFile("public/app.js", "utf8"),
+  readFile("public/document-merge.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
   readFile("public/text-inspector-core.js", "utf8"),
   readFile("public/text-inspector.js", "utf8"),
@@ -110,10 +112,16 @@ const jsonParserPortable = jsonParser
   .replaceAll("'./scanner.js'", JSON.stringify(jsonScannerUrl))
   .replaceAll('"./scanner.js"', JSON.stringify(jsonScannerUrl));
 const jsonParserUrl = dataUrl("text/javascript", jsonParserPortable);
-const documentEnhancementsPortable = documentEnhancements.replace(
-  'from "./vendor/jsonc-parser/impl/parser.js";',
-  `from ${JSON.stringify(jsonParserUrl)};`,
-);
+const documentMergeUrl = dataUrl("text/javascript", documentMerge);
+const documentEnhancementsPortable = documentEnhancements
+  .replace(
+    'from "./vendor/jsonc-parser/impl/parser.js";',
+    `from ${JSON.stringify(jsonParserUrl)};`,
+  )
+  .replace(
+    'from "./document-merge.mjs";',
+    `from ${JSON.stringify(documentMergeUrl)};`,
+  );
 
 const tiktokenBase64Url = dataUrl("text/javascript", tiktokenBase64);
 const tiktokenChunkPortable = tiktokenChunk

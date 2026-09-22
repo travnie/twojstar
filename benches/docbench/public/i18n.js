@@ -11,6 +11,8 @@
   ["Workspace", "Obszar roboczy"],
   ["Documents", "Dokumenty"],
   ["Open file", "Otwórz plik"],
+  ["Merge files", "Scal pliki"],
+  ["Merge TXT/Markdown files into a new editable document", "Scal pliki TXT/Markdown w nowy edytowalny dokument"],
   ["New", "Nowy"],
   ["Format", "Format"],
   ["Line endings", "Końce linii"],
@@ -89,6 +91,7 @@
   ["Valid · numeric YAML", "Poprawny · liczbowy YAML"],
   ["Format failed", "Błąd formatowania"],
   ["Open failed", "Błąd otwierania"],
+  ["Merge failed", "Błąd scalania"],
   ["Save failed", "Błąd zapisu"],
   ["Opening PDF…", "Otwieranie PDF…"],
   ["No embedded files.", "Brak osadzonych plików."],
@@ -124,6 +127,7 @@
   pl: [
     [/^UTF-8 · LF · 1 line$/, "UTF-8 · LF · 1 linia"],
     [/^(.+) · (\d+) lines?$/, (_match, prefix, count) => `${prefix} · ${count} ${plPlural(count, "linia", "linie", "linii")}`],
+    [/^Merged (\d+) files$/, (_match, count) => `Scalono ${count} ${plPlural(count, "plik", "pliki", "plików")}`],
     [/^Added (\d+) attachments?\.$/, (_match, count) => `Dodano ${count} ${plPlural(count, "załącznik", "załączniki", "załączników")}.`],
     [/^(\d+) bookmarks? to deleted pages were pruned\.$/, (_match, count) => `Usunięto ${count} ${plPlural(count, "zakładkę", "zakładki", "zakładek")} prowadzących do usuniętych stron.`],
     [/^(\d+) words?$/, (_match, count) => `${count} ${plPlural(count, "słowo", "słowa", "słów")}`],
@@ -134,6 +138,7 @@
   en: [
     [/^UTF-8 · LF · 1 linia$/, "UTF-8 · LF · 1 line"],
     [/^(.+) · (\d+) (?:linia|linie|linii)$/, (_match, prefix, count) => `${prefix} · ${count} ${enPlural(count, "line", "lines")}`],
+    [/^Scalono (\d+) (?:plik|pliki|plików)$/, (_match, count) => `Merged ${count} ${enPlural(count, "file", "files")}`],
     [/^Dodano (\d+) (?:załącznik|załączniki|załączników)\.$/, (_match, count) => `Added ${count} ${enPlural(count, "attachment", "attachments")}.`],
     [/^Usunięto (\d+) (?:zakładkę|zakładki|zakładek) prowadzących do usuniętych stron\.$/, (_match, count) => `${count} ${enPlural(count, "bookmark", "bookmarks")} to deleted pages were pruned.`],
     [/^(\d+) (?:słowo|słowa|słów)$/, (_match, count) => `${count} ${enPlural(count, "word", "words")}`],

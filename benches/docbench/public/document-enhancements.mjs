@@ -1,4 +1,5 @@
 import { parseTree } from "./vendor/jsonc-parser/impl/parser.js";
+import { isMergeTextFilename, mergeTextDocuments } from "./document-merge.mjs";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -12,7 +13,9 @@ const encodingLabel = $("#encoding-label");
 const detailStatus = $("#detail-status");
 const statusBadge = $("#status-badge");
 const fileInput = $("#file-input");
+const mergeFilesInput = $("#merge-files-input");
 const openButton = $("#open-button");
+const mergeFilesButton = $("#merge-files-button");
 const newButton = $("#new-button");
 const saveButton = $("#save-button");
 const downloadButton = $("#download-button");
@@ -25,6 +28,8 @@ const dropZone = $("#drop-zone");
 const documentWorkspace = $("#document-workspace");
 
 const MAX_TREE_NODES = 5000;
+const MAX_MERGE_FILES = 100;
+const MAX_MERGE_BYTES = 64 * 1024 * 1024;
 const SOURCE_SCALAR = Symbol("source-scalar");
 const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 const extensionToFormat = {
@@ -121,6 +126,64 @@ function applyEol(text, kind) {
 function formatFromFilename(name) {
   const extension = name.includes(".") ? name.split(".").pop().toLowerCase() : "txt";
   return extensionToFormat[extension] || "txt";
+}
+
+async function mergeSelectedFiles(files) {
+  const selected = [...files];
+  if (selected.length < 2) {
+    throw new Error("Choose at least two TXT or Markdown files to merge.");
+  }
+  if (selected.length > MAX_MERGE_FILES) {
+    throw new Error(`Merge is limited to ${MAX_MERGE_FILES} files at once.`);
+  }
+
+  const unsupported = selected.find((file) => !isMergeTextFilename(file.name));
+  if (unsupported) {
+    throw new Error(`${unsupported.name}: only .txt, .md and .markdown files can be merged.`);
+  }
+
+  const totalBytes = selected.reduce((sum, file) => sum + Number(file.size || 0), 0);
+  if (totalBytes > MAX_MERGE_BYTES) {
+    throw new Error("Merge is limited to 64 MiB of source files at once.");
+  }
+
+  const revision = state.documentRevision;
+  const documents = [];
+  for (const file of selected) {
+    const parsed = await readTextFile(file);
+    if (state.documentRevision !== revision) throw staleSaveError();
+    documents.push({
+      name: file.name,
+      text: normalizeEol(parsed.raw),
+      bom: parsed.bom,
+      eol: parsed.eol,
+    });
+  }
+
+  const merged = mergeTextDocuments(documents);
+  if (state.documentRevision !== revision) throw staleSaveError();
+
+  const first = documents[0];
+  state.documentRevision += 1;
+  state.handle = null;
+  state.filename = merged.filename;
+  state.bom = first.bom;
+  state.mixedEol = documents.some((document) => {
+    return document.eol.mixed || document.eol.target !== first.eol.target;
+  });
+  state.eol = first.eol.target;
+
+  editor.value = merged.text;
+  eolSelect.value = state.eol;
+  formatSelect.value = merged.format;
+  filenameLabel.textContent = state.filename;
+  updateFormatButton();
+  updateSaveButton();
+  updateMeta();
+  document.dispatchEvent(new Event("docbench:document-change"));
+  renderEnhancedPreview();
+  setStatus("good", `Merged ${documents.length} files`);
+  editor.focus();
 }
 
 async function readTextFile(file) {
@@ -1437,6 +1500,21 @@ async function syncFallbackFile(file, revision) {
     updateSaveButton();
   }
 }
+
+mergeFilesButton.addEventListener("click", () => mergeFilesInput.click());
+mergeFilesInput.addEventListener("change", () => {
+  const files = mergeFilesInput.files;
+  if (!files?.length) return;
+  void mergeSelectedFiles(files)
+    .catch((error) => {
+      if (error?.name === "StaleDocumentError") return;
+      setStatus("bad", "Merge failed");
+      statusBadge.title = error?.message || String(error);
+    })
+    .finally(() => {
+      mergeFilesInput.value = "";
+    });
+});
 
 openButton.addEventListener("click", (event) => {
   if (!nativeOpenSupported) return;
