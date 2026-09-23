@@ -3,16 +3,17 @@ export const WEBMCP_SCRIPT = String.raw`"use strict";
   const context = document.modelContext;
   if (!context?.registerTool) return;
 
-  const ownerKey = Symbol.for("trfny.weather.webmcp.lifecycle");
-  const previous = globalThis[ownerKey];
+  const runtime = globalThis;
+  const ownerKey = "__trfnyWeatherWebMcpLifecycle";
+  const previous = runtime[ownerKey];
   if (previous && typeof previous.abort === "function") previous.abort();
 
   const lifecycle = new AbortController();
-  globalThis[ownerKey] = lifecycle;
+  runtime[ownerKey] = lifecycle;
 
   const cleanup = () => {
     lifecycle.abort();
-    if (globalThis[ownerKey] === lifecycle) delete globalThis[ownerKey];
+    if (runtime[ownerKey] === lifecycle) delete runtime[ownerKey];
   };
   window.addEventListener("pagehide", (event) => {
     if (!event.persisted) cleanup();
