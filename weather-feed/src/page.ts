@@ -315,7 +315,7 @@ export function renderPage(
   <div class="card" id="entries">${renderEntries(entries)}</div>
 
   <footer>
-    Źródła: Open-Meteo · OpenWeather · Visual Crossing · Vaisala Xweather · IMGW-PIB · Open-Meteo Air Quality (CAMS).
+    Źródła: Open-Meteo · OpenWeather · Visual Crossing · Vaisala Xweather · Pirate Weather · IMGW-PIB · Open-Meteo Air Quality (CAMS).
     Aktualizacja co 2 h (pogoda) i raz dziennie (prognoza).<br>
     <a href="https://www.xweather.com/" target="_blank" rel="noopener noreferrer" title="Powered by Vaisala Xweather">Powered by Vaisala Xweather</a>
     · <a href="https://trfny.com/">TRAVNY ↗</a>
@@ -327,7 +327,7 @@ export function renderPage(
 (function(){
   var PL = {clear:"bezchmurnie",clouds:"zachmurzenie",fog:"mgła",drizzle:"mżawka",
     rain:"deszcz",snow:"śnieg",storm:"burza",unknown:"—"};
-  var SRC = {openmeteo:"Open-Meteo",openweather:"OpenWeather",visualcrossing:"Visual Crossing",xweather:"Vaisala Xweather"};
+  var SRC = {openmeteo:"Open-Meteo",openweather:"OpenWeather",visualcrossing:"Visual Crossing",xweather:"Vaisala Xweather",pirateweather:"Pirate Weather"};
 
   function fmt(x){ return (x===null||x===undefined) ? "—" : (Math.round(x*10)/10); }
   function el(id){ return document.getElementById(id); }
