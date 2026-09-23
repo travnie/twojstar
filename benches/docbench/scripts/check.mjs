@@ -145,6 +145,12 @@ for (const fidelityGuard of [
   "DOCUMENT_TYPE_NODE",
   'statusBadge.dataset.formatResult === "failed"',
   "mergeSelectedFiles",
+  "queueAndMergeFiles",
+  "pendingMergeFiles",
+  "setMergeFeedback",
+  "mergeFilesButton.disabled = true",
+  "mergeFilesInput.disabled = true",
+  "1 file queued · pick one more",
   "MAX_MERGE_FILES = 100",
   "MAX_MERGE_BYTES = 64 * 1024 * 1024",
 ]) {
@@ -243,6 +249,7 @@ const html = await readFile("public/index.html", "utf8");
 for (const mergeUiGuard of [
   'id="merge-files-button"',
   'id="merge-files-input"',
+  'id="merge-files-feedback"',
   'multiple accept="*/*"',
 ]) {
   if (!html.includes(mergeUiGuard)) {

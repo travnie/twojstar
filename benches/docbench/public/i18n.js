@@ -127,6 +127,9 @@
   pl: [
     [/^UTF-8 · LF · 1 line$/, "UTF-8 · LF · 1 linia"],
     [/^(.+) · (\d+) lines?$/, (_match, prefix, count) => `${prefix} · ${count} ${plPlural(count, "linia", "linie", "linii")}`],
+    [/^1 file queued · pick one more$/, "1 plik w kolejce · wybierz jeszcze jeden"],
+    [/^(\d+) files selected · merging…$/, (_match, count) => `${count} ${plPlural(count, "plik wybrany", "pliki wybrane", "plików wybranych")} · scalanie…`],
+    [/^Merge cancelled · document changed$/, "Scalanie anulowane · dokument się zmienił"],
     [/^Merged (\d+) files$/, (_match, count) => `Scalono ${count} ${plPlural(count, "plik", "pliki", "plików")}`],
     [/^Added (\d+) attachments?\.$/, (_match, count) => `Dodano ${count} ${plPlural(count, "załącznik", "załączniki", "załączników")}.`],
     [/^(\d+) bookmarks? to deleted pages were pruned\.$/, (_match, count) => `Usunięto ${count} ${plPlural(count, "zakładkę", "zakładki", "zakładek")} prowadzących do usuniętych stron.`],
@@ -138,6 +141,9 @@
   en: [
     [/^UTF-8 · LF · 1 linia$/, "UTF-8 · LF · 1 line"],
     [/^(.+) · (\d+) (?:linia|linie|linii)$/, (_match, prefix, count) => `${prefix} · ${count} ${enPlural(count, "line", "lines")}`],
+    [/^1 plik w kolejce · wybierz jeszcze jeden$/, "1 file queued · pick one more"],
+    [/^(\d+) (?:plik wybrany|pliki wybrane|plików wybranych) · scalanie…$/, "$1 files selected · merging…"],
+    [/^Scalanie anulowane · dokument się zmienił$/, "Merge cancelled · document changed"],
     [/^Scalono (\d+) (?:plik|pliki|plików)$/, (_match, count) => `Merged ${count} ${enPlural(count, "file", "files")}`],
     [/^Dodano (\d+) (?:załącznik|załączniki|załączników)\.$/, (_match, count) => `Added ${count} ${enPlural(count, "attachment", "attachments")}.`],
     [/^Usunięto (\d+) (?:zakładkę|zakładki|zakładek) prowadzących do usuniętych stron\.$/, (_match, count) => `${count} ${enPlural(count, "bookmark", "bookmarks")} to deleted pages were pruned.`],

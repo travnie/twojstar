@@ -14,6 +14,7 @@ const detailStatus = $("#detail-status");
 const statusBadge = $("#status-badge");
 const fileInput = $("#file-input");
 const mergeFilesInput = $("#merge-files-input");
+const mergeFilesFeedback = $("#merge-files-feedback");
 const openButton = $("#open-button");
 const mergeFilesButton = $("#merge-files-button");
 const newButton = $("#new-button");
@@ -89,6 +90,9 @@ const state = {
   documentRevision: 0,
 };
 
+let pendingMergeFiles = [];
+let pendingMergeRevision = null;
+
 const nativeOpenSupported = globalThis.isSecureContext
   && typeof globalThis.showOpenFilePicker === "function";
 const nativeSaveSupported = globalThis.isSecureContext
@@ -123,6 +127,77 @@ function applyEol(text, kind) {
   return normalized;
 }
 
+function setMergeFeedback(kind, text, title = text) {
+  mergeFilesFeedback.hidden = !text;
+  mergeFilesFeedback.dataset.kind = kind || "";
+  mergeFilesFeedback.textContent = text || "";
+  mergeFilesFeedback.title = text ? title : "";
+}
+
+function resetMergeQueue({ clearFeedback = false } = {}) {
+  pendingMergeFiles = [];
+  pendingMergeRevision = null;
+  if (clearFeedback) setMergeFeedback("", "");
+}
+
+function ensureFreshMergeQueue() {
+  if (pendingMergeRevision !== null && pendingMergeRevision !== state.documentRevision) {
+    resetMergeQueue({ clearFeedback: true });
+  }
+}
+
+async function queueAndMergeFiles(files) {
+  ensureFreshMergeQueue();
+  const selected = [...files];
+  if (!selected.length) return false;
+  if (pendingMergeRevision === null) pendingMergeRevision = state.documentRevision;
+
+  const unsupported = selected.find((file) => !isMergeTextFilename(file.name));
+  if (unsupported) {
+    resetMergeQueue();
+    throw new Error(`${unsupported.name}: only .txt, .md and .markdown files can be merged.`);
+  }
+
+  pendingMergeFiles.push(...selected);
+  if (pendingMergeFiles.length > MAX_MERGE_FILES) {
+    resetMergeQueue();
+    throw new Error(`Merge is limited to ${MAX_MERGE_FILES} files at once.`);
+  }
+
+  if (pendingMergeFiles.length < 2) {
+    const [file] = pendingMergeFiles;
+    setMergeFeedback(
+      "neutral",
+      "1 file queued · pick one more",
+      `${file.name} is queued. Pick at least one more TXT or Markdown file.`,
+    );
+    return false;
+  }
+
+  const queued = [...pendingMergeFiles];
+  setMergeFeedback(
+    "neutral",
+    `${queued.length} files selected · merging…`,
+    queued.map((file) => file.name).join("\n"),
+  );
+  mergeFilesButton.disabled = true;
+  mergeFilesInput.disabled = true;
+
+  try {
+    await mergeSelectedFiles(queued);
+    setMergeFeedback(
+      "good",
+      `Merged ${queued.length} files`,
+      queued.map((file) => file.name).join("\n"),
+    );
+    return true;
+  } finally {
+    mergeFilesButton.disabled = false;
+    mergeFilesInput.disabled = false;
+    resetMergeQueue();
+  }
+}
+
 function formatFromFilename(name) {
   const extension = name.includes(".") ? name.split(".").pop().toLowerCase() : "txt";
   return extensionToFormat[extension] || "txt";
@@ -150,7 +225,12 @@ async function mergeSelectedFiles(files) {
   const revision = state.documentRevision;
   const documents = [];
   for (const file of selected) {
-    const parsed = await readTextFile(file);
+    let parsed;
+    try {
+      parsed = await readTextFile(file);
+    } catch (error) {
+      throw new Error(`${file.name}: ${error?.message || String(error)}`);
+    }
     if (state.documentRevision !== revision) throw staleSaveError();
     documents.push({
       name: file.name,
@@ -1501,15 +1581,24 @@ async function syncFallbackFile(file, revision) {
   }
 }
 
-mergeFilesButton.addEventListener("click", () => mergeFilesInput.click());
+mergeFilesButton.addEventListener("click", () => {
+  ensureFreshMergeQueue();
+  mergeFilesInput.click();
+});
 mergeFilesInput.addEventListener("change", () => {
   const files = mergeFilesInput.files;
   if (!files?.length) return;
-  void mergeSelectedFiles(files)
+  void queueAndMergeFiles(files)
     .catch((error) => {
-      if (error?.name === "StaleDocumentError") return;
+      if (error?.name === "StaleDocumentError") {
+        setMergeFeedback("bad", "Merge cancelled · document changed");
+        return;
+      }
+      const message = error?.message || String(error);
       setStatus("bad", "Merge failed");
-      statusBadge.title = error?.message || String(error);
+      statusBadge.title = message;
+      setMergeFeedback("bad", `Merge failed · ${message}`);
+      resetMergeQueue();
     })
     .finally(() => {
       mergeFilesInput.value = "";

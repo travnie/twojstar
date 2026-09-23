@@ -399,3 +399,28 @@
   color: var(--muted);
   font: 400 0.69rem/1.45 "Space Mono", ui-monospace, monospace;
 }
+
+
+.merge-files-feedback {
+  max-width: min(46vw, 420px);
+  overflow: hidden;
+  color: var(--muted);
+  font: 600 0.68rem/1.35 "Space Mono", ui-monospace, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merge-files-feedback[data-kind="good"] {
+  color: var(--ok);
+}
+
+.merge-files-feedback[data-kind="bad"] {
+  color: var(--bad);
+}
+
+@media (max-width: 640px) {
+  .merge-files-feedback {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
