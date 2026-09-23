@@ -32,7 +32,7 @@ User-agent: Applebot
 User-agent: Applebot-Extended
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
-\\nUser-agent: *\\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\\nAllow: /\\nSitemap: ${SITE_ORIGIN}/sitemap.xml\\n`;
+\nUser-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`;
 const SITEMAP = `<?xml version="1.0" encoding="utf-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_ORIGIN}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>
