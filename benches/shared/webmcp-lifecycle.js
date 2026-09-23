@@ -1,11 +1,21 @@
 "use strict";
 
 (() => {
+  const ownershipKey = Symbol.for("trfny.benches.webmcp.owners");
+  const existingOwners = globalThis[ownershipKey];
+  const owners = existingOwners instanceof Map ? existingOwners : new Map();
+  globalThis[ownershipKey] = owners;
+
   function createRegistrationLifecycle(context, label) {
     if (!context?.registerTool) return null;
 
+    const previous = owners.get(label);
+    if (previous && typeof previous.abort === "function") previous.abort();
+
     const lifecycle = new AbortController();
+    owners.set(label, lifecycle);
     const warning = `${label} WebMCP registration failed`;
+
     const register = (tool) => {
       try {
         Promise.resolve(context.registerTool(tool, { signal: lifecycle.signal }))
@@ -15,11 +25,16 @@
       }
     };
 
-    window.addEventListener("pagehide", (event) => {
-      if (!event.persisted) lifecycle.abort();
-    });
+    const cleanup = () => {
+      lifecycle.abort();
+      if (owners.get(label) === lifecycle) owners.delete(label);
+    };
 
-    return Object.freeze({ register });
+    window.addEventListener("pagehide", (event) => {
+      if (!event.persisted) cleanup();
+    }, { once: true });
+
+    return Object.freeze({ register, cleanup });
   }
 
   globalThis.BenchWebMcp = Object.freeze({ createRegistrationLifecycle });

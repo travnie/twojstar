@@ -148,6 +148,7 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /rel="alternate" type="text\/plain" href="\/llms\.txt"/);
   assert.match(html, /rel="describedby" href="\/llms\.txt"/);
   assert.match(html, /application\/ld\+json/);
+  assert.match(html, /<script src="\/webmcp\.js" defer><\/script>/);
   assert.match(html, /Powered by Vaisala Xweather/);
   assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
@@ -157,6 +158,7 @@ test("weather page advertises its canonical and llms surface", () => {
 test("weather discovery routes do not require storage", async () => {
   const expected = {
     "/robots.txt": "https://weather.trfny.com/sitemap.xml",
+    "/webmcp.js": "read_weather_state",
     "/sitemap.xml": "https://weather.trfny.com/feed.atom",
     "/index.md": "https://weather.trfny.com/state.json",
     "/llms.txt": "https://weather.trfny.com/index.md",
@@ -173,6 +175,14 @@ test("weather discovery routes do not require storage", async () => {
     assert.ok(body.includes(canonicalUrl));
     if (path === "/robots.txt") {
       assert.match(body, /Content-Signal: ai-train=yes, search=yes, ai-input=yes/);
+      assert.match(body, /User-agent: OAI-SearchBot/);
+      assert.match(body, /User-agent: Claude-SearchBot/);
+      assert.match(body, /User-agent: PerplexityBot/);
+    }
+    if (path === "/webmcp.js") {
+      assert.match(body, /document\.modelContext/);
+      assert.match(body, /registerTool\(tool, \{ signal: lifecycle\.signal \}\)/);
+      assert.match(body, /additionalProperties: false/);
     }
   }
 });

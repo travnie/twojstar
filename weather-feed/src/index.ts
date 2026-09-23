@@ -12,12 +12,33 @@ import type {
   AirQuality, CurrentState, DayEnsemble, Ensemble, FeedEntry, Reading, SourceId, Warning,
 } from "./types";
 import { reconcileWarnings } from "./warnings";
+import { WEBMCP_SCRIPT } from "./webmcp";
 
 const SITE_ORIGIN = "https://weather.trfny.com";
 const SITE_HOST = new URL(SITE_ORIGIN).hostname;
 const WORKERS_HOST = "weather.travny.workers.dev";
 
-const ROBOTS = `User-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`;
+const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: OAI-AdsBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot
+User-agent: Applebot-Extended
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+Allow: /
+
+User-agent: *
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+Allow: /
+Sitemap: ${SITE_ORIGIN}/sitemap.xml
+`;
 const SITEMAP = `<?xml version="1.0" encoding="utf-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_ORIGIN}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>
@@ -52,6 +73,7 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 - [Weather changes feed](${SITE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
 - [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
 - [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
+- WebMCP: read_weather_state exposes the current published state on supporting browser hosts.
 - [TRAVNY hub](https://trfny.com/): related tools and services.
 `;
 
@@ -71,6 +93,7 @@ The service combines Open-Meteo, OpenWeather, Visual Crossing, Vaisala Xweather,
 - [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
 - [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom): active warning changes.
 - [Markdown dashboard page](${SITE_ORIGIN}/index.md): concise page description.
+- WebMCP tool: read_weather_state reads the same public state through the visible page on supporting browser hosts.
 
 ## Freshness
 
@@ -371,6 +394,8 @@ function discoveryResponse(pathname: string): Response | undefined {
   switch (pathname) {
     case "/robots.txt":
       return cachedResponse(ROBOTS, "text/plain; charset=utf-8", 86400);
+    case "/webmcp.js":
+      return cachedResponse(WEBMCP_SCRIPT, "text/javascript; charset=utf-8", 3600);
     case "/sitemap.xml":
       return cachedResponse(SITEMAP, "application/xml; charset=utf-8", 86400);
     case "/index.md":
