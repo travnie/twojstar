@@ -45,6 +45,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   openweather: "OpenWeather",
   visualcrossing: "Visual Crossing",
   xweather: "Vaisala Xweather",
+  pirateweather: "Pirate Weather",
 };
 
 export const POLLEN_PL: Record<string, string> = {
