@@ -11,9 +11,19 @@
   const filenameLabel = $("#filename-label");
   const encodingLabel = $("#encoding-label");
   const fileInput = $("#file-input");
+  const mergeFilesInput = $("#merge-files-input");
+  const mergeFilesButton = $("#merge-files-button");
+  const mergeNowButton = $("#merge-now-button");
+  const mergeFilesFeedback = $("#merge-files-feedback");
   const dropZone = $("#drop-zone");
 
   const state = { filename: "untitled.txt", bom: false, mixedEol: false };
+  const MAX_MERGE_FILES = 100;
+  const MAX_MERGE_BYTES = 64 * 1024 * 1024;
+  const ANDROID = /Android/i.test(navigator.userAgent);
+  let mergeQueue = [];
+  let mergeBusy = false;
+  let mergeCorePromise;
   const extensionToFormat = {
     txt: "txt", md: "md", markdown: "md", json: "json", jsonc: "jsonc",
     json5: "json5", jsonl: "jsonl", ndjson: "jsonl",
@@ -364,16 +374,143 @@
     formatSelect.value = extensionToFormat[ext] || "txt";
   }
 
-  async function openFile(file) {
+  async function readTextFile(file) {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const hasBom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
-    const contentBytes = hasBom ? bytes.slice(3) : bytes;
+    const bom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+    const contentBytes = bom ? bytes.slice(3) : bytes;
     if (contentBytes.includes(0)) throw new Error("Binary or UTF-16 input is not supported yet.");
     const raw = new TextDecoder("utf-8", { fatal: true }).decode(contentBytes);
-    const eol = detectEol(raw);
+    return { raw, bom, eol: detectEol(raw) };
+  }
+
+  function getMergeCore() {
+    mergeCorePromise ||= import("./document-merge.mjs");
+    return mergeCorePromise;
+  }
+
+  function setMergeFeedback(kind, text, title = text) {
+    mergeFilesFeedback.hidden = !text;
+    mergeFilesFeedback.dataset.kind = kind || "";
+    mergeFilesFeedback.textContent = text || "";
+    mergeFilesFeedback.title = text ? title : "";
+  }
+
+  function updateMergeControls() {
+    mergeFilesButton.disabled = mergeBusy;
+    mergeFilesInput.disabled = mergeBusy;
+    mergeNowButton.disabled = mergeBusy || mergeQueue.length < 2;
+    mergeNowButton.hidden = mergeQueue.length < 2;
+  }
+
+  function resetMergeQueue({ clearFeedback = false } = {}) {
+    mergeQueue = [];
+    if (clearFeedback) setMergeFeedback("", "");
+    updateMergeControls();
+  }
+
+  async function queueMergeFiles(files) {
+    const selected = [...files];
+    if (!selected.length) return;
+
+    const { isMergeTextFilename } = await getMergeCore();
+    const unsupported = selected.find((file) => !isMergeTextFilename(file.name));
+    if (unsupported) {
+      throw new Error(`${unsupported.name}: only .txt, .md and .markdown files can be merged.`);
+    }
+
+    if (mergeQueue.length + selected.length > MAX_MERGE_FILES) {
+      throw new Error(`Merge is limited to ${MAX_MERGE_FILES} files at once.`);
+    }
+    const totalBytes = [...mergeQueue, ...selected]
+      .reduce((sum, file) => sum + Number(file.size || 0), 0);
+    if (totalBytes > MAX_MERGE_BYTES) {
+      throw new Error("Merge is limited to 64 MiB of source files at once.");
+    }
+
+    mergeQueue.push(...selected);
+    const count = mergeQueue.length;
+    setMergeFeedback(
+      "neutral",
+      count === 1 ? "1 file queued · pick one more" : `${count} files queued · ready to merge`,
+      mergeQueue.map((file) => file.name).join("\n"),
+    );
+    updateMergeControls();
+  }
+
+  async function mergeQueuedFiles() {
+    if (mergeBusy || mergeQueue.length < 2) return;
+    const queued = [...mergeQueue];
+    mergeBusy = true;
+    updateMergeControls();
+    setMergeFeedback(
+      "neutral",
+      `${queued.length} files selected · merging…`,
+      queued.map((file) => file.name).join("\n"),
+    );
+
+    try {
+      const { mergeTextDocuments } = await getMergeCore();
+      const documents = [];
+      for (const file of queued) {
+        let parsed;
+        try {
+          parsed = await readTextFile(file);
+        } catch (error) {
+          throw new Error(`${file.name}: ${error?.message || String(error)}`);
+        }
+        documents.push({
+          name: file.name,
+          text: normalizeEol(parsed.raw),
+          bom: parsed.bom,
+          eol: parsed.eol,
+        });
+      }
+
+      const merged = mergeTextDocuments(documents);
+      const first = documents[0];
+      state.filename = merged.filename;
+      state.bom = first.bom;
+      state.mixedEol = documents.some((document) => {
+        return document.eol.mixed || document.eol.target !== first.eol.target;
+      });
+      editor.value = merged.text;
+      eolSelect.value = first.eol.target;
+      formatSelect.value = merged.format;
+      filenameLabel.textContent = state.filename;
+      document.dispatchEvent(new CustomEvent("docbench:primary-document-state", {
+        detail: {
+          filename: state.filename,
+          bom: state.bom,
+          mixedEol: state.mixedEol,
+          eol: first.eol.target,
+        },
+      }));
+      document.dispatchEvent(new Event("docbench:document-change"));
+      renderValidation();
+      resetMergeQueue();
+      setMergeFeedback(
+        "good",
+        `Merged ${documents.length} files`,
+        queued.map((file) => file.name).join("\n"),
+      );
+      editor.focus();
+    } catch (error) {
+      const message = error?.message || String(error);
+      statusBadge.className = "status bad";
+      statusBadge.textContent = "Merge failed";
+      setMergeFeedback("bad", `Merge failed · ${message}`);
+    } finally {
+      mergeBusy = false;
+      updateMergeControls();
+    }
+  }
+
+  async function openFile(file) {
+    const { raw, bom, eol } = await readTextFile(file);
+    resetMergeQueue({ clearFeedback: true });
 
     state.filename = file.name || "document.txt";
-    state.bom = hasBom;
+    state.bom = bom;
     state.mixedEol = eol.mixed;
     editor.value = normalizeEol(raw);
     eolSelect.value = eol.target;
@@ -396,6 +533,7 @@
   }
 
   function newDocument() {
+    resetMergeQueue({ clearFeedback: true });
     state.filename = `untitled.${preferredExtension[formatSelect.value]}`;
     state.bom = false;
     state.mixedEol = false;
@@ -408,6 +546,36 @@
   }
 
   $("#open-button").addEventListener("click", () => fileInput.click());
+  mergeFilesButton.addEventListener("click", () => {
+    mergeFilesInput.multiple = !ANDROID;
+    setMergeFeedback(
+      "neutral",
+      mergeQueue.length === 1
+        ? "1 file queued · pick one more"
+        : mergeQueue.length > 1
+          ? `${mergeQueue.length} files queued · add more or merge`
+          : "Choose TXT/Markdown files…",
+    );
+    mergeFilesInput.click();
+  });
+  mergeFilesInput.addEventListener("change", async () => {
+    const files = mergeFilesInput.files;
+    if (!files?.length) return;
+    try {
+      await queueMergeFiles(files);
+    } catch (error) {
+      const message = error?.message || String(error);
+      statusBadge.className = "status bad";
+      statusBadge.textContent = "Merge failed";
+      setMergeFeedback("bad", `Merge failed · ${message}`);
+    } finally {
+      mergeFilesInput.value = "";
+    }
+  });
+  mergeNowButton.addEventListener("click", () => void mergeQueuedFiles());
+  document.addEventListener("docbench:document-change", () => {
+    if (!mergeBusy && mergeQueue.length) resetMergeQueue({ clearFeedback: true });
+  });
   $("#new-button").addEventListener("click", newDocument);
   $("#validate-button").addEventListener("click", () => renderValidation({ revealError: true }));
   $("#format-button").addEventListener("click", formatDocument);

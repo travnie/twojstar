@@ -61,6 +61,7 @@ for (const mergeGuard of [
   }
 }
 
+const app = await readFile("public/app.js", "utf8");
 const documentEnhancements = await readFile(
   "public/document-enhancements.mjs",
   "utf8",
@@ -82,6 +83,27 @@ if (!documentEnhancements.includes("printDocument")
   || !documentEnhancements.includes('document.body.dataset.printWorkspace = "document"')) {
   throw new Error("Document workspace is missing local print support.");
 }
+for (const mergeControllerGuard of [
+  'import("./document-merge.mjs")',
+  "queueMergeFiles",
+  "mergeQueuedFiles",
+  "mergeFilesInput.multiple = !ANDROID",
+  "MAX_MERGE_FILES = 100",
+  "MAX_MERGE_BYTES = 64 * 1024 * 1024",
+  "docbench:primary-document-state",
+]) {
+  if (!app.includes(mergeControllerGuard)) {
+    throw new Error(`Primary document controller is missing merge guard: ${mergeControllerGuard}`);
+  }
+}
+if (!documentEnhancements.includes("docbench:primary-document-state")) {
+  throw new Error("Enhanced document state must follow the primary merge controller.");
+}
+if (documentEnhancements.includes("queueMergeFiles")
+  || documentEnhancements.includes("mergeSelectedFiles")) {
+  throw new Error("Text merge must stay in the primary document controller.");
+}
+
 for (const jsonCapability of [
   "renderJsonlTree",
   "normalizeJson5",
@@ -144,15 +166,6 @@ for (const fidelityGuard of [
   "PROCESSING_INSTRUCTION_NODE",
   "DOCUMENT_TYPE_NODE",
   'statusBadge.dataset.formatResult === "failed"',
-  "mergeSelectedFiles",
-  "queueAndMergeFiles",
-  "pendingMergeFiles",
-  "setMergeFeedback",
-  "mergeFilesButton.disabled = true",
-  "mergeFilesInput.disabled = true",
-  "1 file queued · pick one more",
-  "MAX_MERGE_FILES = 100",
-  "MAX_MERGE_BYTES = 64 * 1024 * 1024",
 ]) {
   if (!documentEnhancements.includes(fidelityGuard)) {
     throw new Error(`Structured preview is missing fidelity guard: ${fidelityGuard}`);
@@ -249,8 +262,10 @@ const html = await readFile("public/index.html", "utf8");
 for (const mergeUiGuard of [
   'id="merge-files-button"',
   'id="merge-files-input"',
+  'id="merge-now-button"',
+  '>Merge selected</button>',
   'id="merge-files-feedback"',
-  'multiple accept="*/*"',
+  'accept="*/*"',
 ]) {
   if (!html.includes(mergeUiGuard)) {
     throw new Error(`Doc Bench text merge UI is missing guard: ${mergeUiGuard}`);
