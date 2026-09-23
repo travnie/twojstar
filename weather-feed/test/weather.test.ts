@@ -3,6 +3,7 @@ import test from "node:test";
 import { FEED_ID, renderAtom, warningEntries } from "../src/feed";
 import worker, { completePendingCurrent, pushEntries } from "../src/index";
 import { renderPage } from "../src/page";
+import { fetchPirateWeather, type Env } from "../src/sources";
 import type { FeedEntry, Warning } from "../src/types";
 import {
   reconcileWarnings, warningEndTimeMs,
@@ -19,6 +20,59 @@ const hydro: Warning = {
   probability: null, from: null, to: null, content: "Możliwe wzrosty",
 };
 const beforeExpiry = Date.parse("2026-07-22T15:00:00Z");
+
+
+test("Pirate Weather keeps the API key out of the URL and normalizes SI data", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  let sentKey: string | null = null;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    requestedUrl = String(input);
+    sentKey = new Headers(init?.headers).get("apikey");
+    return new Response(JSON.stringify({
+      currently: {
+        time: 1790160000,
+        temperature: 12.3,
+        apparentTemperature: 11.1,
+        humidity: 0.81,
+        pressure: 1018.4,
+        windSpeed: 3.4,
+        windBearing: 180,
+        precipIntensity: 0.2,
+        uvIndex: 1.2,
+        icon: "rain",
+      },
+      daily: {
+        data: [{
+          time: 1790121600,
+          temperatureMax: 15.4,
+          temperatureMin: 7.6,
+          precipAccumulation: 0.75,
+          precipProbability: 0.7,
+          precipType: "rain",
+          uvIndex: 2.3,
+          icon: "partly-cloudy-day",
+        }],
+      },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+
+  try {
+    const result = await fetchPirateWeather({ PIRATEWEATHER_API_KEY: "super-secret" } as Env);
+    assert.equal(sentKey, "super-secret");
+    assert.doesNotMatch(requestedUrl, /super-secret/);
+    assert.match(requestedUrl, /units=si/);
+    assert.equal(result.current?.source, "pirateweather");
+    assert.equal(result.current?.humidity, 81);
+    assert.equal(result.current?.windMs, 3.4);
+    assert.equal(result.current?.condition, "rain");
+    assert.equal(result.days[0]?.precipMm, 7.5);
+    assert.equal(result.days[0]?.precipProb, 70);
+    assert.equal(result.days[0]?.condition, "clouds");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("failed IMGW category preserves its previous warnings", () => {
   const next = reconcileWarnings(
@@ -95,6 +149,7 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /rel="describedby" href="\/llms\.txt"/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Powered by Vaisala Xweather/);
+  assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
   assert.match(html, /href="https:\/\/trfny\.com\/"/);
 });
