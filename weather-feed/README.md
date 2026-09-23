@@ -8,7 +8,7 @@ of identical readings.
 
 ## What it does
 
-- Up to four point sources are normalized and reduced to median + spread.
+- Up to five point sources are normalized and reduced to median + spread.
 - IMGW meteo warnings are filtered to powiat chrzanowski (TERYT `1203`);
   hydro warnings are filtered to małopolskie.
 - A partial IMGW outage preserves the last known warnings for the failed
@@ -54,6 +54,9 @@ wrangler secret put XWEATHER_CLIENT_SECRET
 # Or a single combined value: client_id_client_secret
 wrangler secret put XWEATHER_API_KEY
 
+# Pirate Weather
+wrangler secret put PIRATEWEATHER_API_KEY
+
 npm run check
 wrangler deploy
 ```
@@ -65,6 +68,8 @@ with the returned ID before deploying.
 
 Open-Meteo and IMGW need no key. Xweather requires a client ID + client secret;
 `XWEATHER_API_KEY` is accepted as the combined `client_id_client_secret` form.
+Pirate Weather uses `PIRATEWEATHER_API_KEY` and sends it in the `apikey` request header,
+so the real key never appears in request URLs or source code.
 Without keyed providers the Worker continues in degraded single-source mode.
 The public page includes the attribution required when Xweather data is displayed.
 
