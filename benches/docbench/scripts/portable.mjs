@@ -113,15 +113,14 @@ const jsonParserPortable = jsonParser
   .replaceAll('"./scanner.js"', JSON.stringify(jsonScannerUrl));
 const jsonParserUrl = dataUrl("text/javascript", jsonParserPortable);
 const documentMergeUrl = dataUrl("text/javascript", documentMerge);
-const documentEnhancementsPortable = documentEnhancements
-  .replace(
-    'from "./vendor/jsonc-parser/impl/parser.js";',
-    `from ${JSON.stringify(jsonParserUrl)};`,
-  )
-  .replace(
-    'from "./document-merge.mjs";',
-    `from ${JSON.stringify(documentMergeUrl)};`,
-  );
+const portableApp = app.replace(
+  '"./document-merge.mjs"',
+  JSON.stringify(documentMergeUrl),
+);
+const documentEnhancementsPortable = documentEnhancements.replace(
+  'from "./vendor/jsonc-parser/impl/parser.js";',
+  `from ${JSON.stringify(jsonParserUrl)};`,
+);
 
 const tiktokenBase64Url = dataUrl("text/javascript", tiktokenBase64);
 const tiktokenChunkPortable = tiktokenChunk
@@ -241,7 +240,7 @@ const portable = html
     '<script src="/vendor/fflate.min.js"></script>',
     `<script>${safeScript(fflate)}</script>`,
   )
-  .replace('<script src="/app.js"></script>', `<script>${safeScript(app)}</script>`)
+  .replace('<script src="/app.js"></script>', `<script>${safeScript(portableApp)}</script>`)
   .replace(
     '<script type="module" src="/document-enhancements.mjs"></script>',
     `<script type="module">${safeScript(documentEnhancementsPortable)}</script>`,
