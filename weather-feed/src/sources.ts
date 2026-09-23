@@ -459,10 +459,12 @@ export async function fetchPirateWeather(
       if (timestamp === null) continue;
       const probability = num(item["precipProbability"]);
       const accumulationCm = num(item["precipAccumulation"]);
-      const precipType = String(item["precipType"] ?? "none").toLowerCase();
+      const precipType = typeof item["precipType"] === "string"
+        ? item["precipType"].toLowerCase()
+        : null;
       const comparablePrecipMm = accumulationCm === null
         ? null
-        : (precipType === "rain" || precipType === "none" || accumulationCm === 0)
+        : (precipType === "rain" || accumulationCm === 0)
           ? Math.round(accumulationCm * 100) / 10
           : null;
       days.push({
