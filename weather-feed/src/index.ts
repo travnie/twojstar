@@ -67,6 +67,7 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 - [Weather changes feed](${SITE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
 - [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
 - [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
+- WebMCP: `read_weather_state` exposes the current published state on supporting browser hosts.
 - [TRAVNY hub](https://trfny.com/): related tools and services.
 `;
 
@@ -86,6 +87,7 @@ The service combines Open-Meteo, OpenWeather, Visual Crossing, Vaisala Xweather,
 - [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
 - [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom): active warning changes.
 - [Markdown dashboard page](${SITE_ORIGIN}/index.md): concise page description.
+- WebMCP tool: `read_weather_state` reads the same public state through the visible page on supporting browser hosts.
 
 ## Freshness
 
@@ -386,6 +388,8 @@ function discoveryResponse(pathname: string): Response | undefined {
   switch (pathname) {
     case "/robots.txt":
       return cachedResponse(ROBOTS, "text/plain; charset=utf-8", 86400);
+    case "/webmcp.js":
+      return cachedResponse(WEBMCP_SCRIPT, "text/javascript; charset=utf-8", 3600);
     case "/sitemap.xml":
       return cachedResponse(SITEMAP, "application/xml; charset=utf-8", 86400);
     case "/index.md":
