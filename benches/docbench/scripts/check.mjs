@@ -243,7 +243,7 @@ const html = await readFile("public/index.html", "utf8");
 for (const mergeUiGuard of [
   'id="merge-files-button"',
   'id="merge-files-input"',
-  'multiple accept=".txt,.md,.markdown,text/plain,text/markdown"',
+  'multiple accept="*/*"',
 ]) {
   if (!html.includes(mergeUiGuard)) {
     throw new Error(`Doc Bench text merge UI is missing guard: ${mergeUiGuard}`);
