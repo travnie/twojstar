@@ -24,7 +24,7 @@ async function getJson(url: string, init?: RequestInit): Promise<unknown | null>
       await sleep(CONFIG.retryBaseMs * 2 ** (attempt - 1) + Math.floor(Math.random() * CONFIG.retryBaseMs));
     }
     try {
-      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(CONFIG.sourceTimeoutMs) });
+      const res = await fetch(url, { ...(init ?? {}), signal: AbortSignal.timeout(CONFIG.sourceTimeoutMs) });
       if (res.ok) return res.json();
       if (RETRYABLE_STATUS.has(res.status)) { lastErr = new Error(`HTTP ${res.status}`); continue; }
       return null;
