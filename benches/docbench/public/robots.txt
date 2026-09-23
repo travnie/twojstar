@@ -13,7 +13,8 @@ User-agent: Applebot
 User-agent: Applebot-Extended
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
-\nUser-agent: *
+
+User-agent: *
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
 
