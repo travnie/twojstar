@@ -136,7 +136,22 @@ export default {
 
     if (url.pathname === "/robots.txt") {
       return textResponse(
-        `User-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\nSitemap: ${SITE_URL}sitemap.xml\n`,
+        `# AI crawlers and user-triggered fetchers explicitly welcome.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: OAI-AdsBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot
+User-agent: Applebot-Extended
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+Allow: /
+\\nUser-agent: *\\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\\nAllow: /\\nSitemap: ${SITE_URL}sitemap.xml\\n`,
         "text/plain; charset=utf-8",
         "public, max-age=86400",
       );
