@@ -10,20 +10,21 @@ export interface Env {
   XWEATHER_API_KEY?: string;
   XWEATHER_CLIENT_ID?: string;
   XWEATHER_CLIENT_SECRET?: string;
+  PIRATEWEATHER_API_KEY?: string;
 }
 
 // ── shared fetch helper (resilient: timeout + retry/backoff + status check) ──
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-async function getJson(url: string): Promise<unknown | null> {
+async function getJson(url: string, init?: RequestInit): Promise<unknown | null> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= CONFIG.sourceRetries; attempt++) {
     if (attempt > 0) {
       await sleep(CONFIG.retryBaseMs * 2 ** (attempt - 1) + Math.floor(Math.random() * CONFIG.retryBaseMs));
     }
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(CONFIG.sourceTimeoutMs) });
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(CONFIG.sourceTimeoutMs) });
       if (res.ok) return res.json();
       if (RETRYABLE_STATUS.has(res.status)) { lastErr = new Error(`HTTP ${res.status}`); continue; }
       return null;
@@ -75,6 +76,18 @@ function vcCond(icon: unknown): Condition {
   if (s.includes("fog")) return "fog";
   if (s.includes("cloud") || s === "wind") return "clouds";
   if (s.includes("clear")) return "clear";
+  return "unknown";
+}
+
+function pwCond(value: unknown): Condition {
+  const s = String(value ?? "").toLowerCase();
+  if (s.includes("thunder")) return "storm";
+  if (s.includes("snow") || s.includes("sleet") || s.includes("ice-pellet")) return "snow";
+  if (s.includes("drizzle")) return "drizzle";
+  if (s.includes("rain") || s.includes("freezing")) return "rain";
+  if (s.includes("fog") || s.includes("mist") || s.includes("haze") || s.includes("smoke")) return "fog";
+  if (s.includes("clear")) return "clear";
+  if (s.includes("cloud") || s.includes("overcast") || s.includes("wind")) return "clouds";
   return "unknown";
 }
 
@@ -379,6 +392,90 @@ export async function fetchXweather(
       uvIndexMax: num(period["uvi"]),
       condition: xwCond(period["weatherPrimary"] ?? period["icon"]),
     });
+  }
+
+  return { current, days };
+}
+
+// ── Pirate Weather (keyed; Dark Sky-compatible) ────────────────────────
+type PirateWeatherMode = "current" | "forecast" | "both";
+
+function pirateWeatherUrl(mode: PirateWeatherMode): string {
+  const u = new URL(`https://api.pirateweather.net/forecast/key/${CONFIG.lat},${CONFIG.lon}`);
+  u.searchParams.set("units", "si");
+  u.searchParams.set("version", "2");
+  u.searchParams.set("lang", "pl");
+  const exclude = ["minutely", "hourly", "alerts", "summary"];
+  if (mode === "current") exclude.push("daily");
+  if (mode === "forecast") exclude.push("currently");
+  u.searchParams.set("exclude", exclude.join(","));
+  return u.toString();
+}
+
+function localDateFromEpoch(epoch: number): string {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: CONFIG.tz, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(epoch * 1000));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values["year"]}-${values["month"]}-${values["day"]}`;
+}
+
+export async function fetchPirateWeather(
+  env: Env,
+  mode: PirateWeatherMode = "both",
+): Promise<{ current: Reading | null; days: DayForecast[] }> {
+  const key = env.PIRATEWEATHER_API_KEY?.trim();
+  if (!key) return { current: null, days: [] };
+
+  const data = await getJson(pirateWeatherUrl(mode), { headers: { apikey: key } });
+  if (!isObj(data)) return { current: null, days: [] };
+
+  let current: Reading | null = null;
+  const c = data["currently"];
+  if (mode !== "forecast" && isObj(c)) {
+    const humidity = num(c["humidity"]);
+    const timestamp = num(c["time"]);
+    current = {
+      source: "pirateweather",
+      tempC: num(c["temperature"]),
+      feelsC: num(c["apparentTemperature"]),
+      humidity: humidity === null ? null : Math.round(humidity * 1000) / 10,
+      pressureHpa: num(c["pressure"]),
+      windMs: num(c["windSpeed"]),
+      windDir: num(c["windBearing"]),
+      precipMm: num(c["precipIntensity"]) ?? 0,
+      uvIndex: num(c["uvIndex"]),
+      condition: pwCond(c["icon"] ?? c["summary"]),
+      observedAt: timestamp === null ? new Date().toISOString() : new Date(timestamp * 1000).toISOString(),
+    };
+  }
+
+  const days: DayForecast[] = [];
+  const daily = data["daily"];
+  if (mode !== "current" && isObj(daily) && Array.isArray(daily["data"])) {
+    for (const item of (daily["data"] as unknown[]).slice(0, CONFIG.forecastDays)) {
+      if (!isObj(item)) continue;
+      const timestamp = num(item["time"]);
+      if (timestamp === null) continue;
+      const probability = num(item["precipProbability"]);
+      const accumulationCm = num(item["precipAccumulation"]);
+      const precipType = String(item["precipType"] ?? "none").toLowerCase();
+      const comparablePrecipMm = accumulationCm === null
+        ? null
+        : (precipType === "rain" || precipType === "none" || accumulationCm === 0)
+          ? Math.round(accumulationCm * 100) / 10
+          : null;
+      days.push({
+        source: "pirateweather",
+        date: localDateFromEpoch(timestamp),
+        tMaxC: num(item["temperatureMax"]),
+        tMinC: num(item["temperatureMin"]),
+        precipMm: comparablePrecipMm,
+        precipProb: probability === null ? null : Math.round(probability * 1000) / 10,
+        uvIndexMax: num(item["uvIndex"]),
+        condition: pwCond(item["icon"] ?? item["summary"]),
+      });
+    }
   }
 
   return { current, days };
