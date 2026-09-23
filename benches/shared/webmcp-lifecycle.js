@@ -15,11 +15,16 @@
       }
     };
 
-    window.addEventListener("pagehide", (event) => {
-      if (!event.persisted) lifecycle.abort();
-    });
+    const cleanup = () => {
+      lifecycle.abort();
+      if (owners.get(label) === lifecycle) owners.delete(label);
+    };
 
-    return Object.freeze({ register });
+    window.addEventListener("pagehide", (event) => {
+      if (!event.persisted) cleanup();
+    }, { once: true });
+
+    return Object.freeze({ register, cleanup });
   }
 
   globalThis.BenchWebMcp = Object.freeze({ createRegistrationLifecycle });
