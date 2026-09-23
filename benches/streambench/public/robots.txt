@@ -13,7 +13,10 @@ User-agent: Applebot
 User-agent: Applebot-Extended
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
-Disallow: /api/\nDisallow: /health\n\nUser-agent: *
+Disallow: /api/
+Disallow: /health
+
+User-agent: *
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
 Disallow: /api/
