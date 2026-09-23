@@ -11,7 +11,8 @@ import {
 import type {
   AirQuality, CurrentState, DayEnsemble, Ensemble, FeedEntry, Reading, SourceId, Warning,
 } from "./types";
-import { reconcileWarnings } from "./warnings";\nimport { WEBMCP_SCRIPT } from "./webmcp";
+import { reconcileWarnings } from "./warnings";
+import { WEBMCP_SCRIPT } from "./webmcp";
 
 const SITE_ORIGIN = "https://weather.trfny.com";
 const SITE_HOST = new URL(SITE_ORIGIN).hostname;
@@ -32,7 +33,12 @@ User-agent: Applebot
 User-agent: Applebot-Extended
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
-\nUser-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`;
+
+User-agent: *
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+Allow: /
+Sitemap: ${SITE_ORIGIN}/sitemap.xml
+`;
 const SITEMAP = `<?xml version="1.0" encoding="utf-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_ORIGIN}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>
