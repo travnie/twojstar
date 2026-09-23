@@ -224,6 +224,7 @@ export function renderPage(
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${escapeHtml(origin)}/og.png">
 <script type="application/ld+json">${schema}</script>
+<script src="/webmcp.js" defer></script>
 <style>
   :root{
     --ice:#d4e4f7; --steel:#4a6fa5; --steel-dark:#33507a; --silver:#c0c0c0;
