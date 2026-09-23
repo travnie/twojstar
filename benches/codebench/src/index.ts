@@ -151,7 +151,12 @@ User-agent: Applebot
 User-agent: Applebot-Extended
 Content-Signal: ai-train=yes, search=yes, ai-input=yes
 Allow: /
-\nUser-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\nSitemap: ${SITE_URL}sitemap.xml\n`,
+
+User-agent: *
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+Allow: /
+Sitemap: ${SITE_URL}sitemap.xml
+`,
         "text/plain; charset=utf-8",
         "public, max-age=86400",
       );
