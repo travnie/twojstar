@@ -112,7 +112,11 @@ const jsonParserPortable = jsonParser
   .replaceAll("'./scanner.js'", JSON.stringify(jsonScannerUrl))
   .replaceAll('"./scanner.js"', JSON.stringify(jsonScannerUrl));
 const jsonParserUrl = dataUrl("text/javascript", jsonParserPortable);
-const documentMergeUrl = dataUrl("text/javascript", documentMerge);
+const documentMergePortable = documentMerge.replace(
+  'from "./vendor/jsonc-parser/impl/parser.js";',
+  `from ${JSON.stringify(jsonParserUrl)};`,
+);
+const documentMergeUrl = dataUrl("text/javascript", documentMergePortable);
 const portableApp = app.replace(
   '"./document-merge.mjs"',
   JSON.stringify(documentMergeUrl),

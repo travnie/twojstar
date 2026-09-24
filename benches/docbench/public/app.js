@@ -412,10 +412,16 @@
     const selected = [...files];
     if (!selected.length) return;
 
-    const { isMergeTextFilename } = await getMergeCore();
-    const unsupported = selected.find((file) => !isMergeTextFilename(file.name));
+    const { isMergeFilename, mergeFamilyForFilename } = await getMergeCore();
+    const unsupported = selected.find((file) => !isMergeFilename(file.name));
     if (unsupported) {
-      throw new Error(`${unsupported.name}: only .txt, .md and .markdown files can be merged.`);
+      throw new Error(`${unsupported.name}: merge supports TXT/Markdown, JSON/JSONC and JSONL/NDJSON.`);
+    }
+    const queuedFamily = mergeQueue.length ? mergeFamilyForFilename(mergeQueue[0].name) : null;
+    const selectedFamily = mergeFamilyForFilename(selected[0].name);
+    if (selected.some((file) => mergeFamilyForFilename(file.name) !== selectedFamily)
+      || (queuedFamily && queuedFamily !== selectedFamily)) {
+      throw new Error("Merge files must belong to the same family.");
     }
 
     if (mergeQueue.length + selected.length > MAX_MERGE_FILES) {
@@ -449,7 +455,7 @@
     );
 
     try {
-      const { mergeTextDocuments } = await getMergeCore();
+      const { mergeDocuments } = await getMergeCore();
       const documents = [];
       for (const file of queued) {
         let parsed;
@@ -466,7 +472,7 @@
         });
       }
 
-      const merged = mergeTextDocuments(documents);
+      const merged = mergeDocuments(documents);
       const first = documents[0];
       state.filename = merged.filename;
       state.bom = first.bom;
@@ -488,10 +494,16 @@
       document.dispatchEvent(new Event("docbench:document-change"));
       renderValidation();
       resetMergeQueue();
+      const conflictSuffix = merged.conflictCount
+        ? ` · ${merged.conflictCount} conflict${merged.conflictCount === 1 ? "" : "s"} · later files won`
+        : "";
+      const conflictDetails = merged.conflicts?.length
+        ? `\nConflicts:\n${merged.conflicts.join("\n")}`
+        : "";
       setMergeFeedback(
-        "good",
-        `Merged ${documents.length} files`,
-        queued.map((file) => file.name).join("\n"),
+        merged.conflictCount ? "neutral" : "good",
+        `Merged ${documents.length} files${conflictSuffix}`,
+        `${queued.map((file) => file.name).join("\n")}${conflictDetails}`,
       );
       editor.focus();
     } catch (error) {
@@ -554,7 +566,7 @@
         ? "1 file queued · pick one more"
         : mergeQueue.length > 1
           ? `${mergeQueue.length} files queued · add more or merge`
-          : "Choose TXT/Markdown files…",
+          : "Choose mergeable files…",
     );
     mergeFilesInput.click();
   });

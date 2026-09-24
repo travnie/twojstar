@@ -27,3 +27,4 @@ On browser hosts implementing WebMCP, Doc Bench exposes `read_document`, `set_do
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/docbench)
 - [Portable builds](https://github.com/travnie/twojstar/releases/latest)
 - [TRAVNY hub](https://trfny.com/)
+\n## Smart JSON merge\n\nJSON and JSONC files can be merged locally. Object roots are merged recursively; array roots are concatenated. Equal scalar values are retained once. Conflicting scalars or incompatible nested types use the later file and are reported by JSON path. Source scalar lexemes are serialized without routing numbers through JavaScript Number, preserving large integer text. JSONC comments are not retained because output is strict JSON. JSONL/NDJSON files are validated line-by-line and concatenated. JSON5 is not part of smart merge yet.\n
