@@ -399,7 +399,7 @@
     mergeFilesButton.disabled = mergeBusy;
     mergeFilesInput.disabled = mergeBusy;
     mergeNowButton.disabled = mergeBusy || mergeQueue.length < 2;
-    mergeNowButton.hidden = mergeQueue.length < 2;
+    mergeNowButton.hidden = ANDROID || mergeQueue.length < 2;
   }
 
   function resetMergeQueue({ clearFeedback = false } = {}) {
@@ -563,6 +563,7 @@
     if (!files?.length) return;
     try {
       await queueMergeFiles(files);
+      if (ANDROID && mergeQueue.length >= 2) await mergeQueuedFiles();
     } catch (error) {
       const message = error?.message || String(error);
       statusBadge.className = "status bad";

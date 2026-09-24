@@ -88,6 +88,8 @@ for (const mergeControllerGuard of [
   "queueMergeFiles",
   "mergeQueuedFiles",
   "mergeFilesInput.multiple = !ANDROID",
+  "mergeNowButton.hidden = ANDROID || mergeQueue.length < 2",
+  "if (ANDROID && mergeQueue.length >= 2) await mergeQueuedFiles()",
   "MAX_MERGE_FILES = 100",
   "MAX_MERGE_BYTES = 64 * 1024 * 1024",
   "docbench:primary-document-state",
