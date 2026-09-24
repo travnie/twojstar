@@ -34,3 +34,4 @@ Files stay in the browser and the application has no telemetry. On WebMCP-capabl
 - [Full LLM guide](https://docbench.travny.workers.dev/llms-full.txt)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/docbench)
 - [Portable builds](https://github.com/travnie/twojstar/releases/latest)
+\n### Smart JSON merge\n\nMerge JSON/JSONC objects recursively or concatenate array roots while preserving source scalar lexemes, including large numeric IDs. Scalar/type conflicts are reported and later files win. JSONL/NDJSON inputs are validated record-by-record and concatenated. JSON5 is not included in smart merge yet.\n

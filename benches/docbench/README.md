@@ -6,7 +6,7 @@ browser and are not uploaded.
 Documents cover TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML editing, UTF-8 BOM and
 line-ending handling, validation and explicit formatting. Markdown gets a safe
 rendered preview, JSON-family/YAML/XML get collapsible tree views, and supported
-browsers can save changes directly back to a chosen local file. TXT and Markdown files can also be merged in picker order into a new editable `merged.txt` or `merged.md` document, with mixed TXT/Markdown output promoted to Markdown. The merge queue accepts multi-select where the browser supports it; on Android the fallback picker intentionally adds one file per selection and automatically merges as soon as the second file is queued. Download remains
+browsers can save changes directly back to a chosen local file. TXT and Markdown files can also be merged in picker order into a new editable `merged.txt` or `merged.md` document, with mixed TXT/Markdown output promoted to Markdown. JSON/JSONC smart merge recursively combines objects, concatenates arrays and reports scalar/type conflicts while letting later files win; it emits strict `merged.json` without coercing source number lexemes. JSONL/NDJSON merge validates every record and appends them into `merged.jsonl`. The merge queue accepts multi-select where the browser supports it; on Android the fallback picker intentionally adds one file per selection and automatically merges as soon as the second file is queued. Download remains
 available as the portable fallback.
 
 PDF tools cover local DOCX→PDF conversion, structure-first PDF→DOCX export, preview, merge, page deletion/reordering, single-page

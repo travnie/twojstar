@@ -51,14 +51,27 @@ for (const path of [
 
 const documentMerge = await readFile("public/document-merge.mjs", "utf8");
 for (const mergeGuard of [
+  "mergeDocuments",
   "mergeTextDocuments",
-  "isMergeTextFilename",
+  "mergeJsonDocuments",
+  "mergeJsonlDocuments",
+  "isMergeFilename",
+  "mergeFamilyForFilename",
   '"merged.md"',
   '"merged.txt"',
+  '"merged.json"',
+  '"merged.jsonl"',
+  "MAX_REPORTED_CONFLICTS",
+  "parseTree",
 ]) {
   if (!documentMerge.includes(mergeGuard)) {
     throw new Error(`Document merge core is missing guard: ${mergeGuard}`);
   }
+}
+
+const i18n = await readFile("public/i18n.js", "utf8");
+if (i18n.includes("],\\\\n  [")) {
+  throw new Error("Docbench i18n contains a literal escaped newline between entries.");
 }
 
 const app = await readFile("public/app.js", "utf8");
@@ -86,6 +99,9 @@ if (!documentEnhancements.includes("printDocument")
 for (const mergeControllerGuard of [
   'import("./document-merge.mjs")',
   "queueMergeFiles",
+  "mergeDocuments",
+  "isMergeFilename",
+  "mergeFamilyForFilename",
   "mergeQueuedFiles",
   "mergeFilesInput.multiple = !ANDROID",
   "mergeNowButton.hidden = ANDROID || mergeQueue.length < 2",
@@ -414,8 +430,15 @@ for (const toolName of ["read_document", "set_document_text", "validate_document
 if (!portable.includes("showSaveFilePicker") || !portable.includes("createWritable")) {
   throw new Error("Portable build is missing direct-save support");
 }
-if (!portable.includes("mergeTextDocuments") || !portable.includes("merge-files-button")) {
-  throw new Error("Portable build is missing TXT/Markdown merge support");
+for (const portableMergeGuard of [
+  "mergeDocuments",
+  "isMergeFilename",
+  "merge-files-button",
+  "later files won",
+]) {
+  if (!portable.includes(portableMergeGuard)) {
+    throw new Error(`Portable build is missing document merge bridge: ${portableMergeGuard}`);
+  }
 }
 if (!portable.includes("__docbenchDocxAssets") || !portable.includes("convertToPdf")) {
   throw new Error("Portable build is missing DOCX conversion runtime.");

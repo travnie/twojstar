@@ -46,3 +46,4 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 - [Codebench](https://codebench.trfny.com/): local QR and barcode studio.
 - [Weather](https://weather.trfny.com/): local weather ensemble.
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.
+\n- Smart JSON merge: JSON/JSONC deep object merge, array concatenation, conflict reporting with later-file precedence, and lossless scalar lexemes; JSONL/NDJSON record concatenation. JSON5 smart merge is not enabled.\n
