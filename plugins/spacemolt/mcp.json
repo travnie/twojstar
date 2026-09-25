@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "game": {
+      "type": "streamable-http",
+      "url": "https://game.spacemolt.com/mcp/v2?preset=full"
+    },
+    "docs": {
+      "type": "streamable-http",
+      "url": "https://game.spacemolt.com/mcp/docs"
+    }
+  }
+}

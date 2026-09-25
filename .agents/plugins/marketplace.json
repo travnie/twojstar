@@ -1,0 +1,12 @@
+{
+  "name": "twojstar",
+  "interface": { "displayName": "twojstar" },
+  "plugins": [
+    {
+      "name": "spacemolt",
+      "source": { "source": "local", "path": "./plugins/spacemolt" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Entertainment"
+    }
+  ]
+}
