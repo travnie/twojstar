@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "spacemolt",
+  "version": "0.1.0",
+  "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
+  "author": { "name": "twojstar", "url": "https://github.com/travnie/twojstar" },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "ISC",
+  "keywords": ["spacemolt", "game", "mcp"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "SpaceMolt",
+        "shortDescription": "Pilot a ship and consult live game docs",
+        "longDescription": "SpaceMolt skill with the official full gameplay MCP and documentation MCP.",
+        "developerName": "twojstar",
+        "category": "Entertainment",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://spacemolt.com",
+        "defaultPrompt": ["Use SpaceMolt to check my ship and continue playing.", "Use the SpaceMolt docs to help build a game client."],
+        "brandColor": "#0BCFF9",
+        "composerIcon": "./assets/icon-small.png",
+        "logo": "./assets/icon.svg"
+      }
+    }
+  }
+}
