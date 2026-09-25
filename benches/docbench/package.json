@@ -20,7 +20,7 @@
     "js-tiktoken": "1.0.21",
     "js-yaml": "5.4.2",
     "jsonc-parser": "3.3.1",
-    "marked": "18.0.13",
+    "marked": "18.0.14",
     "pdfjs-dist": "6.3.289",
     "qpdf-run": "0.2.1",
     "json5": "2.2.3",
@@ -29,6 +29,6 @@
   },
   "devDependencies": {
     "typescript": "7.0.2",
-    "wrangler": "^4.132.0"
+    "wrangler": "^4.136.3"
   }
 }
