@@ -18,7 +18,7 @@ from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guide
 from .maintenance import backend_status, doctor_report, install_latest_backend
 from .mcp_profiles import PROFILES, profiles_json
 from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
-from .projection import parse_fields, project_fields
+from .projection import parse_fields, project_fields, unwrap_payload
 from .profiles import (
     add_profile,
     canonical_profile,
@@ -185,31 +185,40 @@ def extract_cargo_items(payload: Any) -> list[tuple[str, int]]:
     return sorted(found.items())
 
 
-def _entity_rows(payload: Any) -> list[dict[str, Any]]:
-    result: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    def visit(node: Any) -> None:
-        if isinstance(node, dict):
-            for key in ("players", "npcs", "creatures", "prizes", "entities", "nearby"):
-                value = node.get(key)
-                if isinstance(value, list):
-                    for entry in value:
-                        if not isinstance(entry, dict):
-                            continue
-                        entity_id = str(entry.get("id") or entry.get("player_id") or entry.get("actor_id") or id(entry))
-                        if entity_id not in seen:
-                            seen.add(entity_id)
-                            result.append(entry)
-            for value in node.values():
-                if isinstance(value, (dict, list)):
-                    visit(value)
-        elif isinstance(node, list):
-            for value in node:
-                visit(value)
-
-    visit(payload)
-    return result
+def _entity_rows(payload: Any) -> list[tuple[str, dict[str, Any]]]:
+    content = unwrap_payload(payload)
+    if not isinstance(content, dict):
+        return []
+    groups = (
+        ("nearby", "player"),
+        ("players", "player"),
+        ("pirates", "pirate"),
+        ("empire_npcs", "empire NPC"),
+        ("arena_npcs", "arena NPC"),
+        ("npcs", "NPC"),
+        ("creatures", "creature"),
+        ("prizes", "prize"),
+    )
+    rows: list[tuple[str, dict[str, Any]]] = []
+    seen: set[tuple[str, str]] = set()
+    for field, kind in groups:
+        entries = content.get(field)
+        if not isinstance(entries, list):
+            continue
+        for entity in entries:
+            if not isinstance(entity, dict):
+                continue
+            entity_id = next(
+                (str(entity[key]) for key in ("player_id", "pirate_id", "npc_id", "creature_id", "actor_id", "id") if entity.get(key)),
+                None,
+            )
+            identity = (kind, entity_id) if entity_id else None
+            if identity is not None and identity in seen:
+                continue
+            if identity is not None:
+                seen.add(identity)
+            rows.append((kind, entity))
+    return rows
 
 
 def _weapon_count(entity: dict[str, Any]) -> int:
@@ -262,7 +271,7 @@ def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
 
 
 def _entity_name(entity: dict[str, Any]) -> str:
-    return str(entity.get("name") or entity.get("username") or entity.get("id") or entity.get("player_id") or "unknown")
+    return str(entity.get("name") or entity.get("username") or entity.get("ship_name") or entity.get("id") or entity.get("player_id") or "unknown")
 
 
 def cmd_nearby(backend: Backend, argv: list[str]) -> int:
@@ -276,9 +285,9 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
         return result.returncode or 1
 
     assessments = []
-    for entity in _entity_rows(payload):
-        score, marker, reasons = assess_threat(entity)
-        assessments.append({"name": _entity_name(entity), "score": score, "marker": marker, "reasons": reasons, "entity": entity})
+    for kind, entity in _entity_rows(payload):
+        score, marker, reasons = assess_threat({**entity, "kind": kind})
+        assessments.append({"name": _entity_name(entity), "kind": kind, "score": score, "marker": marker, "reasons": reasons, "entity": entity})
     assessments.sort(key=lambda row: row["score"], reverse=True)
 
     if ns.json:
@@ -290,7 +299,7 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
         return 0
     for row in assessments:
         entity = row["entity"]
-        kind = entity.get("kind") or entity.get("type") or "actor"
+        kind = row["kind"]
         ship = entity.get("ship_class") or entity.get("ship") or entity.get("class")
         details = ", ".join(row["reasons"]) or "no visible threat signals"
         suffix = f" · {ship}" if ship else ""
@@ -354,14 +363,27 @@ def cmd_sell_all(backend: Backend, argv: list[str]) -> int:
         return 0
 
     sold: list[dict[str, Any]] = []
+    unfilled: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     for item_id, qty in items:
         result, payload = backend.json(["sell", f"id={item_id}", f"quantity={qty}"])
         row = {"item_id": item_id, "quantity": qty, "response": payload}
         if result.returncode == 0:
-            sold.append(row)
+            content = unwrap_payload(payload)
+            details = content.get("details") if isinstance(content, dict) else None
+            quantity_sold = details.get("quantity_sold") if isinstance(details, dict) else None
+            if not isinstance(quantity_sold, int) or isinstance(quantity_sold, bool) or not 0 <= quantity_sold <= qty:
+                row["error"] = "successful sell response has no valid details.quantity_sold"
+                failed.append(row)
+                if not ns.json:
+                    print(f"✗ {item_id} × {qty}: {row['error']}", file=sys.stderr)
+                continue
+            if quantity_sold:
+                sold.append({**row, "quantity": quantity_sold})
+            if quantity_sold < qty:
+                unfilled.append({"item_id": item_id, "quantity": qty - quantity_sold})
             if not ns.json:
-                print(f"✓ sold {item_id} × {qty}")
+                print(f"✓ sold {item_id} × {quantity_sold} (unfilled {qty - quantity_sold})")
         else:
             row["error"] = (result.stderr or result.stdout).strip()
             failed.append(row)
@@ -369,7 +391,7 @@ def cmd_sell_all(backend: Backend, argv: list[str]) -> int:
                 print(f"✗ {item_id} × {qty}: {row['error']}", file=sys.stderr)
 
     if ns.json:
-        print(json.dumps({"sold": sold, "failed": failed, "kept": sorted(keep)}, indent=2, ensure_ascii=False))
+        print(json.dumps({"sold": sold, "unfilled": unfilled, "failed": failed, "kept": sorted(keep)}, indent=2, ensure_ascii=False))
     return 1 if failed else 0
 
 
