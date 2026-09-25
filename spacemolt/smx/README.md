@@ -69,7 +69,7 @@ Install the official SpaceMolt v2 client and make sure `spacemolt` is on
 `PATH`, then:
 
 ```bash
-cd smx
+cd spacemolt/smx
 python -m pip install .
 ```
 

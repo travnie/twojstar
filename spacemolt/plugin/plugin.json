@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
   "author": { "name": "twojstar", "url": "https://github.com/travnie/twojstar" },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/spacemolt/plugin",
   "repository": "https://github.com/travnie/twojstar",
   "license": "ISC",
   "keywords": ["spacemolt", "game", "mcp"],

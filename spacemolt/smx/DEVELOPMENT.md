@@ -57,8 +57,8 @@ If docs MCP is unavailable while developing, use the current official v2 client 
 Keep tests offline and deterministic:
 
 ```bash
-python -m pip install ./smx
-python -m unittest discover -s smx/tests -v
+python -m pip install ./spacemolt/smx
+python -m unittest discover -s spacemolt/smx/tests -v
 ```
 
 Use fake backends for command behavior. Never authenticate a real character from CI.

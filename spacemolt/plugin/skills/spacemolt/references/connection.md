@@ -29,7 +29,7 @@ If device-link actions are absent, do not guess tool calls or request a password
 
 When working locally in `travnie/twojstar`, prefer the maintained `smx` companion
 and its official SpaceMolt v2 CLI backend for the HTTP API fallback. See
-`smx/README.md` in the repository. It handles session and authentication details
+`spacemolt/smx/README.md` in the repository. It handles session and authentication details
 already, so do not add another credential store or duplicate its command catalog.
 This local fallback requires a shell-capable client; packaging a skill does not
 give ChatGPT's hosted runtime arbitrary HTTP requests or local shell execution.
