@@ -10,9 +10,10 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
 ## What it adds
 
 - `smx sell-all` — sell cargo sequentially through the official client, with
-  `--dry-run`, `--keep`, and aggregate `--json` output.
-- `smx nearby` — compact visible-threat hints from `get_nearby` without hidden
-  scans or combat actions.
+  `--dry-run`, `--keep`, and aggregate `--json` output. The report separates
+  actual fills from quantities left unsold when a market has insufficient demand.
+- `smx nearby` — compact visible-threat hints for players, pirates, NPCs,
+  creatures, and prizes from `get_nearby`, without scans or combat actions.
 - `smx missions` — active and available missions in one command.
 - Friendly aliases such as `status`, `ship`, `cargo`, `map` and `skills`.
 - Kebab-case compatibility: `get-map` becomes `get_map`.
