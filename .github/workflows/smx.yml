@@ -3,13 +3,15 @@ name: smx
 on:
   pull_request:
     paths:
-      - "smx/**"
+      - "spacemolt/smx/**"
+      - "spacemolt/plugin/**"
       - ".github/workflows/smx.yml"
   push:
     branches:
       - main
     paths:
-      - "smx/**"
+      - "spacemolt/smx/**"
+      - "spacemolt/plugin/**"
       - ".github/workflows/smx.yml"
 
 permissions:
@@ -26,17 +28,17 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: python -m pip install ./smx
-      - run: python -m unittest discover -s smx/tests -v
+      - run: python -m pip install ./spacemolt/smx
+      - run: python -m unittest discover -s spacemolt/smx/tests -v
       - if: runner.os == 'Linux'
-        run: sh -n smx/install.sh
+        run: sh -n spacemolt/smx/install.sh
       - if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $tokens = $null
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path "smx/install.ps1"),
+            (Resolve-Path "spacemolt/smx/install.ps1"),
             [ref]$tokens,
             [ref]$errors
           ) | Out-Null
