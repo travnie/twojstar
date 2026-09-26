@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "game": {
+      "type": "http",
+      "url": "https://game.spacemolt.com/mcp/v2?preset=full"
+    },
+    "docs": {
+      "type": "http",
+      "url": "https://game.spacemolt.com/mcp/docs"
+    }
+  }
+}
