@@ -3,9 +3,13 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-python3 -m pip install --user --upgrade pipx
-python3 -m pipx ensurepath
-python3 -m pipx install --force "$SCRIPT_DIR"
+if command -v uv >/dev/null 2>&1; then
+  uv tool install --force "$SCRIPT_DIR"
+else
+  python3 -m pip install --user --upgrade pipx
+  python3 -m pipx ensurepath
+  python3 -m pipx install --force "$SCRIPT_DIR"
+fi
 
 if [ "${1:-}" != "--skip-backend" ]; then
   OS=$(uname -s)

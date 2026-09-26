@@ -50,7 +50,10 @@
       "Bash(uv run:*)",
       "Bash(uv sync:*)",
       "Bash(./gradlew *)",
-      "mcp__github__*"
+      "mcp__github__*",
+      "Bash(smx *)",
+      "mcp__game__*",
+      "mcp__docs__*"
     ],
     "deny": [
       "Bash(chmod 777:*)",
@@ -68,6 +71,22 @@
     ],
     "ask": [
       "Bash(rm -rf:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "game",
+    "docs"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.sh\""
+          }
+        ]
+      }
     ]
   }
 }
