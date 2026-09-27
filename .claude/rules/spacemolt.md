@@ -6,4 +6,4 @@
 - Fallback: the `game` MCP server from `.mcp.json`. Log in with `login(username=$SPACEMOLT_USER, password=$SPACEMOLT_PASSWORD)`.
 - The password goes only into that login call or `smx profile login --password-stdin`. Never print, commit, or log it.
 - Mission log: at the end of each session write one Markdown entry to Anchor, folder `Home/Claude/SpaceMolt/<$SPACEMOLT_USER>` (e.g. `.../SpaceMolt/Claudiusz`; create it if missing): goal, actions, result, credits, next step. Keep the in-game captain's log current too. If the Anchor connector is not enabled, say so in the final message.
-- Other characters' notes live elsewhere in Anchor (`Home/Claude/SpaceMolt Notes.md` is Iron Claw Bartek's, kept by the chat Claude). Do not read them as your own state or edit them.
+- Other characters' notes live elsewhere in Anchor (e.g. `Home/Claude/SpaceMolt/Iron Claw Bartek/SpaceMolt Notes.md`, kept by the chat Claude). Do not read them as your own state or edit them.
