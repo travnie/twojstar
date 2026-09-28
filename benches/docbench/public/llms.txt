@@ -6,9 +6,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY
 
 ## Documents
 
-- Edit TXT, Markdown, JSON, JSONC, JSON5, JSONL/NDJSON, YAML/YML and XML.
-- Preserve and deliberately change UTF-8 BOM and LF/CRLF/CR line endings.
-- Validate and format structured documents.
+- Edit arbitrary UTF-8 text and recognize TXT/Markdown, JSON-family, YAML/XML, INI/config, Batch/CMD, PowerShell, shell/dotfiles, .env and M3U/M3U8/PLS playlist files.
+- Save with arbitrary filename extensions and preserve or deliberately change UTF-8 BOM and LF/CRLF/CR line endings.
+- Validate and format structured documents while keeping scripts and loose configs raw unless a safe parser exists.
 - Render Markdown safely and inspect JSON-family/YAML/XML in structured tree previews.
 - Merge multiple TXT/Markdown files in picker order into a new editable `merged.txt` or `merged.md` document; mixed inputs become Markdown.
 - Save directly back to a selected local file in supported browsers, with download as the portable fallback.

@@ -8,6 +8,7 @@ for (const path of [
   "public/app.js",
   "public/document-merge.mjs",
   "public/document-enhancements.mjs",
+  "public/document-formats.js",
   "public/document-enhancements.css",
   "public/text-inspector-core.js",
   "public/text-inspector.js",
@@ -72,6 +73,16 @@ for (const mergeGuard of [
 const i18n = await readFile("public/i18n.js", "utf8");
 if (i18n.includes("],\\\\n  [")) {
   throw new Error("Docbench i18n contains a literal escaped newline between entries.");
+}
+
+const webmcp = await readFile("public/webmcp.js", "utf8");
+const webmcpValidationCalls = webmcp.match(/validateThroughUi\(\)/g) || [];
+if (!webmcp.includes('const validateThroughUi = () =>')
+  || !webmcp.includes('document.querySelector("#validate-button")')
+  || !webmcp.includes("validateButton.click()")
+  || !webmcp.includes('statusBadge.classList.contains("bad")')
+  || webmcpValidationCalls.length < 2) {
+  throw new Error("WebMCP writes and validation must route through the visible Validate control.");
 }
 
 const app = await readFile("public/app.js", "utf8");
@@ -295,6 +306,20 @@ for (const inputId of ["file-input", "merge-files-input"]) {
     throw new Error(`Doc Bench file input must not filter by extension or MIME type: ${inputId}`);
   }
 }
+for (const formatUiGuard of [
+  'option value="ini"',
+  'option value="shell"',
+  'option value="powershell"',
+  'option value="batch"',
+  'option value="env"',
+  'option value="playlist"',
+  'option value="config"',
+  '/document-formats.js',
+]) {
+  if (!html.includes(formatUiGuard)) {
+    throw new Error(`Doc Bench extended text format UI is missing guard: ${formatUiGuard}`);
+  }
+}
 for (const jsonUiGuard of [
   'option value="jsonc"',
   'option value="json5"',
@@ -393,6 +418,7 @@ for (const leaked of [
   "/fonts/",
   "/app.js",
   "/document-enhancements.mjs",
+  "/document-formats.js",
   "/document-merge.mjs",
   "/text-inspector.js",
   "/text-inspector-core.js",
@@ -425,6 +451,9 @@ if (!portable.includes("marked")) throw new Error("Portable build is missing Mar
 if (!portable.includes("JSON5")) throw new Error("Portable build is missing JSON5 runtime");
 if (!portable.includes("JSONRepair")) throw new Error("Portable build is missing JSON repair runtime");
 if (!portable.includes("parseTree")) throw new Error("Portable build is missing JSON tree runtime");
+if (!portable.includes("DocBenchTextFormats") || !portable.includes("Playlist / M3U8")) {
+  throw new Error("Portable build is missing extended text format support.");
+}
 if (!portable.includes("Text safety inspection") || !portable.includes("inspect-button")) {
   throw new Error("Portable build is missing text inspector support.");
 }

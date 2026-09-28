@@ -15,8 +15,18 @@
   const statusBadge = document.querySelector("#status-badge");
   const preview = document.querySelector("#preview");
   const filenameLabel = document.querySelector("#filename-label");
+  const documentFormats = globalThis.DocBenchTextFormats?.formatIds
+    || ["txt", "md", "json", "jsonc", "json5", "jsonl", "yaml", "xml"];
+  const allowedFormats = new Set(documentFormats);
 
   if (!editor || !formatSelect || !eolSelect || !statusBadge || !preview) return;
+
+  const validateThroughUi = () => {
+    const validateButton = document.querySelector("#validate-button");
+    if (!validateButton) return { ready: false, ok: false };
+    validateButton.click();
+    return { ready: true, ok: !statusBadge.classList.contains("bad") };
+  };
 
   const snapshot = ({ includeText = false } = {}) => {
     const value = editor.value;
@@ -59,7 +69,7 @@
       type: "object",
       properties: {
         text: { type: "string", maxLength: 500000 },
-        format: { type: "string", enum: ["txt", "md", "json", "yaml", "xml"] },
+        format: { type: "string", enum: documentFormats },
       },
       required: ["text"],
       additionalProperties: false,
@@ -69,9 +79,8 @@
       if (typeof text !== "string" || text.length > 500000) {
         return { ok: false, error: "text must be a string of at most 500000 characters." };
       }
-      const allowedFormats = new Set(["txt", "md", "json", "yaml", "xml"]);
       if (format !== undefined && !allowedFormats.has(format)) {
-        return { ok: false, error: "format must be txt, md, json, yaml or xml." };
+        return { ok: false, error: `format must be one of: ${documentFormats.join(", ")}.` };
       }
       editor.value = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -80,22 +89,22 @@
         formatSelect.dispatchEvent(new Event("change", { bubbles: true }));
       }
       eolSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      globalThis.DocBenchDocumentUi?.validate({ revealError: true });
-      return { ok: true, ...snapshot({ includeText: true }) };
+      const validation = validateThroughUi();
+      if (!validation.ready) return { ok: false, error: "Document validator is not ready." };
+      return { ok: validation.ok, ...snapshot({ includeText: true }) };
     },
   });
 
   register({
     name: "validate_document",
     title: "Validate Docbench document",
-    description: "Validate the current TXT, Markdown, JSON, YAML or XML document and update the visible result.",
+    description: "Validate or inspect the current supported Docbench text format and update the visible result.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute() {
-      const validator = globalThis.DocBenchDocumentUi?.validate;
-      if (typeof validator !== "function") return { ok: false, error: "Document validator is not ready." };
-      const validation = validator({ revealError: true });
-      return { ok: validation?.ok !== false, ...snapshot() };
+      const validation = validateThroughUi();
+      if (!validation.ready) return { ok: false, error: "Document validator is not ready." };
+      return { ok: validation.ok, ...snapshot() };
     },
   });
 

@@ -27,53 +27,7 @@ const documentWorkspace = $("#document-workspace");
 const MAX_TREE_NODES = 5000;
 const SOURCE_SCALAR = Symbol("source-scalar");
 const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
-const extensionToFormat = {
-  txt: "txt",
-  md: "md",
-  markdown: "md",
-  json: "json",
-  jsonc: "jsonc",
-  json5: "json5",
-  jsonl: "jsonl",
-  ndjson: "jsonl",
-  yml: "yaml",
-  yaml: "yaml",
-  xml: "xml",
-};
-const preferredExtension = {
-  txt: "txt",
-  md: "md",
-  json: "json",
-  jsonc: "jsonc",
-  json5: "json5",
-  jsonl: "jsonl",
-  yaml: "yaml",
-  xml: "xml",
-};
-const mimeByFormat = {
-  txt: "text/plain;charset=utf-8",
-  md: "text/markdown;charset=utf-8",
-  json: "application/json;charset=utf-8",
-  jsonc: "application/json;charset=utf-8",
-  json5: "application/json5;charset=utf-8",
-  jsonl: "application/x-ndjson;charset=utf-8",
-  yaml: "application/yaml;charset=utf-8",
-  xml: "application/xml;charset=utf-8",
-};
-const pickerTypes = [
-  {
-    description: "Text documents",
-    accept: {
-      "text/plain": [".txt"],
-      "text/markdown": [".md", ".markdown"],
-      "application/json": [".json", ".jsonc"],
-      "application/json5": [".json5"],
-      "application/x-ndjson": [".jsonl", ".ndjson"],
-      "application/yaml": [".yml", ".yaml"],
-      "application/xml": [".xml"],
-    },
-  },
-];
+const textFormats = globalThis.DocBenchTextFormats;
 
 const state = {
   handle: null,
@@ -120,8 +74,7 @@ function applyEol(text, kind) {
 }
 
 function formatFromFilename(name) {
-  const extension = name.includes(".") ? name.split(".").pop().toLowerCase() : "txt";
-  return extensionToFormat[extension] || "txt";
+  return textFormats.formatFromFilename(name);
 }
 
 async function readTextFile(file) {
@@ -1175,10 +1128,11 @@ function renderMarkdown() {
 
 function renderEnhancedPreview() {
   const format = formatSelect.value;
-  if (format === "txt") {
-    setPreviewMode("raw", "Plain-text preview");
+  if (textFormats.isRaw(format)) {
+    const label = textFormats.labelFor(format);
+    setPreviewMode("raw", `${label} preview`);
     preview.textContent = editor.value;
-    setStatus("neutral", "Plain text");
+    setStatus("neutral", label);
     updateMeta();
     return;
   }
@@ -1315,7 +1269,7 @@ function currentDocumentSnapshot() {
 function downloadDocument(snapshot = currentDocumentSnapshot()) {
   const blob = new Blob(
     [snapshot.bytes],
-    { type: mimeByFormat[snapshot.format] || mimeByFormat.txt },
+    { type: textFormats.mimeFor(snapshot.filename, snapshot.format) },
   );
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -1374,8 +1328,8 @@ async function writeHandle(handle, snapshot) {
 
 async function chooseSaveHandle(snapshot) {
   return globalThis.showSaveFilePicker({
+    id: "docbench-document",
     suggestedName: snapshot.filename,
-    types: pickerTypes,
   });
 }
 
@@ -1531,7 +1485,7 @@ function commitFilenameEdit() {
   const previousFilename = state.filename;
   const previousFormat = formatSelect.value;
   const next = filenameLabel.textContent.trim().replace(/[\\/:*?"<>|]/g, "-");
-  const fallback = `untitled.${preferredExtension[formatSelect.value]}`;
+  const fallback = `untitled.${textFormats.preferredExtension(formatSelect.value)}`;
   state.filename = next || fallback;
   filenameLabel.textContent = state.filename;
 
@@ -1581,7 +1535,7 @@ formatSelect.addEventListener("change", (event) => {
   event.stopImmediatePropagation();
   state.documentRevision += 1;
   if (!state.handle && state.filename.startsWith("untitled.")) {
-    state.filename = `untitled.${preferredExtension[formatSelect.value]}`;
+    state.filename = `untitled.${textFormats.preferredExtension(formatSelect.value)}`;
   }
   filenameLabel.textContent = state.filename;
   updateFormatButton();
