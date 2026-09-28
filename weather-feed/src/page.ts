@@ -21,6 +21,8 @@ const SOURCE_LABELS: Record<string, string> = {
   xweather: "Vaisala Xweather",
 };
 
+const VISIBLE_ITEMS = 3;
+
 const POLLEN_LABELS: Record<string, string> = {
   alder: "olcha",
   birch: "brzoza",
@@ -102,18 +104,25 @@ function renderNow(state: CurrentState | null): {
   };
 }
 
+function renderMoreButton(target: string, total: number): string {
+  const more = total - VISIBLE_ITEMS;
+  if (more <= 0) return "";
+  return `<button class="show-more" type="button" data-target="${target}" data-more="${more}" aria-controls="${target}" aria-expanded="false">Pokaż więcej (${more})</button>`;
+}
+
 function renderWarnings(warnings: Warning[] | null | undefined): string {
   if (!warnings?.length) return '<p class="empty">Brak aktywnych ostrzeżeń.</p>';
-  return warnings.map((warning) => {
+  const items = warnings.map((warning, index) => {
     const cls = warning.category === "hydro" ? "hydro" : warning.level != null && warning.level >= 3 ? "alarm" : "";
     const level = warning.level != null && warning.level >= 1 ? ` (stopień ${warning.level})` : "";
     const tag = warning.category === "hydro" ? "IMGW hydro" : "IMGW";
     const range = `${warning.from ?? "?"} → ${warning.to ?? "?"}`;
-    return `<div class="warn ${cls}"><div class="wt">${escapeHtml(`${tag}: ${warning.event}${level}`)}</div>`
+    const classes = ["warn", cls, index >= VISIBLE_ITEMS ? "list-extra" : ""].filter(Boolean).join(" ");
+    return `<div class="${classes}"><div class="wt">${escapeHtml(`${tag}: ${warning.event}${level}`)}</div>`
       + `<div class="wm">${escapeHtml(warning.content)}<br>${escapeHtml(range)}</div></div>`;
   }).join("");
+  return items + renderMoreButton("warnings", warnings.length);
 }
-
 function aqiBand(value: number | null): { label: string; color: string } {
   if (value == null || !Number.isFinite(value)) return { label: "—", color: "var(--muted)" };
   const bands: Array<[number, string, string]> = [
@@ -148,14 +157,15 @@ function renderAir(air: AirQuality | null | undefined): string {
 function renderEntries(entries: FeedEntry[]): string {
   const recent = entries.slice(0, 8);
   if (!recent.length) return '<p class="empty">Brak wpisów — czekam na pierwszą zmianę.</p>';
-  return recent.map((entry) => {
+  const items = recent.map((entry, index) => {
     const when = formatDate(entry.published);
-    return `<div class="entry"><div class="et">${escapeHtml(entry.title)}</div>`
+    const extra = index >= VISIBLE_ITEMS ? " list-extra" : "";
+    return `<div class="entry${extra}"><div class="et">${escapeHtml(entry.title)}</div>`
       + `<div class="em">${escapeHtml(entry.summary)}</div>`
       + `<time datetime="${escapeHtml(entry.published)}">${escapeHtml(when)}</time></div>`;
   }).join("");
+  return items + renderMoreButton("entries", recent.length);
 }
-
 export function renderPage(
   origin: string,
   state: CurrentState | null = null,
@@ -251,7 +261,7 @@ export function renderPage(
   .metrics{display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:.92rem}
   .metrics b{color:var(--steel-dark)}
   .src{margin-top:12px; font-size:.8rem; color:var(--muted)}
-  .btns{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 4px}
+  .btns{display:flex; gap:10px; flex-wrap:wrap; margin:26px 0 4px}
   a.btn,button.btn{
     display:inline-flex; align-items:center; gap:7px; cursor:pointer;
     font:inherit; font-weight:600; font-size:.92rem; text-decoration:none;
@@ -268,11 +278,19 @@ export function renderPage(
   .warn.hydro{border-color:var(--hydro); background:var(--hydro-bg)}
   .warn .wt{font-weight:700} .warn .wm{font-size:.86rem; color:var(--muted); margin-top:2px}
   .entry{padding:10px 0; border-bottom:1px solid #eef2f7}
-  .entry:last-child{border-bottom:0}
+  .entry:last-of-type{border-bottom:0}
   .entry .et{font-weight:600; font-size:.95rem}
   .entry .em{font-size:.86rem; color:var(--muted); margin-top:2px}
   .entry time{font-size:.75rem; color:var(--silver)}
   .empty{color:var(--muted); font-style:italic}
+  .list-extra{display:none}
+  .is-expanded .list-extra{display:block}
+  button.show-more{
+    display:block; width:100%; margin:10px 0 0; padding:9px 12px; cursor:pointer;
+    border:1px solid #d7e0eb; border-radius:9px; background:#f8fafc; color:var(--steel-dark);
+    font:inherit; font-size:.85rem; font-weight:600;
+  }
+  button.show-more:hover{border-color:var(--steel)}
   footer{margin-top:34px; font-size:.78rem; color:var(--muted); text-align:center}
   footer a{color:var(--steel)}
   .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
@@ -287,12 +305,6 @@ export function renderPage(
     <h1>Pogoda Chrzanów <span>· Kościelec</span></h1>
     <p>Mediana wielu źródeł · jakość powietrza i pyłki · ostrzeżenia IMGW · feed zmian</p>
   </header>
-
-  <div class="btns">
-    <a class="btn primary" href="/feed.atom">＋ Subskrybuj (Atom)</a>
-    <a class="btn ghost" href="/warnings.atom">⚠ Tylko ostrzeżenia</a>
-    <button class="btn ghost" id="copy">Kopiuj URL feedu</button>
-  </div>
 
   <div class="card" id="nowCard" aria-live="polite">
     <div class="now">
@@ -315,6 +327,12 @@ export function renderPage(
   <h2>Ostatnie zmiany</h2>
   <div class="card" id="entries">${renderEntries(entries)}</div>
 
+  <div class="btns">
+    <a class="btn primary" href="/feed.atom">＋ Subskrybuj (Atom)</a>
+    <a class="btn ghost" href="/warnings.atom">⚠ Tylko ostrzeżenia</a>
+    <button class="btn ghost" id="copy">Kopiuj URL feedu</button>
+  </div>
+
   <footer>
     Źródła: Open-Meteo · OpenWeather · Visual Crossing · Vaisala Xweather · Pirate Weather · IMGW-PIB · Open-Meteo Air Quality (CAMS).
     Aktualizacja co 2 h (pogoda) i raz dziennie (prognoza).<br>
@@ -329,6 +347,7 @@ export function renderPage(
   var PL = {clear:"bezchmurnie",clouds:"zachmurzenie",fog:"mgła",drizzle:"mżawka",
     rain:"deszcz",snow:"śnieg",storm:"burza",unknown:"—"};
   var SRC = {openmeteo:"Open-Meteo",openweather:"OpenWeather",visualcrossing:"Visual Crossing",xweather:"Vaisala Xweather",pirateweather:"Pirate Weather"};
+  var VISIBLE_ITEMS=3;
 
   function fmt(x){ return (x===null||x===undefined) ? "—" : (Math.round(x*10)/10); }
   function el(id){ return document.getElementById(id); }
@@ -343,6 +362,24 @@ export function renderPage(
     var url=location.origin+"/feed.atom";
     if(navigator.clipboard){ navigator.clipboard.writeText(url).then(function(){toast("Skopiowano: "+url);}); }
     else { toast(url); }
+  });
+
+  function moreButton(target,total){
+    var more=total-VISIBLE_ITEMS;
+    return more>0
+      ? '<button class="show-more" type="button" data-target="'+target+'" data-more="'+more+'" aria-controls="'+target+'" aria-expanded="false">Pokaż więcej ('+more+')</button>'
+      : "";
+  }
+
+  document.addEventListener("click", function(event){
+    var node=event.target;
+    var btn=node && node.closest ? node.closest("button.show-more") : null;
+    if(!btn) return;
+    var target=el(btn.getAttribute("data-target"));
+    if(!target) return;
+    var expanded=target.classList.toggle("is-expanded");
+    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    btn.textContent=expanded ? "Pokaż mniej" : "Pokaż więcej ("+btn.getAttribute("data-more")+")";
   });
 
   function renderNow(s){
@@ -367,17 +404,18 @@ export function renderPage(
 
   function renderWarnings(list){
     var wrap=el("warnings");
+    wrap.classList.remove("is-expanded");
     if(!list || !list.length){ wrap.innerHTML='<p class="empty">Brak aktywnych ostrzeżeń.</p>'; return; }
-    wrap.innerHTML = list.map(function(w){
+    wrap.innerHTML = list.map(function(w,index){
       var cls = w.category==="hydro" ? "hydro" : (w.level && w.level>=3 ? "alarm" : "");
       var lvl = (w.level && w.level>=1) ? (" (stopień "+w.level+")") : "";
       var tag = w.category==="hydro" ? "IMGW hydro" : "IMGW";
       var range = (w.from||"?")+" → "+(w.to||"?");
-      return '<div class="warn '+cls+'"><div class="wt">'+esc(tag+": "+w.event+lvl)+'</div>'+
+      var extra = index>=VISIBLE_ITEMS ? " list-extra" : "";
+      return '<div class="warn '+cls+extra+'"><div class="wt">'+esc(tag+": "+w.event+lvl)+'</div>'+
         '<div class="wm">'+esc(w.content||"")+'<br>'+esc(range)+'</div></div>';
-    }).join("");
+    }).join("") + moreButton("warnings",list.length);
   }
-
   function renderAir(aq){
     var wrap=el("airCard");
     if(!aq){ wrap.innerHTML='<p class="empty">Brak danych o jakości powietrza.</p>'; return; }
@@ -401,16 +439,18 @@ export function renderPage(
 
   function renderEntries(xmlText){
     var wrap=el("entries");
+    wrap.classList.remove("is-expanded");
     try{
       var doc=new DOMParser().parseFromString(xmlText,"application/xml");
       var entries=Array.prototype.slice.call(doc.getElementsByTagName("entry")).slice(0,8);
       if(!entries.length){ wrap.innerHTML='<p class="empty">Brak wpisów — czekam na pierwszą zmianę.</p>'; return; }
-      wrap.innerHTML = entries.map(function(en){
+      wrap.innerHTML = entries.map(function(en,index){
         function t(tag){ var n=en.getElementsByTagName(tag)[0]; return n?n.textContent:""; }
         var when=t("published"); var d=when?new Date(when).toLocaleString("pl-PL"):"";
-        return '<div class="entry"><div class="et">'+esc(t("title"))+'</div>'+
+        var extra=index>=VISIBLE_ITEMS ? " list-extra" : "";
+        return '<div class="entry'+extra+'"><div class="et">'+esc(t("title"))+'</div>'+
           '<div class="em">'+esc(t("content"))+'</div><time>'+esc(d)+'</time></div>';
-      }).join("");
+      }).join("") + moreButton("entries",entries.length);
     }catch(_){ wrap.innerHTML='<p class="empty">Nie udało się wczytać feedu.</p>'; }
   }
 
