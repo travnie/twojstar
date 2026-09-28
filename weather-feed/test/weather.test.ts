@@ -4,7 +4,7 @@ import { FEED_ID, renderAtom, warningEntries } from "../src/feed";
 import worker, { completePendingCurrent, pushEntries } from "../src/index";
 import { renderPage } from "../src/page";
 import { fetchPirateWeather, type Env } from "../src/sources";
-import type { FeedEntry, Warning } from "../src/types";
+import type { CurrentState, FeedEntry, Warning } from "../src/types";
 import {
   reconcileWarnings, warningEndTimeMs,
 } from "../src/warnings";
@@ -153,6 +153,41 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
   assert.match(html, /href="https:\/\/trfny\.com\/"/);
+});
+
+test("weather page collapses long warning and change lists and keeps feed controls near the footer", () => {
+  const warnings = Array.from({ length: 4 }, (_, index): Warning => ({
+    id: `meteo:${index}`,
+    category: "meteo",
+    event: `Test ${index + 1}`,
+    level: 1,
+    probability: 80,
+    from: "2026-09-28T10:00:00Z",
+    to: "2026-09-28T12:00:00Z",
+    content: "Test warning",
+  }));
+  const entries = Array.from({ length: 4 }, (_, index): FeedEntry => ({
+    id: `entry:${index}`,
+    kind: "current_change",
+    title: `Change ${index + 1}`,
+    summary: "Test change",
+    published: `2026-09-28T0${index}:00:00.000Z`,
+  }));
+  const html = renderPage(
+    "https://weather.trfny.com",
+    { warnings } as unknown as CurrentState,
+    entries,
+  );
+
+  assert.equal((html.match(/class="warn list-extra/g) ?? []).length, 1);
+  assert.equal((html.match(/class="entry list-extra/g) ?? []).length, 1);
+  assert.equal((html.match(/Pokaż więcej \(1\)/g) ?? []).length, 2);
+
+  const controls = html.indexOf('<div class="btns">');
+  const changes = html.indexOf('id="entries"');
+  const footer = html.indexOf("<footer>");
+  assert.ok(changes >= 0 && controls > changes);
+  assert.ok(footer > controls);
 });
 
 test("weather discovery routes do not require storage", async () => {
