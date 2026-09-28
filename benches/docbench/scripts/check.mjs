@@ -283,10 +283,16 @@ for (const mergeUiGuard of [
   'id="merge-now-button"',
   '>Merge selected</button>',
   'id="merge-files-feedback"',
-  'accept="*/*"',
 ]) {
   if (!html.includes(mergeUiGuard)) {
     throw new Error(`Doc Bench text merge UI is missing guard: ${mergeUiGuard}`);
+  }
+}
+for (const inputId of ["file-input", "merge-files-input"]) {
+  const inputTag = html.match(new RegExp(`<input[^>]*id=["']${inputId}["'][^>]*>`, "i"))?.[0];
+  if (!inputTag) throw new Error(`Doc Bench file input is missing: ${inputId}`);
+  if (/\saccept\s*=/i.test(inputTag)) {
+    throw new Error(`Doc Bench file input must not filter by extension or MIME type: ${inputId}`);
   }
 }
 for (const jsonUiGuard of [
