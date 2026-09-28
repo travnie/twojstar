@@ -347,7 +347,7 @@ export function renderPage(
   var PL = {clear:"bezchmurnie",clouds:"zachmurzenie",fog:"mgła",drizzle:"mżawka",
     rain:"deszcz",snow:"śnieg",storm:"burza",unknown:"—"};
   var SRC = {openmeteo:"Open-Meteo",openweather:"OpenWeather",visualcrossing:"Visual Crossing",xweather:"Vaisala Xweather",pirateweather:"Pirate Weather"};
-  var VISIBLE_ITEMS=3;
+  var VISIBLE_ITEMS=${VISIBLE_ITEMS};
 
   function fmt(x){ return (x===null||x===undefined) ? "—" : (Math.round(x*10)/10); }
   function el(id){ return document.getElementById(id); }
