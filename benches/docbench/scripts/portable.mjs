@@ -13,6 +13,7 @@ const [
   jsonrepair,
   pdfLib,
   fflate,
+  documentFormats,
   app,
   documentMerge,
   documentEnhancements,
@@ -56,6 +57,7 @@ const [
   readFile("public/vendor/jsonrepair.min.js", "utf8"),
   readFile("public/vendor/pdf-lib.min.js", "utf8"),
   readFile("public/vendor/fflate.min.js", "utf8"),
+  readFile("public/document-formats.js", "utf8"),
   readFile("public/app.js", "utf8"),
   readFile("public/document-merge.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
@@ -244,6 +246,7 @@ const portable = html
     '<script src="/vendor/fflate.min.js"></script>',
     `<script>${safeScript(fflate)}</script>`,
   )
+  .replace('<script src="/document-formats.js"></script>', `<script>${safeScript(documentFormats)}</script>`)
   .replace('<script src="/app.js"></script>', `<script>${safeScript(portableApp)}</script>`)
   .replace(
     '<script type="module" src="/document-enhancements.mjs"></script>',

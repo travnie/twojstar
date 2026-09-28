@@ -24,15 +24,7 @@
   let mergeQueue = [];
   let mergeBusy = false;
   let mergeCorePromise;
-  const extensionToFormat = {
-    txt: "txt", md: "md", markdown: "md", json: "json", jsonc: "jsonc",
-    json5: "json5", jsonl: "jsonl", ndjson: "jsonl",
-    yml: "yaml", yaml: "yaml", xml: "xml",
-  };
-  const preferredExtension = {
-    txt: "txt", md: "md", json: "json", jsonc: "jsonc",
-    json5: "json5", jsonl: "jsonl", yaml: "yml", xml: "xml",
-  };
+  const textFormats = globalThis.DocBenchTextFormats;
 
   function detectEol(raw) {
     const crlf = (raw.match(/\r\n/g) || []).length;
@@ -253,9 +245,9 @@
   function renderValidation({ revealError = false } = {}) {
     const result = parseCurrent();
     const format = formatSelect.value;
-    if (["txt", "md"].includes(format)) {
+    if (format === "md" || textFormats.isRaw(format)) {
       statusBadge.className = "status neutral";
-      statusBadge.textContent = format === "md" ? "Markdown" : "Plain text";
+      statusBadge.textContent = format === "md" ? "Markdown" : textFormats.labelFor(format);
       preview.textContent = editor.value;
       updateMeta();
       return result;
@@ -370,8 +362,7 @@
   }
 
   function setFormatFromFilename(name) {
-    const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "txt";
-    formatSelect.value = extensionToFormat[ext] || "txt";
+    formatSelect.value = textFormats.formatFromFilename(name);
   }
 
   async function readTextFile(file) {
@@ -536,7 +527,7 @@
     const raw = applyEol(editor.value, eolSelect.value);
     const data = new TextEncoder().encode(raw);
     const parts = state.bom ? [new Uint8Array([0xef, 0xbb, 0xbf]), data] : [data];
-    const blob = new Blob(parts, { type: "text/plain;charset=utf-8" });
+    const blob = new Blob(parts, { type: textFormats.mimeFor(state.filename, formatSelect.value) });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = state.filename;
@@ -546,7 +537,7 @@
 
   function newDocument() {
     resetMergeQueue({ clearFeedback: true });
-    state.filename = `untitled.${preferredExtension[formatSelect.value]}`;
+    state.filename = `untitled.${textFormats.preferredExtension(formatSelect.value)}`;
     state.bom = false;
     state.mixedEol = false;
     eolSelect.value = "LF";
@@ -602,7 +593,7 @@
   });
   formatSelect.addEventListener("change", () => {
     if (state.filename.startsWith("untitled.")) {
-      state.filename = `untitled.${preferredExtension[formatSelect.value]}`;
+      state.filename = `untitled.${textFormats.preferredExtension(formatSelect.value)}`;
       filenameLabel.textContent = state.filename;
     }
     renderValidation();
