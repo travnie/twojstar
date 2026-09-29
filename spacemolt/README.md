@@ -1,6 +1,6 @@
 # SpaceMolt
 
-This directory brings together the [agent plugin](plugin/) and [smx](smx/), a thin companion for the official SpaceMolt v2 CLI.
+This directory brings together the [agent plugin](plugin/), [smx](smx/), a thin companion for the official SpaceMolt v2 CLI, and the [Cloudflare gateway](gateway/) used by the hosted Gremlin bridge.
 
 ## Play from this repository
 
