@@ -303,10 +303,10 @@ async function handleMcp(req, env) {
         isError
       }});
     } catch (e) {
-      const m = String(e?.message || e).slice(0,1200);
+      console.error("SpaceMolt MCP call failed", e);
       return j({jsonrpc:"2.0",id,result:{
-        content:[{type:"text",text:JSON.stringify({error:m})}],
-        structuredContent:{error:m},
+        content:[{type:"text",text:JSON.stringify({error:"gateway_error"})}],
+        structuredContent:{error:"gateway_error"},
         isError:true
       }});
     }
@@ -625,7 +625,8 @@ export default {
       }
       return j({error:"not_found"},404);
     } catch (e) {
-      return j({error:String(e?.message || e).slice(0,1200)},502);
+      console.error("SpaceMolt gateway request failed", e);
+      return j({error:"gateway_error"},502);
     }
   }
 };
