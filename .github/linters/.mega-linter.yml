@@ -12,7 +12,15 @@ FAIL_IF_UPDATED_SOURCES: false
 
 # Fixers only modify the runner checkout. The artifact keeps updated_sources so
 # useful formatter output can be reviewed and copied back deliberately.
-APPLY_FIXES: all
+APPLY_FIXES:
+  - BASH_SHFMT
+  - CSS_STYLELINT
+  - JAVASCRIPT_PRETTIER
+  - JSON_PRETTIER
+  - MARKDOWN_MARKDOWNLINT
+  - PYTHON_RUFF_FORMAT
+  - TYPESCRIPT_PRETTIER
+  - YAML_PRETTIER
 UPDATED_SOURCES_REPORTER: true
 UPDATED_SOURCES_REPORTER_DIR: updated_sources
 
