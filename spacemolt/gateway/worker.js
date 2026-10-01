@@ -10,7 +10,7 @@ const IRREVERSIBLE = new Set([
   "leave_faction","kick_member","transfer_ownership","renounce_citizenship",
   "abandon_mission","delete_note","write_note","forum_delete_thread","forum_delete_reply",
   // v2 action names (spacemolt_faction/kick, /leave, salvage/scrap, ...)
-  "kick","leave","delete_role","delete_room","scrap","release","recycle",
+  "kick","leave","delete_role","delete_room","faction_kick","faction_delete_role","faction_delete_room","scrap","release","recycle",
   "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
   "declare_war","faction_declare_war","attack","hunt",
   // spacemolt_drone/upload replaces the drone's only stored script
@@ -366,6 +366,8 @@ async function handleMcp(req, env) {
 
 
 const DAILY_MAX_STEPS = 6;
+// Small enough that the whole peeked batch fits the planner's per-observation budget.
+const DAILY_NOTIFICATION_PEEK = 5;
 // Leave room for the final ensureDocked and summary write; one travel/jump can block for minutes.
 const DAILY_LOOP_BUDGET_MS = 4 * 60 * 1000;
 // Movement can long-poll for minutes, so only start it well inside the budget.
@@ -521,18 +523,21 @@ function errorText(e, max) {
   return String(e?.message || e).slice(0, max);
 }
 
-async function gatherDailyObservations(env, history) {
+async function gatherDailyObservations(env, run) {
+  const history = run.history;
   // Probe serially first so an expired session triggers at most one re-login.
   const statusObs = await safeObs(env,"spacemolt","get_status",{});
   const initial = [statusObs, ...await Promise.all([
     safeObs(env,"spacemolt","get_active_missions",{}),
-    // Peek only: the planner sees a truncated view, so don't consume events it never read.
-    safeObs(env,"spacemolt","get_notifications",{clear:false}),
+    // Peek a small batch; only that batch is cleared once the run has seen it.
+    safeObs(env,"spacemolt","get_notifications",{clear:false, limit:DAILY_NOTIFICATION_PEEK}),
     safeObs(env,"spacemolt","get_commands",{}),
     safeObs(env,"spacemolt","get_guide",{}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
   ])];
+  const peeked = initial[2].ok ? sc(initial[2].data)?.notifications : null;
+  run.notificationsSeen = Array.isArray(peeked) ? peeked.length : 0;
   initial.forEach((value, i) => {
     if (i !== 3 && i !== 4) history.push({kind:"observation", value});
   });
@@ -631,9 +636,18 @@ async function executeDailyDecision(env, run, decision, provider) {
     run.history.push({kind:"blocked", tool, action, reason:"captains_log_full: appending would evict the oldest entry"});
     return "continue";
   }
+  if (action === "get_notifications" && args.clear !== false) run.notificationsSeen = 0;
   const result = await safeObs(env, tool, action, args);
   run.history.push({kind:"action", tool, action, args, why:String(decision.why || "").slice(0,250), result});
   return "continue";
+}
+
+// Drop the peeked batch so the next run does not act on the same events again.
+// Skipped if the planner already drained the queue itself.
+async function clearSeenNotifications(env, run) {
+  if (!run.notificationsSeen) return;
+  const cleared = await safeObs(env, "spacemolt", "get_notifications", {clear:true, limit:run.notificationsSeen});
+  run.history.push({kind:"notifications_cleared", count:run.notificationsSeen, ok:cleared.ok});
 }
 
 async function finishDailyRun(env, startedAt, history) {
@@ -664,9 +678,10 @@ async function runDailyGremlin(env) {
     history:[],
     providerRotation:Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length,
     blockedCount:0,
-    plannerInvalidCount:0
+    plannerInvalidCount:0,
+    notificationsSeen:0
   };
-  const mechanics = await gatherDailyObservations(env, run.history);
+  const mechanics = await gatherDailyObservations(env, run);
 
   for (let step = 0; step < DAILY_MAX_STEPS; step++) {
     if (Date.now() - run.loopStart > DAILY_LOOP_BUDGET_MS) {
@@ -679,6 +694,7 @@ async function runDailyGremlin(env) {
     if (await executeDailyDecision(env, run, plan.decision, plan.provider) === "stop") break;
   }
 
+  await clearSeenNotifications(env, run);
   return finishDailyRun(env, startedAt, run.history);
 }
 
