@@ -226,7 +226,7 @@ function currentLooksDockable(x) {
   return /station|outpost|base/.test(t) || /station|outpost/.test(n);
 }
 
-function findDockTarget(root) {
+function findDockTarget(root, excludeId) {
   const seen = new Set();
   let found = null;
   function walk(v) {
@@ -236,7 +236,7 @@ function findDockTarget(root) {
       const id = v.poi_id || v.id || v.base_id;
       const type = String(v.poi_type || v.type || v.kind || "").toLowerCase();
       const name = String(v.poi_name || v.name || v.base_name || "").toLowerCase();
-      if (id && (/station|outpost|base/.test(type) || /station|outpost/.test(name))) {
+      if (id && String(id) !== excludeId && (/station|outpost|base/.test(type) || /station|outpost/.test(name))) {
         found = String(id); return;
       }
     }
@@ -250,18 +250,23 @@ async function ensureDocked(env) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
   if (isDocked(status)) return {docked:true, changed:false, status};
   // Try docking where we are first: station names are not always recognisable.
+  let localDockError = null;
   try {
     const dock = await gameCall(env, "spacemolt", "dock", {});
     if (isDocked(dock)) return {docked:true, changed:true, dock};
     // The dock reply may not carry docked state; re-read status before deciding.
     const after = await gameCall(env, "spacemolt", "get_status", {});
-    if (isDocked(after) || currentLooksDockable(status)) return {docked:isDocked(after), changed:true, dock, status:after};
+    if (isDocked(after)) return {docked:true, changed:true, dock, status:after};
   } catch (e) {
-    if (currentLooksDockable(status)) throw e;
+    // A game refusal (hostile or access-controlled dock) falls through to the system search.
+    localDockError = gameRejection(e);
+    if (!localDockError) throw e;
   }
+  const here = currentLocation(status);
+  const hereId = String(here.poi_id || here.id || "");
   const sys = await gameCall(env, "spacemolt", "get_system", {});
-  const target = findDockTarget(sc(sys));
-  if (!target) return {docked:false, changed:false, reason:"no_dock_in_current_system", status, system:sys};
+  const target = findDockTarget(sc(sys), hereId);
+  if (!target) return {docked:false, changed:false, reason:"no_dock_in_current_system", localDockError, status, system:sys};
   const travel = await gameCall(env, "spacemolt", "travel", {id:target});
   const dock = await gameCall(env, "spacemolt", "dock", {});
   if (isDocked(dock)) return {docked:true, changed:true, target, travel, dock};
@@ -323,7 +328,9 @@ function isConditionallyIrreversible(tool, action, payload) {
 function commandRejection(tool, action, allowIrreversible, payload) {
   action = String(action || "");
   tool = String(tool || "");
-  if (GATEWAY_HARD_DENY.has(action)) return {error:"action_hard_denied", status:403};
+  // The flat battle dispatcher carries the real action in payload.action (e.g. self_destruct).
+  const nested = action === "battle" ? String(payload?.action || "") : "";
+  if (GATEWAY_HARD_DENY.has(action) || GATEWAY_HARD_DENY.has(nested)) return {error:"action_hard_denied", status:403};
   if ((IRREVERSIBLE.has(action) || isConditionallyIrreversible(tool, action, payload)) && allowIrreversible !== true) {
     return {error:"irreversible_action_requires_explicit_override", status:409};
   }
@@ -788,12 +795,14 @@ export default {
       "access-control-allow-methods":"GET, POST, OPTIONS"
     }});
     if (u.pathname === "/health" && req.method === "GET") {
-      return j({ok:true,version:VERSION,configured:{
+      const configured = {
         clerk:Boolean(env.SPACEMOLT_CLERK_API_KEY),
         bridge:Boolean(env.BRIDGE_TOKEN),
         player:Boolean(env.SPACEMOLT_PLAYER_ID),
         state:Boolean(env.STATE)
-      }});
+      };
+      const ok = Object.values(configured).every(Boolean);
+      return j({ok, version:VERSION, configured}, ok ? 200 : 503);
     }
 
     if (u.pathname === "/mcp" && req.method === "POST") return handleMcp(req, env);
