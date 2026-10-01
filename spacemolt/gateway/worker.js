@@ -207,8 +207,8 @@ function currentLocation(x) {
 function isDocked(x) {
   const l = currentLocation(x);
   if (typeof l.docked === "boolean") return l.docked;
-  const s = sc(x);
-  const ship = s?.ship || s?.state?.ship || s?.structuredContent?.ship || {};
+  const status = sc(x);
+  const ship = status?.ship || status?.state?.ship || status?.structuredContent?.ship || {};
   if (typeof ship.docked === "boolean") return ship.docked;
   return Boolean(l.docked_at || l.dockedAt);
 }
@@ -339,12 +339,13 @@ function mcpToolResult(id, out) {
 const MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
 const NO_REPLY = {status:202};
+const PARSE_FAILED = Symbol("parse_failed");
 
 async function handleMcp(req, env) {
   const auth = await requireAuth(req, env);
   if (!auth.ok) return auth.response;
-  let body;
-  try { body = await req.json(); } catch { return j({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}},400); }
+  const body = await req.json().catch(() => PARSE_FAILED);
+  if (body === PARSE_FAILED) return j({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}},400);
   if (!Array.isArray(body)) {
     const out = await handleMcpMessage(body, env);
     if (out === NO_REPLY) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
