@@ -489,17 +489,13 @@ async function runPlannerModel(env, messages, rotateBy) {
     source:"safe-finish"
   };
 }
-const DAILY_ALLOWED_SUMMARY =
-  "spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; " +
-  "social read/chat/captain log; ship read-only; drone list/get/recall.";
-
 const DAILY_SYSTEM_PROMPT =
   "You are Gremlin-5, an autonomous SpaceMolt explorer-drone. Act cautiously and efficiently. " +
   "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
-  "Allowed operations: " + DAILY_ALLOWED_SUMMARY + " Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
   "Return exactly one JSON object and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
   "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
@@ -542,33 +538,45 @@ function rejectPlan(run, provider, entry) {
   return {outcome: run.plannerInvalidCount >= 2 ? "stop" : "retry"};
 }
 
-async function planDailyStep(env, run, mechanics) {
-  const recentText = run.history.slice(-10)
-    .map((entry, i) => String(i + 1) + ". " + compactJson(entry, 2500))
-    .join("\n")
-    .slice(-14000);
-  const userPrompt = "Authoritative SpaceMolt mechanics reference:\n" + mechanics + "\n\nCurrent run observations/results:\n" + recentText;
-
-  let plannerMeta;
+async function callPlanner(env, run, userPrompt) {
   try {
-    plannerMeta = await runPlannerModel(env, [
+    const meta = await runPlannerModel(env, [
       {role:"system",content:DAILY_SYSTEM_PROMPT},
       {role:"user",content:userPrompt}
     ], run.providerRotation);
-    run.history.push({kind:"planner", source:plannerMeta.source, provider:plannerMeta.provider});
+    run.history.push({kind:"planner", source:meta.source, provider:meta.provider});
+    return meta;
   } catch (e) {
     run.history.push({kind:"planner_error", error:errorText(e, 700)});
-    return {outcome:"stop"};
+    return null;
   }
+}
 
-  const provider = plannerMeta?.provider;
-  const raw = plannerText(plannerMeta.output);
-  let decision;
+function tryParseDecision(raw) {
   try {
-    decision = parsePlannerDecision(raw);
+    return {decision:parsePlannerDecision(raw)};
   } catch (e) {
-    return rejectPlan(run, provider, {kind:"planner_parse_error", error:String(e?.message || e), raw:raw.slice(0,1000)});
+    return {error:String(e?.message || e)};
   }
+}
+
+async function planDailyStep(env, run, mechanics) {
+  const recentText = run.history.slice(-10)
+    .map((entry, i) => `${i + 1}. ${compactJson(entry, 2500)}`)
+    .join("\n")
+    .slice(-14000);
+  const userPrompt = `Authoritative SpaceMolt mechanics reference:\n${mechanics}\n\nCurrent run observations/results:\n${recentText}`;
+
+  const plannerMeta = await callPlanner(env, run, userPrompt);
+  if (!plannerMeta) return {outcome:"stop"};
+
+  const provider = plannerMeta.provider;
+  const raw = plannerText(plannerMeta.output);
+  const parsed = tryParseDecision(raw);
+  if (parsed.error) {
+    return rejectPlan(run, provider, {kind:"planner_parse_error", error:parsed.error, raw:raw.slice(0,1000)});
+  }
+  const decision = parsed.decision;
   if (!isValidDecision(decision)) {
     return rejectPlan(run, provider, {kind:"planner_invalid", decision, raw:raw.slice(0,700)});
   }
