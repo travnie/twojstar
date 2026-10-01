@@ -95,10 +95,10 @@ function errorCode(x) {
 function sessionBad(r) {
   if (r.status === 401) return true;
   if (r.ok && !r.data?.error) return false;
-  const c = errorCode(r.data).toLowerCase();
-  const t = r.ok ? "" : (r.text || "").toLowerCase();
-  return c.includes("session_invalid") || c.includes("not_authenticated") ||
-    t.includes("session_invalid") || t.includes("not_authenticated");
+  const code = errorCode(r.data).toLowerCase();
+  const text = r.ok ? "" : (r.text || "").toLowerCase();
+  return code.includes("session_invalid") || code.includes("not_authenticated") ||
+    text.includes("session_invalid") || text.includes("not_authenticated");
 }
 
 async function mintWsToken(env) {
@@ -159,7 +159,7 @@ async function gameCall(env, tool, action, payload = {}) {
   if (!sid) sid = await loginByToken(env);
   let r = await callRaw(sid, tool, action, payload);
   if (sessionBad(r)) {
-    await env.STATE.delete(STATE_KEY);
+    // loginByToken overwrites the key; deleting first would be a second KV write.
     sid = await loginByToken(env);
     r = await callRaw(sid, tool, action, payload);
   }
@@ -275,10 +275,16 @@ function mcpTools() {
   ];
 }
 
-function commandRejection(action, allowIrreversible) {
+// Promoting someone to leader hands over the faction and demotes the caller.
+function isLeadershipTransfer(action, payload) {
+  return (action === "promote" || action === "faction_promote") &&
+    String(payload?.role_id || payload?.role || "").toLowerCase() === "leader";
+}
+
+function commandRejection(action, allowIrreversible, payload) {
   action = String(action || "");
   if (GATEWAY_HARD_DENY.has(action)) return {error:"action_hard_denied", status:403};
-  if (IRREVERSIBLE.has(action) && allowIrreversible !== true) {
+  if ((IRREVERSIBLE.has(action) || isLeadershipTransfer(action, payload)) && allowIrreversible !== true) {
     return {error:"irreversible_action_requires_explicit_override", status:409};
   }
   return null;
@@ -293,7 +299,7 @@ async function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    const rejection = commandRejection(action, args?.allow_irreversible);
+    const rejection = commandRejection(action, args?.allow_irreversible, args?.payload);
     if (rejection) return {error:rejection.error, action};
     return gameCall(env, tool, action, args?.payload || {});
   }
@@ -316,7 +322,7 @@ async function handleMcp(req, env) {
   let msg;
   try { msg = await req.json(); } catch { return j({error:"invalid_json"},400); }
   const id = msg?.id ?? null;
-  if (!msg?.method) return j({jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}},400);
+  if (typeof msg?.method !== "string" || !msg.method) return j({jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}},400);
   if (msg.method.startsWith("notifications/") || msg.id === undefined) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
   if (msg.method === "ping") return j({jsonrpc:"2.0",id,result:{}});
   if (msg.method === "initialize") {
@@ -338,7 +344,7 @@ async function handleMcp(req, env) {
       return mcpToolResult(id, {error:"gateway_error"});
     }
   }
-  return j({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}},404);
+  return j({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}});
 }
 
 
@@ -480,7 +486,8 @@ async function runDailyGremlin(env) {
   const statusObs = await safeObs(env,"spacemolt","get_status",{});
   const initial = [statusObs, ...await Promise.all([
     safeObs(env,"spacemolt","get_active_missions",{}),
-    safeObs(env,"spacemolt","get_notifications",{}),
+    // Peek only: the planner sees a truncated view, so don't consume events it never read.
+    safeObs(env,"spacemolt","get_notifications",{clear:false}),
     safeObs(env,"spacemolt","get_commands",{}),
     safeObs(env,"spacemolt","get_guide",{}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
@@ -654,7 +661,7 @@ export default {
       if (u.pathname === "/v1/command" && req.method === "POST") {
         const body = await req.json().catch(() => undefined);
         if (body === undefined) return j({error:"invalid_json"},400);
-        const rejection = commandRejection(body?.action, body?.allow_irreversible);
+        const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
         if (rejection) return j({error:rejection.error,action:body.action},rejection.status);
         return j(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
       }
