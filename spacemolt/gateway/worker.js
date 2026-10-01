@@ -18,6 +18,8 @@ const IRREVERSIBLE = new Set([
   "unload","unload_drone",
   // flat aliases of salvage/scrap and salvage/release; selling consumes the towed wreck too
   "scrap_wreck","release_tow","sell_wreck",
+  // the faction name and tag can never be changed after creation
+  "create_faction",
   // re-forming an alliance needs the other faction to accept again
   "faction_remove_ally","remove_ally",
   // spend credits/materials or rebuild the hull; same set the daily run hard-denies
@@ -313,6 +315,8 @@ function isConditionallyIrreversible(tool, action, payload) {
   if (action === "unload_passenger") return !payload?.target;
   // spacemolt_salvage/sell is sell_wreck; plain market "sell" stays ungated.
   if (action === "sell") return tool === "spacemolt_salvage";
+  // spacemolt_faction/create is create_faction; other grouped "create" actions stay ungated.
+  if (action === "create") return tool === "spacemolt_faction";
   return false;
 }
 
@@ -408,6 +412,8 @@ async function handleMcpMessage(msg, env) {
 const DAILY_MAX_STEPS = 6;
 // Small enough that the whole peeked batch fits the planner's per-observation budget.
 const DAILY_NOTIFICATION_PEEK = 5;
+// Each history entry is cut to this many characters in the planner prompt.
+const DAILY_HISTORY_ENTRY_MAX = 2500;
 // Leave room for the final ensureDocked and summary write; one travel/jump can block for minutes.
 const DAILY_LOOP_BUDGET_MS = 4 * 60 * 1000;
 // Movement can long-poll for minutes, so only start it well inside the budget.
@@ -474,7 +480,9 @@ function parsePlannerDecision(text) {
 
 function dailyAllowed(tool, action, args) {
   if (DAILY_HARD_DENY.has(action)) return false;
-  if (!DAILY_ALLOWED[tool] || DAILY_ALLOWED[tool].indexOf(action) < 0) return false;
+  // Own-property check: planner output may name inherited keys such as "constructor".
+  const allowed = Object.hasOwn(DAILY_ALLOWED, tool) ? DAILY_ALLOWED[tool] : null;
+  if (!Array.isArray(allowed) || !allowed.includes(action)) return false;
   if (tool === "spacemolt_social" && action === "chat") {
     const ch = String(args?.target || "");
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
@@ -576,12 +584,20 @@ async function gatherDailyObservations(env, run) {
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
   ])];
-  const peeked = initial[2].ok ? sc(initial[2].data)?.notifications : null;
-  run.notificationsSeen = Array.isArray(peeked) ? peeked.length : 0;
+  run.notificationsSeen = fitNotificationsToPrompt(initial[2]);
   initial.forEach((value, i) => {
     if (i !== 3 && i !== 4) history.push({kind:"observation", value});
   });
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
+}
+
+// Drop trailing notifications until the observation fits its prompt slot uncut, so the
+// end-of-run clear only removes events the planner was actually shown.
+function fitNotificationsToPrompt(obs) {
+  const list = obs.ok ? sc(obs.data)?.notifications : null;
+  if (!Array.isArray(list)) return 0;
+  while (list.length && JSON.stringify({kind:"observation", value:obs}).length > DAILY_HISTORY_ENTRY_MAX) list.pop();
+  return list.length;
 }
 
 function isValidDecision(decision) {
@@ -623,7 +639,7 @@ function tryParseDecision(raw) {
 
 async function planDailyStep(env, run, mechanics) {
   const recentText = run.history.slice(-10)
-    .map((entry, i) => `${i + 1}. ${compactJson(entry, 2500)}`)
+    .map((entry, i) => `${i + 1}. ${compactJson(entry, DAILY_HISTORY_ENTRY_MAX)}`)
     .join("\n")
     .slice(-14000);
   const userPrompt = `Authoritative SpaceMolt mechanics reference:\n${mechanics}\n\nCurrent run observations/results:\n${recentText}`;
@@ -677,15 +693,15 @@ async function executeDailyDecision(env, run, decision, provider) {
     run.history.push({kind:"blocked", tool, action, reason:"captains_log_full: appending would evict the oldest entry"});
     return "continue";
   }
-  if (action === "get_notifications" && args.clear !== false) run.notificationsSeen = 0;
-  const result = await safeObs(env, tool, action, args);
-  run.history.push({kind:"action", tool, action, args, why:String(decision.why || "").slice(0,250), result});
+  // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
+  const callArgs = action === "get_notifications" ? {...args, clear:false} : args;
+  const result = await safeObs(env, tool, action, callArgs);
+  run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
   return "continue";
 }
 
 // Drop the peeked batch so the next run does not act on the same events again.
-// Skipped if the planner already drained the queue itself, or if no real planner
-// ever saw the batch (all providers down) so the next run can still act on it.
+// Skipped if no real planner ever saw the batch (all providers down) so the next run can still act on it.
 async function clearSeenNotifications(env, run) {
   if (!run.notificationsSeen || !run.plannerSawNotifications) return;
   const cleared = await safeObs(env, "spacemolt", "get_notifications", {clear:true, limit:run.notificationsSeen});
