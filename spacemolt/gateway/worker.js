@@ -647,11 +647,11 @@ export default {
         return j(await ensureDocked(env));
       }
       if (u.pathname === "/v1/command" && req.method === "POST") {
-        let b;
-        try { b = await req.json(); } catch { return j({error:"invalid_json"},400); }
-        const rejection = commandRejection(b?.action, b?.allow_irreversible);
-        if (rejection) return j({error:rejection.error,action:b.action},rejection.status);
-        return j(await gameCall(env,String(b?.tool||""),String(b?.action||""),b?.payload||{}));
+        const body = await req.json().catch(() => undefined);
+        if (body === undefined) return j({error:"invalid_json"},400);
+        const rejection = commandRejection(body?.action, body?.allow_irreversible);
+        if (rejection) return j({error:rejection.error,action:body.action},rejection.status);
+        return j(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
       }
       return j({error:"not_found"},404);
     } catch (e) {
