@@ -219,13 +219,6 @@ function isDocked(x) {
   return Boolean(l.docked_at || l.dockedAt);
 }
 
-function currentLooksDockable(x) {
-  const l = currentLocation(x);
-  const t = String(l.poi_type || l.type || "").toLowerCase();
-  const n = String(l.poi_name || l.name || "").toLowerCase();
-  return /station|outpost|base/.test(t) || /station|outpost/.test(n);
-}
-
 function findDockTarget(root, excludeId) {
   const seen = new Set();
   let found = null;
