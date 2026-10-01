@@ -359,9 +359,9 @@ function compactJson(value, max) {
 
 function plannerText(out) {
   if (typeof out === "string") return out;
-  let msg = dget(out, ["choices",0,"message"]);
+  const msg = dget(out, ["choices",0,"message"]);
   if (msg && typeof msg === "object") {
-    let content = msg.content;
+    const content = msg.content;
     if (typeof content === "string" && content.trim()) return content;
     if (msg.reasoning || msg.reasoning_content) return "";
   }
@@ -376,8 +376,8 @@ function parsePlannerDecision(text) {
   if (cleaned.indexOf("```") === 0) {
     cleaned = cleaned.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
   }
-  let first = cleaned.indexOf("{");
-  let last = cleaned.lastIndexOf("}");
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
   if (first < 0 || last <= first) throw new Error("planner_no_json");
   return JSON.parse(cleaned.slice(first, last + 1));
 }
@@ -386,13 +386,13 @@ function dailyAllowed(tool, action, args) {
   if (DAILY_HARD_DENY.has(action)) return false;
   if (!DAILY_ALLOWED[tool] || DAILY_ALLOWED[tool].indexOf(action) < 0) return false;
   if (tool === "spacemolt_social" && action === "chat") {
-    let ch = String(args && args.target || "");
+    const ch = String(args && args.target || "");
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
     if (!args || !args.content || String(args.content).length > 800) return false;
   }
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
   if ((action === "refuel" || action === "repair") && args && args.quantity != null) {
-    let q = Number(args.quantity);
+    const q = Number(args.quantity);
     if (!isFinite(q) || q < 0 || q > 200) return false;
   }
   return true;
@@ -409,8 +409,8 @@ async function safeObs(env, tool, action, payload) {
 }
 
 function warsawIs2137(ms) {
-  let d = new Date(ms);
-  let parts = new Intl.DateTimeFormat("en-GB", {
+  const d = new Date(ms);
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone:"Europe/Warsaw", hour:"2-digit", minute:"2-digit", hourCycle:"h23"
   }).formatToParts(d);
   let h = null, m = null;
@@ -422,14 +422,14 @@ function warsawIs2137(ms) {
 }
 
 function nextProviderRotation(current, provider) {
-  let idx = DAILY_PROVIDER_ORDER.indexOf(String(provider || ""));
+  const idx = DAILY_PROVIDER_ORDER.indexOf(String(provider || ""));
   if (idx >= 0) return (idx + 1) % DAILY_PROVIDER_ORDER.length;
   return (current + 1) % DAILY_PROVIDER_ORDER.length;
 }
 async function runPlannerModel(env, messages, rotateBy) {
   if (env.KANAREK_PLANNER) {
     try {
-      let routed = await env.KANAREK_PLANNER.plan({
+      const routed = await env.KANAREK_PLANNER.plan({
         max_tokens:700,
         reasoning_effort:"low",
         temperature:0.2,
@@ -447,12 +447,12 @@ async function runPlannerModel(env, messages, rotateBy) {
   };
 }
 async function runDailyGremlin(env) {
-  let startedAt = new Date().toISOString();
-  let history = [];
+  const startedAt = new Date().toISOString();
+  const history = [];
   let providerRotation = Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length;
-  let cachedSession = await env.STATE.get(STATE_KEY);
+  const cachedSession = await env.STATE.get(STATE_KEY);
   if (!cachedSession) await loginByToken(env);
-  let initial = await Promise.all([
+  const initial = await Promise.all([
     safeObs(env,"spacemolt","get_status",{}),
     safeObs(env,"spacemolt","get_active_missions",{}),
     safeObs(env,"spacemolt","get_notifications",{}),
@@ -461,7 +461,7 @@ async function runDailyGremlin(env) {
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
   ]);
-  let mechanics = compactJson({commands:initial[3], guides:initial[4]}, 9000);
+  const mechanics = compactJson({commands:initial[3], guides:initial[4]}, 9000);
   for (let z = 0; z < initial.length; z++) {
     if (z === 3 || z === 4) continue;
     history.push({kind:"observation", value:initial[z]});
@@ -469,7 +469,7 @@ async function runDailyGremlin(env) {
   let blockedCount = 0;
   let plannerInvalidCount = 0;
 
-  let allowedSummary =
+  const allowedSummary =
     "spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; " +
     "social read/chat/captain log; ship read-only; drone list/get/recall.";
 
@@ -491,7 +491,7 @@ async function runDailyGremlin(env) {
       .map((entry, i) => String(i + 1) + ". " + compactJson(entry, 2500))
       .join("\n")
       .slice(-14000);
-    let userPrompt = "Authoritative SpaceMolt mechanics reference:\n" + mechanics + "\n\nCurrent run observations/results:\n" + recentText;
+    const userPrompt = "Authoritative SpaceMolt mechanics reference:\n" + mechanics + "\n\nCurrent run observations/results:\n" + recentText;
 
     let ai;
     let plannerMeta;
@@ -508,7 +508,7 @@ async function runDailyGremlin(env) {
     }
 
     let decision;
-    let rawDecisionText = plannerText(ai);
+    const rawDecisionText = plannerText(ai);
     try {
       decision = parsePlannerDecision(rawDecisionText);
     } catch (e) {
@@ -518,8 +518,8 @@ async function runDailyGremlin(env) {
       if (plannerInvalidCount >= 2) break;
       continue;
     }
-    let validKind = decision && (decision.kind === "act" || decision.kind === "finish");
-    let validActShape = decision && decision.kind === "act" && typeof decision.tool === "string" && decision.tool && typeof decision.action === "string" && decision.action;
+    const validKind = decision && (decision.kind === "act" || decision.kind === "finish");
+    const validActShape = decision && decision.kind === "act" && typeof decision.tool === "string" && decision.tool && typeof decision.action === "string" && decision.action;
     if (!validKind || (decision.kind === "act" && !validActShape)) {
       plannerInvalidCount += 1;
       history.push({kind:"planner_invalid", provider:plannerMeta && plannerMeta.provider, decision:decision, raw:rawDecisionText.slice(0,700)});
@@ -534,9 +534,9 @@ async function runDailyGremlin(env) {
       break;
     }
 
-    let tool = String(decision && decision.tool || "");
-    let action = String(decision && decision.action || "");
-    let args = decision && decision.args && typeof decision.args === "object" ? decision.args : {};
+    const tool = String(decision && decision.tool || "");
+    const action = String(decision && decision.action || "");
+    const args = decision && decision.args && typeof decision.args === "object" ? decision.args : {};
     if (!dailyAllowed(tool, action, args)) {
       blockedCount += 1;
       history.push({kind:"blocked", provider:plannerMeta && plannerMeta.provider, tool:tool, action:action, decision:decision, reason:"not in daily safety allowlist"});
@@ -547,7 +547,7 @@ async function runDailyGremlin(env) {
     blockedCount = 0;
     plannerInvalidCount = 0;
 
-    let result = await safeObs(env, tool, action, args);
+    const result = await safeObs(env, tool, action, args);
     history.push({
       kind:"action", tool:tool, action:action, args:args,
       why:String(decision && decision.why || "").slice(0,250), result:result
@@ -561,8 +561,8 @@ async function runDailyGremlin(env) {
     dock = {docked:false,error:String(e && e.message || e).slice(0,700)};
   }
 
-  let finalStatus = dock && (dock.status || dock.dock) ? (dock.status || dock.dock) : null;
-  let summary = {
+  const finalStatus = dock && (dock.status || dock.dock) ? (dock.status || dock.dock) : null;
+  const summary = {
     ok:Boolean(dock && dock.docked),
     startedAt:startedAt,
     finishedAt:new Date().toISOString(),
