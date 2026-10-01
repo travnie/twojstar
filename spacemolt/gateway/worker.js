@@ -128,12 +128,7 @@ async function createSession() {
 async function loginByToken(env) {
   const token = await mintWsToken(env);
   let sid = await createSession();
-  const res = await fetch(GAME + "/api/v2/spacemolt_auth/login_token", {
-    method:"POST",
-    headers:{"content-type":"application/json","accept":"application/json","x-session-id":sid},
-    body:JSON.stringify({token})
-  });
-  const p = await parse(res);
+  const p = await callRaw(sid, "spacemolt_auth", "login_token", {token});
   if (!p.ok || p.data?.error) throw new Error("login_token_failed:" + p.status + ":" + (errorCode(p.data) || p.text));
   sid = sessionFrom(p.data) || sid;
   await env.STATE.put(STATE_KEY, sid, { expirationTtl: 1740 });
@@ -257,6 +252,15 @@ function mcpTools() {
   ];
 }
 
+function commandRejection(action, allowIrreversible) {
+  action = String(action || "");
+  if (GATEWAY_HARD_DENY.has(action)) return {error:"action_hard_denied", status:403};
+  if (IRREVERSIBLE.has(action) && allowIrreversible !== true) {
+    return {error:"irreversible_action_requires_explicit_override", status:409};
+  }
+  return null;
+}
+
 async function runTool(name, args, env) {
   if (name === "spacemolt_health") {
     return {ok:true, version:VERSION, clerk:Boolean(env.SPACEMOLT_CLERK_API_KEY), player:Boolean(env.SPACEMOLT_PLAYER_ID), state:Boolean(env.STATE)};
@@ -266,13 +270,19 @@ async function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    if (GATEWAY_HARD_DENY.has(action)) return {error:"action_hard_denied", action};
-    if (IRREVERSIBLE.has(action) && args?.allow_irreversible !== true) {
-      return {error:"irreversible_action_requires_explicit_override", action};
-    }
+    const rejection = commandRejection(action, args?.allow_irreversible);
+    if (rejection) return {error:rejection.error, action};
     return gameCall(env, tool, action, args?.payload || {});
   }
   return {error:"unknown_tool"};
+}
+
+function mcpToolResult(id, out) {
+  return j({jsonrpc:"2.0",id,result:{
+    content:[{type:"text",text:JSON.stringify(out)}],
+    structuredContent:out,
+    isError:Boolean(out?.error)
+  }});
 }
 
 async function handleMcp(req, env) {
@@ -296,26 +306,16 @@ async function handleMcp(req, env) {
   if (msg.method === "tools/call") {
     try {
       const out = await runTool(msg.params?.name, msg.params?.arguments || {}, env);
-      const isError = Boolean(out?.error);
-      return j({jsonrpc:"2.0",id,result:{
-        content:[{type:"text",text:JSON.stringify(out)}],
-        structuredContent:out,
-        isError
-      }});
+      return mcpToolResult(id, out);
     } catch (e) {
       console.error("SpaceMolt MCP call failed", e);
-      return j({jsonrpc:"2.0",id,result:{
-        content:[{type:"text",text:JSON.stringify({error:"gateway_error"})}],
-        structuredContent:{error:"gateway_error"},
-        isError:true
-      }});
+      return mcpToolResult(id, {error:"gateway_error"});
     }
   }
   return j({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}},404);
 }
 
 
-const DAILY_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const DAILY_MAX_STEPS = 6;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
@@ -360,14 +360,10 @@ function plannerText(out) {
     if (typeof content === "string" && content.trim()) return content;
     if (msg.reasoning || msg.reasoning_content) return "";
   }
-  var x = dget(out, ["choices",0,"text"]);
-  if (typeof x === "string" && x) return x;
-  x = dget(out, ["response"]);
-  if (typeof x === "string" && x) return x;
-  x = dget(out, ["result","response"]);
-  if (typeof x === "string" && x) return x;
-  x = dget(out, ["text"]);
-  if (typeof x === "string" && x) return x;
+  for (const path of [["choices",0,"text"], ["response"], ["result","response"], ["text"]]) {
+    const text = dget(out, path);
+    if (typeof text === "string" && text) return text;
+  }
   return "";
 }
 function parsePlannerDecision(text) {
@@ -448,7 +444,7 @@ async function runPlannerModel(env, messages, rotateBy) {
 async function runDailyGremlin(env) {
   var startedAt = new Date().toISOString();
   var history = [];
-  var providerRotation = Math.floor(Date.now() / 86400000) % 6;
+  var providerRotation = Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length;
   var cachedSession = await env.STATE.get(STATE_KEY);
   if (!cachedSession) await loginByToken(env);
   var initial = await Promise.all([
@@ -472,27 +468,23 @@ async function runDailyGremlin(env) {
     "spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; " +
     "social read/chat/captain log; ship read-only; drone list/get/recall.";
 
+  const systemPrompt =
+    "You are Gremlin-5, an autonomous SpaceMolt explorer-drone. Act cautiously and efficiently. " +
+    "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
+    "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
+    "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
+    "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
+    "Allowed operations: " + allowedSummary + " Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+    "Return exactly one JSON object and no prose. Use either " +
+    "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
+    "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
+    "For private chat use target=private, target_id=player name or ID, and English content. Never invent IDs.";
+
   for (var step = 0; step < DAILY_MAX_STEPS; step++) {
-    var recentParts = [];
-    var recent = history.slice(Math.max(0, history.length - 10));
-    for (var i = 0; i < recent.length; i++) {
-      recentParts.push(String(i + 1) + ". " + compactJson(recent[i], 2500));
-    }
-
-    var systemPrompt =
-      "You are Gremlin-5, an autonomous SpaceMolt explorer-drone. Act cautiously and efficiently. " +
-      "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
-      "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
-      "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
-      "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
-      "Allowed operations: " + allowedSummary + " Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
-      "Return exactly one JSON object and no prose. Use either " +
-      "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
-      "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
-      "For private chat use target=private, target_id=player name or ID, and English content. Never invent IDs.";
-
-    var recentText = recentParts.join("\n");
-    if (recentText.length > 14000) recentText = recentText.slice(recentText.length - 14000);
+    const recentText = history.slice(-10)
+      .map((entry, i) => String(i + 1) + ". " + compactJson(entry, 2500))
+      .join("\n")
+      .slice(-14000);
     var userPrompt = "Authoritative SpaceMolt mechanics reference:\n" + mechanics + "\n\nCurrent run observations/results:\n" + recentText;
 
     var ai;
@@ -542,7 +534,7 @@ async function runDailyGremlin(env) {
     if (!dailyAllowed(tool, action, args)) {
       blockedCount += 1;
       history.push({kind:"blocked", provider:plannerMeta && plannerMeta.provider, tool:tool, action:action, decision:decision, reason:"not in daily safety allowlist"});
-      providerRotation = (providerRotation + 1) % 6;
+      providerRotation = (providerRotation + 1) % DAILY_PROVIDER_ORDER.length;
       if (blockedCount >= 2) break;
       continue;
     }
@@ -571,7 +563,7 @@ async function runDailyGremlin(env) {
     docked:Boolean(dock && dock.docked),
     dock:dock,
     finalStatus:finalStatus,
-    history:history.slice(Math.max(0, history.length - 18))
+    history:history.slice(-18)
   };
   await env.STATE.put(DAILY_LAST_KEY, JSON.stringify(summary), {expirationTtl:604800});
   return summary;
@@ -618,10 +610,8 @@ export default {
       }
       if (u.pathname === "/v1/command" && req.method === "POST") {
         const b = await req.json();
-        if (GATEWAY_HARD_DENY.has(String(b?.action || ""))) return j({error:"action_hard_denied",action:b.action},403);
-        if (IRREVERSIBLE.has(String(b?.action || "")) && b?.allow_irreversible !== true) {
-          return j({error:"irreversible_action_requires_explicit_override",action:b.action},409);
-        }
+        const rejection = commandRejection(b?.action, b?.allow_irreversible);
+        if (rejection) return j({error:rejection.error,action:b.action},rejection.status);
         return j(await gameCall(env,String(b?.tool||""),String(b?.action||""),b?.payload||{}));
       }
       return j({error:"not_found"},404);
