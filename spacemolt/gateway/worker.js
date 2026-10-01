@@ -13,6 +13,8 @@ const IRREVERSIBLE = new Set([
   "kick","leave","delete_role","delete_room","scrap","release","recycle",
   "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
   "declare_war","faction_declare_war","attack","hunt",
+  // spacemolt_drone/upload replaces the drone's only stored script
+  "upload","upload_script",
   "unload"
 ]);
 
@@ -133,13 +135,26 @@ async function createSession() {
   return sid;
 }
 
-async function loginByToken(env) {
+// One login per isolate at a time: concurrent cache misses share it instead of
+// each writing the session key (KV allows one write per second per key).
+let pendingLogin = null;
+function loginByToken(env) {
+  if (!pendingLogin) pendingLogin = doLogin(env).finally(() => { pendingLogin = null; });
+  return pendingLogin;
+}
+
+async function doLogin(env) {
   const token = await mintWsToken(env);
   let sid = await createSession();
   const p = await callRaw(sid, "spacemolt_auth", "login_token", {token});
   if (!p.ok || p.data?.error) throw new Error("login_token_failed:" + p.status + ":" + (errorCode(p.data) || p.text));
   sid = sessionFrom(p.data) || sid;
-  await env.STATE.put(STATE_KEY, sid, { expirationTtl: 1740 });
+  try {
+    await env.STATE.put(STATE_KEY, sid, { expirationTtl: 1740 });
+  } catch (err) {
+    // A throttled cache write must not fail a request whose login succeeded.
+    console.error("SpaceMolt session cache write failed", err);
+  }
   return sid;
 }
 
@@ -321,7 +336,7 @@ async function handleMcp(req, env) {
   const auth = await requireAuth(req, env);
   if (!auth.ok) return auth.response;
   let msg;
-  try { msg = await req.json(); } catch { return j({error:"invalid_json"},400); }
+  try { msg = await req.json(); } catch { return j({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}},400); }
   const id = msg?.id ?? null;
   if (typeof msg?.method !== "string" || !msg.method) return j({jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}},400);
   if (msg.method.startsWith("notifications/") || msg.id === undefined) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
