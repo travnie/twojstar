@@ -1,0 +1,78 @@
+# MegaLinter - cross-cutting lint and ready-made fix artifacts.
+# https://megalinter.io
+---
+name: MegaLinter
+
+on: # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+    paths: &lint-paths
+      - "**/*.css"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.json"
+      - "!**/package-lock.json"
+      - "**/*.md"
+      - "**/*.py"
+      - "**/*.sh"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".github/linters/**"
+      - ".github/workflows/mega-linter.yml"
+  pull_request:
+    paths: *lint-paths
+  workflow_dispatch:
+
+concurrency:
+  group: megalinter-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  megalinter:
+    name: MegaLinter
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: MegaLinter
+        id: megalinter
+        continue-on-error: true
+        uses: oxsecurity/megalinter/flavors/cupcake@v10.1.0
+        env:
+          MEGALINTER_CONFIG: .github/linters/.mega-linter.yml
+          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLY_FIXES_EVENT: none
+          # Never expose the shared LLM credential to code/config from pull requests.
+          LLM_ADVISOR_ENABLED: ${{ github.event_name != 'pull_request' && secrets.ORCAROUTER_API_KEY != '' }}
+          LLM_PROVIDER: orcarouter
+          LLM_MODEL_NAME: orcarouter/auto
+          ORCAROUTER_API_KEY: ${{ github.event_name != 'pull_request' && secrets.ORCAROUTER_API_KEY || '' }}
+
+      - name: Archive MegaLinter reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: MegaLinter reports
+          include-hidden-files: "true"
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            megalinter-reports
+            mega-linter.log
+
+      - name: Gate MegaLinter
+        if: always() && steps.megalinter.outcome != 'success'
+        run: exit 1

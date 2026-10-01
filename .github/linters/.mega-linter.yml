@@ -1,0 +1,63 @@
+# MegaLinter configuration
+# Docs: https://megalinter.io/latest/config-file/
+---
+LINTER_RULES_PATH: .github/linters
+DEFAULT_BRANCH: main
+
+FLAVOR_SUGGESTIONS: false
+SECURITY_SUGGESTIONS: false
+IGNORE_GITIGNORED_FILES: true
+IGNORE_GENERATED_FILES: true
+FAIL_IF_UPDATED_SOURCES: false
+
+# Fixers only modify the runner checkout. The artifact keeps updated_sources so
+# useful formatter output can be reviewed and copied back deliberately.
+APPLY_FIXES:
+  - BASH_SHFMT
+  - CSS_STYLELINT
+  - JAVASCRIPT_PRETTIER
+  - JSON_PRETTIER
+  - MARKDOWN_MARKDOWNLINT
+  - PYTHON_RUFF_FORMAT
+  - TYPESCRIPT_PRETTIER
+  - YAML_PRETTIER
+UPDATED_SOURCES_REPORTER: true
+UPDATED_SOURCES_REPORTER_DIR: updated_sources
+
+# Keep the workflow quiet: one Actions check plus its artifact, no PR spam.
+GITHUB_COMMENT_REPORTER: false
+GITHUB_STATUS_REPORTER: false
+
+
+# Dedicated project workflows own builds, platform linting and tests. MegaLinter
+# stays intentionally cross-cutting across this mixed monorepo.
+ENABLE_LINTERS:
+  - ACTION_ACTIONLINT
+  - ACTION_ZIZMOR
+  - BASH_SHELLCHECK
+  - BASH_SHFMT
+  - CSS_STYLELINT
+  - JAVASCRIPT_PRETTIER
+  - JSON_JSONLINT
+  - JSON_PRETTIER
+  - MARKDOWN_MARKDOWNLINT
+  - PYTHON_RUFF
+  - PYTHON_RUFF_FORMAT
+  - TYPESCRIPT_PRETTIER
+  - YAML_PRETTIER
+  - YAML_YAMLLINT
+
+# High-signal correctness checks gate merges. Security/style advice from zizmor,
+# Markdown, CSS and formatters remains visible without blocking unrelated work.
+ENABLE_ERRORS_LINTERS:
+  - ACTION_ACTIONLINT
+  - BASH_SHELLCHECK
+  - JSON_JSONLINT
+  - PYTHON_RUFF
+
+ACTION_ZIZMOR_ARGUMENTS:
+  - "--offline"
+  - "--min-severity=medium"
+
+# Generated/dependency state should not create lint chores in the monorepo.
+FILTER_REGEX_EXCLUDE: "(package-lock\\.json|(^|/)dist/|(^|/)build/|(^|/)node_modules/)"
