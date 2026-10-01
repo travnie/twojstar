@@ -91,10 +91,13 @@ function errorCode(x) {
   return String(e.code || e.type || e.message || "");
 }
 
+// Only failed responses count: successful bodies can echo player-written text.
 function sessionBad(r) {
+  if (r.status === 401) return true;
+  if (r.ok && !r.data?.error) return false;
   const c = errorCode(r.data).toLowerCase();
-  const t = (r.text || "").toLowerCase();
-  return r.status === 401 || c.includes("session_invalid") || c.includes("not_authenticated") ||
+  const t = r.ok ? "" : (r.text || "").toLowerCase();
+  return c.includes("session_invalid") || c.includes("not_authenticated") ||
     t.includes("session_invalid") || t.includes("not_authenticated");
 }
 
@@ -162,7 +165,7 @@ async function gameCall(env, tool, action, payload = {}) {
   }
   if (!r.ok) throw new Error("game_http_" + r.status + ":" + (errorCode(r.data) || r.text));
   if (r.data?.error) throw new Error("game_error:" + (errorCode(r.data) || "unknown"));
-  await env.STATE.put(STATE_KEY, sid, { expirationTtl: 1740 });
+  // The session is stored once at login; KV allows one write per second per key.
   return r.data;
 }
 
@@ -635,6 +638,8 @@ export default {
     }
 
     if (u.pathname === "/mcp" && req.method === "POST") return handleMcp(req, env);
+    // No server-initiated SSE stream; the MCP transport expects 405 for GET.
+    if (u.pathname === "/mcp") return j({error:"method_not_allowed"},405,{allow:"POST, OPTIONS"});
 
     const auth = await requireAuth(req, env);
     if (!auth.ok) return auth.response;
