@@ -28,8 +28,13 @@ const SAFE_ACTIONS = new Set([
   // routine gameplay
   "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
   "accept_mission","complete_mission","decline_mission","chat","captains_log_add",
-  "tow_wreck","loot_wreck","recall_drone","recall"
+  "tow_wreck","loot_wreck","recall_drone","recall","buy"
 ]);
+// Self-defence inside a battle someone else started. These require an active battle, so they
+// cannot start a fight; attack, hunt, engage and advance still need the override.
+const DEFENSIVE_BATTLE_ACTIONS = new Set(["retreat","stance","target","reload"]);
+// The board stance captures the enemy ship rather than defending against it.
+const DEFENSIVE_STANCES = new Set(["fire","evade","brace","flee"]);
 
 function jsonResponse(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
@@ -281,7 +286,7 @@ function mcpTools() {
     },
     {
       name:"spacemolt_command",
-      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads and routine actions (travel, dock, mine, refuel, missions, chat, ...) run as-is; anything else requires allow_irreversible=true.",
+      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, buy, missions, chat, ...) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
       inputSchema:{
         type:"object",
         properties:{
@@ -306,9 +311,17 @@ function mcpTools() {
   ];
 }
 
+function isDefensiveBattleAction(action, payload) {
+  if (!DEFENSIVE_BATTLE_ACTIONS.has(action)) return false;
+  return action !== "stance" || DEFENSIVE_STANCES.has(String(payload?.id || ""));
+}
+
 function isSafeAction(action, payload) {
   // get_notifications clears the queue unless clear:false is passed.
   if (action === "get_notifications") return payload?.clear === false;
+  // The flat battle dispatcher carries the real action in payload.action.
+  if (action === "battle") return isDefensiveBattleAction(String(payload?.action || ""), payload);
+  if (DEFENSIVE_BATTLE_ACTIONS.has(action)) return isDefensiveBattleAction(action, payload);
   return SAFE_ACTIONS.has(action);
 }
 
@@ -421,14 +434,15 @@ const DAILY_ALLOWED = {
     "get_base","get_ship","get_cargo","get_skills","get_achievements","get_active_missions",
     "get_missions","completed_missions","view_completed_mission","get_notifications","get_map",
     "search_systems","find_route","get_commands","get_guide","inspect","scan",
-    "travel","jump","dock","undock","refuel","repair","mine","complete_mission"
+    "travel","jump","dock","undock","refuel","repair","mine","complete_mission","get_battle_status"
   ],
   spacemolt_social: [
     "get_chat_history","chat","captains_log_add","captains_log_list","captains_log_get",
     "get_action_log","get_notes","read_note"
   ],
   spacemolt_ship: ["list_ships","browse_ships","view_ship_buy_orders","commission_status"],
-  spacemolt_drone: ["list","get","recall"]
+  spacemolt_drone: ["list","get","recall"],
+  spacemolt_battle: ["retreat","stance","target","reload"]
 };
 
 function dget(obj, path) {
@@ -482,6 +496,7 @@ function dailyAllowed(tool, action, args) {
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
     if (!args || !args.content || String(args.content).length > 800) return false;
   }
+  if (tool === "spacemolt_battle" && !isDefensiveBattleAction(action, args)) return false;
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
   if ((action === "refuel" || action === "repair") && args?.quantity != null) {
     const qty = Number(args.quantity);
@@ -556,7 +571,7 @@ const DAILY_SYSTEM_PROMPT =
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
   "Return exactly one JSON object and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
   "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
