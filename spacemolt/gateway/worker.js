@@ -402,7 +402,8 @@ async function safeObs(env, tool, action, payload) {
   try {
     return {ok:true, tool:tool, action:action, data:await gameCall(env, tool, action, payload || {})};
   } catch (e) {
-    return {ok:false, tool:tool, action:action, error:String(e && e.message || e).slice(0,700)};
+    console.error("SpaceMolt daily obs failed", tool, action, e);
+    return {ok:false, tool:tool, action:action, error:"game_call_failed"};
   }
 }
 
