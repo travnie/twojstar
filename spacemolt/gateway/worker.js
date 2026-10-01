@@ -8,7 +8,7 @@ const GATEWAY_HARD_DENY = new Set(["self_destruct"]);
 const IRREVERSIBLE = new Set([
   "self_destruct","sell_ship","scrap_ship","jettison","disband","disband_faction",
   "leave_faction","kick_member","transfer_ownership","renounce_citizenship",
-  "abandon_mission","delete_note","forum_delete_thread","forum_delete_reply",
+  "abandon_mission","delete_note","write_note","forum_delete_thread","forum_delete_reply",
   // v2 action names (spacemolt_faction/kick, /leave, salvage/scrap, ...)
   "kick","leave","delete_role","delete_room","scrap","release","recycle",
   "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
@@ -168,9 +168,9 @@ async function gameCall(env, tool, action, payload = {}) {
 
 // Upstream refused the command itself (bad args, no fuel, ...): not retryable, report as 4xx.
 function gameRejection(e) {
-  const m = /^(game_error|game_http_4(?!01|03|29)\d\d|command_not_allowed)(?::(.*))?$/s.exec(String(e?.message || ""));
-  if (!m) return null;
-  const detail = String(m[2] || m[1]).trim();
+  const match = /^(game_error|game_http_4(?!01|03|29)\d\d|command_not_allowed)(?::(.*))?$/s.exec(String(e?.message || ""));
+  if (!match) return null;
+  const detail = String(match[2] || match[1]).trim();
   return /^[a-z0-9_]{1,64}$/i.test(detail) ? detail.toLowerCase() : "rejected";
 }
 
@@ -622,7 +622,7 @@ export default {
     const u = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null,{status:204,headers:{
       "access-control-allow-origin":"*",
-      "access-control-allow-headers":"authorization, content-type",
+      "access-control-allow-headers":"authorization, content-type, mcp-protocol-version",
       "access-control-allow-methods":"GET, POST, OPTIONS"
     }});
     if (u.pathname === "/health" && req.method === "GET") {
@@ -647,7 +647,8 @@ export default {
         return j(await ensureDocked(env));
       }
       if (u.pathname === "/v1/command" && req.method === "POST") {
-        const b = await req.json();
+        let b;
+        try { b = await req.json(); } catch { return j({error:"invalid_json"},400); }
         const rejection = commandRejection(b?.action, b?.allow_irreversible);
         if (rejection) return j({error:rejection.error,action:b.action},rejection.status);
         return j(await gameCall(env,String(b?.tool||""),String(b?.action||""),b?.payload||{}));
