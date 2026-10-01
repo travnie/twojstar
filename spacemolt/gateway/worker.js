@@ -166,6 +166,14 @@ async function gameCall(env, tool, action, payload = {}) {
   return r.data;
 }
 
+// Upstream refused the command itself (bad args, no fuel, ...): not retryable, report as 4xx.
+function gameRejection(e) {
+  const m = /^(game_error|game_http_4(?!01|03|29)\d\d|command_not_allowed)(?::(.*))?$/s.exec(String(e?.message || ""));
+  if (!m) return null;
+  const detail = String(m[2] || m[1]).trim();
+  return /^[a-z0-9_]{1,64}$/i.test(detail) ? detail.toLowerCase() : "rejected";
+}
+
 function sc(x) {
   return x?.structuredContent ?? x?.data?.structuredContent ?? x?.result?.structuredContent ?? x;
 }
@@ -225,7 +233,9 @@ async function ensureDocked(env) {
   if (!target) return {docked:false, changed:false, reason:"no_dock_in_current_system", status, system:sys};
   const travel = await gameCall(env, "spacemolt", "travel", {id:target});
   const dock = await gameCall(env, "spacemolt", "dock", {});
-  return {docked:isDocked(dock), changed:true, target, travel, dock};
+  if (isDocked(dock)) return {docked:true, changed:true, target, travel, dock};
+  const after = await gameCall(env, "spacemolt", "get_status", {});
+  return {docked:isDocked(after), changed:true, target, travel, dock, status:after};
 }
 
 function mcpTools() {
@@ -332,6 +342,8 @@ async function handleMcp(req, env) {
 const DAILY_MAX_STEPS = 6;
 // Leave room for the final ensureDocked and summary write; one travel/jump can block for minutes.
 const DAILY_LOOP_BUDGET_MS = 4 * 60 * 1000;
+// Movement can long-poll for minutes, so only start it well inside the budget.
+const DAILY_MOVE_CUTOFF_MS = 2 * 60 * 1000;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
 const DAILY_HARD_DENY = new Set(["self_destruct","attack","hunt","jettison","abandon_mission","scrap_ship","refit_ship","buy_listed_ship","commission_ship","sell_ship_to_order","leave_faction","disband","transfer_ownership"]);
@@ -561,6 +573,12 @@ async function runDailyGremlin(env) {
     blockedCount = 0;
     plannerInvalidCount = 0;
 
+    const elapsed = Date.now() - loopStart;
+    const moving = action === "travel" || action === "jump";
+    if (elapsed > DAILY_LOOP_BUDGET_MS || (moving && elapsed > DAILY_MOVE_CUTOFF_MS)) {
+      history.push({kind:"budget_exhausted", elapsed_ms:elapsed, skipped:action});
+      break;
+    }
     const result = await safeObs(env, tool, action, args);
     history.push({
       kind:"action", tool:tool, action:action, args:args,
@@ -637,6 +655,8 @@ export default {
       return j({error:"not_found"},404);
     } catch (e) {
       console.error("SpaceMolt gateway request failed", e);
+      const rejected = gameRejection(e);
+      if (rejected) return j({error:"game_rejected",code:rejected},422);
       return j({error:"gateway_error"},502);
     }
   }
