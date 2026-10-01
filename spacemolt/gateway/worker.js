@@ -19,7 +19,9 @@ const IRREVERSIBLE = new Set([
   // flat aliases of salvage/scrap and salvage/release; selling consumes the towed wreck too
   "scrap_wreck","release_tow","sell_wreck",
   // re-forming an alliance needs the other faction to accept again
-  "faction_remove_ally","remove_ally"
+  "faction_remove_ally","remove_ally",
+  // spend credits/materials or rebuild the hull; same set the daily run hard-denies
+  "refit_ship","buy_listed_ship","commission_ship"
 ]);
 
 function j(data, status = 200, extra = {}) {
