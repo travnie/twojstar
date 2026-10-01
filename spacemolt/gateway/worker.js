@@ -5,25 +5,30 @@ const STATE_KEY = "session:v2";
 const TOOL_RE = /^spacemolt(?:_[a-z0-9_]+)?$/;
 const ACTION_RE = /^[a-z0-9_]+$/;
 const GATEWAY_HARD_DENY = new Set(["self_destruct"]);
-const IRREVERSIBLE = new Set([
-  "self_destruct","sell_ship","scrap_ship","jettison","disband","disband_faction",
-  "leave_faction","kick_member","transfer_ownership","renounce_citizenship",
-  "abandon_mission","delete_note","write_note","forum_delete_thread","forum_delete_reply",
-  // v2 action names (spacemolt_faction/kick, /leave, salvage/scrap, ...)
-  "kick","leave","delete_role","delete_room","faction_kick","faction_delete_role","faction_delete_room","scrap","release","recycle",
-  "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
-  "declare_war","faction_declare_war","attack","hunt",
-  // spacemolt_drone/upload replaces the drone's only stored script
-  "upload","upload_script","upload_drone_script",
-  "unload","unload_drone",
-  // flat aliases of salvage/scrap and salvage/release; selling consumes the towed wreck too
-  "scrap_wreck","release_tow","sell_wreck",
-  // the faction name and tag can never be changed after creation
-  "create_faction",
-  // re-forming an alliance needs the other faction to accept again
-  "faction_remove_ally","remove_ally",
-  // spend credits/materials or rebuild the hull; same set the daily run hard-denies
-  "refit_ship","buy_listed_ship","commission_ship"
+// Commands that run without allow_irreversible=true: reads plus routine, recoverable
+// gameplay. Everything else, including any action added to the game later, needs the override.
+const SAFE_ACTIONS = new Set([
+  // reads (flat names)
+  "analyze_market","browse_ships","captains_log_get","captains_log_list","catalog",
+  "commission_quote","commission_status","completed_missions","estimate_purchase",
+  "faction_garages","faction_get_invites","faction_info","faction_intel_status","faction_list",
+  "faction_list_missions","faction_query_intel","faction_query_trade_intel","faction_rooms",
+  "faction_trade_intel_status","find_route","forum_get_thread","forum_list",
+  "get_achievements","get_action_log","get_active_missions","get_base","get_base_cost",
+  "get_battle_log","get_battle_status","get_battle_summary","get_cargo","get_chat_history",
+  "get_commands","get_drone","get_drones","get_empire_info","get_faction_achievements",
+  "get_faction_tax_estimate","get_guide","get_insurance_quote","get_location","get_map",
+  "get_missions","get_nearby","get_notes","get_notification_settings","get_player","get_poi",
+  "get_queue","get_ship","get_skills","get_state","get_status","get_system","get_system_agents",
+  "get_tax_estimate","get_trades","get_version","get_wrecks","help","inspect","list_ships",
+  "read_note","search_systems","view_completed_mission","view_faction_storage","view_insurance",
+  "view_market","view_orders","view_ship_buy_orders","view_storage",
+  // reads (grouped v2 names, e.g. spacemolt_drone/list)
+  "get","list","info",
+  // routine gameplay
+  "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
+  "accept_mission","complete_mission","decline_mission","chat","captains_log_add",
+  "tow_wreck","loot_wreck","recall_drone","recall"
 ]);
 
 function jsonResponse(data, status = 200, extra = {}) {
@@ -276,7 +281,7 @@ function mcpTools() {
     },
     {
       name:"spacemolt_command",
-      description:"Call an authenticated SpaceMolt v2 tool/action. Irreversible actions require allow_irreversible=true.",
+      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads and routine actions (travel, dock, mine, refuel, missions, chat, ...) run as-is; anything else requires allow_irreversible=true.",
       inputSchema:{
         type:"object",
         properties:{
@@ -301,30 +306,19 @@ function mcpTools() {
   ];
 }
 
-// Actions that are only irreversible for some payloads or under one grouped tool.
-function isConditionallyIrreversible(tool, action, payload) {
-  // Promoting someone to leader hands over the faction and demotes the caller.
-  if (action === "promote" || action === "faction_promote") {
-    return String(payload?.role_id || payload?.role || "").toLowerCase() === "leader";
-  }
-  // Gifting a hull gives up ownership of the ship.
-  if (action === "send_gift") return Boolean(payload?.ship_id);
-  // Without a transfer target, passengers are stranded: no fare and a standing loss.
-  if (action === "unload_passenger") return !payload?.target;
-  // spacemolt_salvage/sell is sell_wreck; plain market "sell" stays ungated.
-  if (action === "sell") return tool === "spacemolt_salvage";
-  // spacemolt_faction/create is create_faction; other grouped "create" actions stay ungated.
-  if (action === "create") return tool === "spacemolt_faction";
-  return false;
+function isSafeAction(action, payload) {
+  // get_notifications clears the queue unless clear:false is passed.
+  if (action === "get_notifications") return payload?.clear === false;
+  return SAFE_ACTIONS.has(action);
 }
 
-function commandRejection(tool, action, allowIrreversible, payload) {
+function commandRejection(action, allowIrreversible, payload) {
   action = String(action || "");
-  tool = String(tool || "");
   // The flat battle dispatcher carries the real action in payload.action (e.g. self_destruct).
   const nested = action === "battle" ? String(payload?.action || "") : "";
   if (GATEWAY_HARD_DENY.has(action) || GATEWAY_HARD_DENY.has(nested)) return {error:"action_hard_denied", status:403};
-  if ((IRREVERSIBLE.has(action) || isConditionallyIrreversible(tool, action, payload)) && allowIrreversible !== true) {
+  if (!isSafeAction(action, payload) && allowIrreversible !== true) {
+    // Error code kept for existing clients; it now covers every action outside SAFE_ACTIONS.
     return {error:"irreversible_action_requires_explicit_override", status:409};
   }
   return null;
@@ -339,7 +333,7 @@ function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    const rejection = commandRejection(tool, action, args?.allow_irreversible, args?.payload);
+    const rejection = commandRejection(action, args?.allow_irreversible, args?.payload);
     if (rejection) return {error:rejection.error, action};
     return gameCall(env, tool, action, args?.payload || {});
   }
@@ -817,7 +811,7 @@ export default {
       if (reqUrl.pathname === "/v1/command" && req.method === "POST") {
         const body = await req.json().catch(() => undefined);
         if (body === undefined) return jsonResponse({error:"invalid_json"},400);
-        const rejection = commandRejection(body?.tool, body?.action, body?.allow_irreversible, body?.payload);
+        const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
         if (rejection) return jsonResponse({error:rejection.error,action:body.action},rejection.status);
         return jsonResponse(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
       }
