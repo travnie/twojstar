@@ -11,7 +11,7 @@ const IRREVERSIBLE = new Set([
   "abandon_mission","delete_note","forum_delete_thread","forum_delete_reply",
   // v2 action names (spacemolt_faction/kick, /leave, salvage/scrap, ...)
   "kick","leave","delete_role","delete_room","scrap","release","recycle",
-  "dismantle_outpost","sell_ship_to_order","captains_log_delete"
+  "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete"
 ]);
 
 function j(data, status = 200, extra = {}) {
@@ -209,9 +209,12 @@ function findDockTarget(root) {
 async function ensureDocked(env) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
   if (isDocked(status)) return {docked:true, changed:false, status};
-  if (currentLooksDockable(status)) {
+  // Try docking where we are first: station names are not always recognisable.
+  try {
     const dock = await gameCall(env, "spacemolt", "dock", {});
-    return {docked:isDocked(dock), changed:true, dock};
+    if (isDocked(dock) || currentLooksDockable(status)) return {docked:isDocked(dock), changed:true, dock};
+  } catch (e) {
+    if (currentLooksDockable(status)) throw e;
   }
   const sys = await gameCall(env, "spacemolt", "get_system", {});
   const target = findDockTarget(sc(sys));
@@ -297,7 +300,7 @@ async function handleMcp(req, env) {
   try { msg = await req.json(); } catch { return j({error:"invalid_json"},400); }
   const id = msg?.id ?? null;
   if (!msg?.method) return j({jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}},400);
-  if (msg.method === "notifications/initialized") return new Response(null,{status:202});
+  if (msg.method === "notifications/initialized") return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
   if (msg.method === "initialize") {
     return j({jsonrpc:"2.0",id,result:{
       protocolVersion: MCP_PROTOCOL_VERSIONS.includes(msg.params?.protocolVersion) ? msg.params.protocolVersion : MCP_PROTOCOL_VERSIONS[0],
@@ -386,7 +389,7 @@ function dailyAllowed(tool, action, args) {
   if (DAILY_HARD_DENY.has(action)) return false;
   if (!DAILY_ALLOWED[tool] || DAILY_ALLOWED[tool].indexOf(action) < 0) return false;
   if (tool === "spacemolt_social" && action === "chat") {
-    const ch = String(args && args.target || "");
+    const ch = String(args?.target || "");
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
     if (!args || !args.content || String(args.content).length > 800) return false;
   }
@@ -534,9 +537,9 @@ async function runDailyGremlin(env) {
       break;
     }
 
-    const tool = String(decision && decision.tool || "");
-    const action = String(decision && decision.action || "");
-    const args = decision && decision.args && typeof decision.args === "object" ? decision.args : {};
+    const tool = String(decision?.tool || "");
+    const action = String(decision?.action || "");
+    const args = decision?.args && typeof decision.args === "object" ? decision.args : {};
     if (!dailyAllowed(tool, action, args)) {
       blockedCount += 1;
       history.push({kind:"blocked", provider:plannerMeta && plannerMeta.provider, tool:tool, action:action, decision:decision, reason:"not in daily safety allowlist"});
