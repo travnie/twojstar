@@ -453,17 +453,16 @@ async function runDailyGremlin(env) {
   const startedAt = new Date().toISOString();
   const history = [];
   let providerRotation = Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length;
-  const cachedSession = await env.STATE.get(STATE_KEY);
-  if (!cachedSession) await loginByToken(env);
-  const initial = await Promise.all([
-    safeObs(env,"spacemolt","get_status",{}),
+  // Probe serially first so an expired session triggers at most one re-login.
+  const statusObs = await safeObs(env,"spacemolt","get_status",{});
+  const initial = [statusObs, ...await Promise.all([
     safeObs(env,"spacemolt","get_active_missions",{}),
     safeObs(env,"spacemolt","get_notifications",{}),
     safeObs(env,"spacemolt","get_commands",{}),
     safeObs(env,"spacemolt","get_guide",{}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
-  ]);
+  ])];
   const mechanics = compactJson({commands:initial[3], guides:initial[4]}, 9000);
   for (let z = 0; z < initial.length; z++) {
     if (z === 3 || z === 4) continue;
