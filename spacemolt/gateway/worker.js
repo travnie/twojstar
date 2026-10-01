@@ -12,6 +12,7 @@ const IRREVERSIBLE = new Set([
   // v2 action names (spacemolt_faction/kick, /leave, salvage/scrap, ...)
   "kick","leave","delete_role","delete_room","scrap","release","recycle",
   "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
+  "declare_war","faction_declare_war","attack","hunt",
   "unload"
 ]);
 
@@ -341,7 +342,8 @@ async function handleMcp(req, env) {
       return mcpToolResult(id, out);
     } catch (e) {
       console.error("SpaceMolt MCP call failed", e);
-      return mcpToolResult(id, {error:"gateway_error"});
+      const rejected = gameRejection(e);
+      return mcpToolResult(id, rejected ? {error:"game_rejected", code:rejected} : {error:"gateway_error"});
     }
   }
   return j({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}});
@@ -427,6 +429,16 @@ function dailyAllowed(tool, action, args) {
     if (!isFinite(q) || q < 0 || q > 200) return false;
   }
   return true;
+}
+
+// The log keeps a fixed number of entries and silently drops the oldest on append.
+async function captainsLogHasRoom(env) {
+  try {
+    const log = sc(await gameCall(env, "spacemolt_social", "captains_log_list", {}));
+    return Number.isFinite(log?.total_count) && Number.isFinite(log?.max_entries) && log.total_count < log.max_entries;
+  } catch {
+    return false;
+  }
 }
 
 async function safeObs(env, tool, action, payload) {
@@ -589,6 +601,10 @@ async function runDailyGremlin(env) {
       history.push({kind:"budget_exhausted", elapsed_ms:elapsed, skipped:action});
       break;
     }
+    if (action === "captains_log_add" && !await captainsLogHasRoom(env)) {
+      history.push({kind:"blocked", tool:tool, action:action, reason:"captains_log_full: appending would evict the oldest entry"});
+      continue;
+    }
     const result = await safeObs(env, tool, action, args);
     history.push({
       kind:"action", tool:tool, action:action, args:args,
@@ -617,16 +633,28 @@ async function runDailyGremlin(env) {
   return summary;
 }
 
+// Record a failed run too, so a crash before the summary write still leaves a trace.
+async function runDailyRecorded(env) {
+  try {
+    return await runDailyGremlin(env);
+  } catch (e) {
+    console.error("SpaceMolt daily run failed", e);
+    const failed = {ok:false, finishedAt:new Date().toISOString(), error:String(e?.message || e).slice(0,700)};
+    await env.STATE.put(DAILY_LAST_KEY, JSON.stringify(failed), {expirationTtl:604800});
+    return failed;
+  }
+}
+
 export default {
   async scheduled(controller, env, ctx) {
     const manual = await env.STATE.get("manual:armed");
     if (manual) {
       await env.STATE.delete("manual:armed");
-      ctx.waitUntil(runDailyGremlin(env));
+      ctx.waitUntil(runDailyRecorded(env));
       return;
     }
     if (!warsawIs2137(controller.scheduledTime)) return;
-    ctx.waitUntil(runDailyGremlin(env));
+    ctx.waitUntil(runDailyRecorded(env));
   },
   async fetch(req, env) {
     const u = new URL(req.url);
