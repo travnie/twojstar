@@ -14,8 +14,10 @@ const IRREVERSIBLE = new Set([
   "dismantle_outpost","dismantle","faction_dismantle","sell_ship_to_order","captains_log_delete",
   "declare_war","faction_declare_war","attack","hunt",
   // spacemolt_drone/upload replaces the drone's only stored script
-  "upload","upload_script",
-  "unload"
+  "upload","upload_script","upload_drone_script",
+  "unload","unload_drone",
+  // flat aliases of salvage/scrap and salvage/release
+  "scrap_wreck","release_tow"
 ]);
 
 function j(data, status = 200, extra = {}) {
@@ -204,6 +206,10 @@ function currentLocation(x) {
 
 function isDocked(x) {
   const l = currentLocation(x);
+  if (typeof l.docked === "boolean") return l.docked;
+  const s = sc(x);
+  const ship = s?.ship || s?.state?.ship || s?.structuredContent?.ship || {};
+  if (typeof ship.docked === "boolean") return ship.docked;
   return Boolean(l.docked_at || l.dockedAt);
 }
 
@@ -323,33 +329,52 @@ async function runTool(name, args, env) {
 }
 
 function mcpToolResult(id, out) {
-  return j({jsonrpc:"2.0",id,result:{
+  return {reply:{jsonrpc:"2.0",id,result:{
     content:[{type:"text",text:JSON.stringify(out)}],
     structuredContent:out,
     isError:Boolean(out?.error)
-  }});
+  }}};
 }
 
 const MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
+const NO_REPLY = {status:202};
+
 async function handleMcp(req, env) {
   const auth = await requireAuth(req, env);
   if (!auth.ok) return auth.response;
-  let msg;
-  try { msg = await req.json(); } catch { return j({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}},400); }
+  let body;
+  try { body = await req.json(); } catch { return j({jsonrpc:"2.0",id:null,error:{code:-32700,message:"Parse error"}},400); }
+  if (!Array.isArray(body)) {
+    const out = await handleMcpMessage(body, env);
+    if (out === NO_REPLY) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
+    return j(out.reply, out.status);
+  }
+  // JSON-RPC batch (allowed by the 2025-03-26 revision we still advertise).
+  if (!body.length) return j({jsonrpc:"2.0",id:null,error:{code:-32600,message:"Invalid Request"}},400);
+  const replies = [];
+  for (const msg of body) {
+    const out = await handleMcpMessage(msg, env);
+    if (out !== NO_REPLY) replies.push(out.reply);
+  }
+  if (!replies.length) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
+  return j(replies);
+}
+
+async function handleMcpMessage(msg, env) {
   const id = msg?.id ?? null;
-  if (typeof msg?.method !== "string" || !msg.method) return j({jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}},400);
-  if (msg.method.startsWith("notifications/") || msg.id === undefined) return new Response(null,{status:202,headers:{"access-control-allow-origin":"*"}});
-  if (msg.method === "ping") return j({jsonrpc:"2.0",id,result:{}});
+  if (typeof msg?.method !== "string" || !msg.method) return {reply:{jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}}, status:400};
+  if (msg.method.startsWith("notifications/") || msg.id === undefined) return NO_REPLY;
+  if (msg.method === "ping") return {reply:{jsonrpc:"2.0",id,result:{}}};
   if (msg.method === "initialize") {
-    return j({jsonrpc:"2.0",id,result:{
+    return {reply:{jsonrpc:"2.0",id,result:{
       protocolVersion: MCP_PROTOCOL_VERSIONS.includes(msg.params?.protocolVersion) ? msg.params.protocolVersion : MCP_PROTOCOL_VERSIONS[0],
       capabilities:{tools:{}},
       serverInfo:{name:"gremlin-spacemolt-gateway",version:VERSION}
-    }});
+    }}};
   }
   if (msg.method === "tools/list") {
-    return j({jsonrpc:"2.0",id,result:{tools:mcpTools()}});
+    return {reply:{jsonrpc:"2.0",id,result:{tools:mcpTools()}}};
   }
   if (msg.method === "tools/call") {
     try {
@@ -361,7 +386,7 @@ async function handleMcp(req, env) {
       return mcpToolResult(id, rejected ? {error:"game_rejected", code:rejected} : {error:"gateway_error"});
     }
   }
-  return j({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}});
+  return {reply:{jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}}};
 }
 
 
@@ -565,6 +590,7 @@ async function callPlanner(env, run, userPrompt) {
       {role:"user",content:userPrompt}
     ], run.providerRotation);
     run.history.push({kind:"planner", source:meta.source, provider:meta.provider});
+    if (meta.source !== "safe-finish") run.plannerSawNotifications = true;
     return meta;
   } catch (e) {
     run.history.push({kind:"planner_error", error:errorText(e, 700)});
@@ -643,9 +669,10 @@ async function executeDailyDecision(env, run, decision, provider) {
 }
 
 // Drop the peeked batch so the next run does not act on the same events again.
-// Skipped if the planner already drained the queue itself.
+// Skipped if the planner already drained the queue itself, or if no real planner
+// ever saw the batch (all providers down) so the next run can still act on it.
 async function clearSeenNotifications(env, run) {
-  if (!run.notificationsSeen) return;
+  if (!run.notificationsSeen || !run.plannerSawNotifications) return;
   const cleared = await safeObs(env, "spacemolt", "get_notifications", {clear:true, limit:run.notificationsSeen});
   run.history.push({kind:"notifications_cleared", count:run.notificationsSeen, ok:cleared.ok});
 }
@@ -679,7 +706,8 @@ async function runDailyGremlin(env) {
     providerRotation:Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length,
     blockedCount:0,
     plannerInvalidCount:0,
-    notificationsSeen:0
+    notificationsSeen:0,
+    plannerSawNotifications:false
   };
   const mechanics = await gatherDailyObservations(env, run);
 
