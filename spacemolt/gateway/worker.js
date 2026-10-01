@@ -16,8 +16,10 @@ const IRREVERSIBLE = new Set([
   // spacemolt_drone/upload replaces the drone's only stored script
   "upload","upload_script","upload_drone_script",
   "unload","unload_drone",
-  // flat aliases of salvage/scrap and salvage/release
-  "scrap_wreck","release_tow"
+  // flat aliases of salvage/scrap and salvage/release; selling consumes the towed wreck too
+  "scrap_wreck","release_tow","sell_wreck",
+  // re-forming an alliance needs the other faction to accept again
+  "faction_remove_ally","remove_ally"
 ]);
 
 function j(data, status = 200, extra = {}) {
@@ -297,16 +299,26 @@ function mcpTools() {
   ];
 }
 
-// Promoting someone to leader hands over the faction and demotes the caller.
-function isLeadershipTransfer(action, payload) {
-  return (action === "promote" || action === "faction_promote") &&
-    String(payload?.role_id || payload?.role || "").toLowerCase() === "leader";
+// Actions that are only irreversible for some payloads or under one grouped tool.
+function isConditionallyIrreversible(tool, action, payload) {
+  // Promoting someone to leader hands over the faction and demotes the caller.
+  if (action === "promote" || action === "faction_promote") {
+    return String(payload?.role_id || payload?.role || "").toLowerCase() === "leader";
+  }
+  // Gifting a hull gives up ownership of the ship.
+  if (action === "send_gift") return Boolean(payload?.ship_id);
+  // Without a transfer target, passengers are stranded: no fare and a standing loss.
+  if (action === "unload_passenger") return !payload?.target;
+  // spacemolt_salvage/sell is sell_wreck; plain market "sell" stays ungated.
+  if (action === "sell") return tool === "spacemolt_salvage";
+  return false;
 }
 
-function commandRejection(action, allowIrreversible, payload) {
+function commandRejection(tool, action, allowIrreversible, payload) {
   action = String(action || "");
+  tool = String(tool || "");
   if (GATEWAY_HARD_DENY.has(action)) return {error:"action_hard_denied", status:403};
-  if ((IRREVERSIBLE.has(action) || isLeadershipTransfer(action, payload)) && allowIrreversible !== true) {
+  if ((IRREVERSIBLE.has(action) || isConditionallyIrreversible(tool, action, payload)) && allowIrreversible !== true) {
     return {error:"irreversible_action_requires_explicit_override", status:409};
   }
   return null;
@@ -321,7 +333,7 @@ async function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    const rejection = commandRejection(action, args?.allow_irreversible, args?.payload);
+    const rejection = commandRejection(tool, action, args?.allow_irreversible, args?.payload);
     if (rejection) return {error:rejection.error, action};
     return gameCall(env, tool, action, args?.payload || {});
   }
@@ -364,7 +376,7 @@ async function handleMcp(req, env) {
 
 async function handleMcpMessage(msg, env) {
   const id = msg?.id ?? null;
-  if (typeof msg?.method !== "string" || !msg.method) return {reply:{jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}}, status:400};
+  if (msg?.jsonrpc !== "2.0" || typeof msg.method !== "string" || !msg.method) return {reply:{jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}}, status:400};
   if (msg.method.startsWith("notifications/") || msg.id === undefined) return NO_REPLY;
   if (msg.method === "ping") return {reply:{jsonrpc:"2.0",id,result:{}}};
   if (msg.method === "initialize") {
@@ -783,7 +795,7 @@ export default {
       if (u.pathname === "/v1/command" && req.method === "POST") {
         const body = await req.json().catch(() => undefined);
         if (body === undefined) return j({error:"invalid_json"},400);
-        const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
+        const rejection = commandRejection(body?.tool, body?.action, body?.allow_irreversible, body?.payload);
         if (rejection) return j({error:rejection.error,action:body.action},rejection.status);
         return j(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
       }
