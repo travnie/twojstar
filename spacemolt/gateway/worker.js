@@ -20,14 +20,14 @@ const SAFE_ACTIONS = new Set([
   "get_faction_tax_estimate","get_guide","get_insurance_quote","get_location","get_map",
   "get_missions","get_nearby","get_notes","get_notification_settings","get_player","get_poi",
   "get_queue","get_ship","get_skills","get_state","get_status","get_system","get_system_agents",
-  "get_tax_estimate","get_trades","get_version","get_wrecks","help","inspect","list_ships",
+  "get_tax_estimate","get_trades","get_version","get_wrecks","help","inspect","list_ships","claim_insurance",
   "read_note","search_systems","view_completed_mission","view_faction_storage","view_insurance",
   "view_market","view_orders","view_ship_buy_orders","view_storage",
   // reads (grouped v2 names, e.g. spacemolt_drone/list)
   "get","list","info",
-  // routine gameplay
+  // routine gameplay (captains_log_add is left out: on a full log it evicts the oldest entry)
   "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
-  "accept_mission","complete_mission","decline_mission","chat","captains_log_add",
+  "accept_mission","complete_mission","decline_mission","chat",
   "tow_wreck","loot_wreck","recall_drone","recall","buy"
 ]);
 // Self-defence inside a battle someone else started. These require an active battle, so they
@@ -176,26 +176,27 @@ async function doLogin(env) {
   return sid;
 }
 
-async function callRaw(sid, tool, action, payload = {}) {
+async function callRaw(sid, tool, action, payload = {}, signal = undefined) {
   const res = await fetch(`${GAME}/api/v2/${tool}/${action}`, {
     method:"POST",
     headers:{"content-type":"application/json","accept":"application/json","x-session-id":sid},
-    body:JSON.stringify(payload || {})
+    body:JSON.stringify(payload || {}),
+    signal
   });
   return parse(res);
 }
 
-async function gameCall(env, tool, action, payload = {}) {
+async function gameCall(env, tool, action, payload = {}, signal = undefined) {
   if (!TOOL_RE.test(tool) || !ACTION_RE.test(action) || tool === "spacemolt_auth") {
     throw new Error("command_not_allowed");
   }
   let sid = await env.STATE.get(STATE_KEY);
   if (!sid) sid = await loginByToken(env);
-  let resp = await callRaw(sid, tool, action, payload);
+  let resp = await callRaw(sid, tool, action, payload, signal);
   if (sessionBad(resp)) {
     // loginByToken overwrites the key; deleting first would be a second KV write.
     sid = await loginByToken(env);
-    resp = await callRaw(sid, tool, action, payload);
+    resp = await callRaw(sid, tool, action, payload, signal);
   }
   if (!resp.ok) throw new Error(`game_http_${resp.status}:${errorCode(resp.data) || resp.text}`);
   if (resp.data?.error) throw new Error(`game_error:${errorCode(resp.data) || "unknown"}`);
@@ -229,18 +230,22 @@ function isDocked(input) {
   return Boolean(loc.docked_at || loc.dockedAt);
 }
 
-function findDockTarget(root, excludeId) {
+// Each candidate may cost a long travel, so ensureDocked tries only the first few.
+const DOCK_CANDIDATE_MAX = 3;
+
+function findDockTargets(root, excludeId) {
   const seen = new Set();
-  let found = null;
+  const found = [];
   function walk(node) {
-    if (found || node == null || typeof node !== "object" || seen.has(node)) return;
+    if (node == null || typeof node !== "object" || seen.has(node)) return;
     seen.add(node);
     if (!Array.isArray(node)) {
       const id = node.poi_id || node.id || node.base_id;
       const type = String(node.poi_type || node.type || node.kind || "").toLowerCase();
       const name = String(node.poi_name || node.name || node.base_name || "").toLowerCase();
-      if (id && String(id) !== excludeId && (/station|outpost|base/.test(type) || /station|outpost/.test(name))) {
-        found = String(id); return;
+      if (id && String(id) !== excludeId && !found.includes(String(id)) && (/station|outpost|base/.test(type) || /station|outpost/.test(name))) {
+        found.push(String(id));
+        return;
       }
     }
     for (const key of Object.keys(node)) walk(node[key]);
@@ -268,13 +273,26 @@ async function ensureDocked(env) {
   const here = currentLocation(status);
   const hereId = String(here.poi_id || here.id || "");
   const sys = await gameCall(env, "spacemolt", "get_system", {});
-  const target = findDockTarget(sc(sys), hereId);
-  if (!target) return {docked:false, changed:false, reason:"no_dock_in_current_system", localDockError, status, system:sys};
-  const travel = await gameCall(env, "spacemolt", "travel", {id:target});
-  const dock = await gameCall(env, "spacemolt", "dock", {});
-  if (isDocked(dock)) return {docked:true, changed:true, target, travel, dock};
+  const targets = findDockTargets(sc(sys), hereId).slice(0, DOCK_CANDIDATE_MAX);
+  if (!targets.length) return {docked:false, changed:false, reason:"no_dock_in_current_system", localDockError, status, system:sys};
+  // A hostile or access-controlled dock refuses at game level; move on to the next candidate.
+  const refused = [];
+  for (const target of targets) {
+    try {
+      const travel = await gameCall(env, "spacemolt", "travel", {id:target});
+      const dock = await gameCall(env, "spacemolt", "dock", {});
+      if (isDocked(dock)) return {docked:true, changed:true, target, travel, dock, refused};
+      const after = await gameCall(env, "spacemolt", "get_status", {});
+      if (isDocked(after)) return {docked:true, changed:true, target, travel, dock, status:after, refused};
+      refused.push({target, error:"not_docked"});
+    } catch (err) {
+      const rejected = gameRejection(err);
+      if (!rejected) throw err;
+      refused.push({target, error:rejected});
+    }
+  }
   const after = await gameCall(env, "spacemolt", "get_status", {});
-  return {docked:isDocked(after), changed:true, target, travel, dock, status:after};
+  return {docked:isDocked(after), changed:true, reason:"all_dock_candidates_failed", localDockError, refused, status:after};
 }
 
 function mcpTools() {
@@ -313,7 +331,10 @@ function mcpTools() {
 
 function isDefensiveBattleAction(action, payload) {
   if (!DEFENSIVE_BATTLE_ACTIONS.has(action)) return false;
-  return action !== "stance" || DEFENSIVE_STANCES.has(String(payload?.id || ""));
+  if (action !== "stance") return true;
+  // Grouped spacemolt_battle/stance takes `id`; the flat battle dispatcher takes `stance`.
+  const stances = [payload?.id, payload?.stance].filter((value) => value !== undefined);
+  return stances.length > 0 && stances.every((value) => DEFENSIVE_STANCES.has(String(value)));
 }
 
 function isSafeAction(action, payload) {
@@ -339,7 +360,10 @@ function commandRejection(action, allowIrreversible, payload) {
 
 function runTool(name, args, env) {
   if (name === "spacemolt_health") {
-    return {ok:true, version:VERSION, clerk:Boolean(env.SPACEMOLT_CLERK_API_KEY), player:Boolean(env.SPACEMOLT_PLAYER_ID), state:Boolean(env.STATE)};
+    const clerk = Boolean(env.SPACEMOLT_CLERK_API_KEY);
+    const player = Boolean(env.SPACEMOLT_PLAYER_ID);
+    const state = Boolean(env.STATE);
+    return {ok:clerk && player && state, version:VERSION, clerk, player, state};
   }
   if (name === "spacemolt_state") return gameCall(env, "spacemolt", "get_status", {});
   if (name === "spacemolt_ensure_docked") return ensureDocked(env);
@@ -361,7 +385,8 @@ function mcpToolResult(id, out) {
   }}};
 }
 
-const MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+// 2024-11-05 is left out: it uses the HTTP+SSE transport, which this Worker does not serve.
+const MCP_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26"];
 
 const NO_REPLY = {status:202};
 const PARSE_FAILED = Symbol("parse_failed");
@@ -390,7 +415,8 @@ async function handleMcp(req, env) {
 async function handleMcpMessage(msg, env) {
   const id = msg?.id ?? null;
   if (msg?.jsonrpc !== "2.0" || typeof msg.method !== "string" || !msg.method) return {reply:{jsonrpc:"2.0",id,error:{code:-32600,message:"Invalid Request"}}, status:400};
-  if (msg.method.startsWith("notifications/") || msg.id === undefined) return NO_REPLY;
+  // Only id-less messages are notifications; a notifications/* method sent with an id gets Method not found.
+  if (msg.id === undefined) return NO_REPLY;
   if (msg.method === "ping") return {reply:{jsonrpc:"2.0",id,result:{}}};
   if (msg.method === "initialize") {
     return {reply:{jsonrpc:"2.0",id,result:{
@@ -515,11 +541,12 @@ async function captainsLogHasRoom(env) {
   }
 }
 
-async function safeObs(env, tool, action, payload) {
+async function safeObs(env, tool, action, payload, signal = undefined) {
   if (DAILY_HARD_DENY.has(action)) return {ok:false, tool, action, error:"hard_denied"};
   try {
-    return {ok:true, tool, action, data:await gameCall(env, tool, action, payload || {})};
+    return {ok:true, tool, action, data:await gameCall(env, tool, action, payload || {}, signal)};
   } catch (err) {
+    if (err?.name === "TimeoutError") return {ok:false, tool, action, error:"daily_budget_timeout"};
     console.error("SpaceMolt daily obs failed", tool, action, err);
     return {ok:false, tool, action, error:"game_call_failed"};
   }
@@ -706,7 +733,10 @@ async function executeDailyDecision(env, run, decision, provider) {
   }
   // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
   const callArgs = action === "get_notifications" ? {...args, clear:false} : args;
-  const result = await safeObs(env, tool, action, callArgs);
+  // Movement can long-poll; stop waiting once the loop budget is spent so docking and the summary still run.
+  const moving = action === "travel" || action === "jump";
+  const remaining = Math.max(DAILY_LOOP_BUDGET_MS - (Date.now() - run.loopStart), 1000);
+  const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
   return "continue";
 }
