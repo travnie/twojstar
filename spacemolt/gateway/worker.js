@@ -855,7 +855,8 @@ export default {
       }
       if (reqUrl.pathname === "/v1/command" && req.method === "POST") {
         const body = await req.json().catch(() => undefined);
-        if (body === undefined) return jsonResponse({error:"invalid_json"},400);
+        // JSON null, arrays and scalars parse fine but are not a command object.
+        if (body === null || typeof body !== "object" || Array.isArray(body)) return jsonResponse({error:"invalid_json"},400);
         const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
         if (rejection) return jsonResponse({error:rejection.error,action:body.action},rejection.status);
         return jsonResponse(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
