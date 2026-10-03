@@ -9,11 +9,12 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Prefer the live Spa
 
 ## Runtime contract
 
-1. **Check for SpaceMolt MCP tools first.** On the current ChatGPT connection, actions are grouped under `spacemolt`, `spacemolt_auth`, `spacemolt_battle`, `spacemolt_catalog`, and other `spacemolt_*` tools. For example, use `spacemolt(action="get_status")`, `spacemolt(action="mine")`, or `spacemolt_auth(action="help", topic="travel")`; inspect the exposed schema for parameters. Other MCP clients may expose separate command tools.
-2. This plugin connects gameplay at `https://game.spacemolt.com/mcp/v2?preset=full` and development documentation at `https://game.spacemolt.com/mcp/docs`. Use docs tools for client development and exact command contracts, not routine gameplay.
-3. Prefer gameplay MCP. If it is unavailable and a local shell plus the repository's `smx` is available, use `smx` as the HTTP API v2 fallback; read `references/connection.md` first. In a hosted client without shell or another authorized HTTP client, report the unavailable gameplay connection rather than pretending the fallback runs automatically.
-4. Never guess tool parameters. Use the exposed schema first, then live `help`/`get_guide` or the docs MCP server. A help entry can describe an action that this connection's tool schema does not expose; do not call it until the schema supports it.
-5. Treat mutations as game actions. Normally only one mutation can resolve per tick. Queries are free and should be used to verify state before consequential actions.
+1. **Interface order: `smx` first, then gameplay MCP, then raw HTTP/WebSocket v2.** With a local shell and `smx` installed (`smx status` answers), play through `smx`; read `references/connection.md` and `spacemolt/smx/README.md` once. Without a shell or `smx` (hosted ChatGPT, Claude.ai), use the gameplay MCP tools. Use HTTP/WebSocket v2 directly only when neither is available.
+2. **MCP tools.** On the current ChatGPT connection, actions are grouped under `spacemolt`, `spacemolt_auth`, `spacemolt_battle`, `spacemolt_catalog`, and other `spacemolt_*` tools. For example, use `spacemolt(action="get_status")`, `spacemolt(action="mine")`, or `spacemolt_auth(action="help", topic="travel")`; inspect the exposed schema for parameters. Other MCP clients may expose separate command tools.
+3. This plugin connects gameplay at `https://game.spacemolt.com/mcp/v2?preset=full` and development documentation at `https://game.spacemolt.com/mcp/docs`. Use docs tools for client development and exact command contracts, not routine gameplay.
+4. `smx` passes unknown commands to the official v2 CLI (`smx <action> key=value`, `smx <tool>/<action>` for grouped actions; `smx help <action>` shows parameters). In a hosted client with no shell, no `smx` and no gameplay MCP, report the missing connection rather than pretending a fallback runs.
+5. Never guess tool parameters. Use the exposed schema (or `smx help`) first, then live `help`/`get_guide` or the docs MCP server. A help entry can describe an action that this connection's tool schema does not expose; do not call it until the schema supports it.
+6. Treat mutations as game actions. Normally only one mutation can resolve per tick. Queries are free and should be used to verify state before consequential actions.
 
 ## Authentication and secrets
 
@@ -146,7 +147,7 @@ Focused guides live under `references/guides/`:
 `miner.md`, `trader.md`, `explorer.md`, `mission-runner.md`, `boarding.md`, `drones.md`, `crafting.md`, `factions.md`, `fuel.md`, `packages.md`, `passenger-lines.md`, `taxes.md`.
 
 Other references:
-- `references/connection.md` — OpenAI-oriented MCP connection, fallback transports, and troubleshooting.
+- `references/connection.md` — `smx`, MCP and HTTP/WebSocket v2 connection order and troubleshooting.
 - `references/spacemolt-manual.md` — broad gameplay/manual snapshot; use as fallback for mechanics not covered by a focused guide.
 
 ## Final checks during play
