@@ -3,9 +3,7 @@ import io
 import json
 import unittest
 
-from smx.cli import (BackendResult, assess_threat, cmd_missions, cmd_nearby,
-                     cmd_sell_all, extract_cargo_items, extract_global_profile,
-                     normalize_command, parse_help_commands, suggest)
+from smx.cli import BackendResult, assess_threat, cmd_missions, cmd_nearby, cmd_sell_all, extract_cargo_items, extract_global_profile, normalize_command, parse_help_commands, suggest
 
 
 class CliTests(unittest.TestCase):
