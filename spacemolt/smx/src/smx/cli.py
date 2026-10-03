@@ -328,10 +328,11 @@ def cmd_missions(backend: Backend, argv: list[str]) -> int:
         sys.stderr.write(active_result.stderr or active_result.stdout)
         return active_result.returncode
     if available_result.returncode != 0:
-        # The board is local (e.g. no_mission_service at small POIs); keep active missions visible.
-        if not (isinstance(available, dict) and "error" in available):
-            message = (available_result.stderr or available_result.stdout).strip()
-            available = {"error": {"message": message or f"backend exited {available_result.returncode}"}}
+        # Small POIs have no board (no_mission_service); keep active missions visible there.
+        error = available.get("error") if isinstance(available, dict) else None
+        if not (isinstance(error, dict) and error.get("code") == "no_mission_service"):
+            sys.stderr.write(available_result.stderr or available_result.stdout)
+            return available_result.returncode
 
     combined = {"active": active, "available": available}
     if ns.json:

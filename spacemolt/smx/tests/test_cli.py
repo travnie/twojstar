@@ -97,6 +97,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(combined["active"]["structuredContent"]["missions"], [{"id": "m1"}])
         self.assertEqual(combined["available"]["error"]["code"], "no_mission_service")
 
+    def test_missions_fails_on_other_board_errors(self):
+        class Backend:
+            @staticmethod
+            def json(args):
+                if args == ["get_active_missions"]:
+                    return BackendResult(0, "", ""), {"structuredContent": {"missions": []}}
+                error = {"error": {"code": "rate_limited", "message": "slow down"}}
+                return BackendResult(1, json.dumps(error), ""), error
+
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cmd_missions(Backend(), ["--json"]), 1)
+
     def test_sell_all_reports_actual_fill_and_unsold_items(self):
         calls = []
 
