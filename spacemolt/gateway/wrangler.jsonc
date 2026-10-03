@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
+  "ai": {
+    "binding": "AI"
+  },
   "kv_namespaces": [
     {
       "binding": "STATE",
@@ -20,7 +23,9 @@
     }
   ],
   "vars": {
-    "SPACEMOLT_PLAYER_ID": "927ac82a2eac80eb3f3efe917c93b407"
+    "SPACEMOLT_PLAYER_ID": "927ac82a2eac80eb3f3efe917c93b407",
+    "WORKERS_AI_DAILY_NEURONS": "10000",
+    "WORKERS_AI_MAX_OUTPUT_TOKENS": "16384"
   },
   "triggers": {
     "crons": ["37 19,20 * * *"]
