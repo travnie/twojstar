@@ -1056,7 +1056,10 @@ def main(argv: list[str] | None = None) -> int:
     except BrokenPipeError:
         # Output piped into head/less that closed early; exit quietly like coreutils.
         devnull = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(devnull, sys.stdout.fileno())
+        try:
+            os.dup2(devnull, sys.stdout.fileno())
+        finally:
+            os.close(devnull)
         return 141
 
 

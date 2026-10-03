@@ -73,7 +73,7 @@ class CliTests(unittest.TestCase):
     def test_nearby_reports_unknown_signature(self):
         class Backend:
             @staticmethod
-            def json(args):
+            def json(_args):
                 return BackendResult(0, "", ""), {"structuredContent": {"nearby": [], "unknown_signature": True}}
 
         output = io.StringIO()
