@@ -77,6 +77,14 @@ function formatFromFilename(name) {
   return textFormats.formatFromFilename(name);
 }
 
+function detectFormat(name, text) {
+  return textFormats.detectFormat(name, text);
+}
+
+function canWriteHandle(handle) {
+  return Boolean(handle && typeof handle.createWritable === "function");
+}
+
 async function readTextFile(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const bom = bytes.length >= 3
@@ -101,12 +109,13 @@ function updateMeta() {
 }
 
 function updateSaveButton() {
-  saveButton.textContent = state.handle || !nativeSaveSupported ? "Save" : "Save as…";
-  saveButton.title = state.handle
+  const directSave = canWriteHandle(state.handle);
+  saveButton.textContent = directSave ? "Save" : nativeSaveSupported ? "Save as…" : "Download";
+  saveButton.title = directSave
     ? `Save directly to ${state.filename}`
     : nativeSaveSupported
-      ? "Choose a file once, then later saves update it directly"
-      : "Download the edited file";
+      ? "Choose a writable file; later saves update that selected file directly"
+      : "This browser cannot overwrite the opened file; download the edited copy instead";
 }
 
 function setPreviewMode(mode, title) {
@@ -1298,6 +1307,11 @@ function staleSaveError() {
 }
 
 async function writeHandle(handle, snapshot) {
+  if (!canWriteHandle(handle)) {
+    const error = new Error("This browser cannot write back to the selected file.");
+    error.name = "NotSupportedError";
+    throw error;
+  }
   if (!await ensureWritePermission(handle)) {
     throw new Error("Write permission was not granted.");
   }
@@ -1351,9 +1365,16 @@ async function saveDocument() {
     flashSaveState("Downloaded ✓");
   } catch (error) {
     if (error?.name === "AbortError" || error?.name === "StaleDocumentError") return;
-    if (!linkedHandle && ["TypeError", "SecurityError", "NotAllowedError"].includes(error?.name)) {
+    const unsupportedWrite = ["TypeError", "NotSupportedError"].includes(error?.name);
+    if ((linkedHandle && unsupportedWrite)
+      || (!linkedHandle && ["TypeError", "SecurityError", "NotAllowedError", "NotSupportedError"].includes(error?.name))) {
+      if (linkedHandle) {
+        state.handle = null;
+        updateSaveButton();
+      }
       downloadDocument(snapshot);
       flashSaveState("Downloaded ✓");
+      statusBadge.title = "The browser could not overwrite the original file, so Docbench downloaded an edited copy.";
       return;
     }
     setStatus("bad", "Save failed");
@@ -1365,14 +1386,14 @@ async function loadNativeHandle(handle, revision) {
   const file = await handle.getFile();
   const { raw, bom, eol } = await readTextFile(file);
   if (state.documentRevision !== revision) return false;
-  state.handle = handle;
+  state.handle = canWriteHandle(handle) ? handle : null;
   state.filename = file.name || handle.name || "document.txt";
   state.bom = bom;
   state.mixedEol = eol.mixed;
   state.eol = eol.target;
   editor.value = normalizeEol(raw);
   eolSelect.value = eol.target;
-  formatSelect.value = formatFromFilename(state.filename);
+  formatSelect.value = detectFormat(state.filename, raw);
   filenameLabel.textContent = state.filename;
   updateFormatButton();
   editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1392,7 +1413,7 @@ async function syncFallbackFile(file, revision) {
     state.eol = eol.target;
     editor.value = normalizeEol(raw);
     eolSelect.value = eol.target;
-    formatSelect.value = formatFromFilename(state.filename);
+    formatSelect.value = detectFormat(state.filename, raw);
     filenameLabel.textContent = state.filename;
     updateFormatButton();
     updateSaveButton();

@@ -6,9 +6,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 
 ## Documents
 
-- Edit arbitrary UTF-8 text and recognize TXT/Markdown, JSON-family, YAML/XML, INI/config, Batch/CMD, PowerShell, shell/dotfiles, .env and M3U/M3U8/PLS playlist files.
+- Edit arbitrary UTF-8 text and recognize TXT/Markdown, JSON-family, YAML/XML, INI/config, Batch/CMD, PowerShell, shell/dotfiles, .env and M3U/M3U8/PLS playlist files, with conservative content detection for generic or unknown filenames.
 - Validate and format structured text, plus minify or explicitly repair JSON-family documents; scripts and loose configs remain raw to avoid unsafe rewrites.
-- Save with arbitrary filename extensions in supported File System Access browsers.
+- Save directly back to an opened file only when the browser grants a writable file handle; otherwise use Save as or download an edited copy.
 - Inspect Markdown, JSON-family formats, YAML and XML with richer previews.
 - Preserve UTF-8 BOM and LF, CRLF or CR line endings unless deliberately changed.
 - Merge multiple TXT/Markdown files in picker order into a new editable document; mixed TXT/Markdown output becomes Markdown.

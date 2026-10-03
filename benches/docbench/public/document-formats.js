@@ -74,14 +74,143 @@
     return String(name || "").replaceAll("\\", "/").split("/").at(-1).toLowerCase();
   }
 
-  function formatFromFilename(name) {
+  function formatHintFromFilename(name) {
     const base = basename(name);
-    if (!base) return "txt";
+    if (!base) return null;
     if (filenameToFormat[base]) return filenameToFormat[base];
     if (base.startsWith(".env.")) return "env";
     const dot = base.lastIndexOf(".");
-    if (dot < 0 || dot === base.length - 1) return "txt";
-    return extensionToFormat[base.slice(dot + 1)] || "txt";
+    if (dot < 0 || dot === base.length - 1) return null;
+    return extensionToFormat[base.slice(dot + 1)] || null;
+  }
+
+  function formatFromFilename(name) {
+    return formatHintFromFilename(name) || "txt";
+  }
+
+  const MAX_SNIFF_CHARS = 256 * 1024;
+
+  function detectPlaylistContent(source, trimmed) {
+    if (/^#EXTM3U(?:\s|$)/iu.test(trimmed)) return "playlist";
+    if (/^\[playlist\]\s*$/imu.test(source) && /^File\d+\s*=/imu.test(source)) return "playlist";
+    return null;
+  }
+
+  function detectScriptContent(source, trimmed) {
+    if (/^#![^\r\n]*(?:\b(?:ba|da|k|z)?sh\b|\bfish\b)/iu.test(trimmed)) return "shell";
+    if (/^#![^\r\n]*(?:\bpwsh\b|\bpowershell\b)/iu.test(trimmed)) return "powershell";
+    if (/^@echo\s+off\b/imu.test(source) || /%~dp0/iu.test(source)) return "batch";
+    if (/^#requires\s+-/imu.test(source)
+      || (/^\s*param\s*\(/imu.test(source) && /\$(?:PSScriptRoot|env:)/iu.test(source))) {
+      return "powershell";
+    }
+    return null;
+  }
+
+  function detectXmlContent(trimmed) {
+    return /^<\?xml\b/iu.test(trimmed) || /^<(?:rss|feed|tv|playlist)\b/iu.test(trimmed)
+      ? "xml"
+      : null;
+  }
+
+  function detectJsonLines(nonEmptyLines) {
+    if (nonEmptyLines.length < 2 || nonEmptyLines.length > 100) return null;
+    const valid = nonEmptyLines.every((line) => {
+      if (!/^[{[]/u.test(line)) return false;
+      try {
+        JSON.parse(line);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    return valid ? "jsonl" : null;
+  }
+
+  function detectJsonFamily(source, trimmed) {
+    if (!/^[{[]/u.test(trimmed)) return null;
+    if (source.length < MAX_SNIFF_CHARS) {
+      try {
+        JSON.parse(source);
+        return "json";
+      } catch {
+        // Try conservative JSON-family signatures below.
+      }
+    }
+    if (/(?:^|[{,]\s*)[A-Za-z_$][\w$]*\s*:/mu.test(source)
+      || /'(?:[^'\\]|\\.)*'/u.test(source)) {
+      return "json5";
+    }
+    if (/(^|[^:])\/\/[^\r\n]*$|\/\*[\s\S]*?\*\/|,\s*[}\]]/mu.test(source)) {
+      return "jsonc";
+    }
+    return null;
+  }
+
+  function detectYamlContent(source, trimmed) {
+    if (/^%YAML(?:\s|$)/iu.test(trimmed)) return "yaml";
+    return /^---\s*(?:\r?\n|$)/u.test(trimmed) && /^\s*[\w.-]+\s*:/mu.test(source)
+      ? "yaml"
+      : null;
+  }
+
+  function detectIniContent(source) {
+    if (/^\[playlist\]\s*$/imu.test(source)) return "playlist";
+    return /^\s*\[[^\]\r\n]+\]\s*$/mu.test(source)
+      && /^\s*[^#;\s][^=\r\n]*\s*=.+$/mu.test(source)
+      ? "ini"
+      : null;
+  }
+
+  function detectEnvContent(nonEmptyLines) {
+    const envLines = nonEmptyLines.filter((line) => !line.startsWith("#"));
+    if (envLines.length < 2) return null;
+    return envLines.every((line) => /^(?:export\s+)?[A-Z_][A-Z0-9_]*\s*=/u.test(line))
+      ? "env"
+      : null;
+  }
+
+  function detectMarkdownContent(source) {
+    const signals = [
+      /^#{1,6}\s+\S/mu.test(source),
+      /^(?:\x60\x60\x60|~~~)/mu.test(source),
+      /\[[^\]\r\n]+\]\([^\r\n)]+\)/u.test(source),
+      /^\s*[-*+]\s+\S/mu.test(source),
+    ].filter(Boolean).length;
+    return signals >= 2 ? "md" : null;
+  }
+
+  function formatFromContent(text) {
+    const source = String(text || "").slice(0, MAX_SNIFF_CHARS);
+    const trimmed = source.trimStart();
+    if (!trimmed) return null;
+
+    const nonEmptyLines = source
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    for (const detector of [
+      () => detectPlaylistContent(source, trimmed),
+      () => detectScriptContent(source, trimmed),
+      () => detectXmlContent(trimmed),
+      () => detectJsonLines(nonEmptyLines),
+      () => detectJsonFamily(source, trimmed),
+      () => detectYamlContent(source, trimmed),
+      () => detectIniContent(source),
+      () => detectEnvContent(nonEmptyLines),
+      () => detectMarkdownContent(source),
+    ]) {
+      const detected = detector();
+      if (detected) return detected;
+    }
+    return null;
+  }
+
+  function detectFormat(name, text) {
+    const filenameFormat = formatHintFromFilename(name);
+    if (filenameFormat && filenameFormat !== "txt") return filenameFormat;
+    return formatFromContent(text) || filenameFormat || "txt";
   }
 
   function preferredExtension(format) {
@@ -109,6 +238,8 @@
     definitions,
     formatIds,
     formatFromFilename,
+    formatFromContent,
+    detectFormat,
     preferredExtension,
     labelFor,
     isRaw,
