@@ -13,22 +13,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from .fleet import error_status, fleet_check_ok, render_fleet, status_from_payload
-from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
+from .fleet import (error_status, fleet_check_ok, render_fleet,
+                    status_from_payload)
+from .knowledge import (GUIDES, guide_json, list_guides, load_guide,
+                        search_guides)
 from .maintenance import backend_status, doctor_report, install_latest_backend
 from .mcp_profiles import PROFILES, profiles_json
-from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
+from .paths import (ensure_private_state_dir, managed_backend_path,
+                    resolve_backend, state_dir)
+from .profiles import (add_profile, canonical_profile, default_profile,
+                       list_profiles, migrate_legacy_session, remove_profile,
+                       selected_session_path, set_default_profile)
 from .projection import parse_fields, project_fields, unwrap_payload
-from .profiles import (
-    add_profile,
-    canonical_profile,
-    default_profile,
-    list_profiles,
-    migrate_legacy_session,
-    remove_profile,
-    selected_session_path,
-    set_default_profile,
-)
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
