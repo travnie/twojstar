@@ -1,5 +1,5 @@
 const GAME = "https://game.spacemolt.com";
-const VERSION = "2026-09-22.1";
+const VERSION = "2026-10-03.1";
 const STATE_KEY = "session:v2";
 
 const TOOL_RE = /^spacemolt(?:_[a-z0-9_]+)?$/;
@@ -451,6 +451,14 @@ const DAILY_LOOP_BUDGET_MS = 4 * 60 * 1000;
 const DAILY_MOVE_CUTOFF_MS = 2 * 60 * 1000;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
+const WORKERS_AI_DEFAULT_MODEL = "@cf/zai-org/glm-4.7-flash";
+const WORKERS_AI_DEFAULT_DAILY_NEURONS = 10_000;
+const WORKERS_AI_DEFAULT_MAX_OUTPUT_TOKENS = 16_384;
+const WORKERS_AI_INPUT_NEURONS_PER_MILLION = 5_500;
+const WORKERS_AI_OUTPUT_NEURONS_PER_MILLION = 36_400;
+const WORKERS_AI_HIDDEN_OUTPUT_TOKEN_FACTOR = 2;
+const WORKERS_AI_RESERVATION_SAFETY_FACTOR = 1.25;
+const WORKERS_AI_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
 const DAILY_HARD_DENY = new Set(["self_destruct","attack","hunt","jettison","abandon_mission","scrap_ship","refit_ship","buy_listed_ship","commission_ship","sell_ship_to_order","leave_faction","disband","transfer_ownership"]);
 const DAILY_ALLOWED = {
   spacemolt: [
@@ -568,7 +576,119 @@ function nextProviderRotation(current, provider) {
   if (idx >= 0) return (idx + 1) % DAILY_PROVIDER_ORDER.length;
   return (current + 1) % DAILY_PROVIDER_ORDER.length;
 }
-async function runPlannerModel(env, messages, rotateBy) {
+
+function positiveInt(raw, fallback, max) {
+  const value = String(raw || "").trim();
+  if (!/^\d+$/.test(value)) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+}
+
+function workersAiSettings(env) {
+  return {
+    model:WORKERS_AI_DEFAULT_MODEL,
+    dailyNeurons:positiveInt(env.WORKERS_AI_DAILY_NEURONS, WORKERS_AI_DEFAULT_DAILY_NEURONS, 10_000),
+    maxTokens:positiveInt(env.WORKERS_AI_MAX_OUTPUT_TOKENS, WORKERS_AI_DEFAULT_MAX_OUTPUT_TOKENS, 131_072)
+  };
+}
+
+function workersAiReservationNeurons(messages, maxTokens) {
+  const conservativeInputTokens = new TextEncoder().encode(JSON.stringify(messages)).byteLength;
+  const inputNeurons = conservativeInputTokens * WORKERS_AI_INPUT_NEURONS_PER_MILLION / 1_000_000;
+  const outputNeurons = maxTokens * WORKERS_AI_HIDDEN_OUTPUT_TOKEN_FACTOR *
+    WORKERS_AI_OUTPUT_NEURONS_PER_MILLION / 1_000_000;
+  return Math.max(1, Math.ceil((inputNeurons + outputNeurons) * WORKERS_AI_RESERVATION_SAFETY_FACTOR));
+}
+
+function workersAiActualNeurons(result) {
+  const usage = result && typeof result === "object" ? result.usage : null;
+  if (!usage || typeof usage !== "object") return null;
+  const promptTokens = Number(usage.prompt_tokens ?? usage.input_tokens);
+  const completionTokens = Number(usage.completion_tokens ?? usage.output_tokens);
+  if (!Number.isInteger(promptTokens) || promptTokens < 0 ||
+      !Number.isInteger(completionTokens) || completionTokens < 0) return null;
+  const inputNeurons = promptTokens * WORKERS_AI_INPUT_NEURONS_PER_MILLION / 1_000_000;
+  const outputNeurons = completionTokens * WORKERS_AI_OUTPUT_NEURONS_PER_MILLION / 1_000_000;
+  return Math.max(1, Math.ceil(inputNeurons + outputNeurons));
+}
+
+function workersAiBudgetPrefix(day) {
+  return `workers-ai:neurons:${day}:`;
+}
+
+async function loadWorkersAiNeurons(env, run) {
+  if (Number.isInteger(run.workersAiNeuronsUsed)) return run.workersAiNeuronsUsed;
+  const day = new Date().toISOString().slice(0, 10);
+  run.workersAiBudgetDay = day;
+  const prefix = workersAiBudgetPrefix(day);
+  let cursor = undefined;
+  let total = 0;
+  do {
+    const page = await env.STATE.list({prefix, ...(cursor ? {cursor} : {})});
+    for (const key of page.keys || []) {
+      const neurons = Number(key.metadata?.neurons);
+      if (Number.isFinite(neurons)) total += neurons;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  run.workersAiNeuronsUsed = Math.max(0, Math.ceil(total));
+  return run.workersAiNeuronsUsed;
+}
+
+async function recordWorkersAiNeurons(env, run, neurons, kind) {
+  if (!Number.isFinite(neurons) || neurons === 0) return;
+  const amount = neurons > 0 ? Math.ceil(neurons) : -Math.ceil(Math.abs(neurons));
+  const key = `${workersAiBudgetPrefix(run.workersAiBudgetDay)}${Date.now()}:${crypto.randomUUID()}`;
+  await env.STATE.put(key, "", {
+    expirationTtl:WORKERS_AI_BUDGET_TTL_SECONDS,
+    metadata:{neurons:amount, kind}
+  });
+}
+
+async function runWorkersAiPlanner(env, run, messages) {
+  if (!env.AI) throw new Error("workers_ai_not_configured");
+  const settings = workersAiSettings(env);
+  const used = await loadWorkersAiNeurons(env, run);
+  const reservation = workersAiReservationNeurons(messages, settings.maxTokens);
+  if (used + reservation > settings.dailyNeurons) throw new Error("workers_ai_daily_budget_exhausted");
+
+  // Persist the conservative upper bound before inference. Unique ledger keys avoid
+  // Workers KV's one-write-per-key-per-second limit.
+  await recordWorkersAiNeurons(env, run, reservation, "reservation");
+  run.workersAiNeuronsUsed = used + reservation;
+
+  const output = await env.AI.run(settings.model, {
+    messages,
+    max_tokens:settings.maxTokens,
+    chat_template_kwargs:{
+      enable_thinking:true
+    },
+    temperature:0.2
+  });
+
+  const actual = workersAiActualNeurons(output);
+  if (actual != null && actual < reservation) {
+    const refund = reservation - actual;
+    try {
+      await recordWorkersAiNeurons(env, run, -refund, "settlement_refund");
+      run.workersAiNeuronsUsed = used + actual;
+    } catch (err) {
+      // Keep the persisted reservation. Accounting stays conservative and the
+      // completed planner response remains usable.
+      console.warn("SpaceMolt Workers AI budget refund write failed", errorText(err, 240));
+    }
+  }
+  return {output, provider:"workers-ai", source:"workers-ai"};
+}
+
+async function runPlannerModel(env, run, messages, rotateBy) {
+  try {
+    return await runWorkersAiPlanner(env, run, messages);
+  } catch (err) {
+    run.history.push({kind:"workers_ai_unavailable", error:errorText(err, 240)});
+  }
+
   if (env.KANAREK_PLANNER) {
     try {
       const routed = await env.KANAREK_PLANNER.plan({
@@ -652,7 +772,7 @@ function rejectPlan(run, provider, entry) {
 
 async function callPlanner(env, run, userPrompt) {
   try {
-    const meta = await runPlannerModel(env, [
+    const meta = await runPlannerModel(env, run, [
       {role:"system",content:DAILY_SYSTEM_PROMPT},
       {role:"user",content:userPrompt}
     ], run.providerRotation);
@@ -777,7 +897,9 @@ async function runDailyGremlin(env) {
     blockedCount:0,
     plannerInvalidCount:0,
     notificationsSeen:0,
-    plannerSawNotifications:false
+    plannerSawNotifications:false,
+    workersAiBudgetDay:"",
+    workersAiNeuronsUsed:null
   };
   const mechanics = await gatherDailyObservations(env, run);
 
@@ -831,10 +953,16 @@ export default {
         clerk:Boolean(env.SPACEMOLT_CLERK_API_KEY),
         bridge:Boolean(env.BRIDGE_TOKEN),
         player:Boolean(env.SPACEMOLT_PLAYER_ID),
-        state:Boolean(env.STATE)
+        state:Boolean(env.STATE),
+        workersAi:Boolean(env.AI)
       };
-      const ok = Object.values(configured).every(Boolean);
-      return jsonResponse({ok, version:VERSION, configured}, ok ? 200 : 503);
+      const ok = configured.clerk && configured.bridge && configured.player && configured.state;
+      return jsonResponse({
+        ok,
+        degraded:ok && !configured.workersAi,
+        version:VERSION,
+        configured
+      }, ok ? 200 : 503);
     }
 
     if (reqUrl.pathname === "/mcp" && req.method === "POST") return handleMcp(req, env);
