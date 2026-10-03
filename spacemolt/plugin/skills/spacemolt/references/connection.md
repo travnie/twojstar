@@ -1,8 +1,19 @@
 # SpaceMolt connection reference
 
-Use this only when connection/setup details are needed. The skill's declared OpenAI MCP dependency is the preferred path.
+Use this only when connection/setup details are needed. Order: `smx` when a shell has it, then gameplay MCP, then raw HTTP/WebSocket v2.
 
-## Preferred: MCP
+## Preferred: smx
+
+In a shell-capable client working in `travnie/twojstar`, play through the maintained `smx`
+companion and its official SpaceMolt v2 CLI backend. See `spacemolt/smx/README.md`.
+It already handles sessions, login and per-agent profiles, so do not add another
+credential store or duplicate its command catalog. Check it with `smx status`; install it with
+`sh spacemolt/smx/install.sh` when missing. Unknown commands pass through to the official
+CLI (`smx get_nearby`, `smx spacemolt_battle/status`, `smx help <action>`).
+
+## Fallback: MCP
+
+Use when there is no shell or `smx` (hosted ChatGPT, Claude.ai) or `smx` cannot reach the game.
 
 - Gameplay endpoint: `https://game.spacemolt.com/mcp/v2?preset=full`
 - Transport: Streamable HTTP
@@ -25,14 +36,10 @@ The user selects and approves the character in the browser. The model does not n
 
 If device-link actions are absent, do not guess tool calls or request a password in chat. The user can connect a client with the device flow or select another authentication method supported by their environment. `spacemolt_auth(action="help", topic="login")` can clarify live login semantics without logging in.
 
-## If MCP is not supported
+## Last resort: raw v2 API
 
-When working locally in `travnie/twojstar`, prefer the maintained `smx` companion
-and its official SpaceMolt v2 CLI backend for the HTTP API fallback. See
-`spacemolt/smx/README.md` in the repository. It handles session and authentication details
-already, so do not add another credential store or duplicate its command catalog.
-This local fallback requires a shell-capable client; packaging a skill does not
-give ChatGPT's hosted runtime arbitrary HTTP requests or local shell execution.
+Only when neither `smx` nor MCP is available. Packaging a skill does not give a hosted
+runtime arbitrary HTTP requests or local shell execution.
 
 ### WebSocket v2
 

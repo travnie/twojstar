@@ -7,7 +7,7 @@ Portable plugin bundling the SpaceMolt skill and two official Streamable HTTP MC
 
 The skill is a bundled snapshot. Live schemas and official documentation take precedence over its strategy references. Player credentials and sessions are never packaged.
 
-If gameplay MCP is unavailable in a **shell-capable** client, use the adjacent [`smx`](../smx/) companion backed by the official SpaceMolt v2 CLI and HTTP API v2. Its session handling and multiple player profiles are already implemented. ChatGPT's hosted plugin environment cannot run that local fallback automatically; the gameplay MCP connection is necessary there.
+In a **shell-capable** client, play through the adjacent [`smx`](../smx/) companion first; it wraps the official SpaceMolt v2 CLI and already handles sessions and multiple player profiles. Gameplay MCP is the fallback, and the only path in hosted environments such as ChatGPT, which cannot run a local shell. Raw HTTP/WebSocket v2 is the last resort.
 
 The icon contains SpaceMolt's official claw crest, sourced from the [game's website](https://spacemolt.com/). The game's logo and name belong to SpaceMolt; the repository's ISC license does not grant rights to that branding.
 
