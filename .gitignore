@@ -23,6 +23,7 @@ Desktop.ini
 **/.pytest_cache/
 **/.ruff_cache/
 **/*.egg-info/
+**/__pycache__/
 
 # JavaScript package managers
 **/node_modules/
