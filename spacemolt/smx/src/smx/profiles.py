@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
 from .paths import ensure_private_state_dir, session_path, state_dir
 
@@ -19,23 +19,23 @@ def canonical_profile(name: str) -> str:
     return value.casefold()
 
 
-def profiles_dir(env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def profiles_dir(env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     return state_dir(env, **kwargs) / "profiles"
 
 
-def profile_dir(name: str, env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def profile_dir(name: str, env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     return profiles_dir(env, **kwargs) / canonical_profile(name)
 
 
-def profile_session_path(name: str, env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def profile_session_path(name: str, env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     return profile_dir(name, env, **kwargs) / "session.json"
 
 
-def config_path(env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def config_path(env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     return state_dir(env, **kwargs) / "profiles.json"
 
 
-def _read_config(env: Mapping[str, str] | None = None, **kwargs: object) -> dict[str, str]:
+def _read_config(env: Mapping[str, str] | None = None, **kwargs: Any) -> dict[str, str]:
     path = config_path(env, **kwargs)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -44,7 +44,7 @@ def _read_config(env: Mapping[str, str] | None = None, **kwargs: object) -> dict
     return payload if isinstance(payload, dict) else {}
 
 
-def default_profile(env: Mapping[str, str] | None = None, **kwargs: object) -> str | None:
+def default_profile(env: Mapping[str, str] | None = None, **kwargs: Any) -> str | None:
     env = os.environ if env is None else env
     override = env.get("SMX_PROFILE")
     if override:
@@ -56,7 +56,7 @@ def default_profile(env: Mapping[str, str] | None = None, **kwargs: object) -> s
 def selected_session_path(
     profile: str | None = None,
     env: Mapping[str, str] | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> Path:
     env = os.environ if env is None else env
     if env.get("SPACEMOLT_SESSION"):
@@ -65,7 +65,7 @@ def selected_session_path(
     return profile_session_path(selected, env, **kwargs) if selected else session_path(env, **kwargs)
 
 
-def list_profiles(env: Mapping[str, str] | None = None, **kwargs: object) -> list[dict[str, object]]:
+def list_profiles(env: Mapping[str, str] | None = None, **kwargs: Any) -> list[dict[str, object]]:
     root = profiles_dir(env, **kwargs)
     default = default_profile(env, **kwargs)
     if not root.is_dir():
@@ -80,13 +80,13 @@ def list_profiles(env: Mapping[str, str] | None = None, **kwargs: object) -> lis
     return rows
 
 
-def add_profile(name: str, env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def add_profile(name: str, env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     path = profile_dir(name, env, **kwargs)
     ensure_private_state_dir(path)
     return path
 
 
-def set_default_profile(name: str | None, env: Mapping[str, str] | None = None, **kwargs: object) -> None:
+def set_default_profile(name: str | None, env: Mapping[str, str] | None = None, **kwargs: Any) -> None:
     env = os.environ if env is None else env
     state = state_dir(env, **kwargs)
     ensure_private_state_dir(state)
@@ -105,7 +105,7 @@ def set_default_profile(name: str | None, env: Mapping[str, str] | None = None, 
 def migrate_legacy_session(
     name: str,
     env: Mapping[str, str] | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> Path:
     env = os.environ if env is None else env
     if env.get("SPACEMOLT_SESSION"):
@@ -125,7 +125,7 @@ def migrate_legacy_session(
 def remove_profile(
     name: str,
     env: Mapping[str, str] | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> None:
     env = os.environ if env is None else env
     canonical = canonical_profile(name)

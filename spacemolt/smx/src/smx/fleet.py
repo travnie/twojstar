@@ -51,6 +51,11 @@ def _canonical_status(node: Any) -> dict[str, Any] | None:
     return None
 
 
+def _section(content: dict[str, Any], key: str) -> dict[str, Any]:
+    value = content.get(key)
+    return value if isinstance(value, dict) else {}
+
+
 def _text(node: dict[str, Any], *keys: str) -> str | None:
     for key in keys:
         value = node.get(key)
@@ -99,9 +104,9 @@ def status_from_payload(profile: str, payload: Any) -> FleetStatus:
     if content is None:
         return FleetStatus(profile=profile, ok=False, error="status payload has no canonical player/ship/location data")
 
-    player = content.get("player") if isinstance(content.get("player"), dict) else {}
-    ship = content.get("ship") if isinstance(content.get("ship"), dict) else {}
-    location = content.get("location") if isinstance(content.get("location"), dict) else {}
+    player = _section(content, "player")
+    ship = _section(content, "ship")
+    location = _section(content, "location")
 
     system = _text(location, "system_name", "system_id")
     poi = _text(location, "poi_name", "poi_id")

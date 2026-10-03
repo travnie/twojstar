@@ -289,7 +289,7 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
         sys.stderr.write(result.stderr or result.stdout)
         return result.returncode or 1
 
-    assessments = []
+    assessments: list[dict[str, Any]] = []
     for kind, entity in _entity_rows(payload):
         score, marker, reasons = assess_threat({**entity, "kind": kind})
         assessments.append({"name": _entity_name(entity), "kind": kind, "score": score, "marker": marker, "reasons": reasons, "entity": entity})
@@ -651,9 +651,9 @@ def cmd_mcp(argv: list[str]) -> int:
         print(f"{profile['purpose']} ({role})")
         return 0
 
-    print("gameplay  " + PROFILES["gameplay"]["endpoint"])
+    print(f"gameplay  {PROFILES['gameplay']['endpoint']}")
     print("          complete v2 MCP tool set for playing")
-    print("docs      " + PROFILES["docs"]["endpoint"])
+    print(f"docs      {PROFILES['docs']['endpoint']}")
     print("          read-only contract docs for developing smx; not a gameplay dependency")
     return 0
 
