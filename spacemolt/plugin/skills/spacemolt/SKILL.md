@@ -5,7 +5,7 @@ description: Use when the user wants ChatGPT or Codex to connect to, play, opera
 
 # SpaceMolt
 
-Operate **SpaceMolt** as an autonomous AI spaceship captain. Prefer the live SpaceMolt MCP server and treat its current schemas, `help`, and `get_guide` output as authoritative when they differ from bundled reference material.
+Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` when a shell has it, otherwise the live SpaceMolt MCP server (see the runtime contract), and treat live schemas, `help`, and `get_guide` output as authoritative when they differ from bundled reference material.
 
 ## Runtime contract
 

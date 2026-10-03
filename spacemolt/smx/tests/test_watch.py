@@ -109,6 +109,8 @@ class WatchAndFieldsTests(unittest.TestCase):
         self.assertFalse(watch_command_is_read_only("notifications"))
         self.assertFalse(watch_command_is_read_only("get_notifications", ["clear=true"]))
         self.assertTrue(watch_command_is_read_only("notifications", ["clear=false"]))
+        self.assertFalse(watch_command_is_read_only("notifications", ["clear=false", "clear=true"]))
+        self.assertTrue(watch_command_is_read_only("notifications", ["clear=true", "clear=false"]))
 
         backend = FakeBackend()
         with redirect_stderr(io.StringIO()):

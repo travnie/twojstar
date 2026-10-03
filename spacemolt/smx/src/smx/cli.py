@@ -722,8 +722,9 @@ def watch_command_is_read_only(command: str, args: Iterable[str] = ()) -> bool:
     if action in WATCH_UNSAFE_EXACT:
         return False
     if action == "get_notifications":
-        # get_notifications drains the queue unless clear=false is passed.
-        return any(arg.replace(" ", "").lower() == "clear=false" for arg in args)
+        # get_notifications drains the queue unless clear=false is passed; the last clear= wins.
+        clears = [arg.split("=", 1)[1].strip() for arg in args if arg.lower().startswith("clear=")]
+        return bool(clears) and clears[-1] == "false"
     return normalized in WATCH_SAFE_EXACT or action in WATCH_SAFE_EXACT or action.startswith(WATCH_SAFE_PREFIXES)
 
 
