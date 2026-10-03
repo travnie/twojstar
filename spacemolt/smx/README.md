@@ -14,7 +14,8 @@ conveniences that made `vcarl/sm-cli` pleasant to drive.
   actual fills from quantities left unsold when a market has insufficient demand.
 - `smx nearby` — compact visible-threat hints for players, pirates, NPCs,
   creatures, and prizes from `get_nearby`, without scans or combat actions.
-- `smx missions` — active and available missions in one command.
+- `smx missions` — active and available missions in one command; active missions still
+  show at POIs without a mission board.
 - Friendly aliases such as `status`, `ship`, `cargo`, `map` and `skills`.
 - Kebab-case compatibility: `get-map` becomes `get_map`.
 - Fuzzy typo suggestions after unknown commands. Suggestions are never executed
@@ -219,7 +220,9 @@ smx watch status --count 6 --fields player.username,ship.fuel
 `watch` is deliberately conservative. It only accepts commands that look read-only
 (`get_*`, `list_*`, `view_*`, `find_*`, `search_*`, plus a few local reference
 commands). Mutating commands such as `mine`, `sell`, or `travel` are refused instead
-of being repeated accidentally.
+of being repeated accidentally, including the `list_for_sale` and `list_ship_for_sale`
+mutations that merely look like listings. `get_notifications` drains the queue, so it is
+only watched with `clear=false`.
 
 Use `--` before official command arguments if they collide with watch's own
 `--interval`, `--count`, or `--fields` options.

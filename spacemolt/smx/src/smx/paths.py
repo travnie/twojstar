@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
 APP_NAME = "smx"
 
@@ -37,7 +37,7 @@ def state_dir(
     return Path(xdg) / APP_NAME if xdg else home / ".local" / "state" / APP_NAME
 
 
-def session_path(env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def session_path(env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     env = os.environ if env is None else env
     override = env.get("SPACEMOLT_SESSION")
     if override:
@@ -45,11 +45,11 @@ def session_path(env: Mapping[str, str] | None = None, **kwargs: object) -> Path
     return state_dir(env, **kwargs) / "spacemolt-session.json"
 
 
-def managed_bin_dir(env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def managed_bin_dir(env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     return state_dir(env, **kwargs) / "bin"
 
 
-def managed_backend_path(env: Mapping[str, str] | None = None, **kwargs: object) -> Path:
+def managed_backend_path(env: Mapping[str, str] | None = None, **kwargs: Any) -> Path:
     platform = kwargs.get("platform")
     current_platform = sys.platform if platform is None else str(platform)
     name = "spacemolt.exe" if current_platform.startswith("win") else "spacemolt"
@@ -59,7 +59,7 @@ def managed_backend_path(env: Mapping[str, str] | None = None, **kwargs: object)
 def resolve_backend(
     binary: str | None = None,
     env: Mapping[str, str] | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> str:
     env = os.environ if env is None else env
     if binary:

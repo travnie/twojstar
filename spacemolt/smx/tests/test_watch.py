@@ -2,13 +2,8 @@ import io
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from smx.cli import (
-    BackendResult,
-    _passthrough,
-    cmd_watch,
-    extract_smx_globals,
-    watch_command_is_read_only,
-)
+from smx.cli import (BackendResult, _passthrough, cmd_watch,
+                     extract_smx_globals, watch_command_is_read_only)
 
 
 class FakeBackend:
@@ -99,6 +94,24 @@ class WatchAndFieldsTests(unittest.TestCase):
         self.assertTrue(watch_command_is_read_only("market/view_market"))
         self.assertFalse(watch_command_is_read_only("sell"))
         self.assertFalse(watch_command_is_read_only("mine"))
+
+    def test_watch_refuses_list_prefixed_mutations(self):
+        self.assertTrue(watch_command_is_read_only("spacemolt_ship/list_ships"))
+        self.assertFalse(watch_command_is_read_only("spacemolt_facility/list_for_sale"))
+        self.assertFalse(watch_command_is_read_only("spacemolt_ship/list_ship_for_sale"))
+
+    def test_watch_notifications_only_without_clearing(self):
+        self.assertFalse(watch_command_is_read_only("notifications"))
+        self.assertFalse(watch_command_is_read_only("get_notifications", ["clear=true"]))
+        self.assertTrue(watch_command_is_read_only("notifications", ["clear=false"]))
+        self.assertFalse(watch_command_is_read_only("notifications", ["clear=false", "clear=true"]))
+        self.assertTrue(watch_command_is_read_only("notifications", ["clear=true", "clear=false"]))
+
+        backend = FakeBackend()
+        with redirect_stderr(io.StringIO()):
+            rc = cmd_watch(backend, ["notifications", "--count", "1"])
+        self.assertEqual(rc, 2)
+        self.assertEqual(backend.run_calls, [])
 
 
 if __name__ == "__main__":

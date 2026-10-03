@@ -13,22 +13,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from .fleet import error_status, fleet_check_ok, render_fleet, status_from_payload
-from .knowledge import GUIDES, guide_json, list_guides, load_guide, search_guides
+from .fleet import (error_status, fleet_check_ok, render_fleet,
+                    status_from_payload)
+from .knowledge import (GUIDES, guide_json, list_guides, load_guide,
+                        search_guides)
 from .maintenance import backend_status, doctor_report, install_latest_backend
 from .mcp_profiles import PROFILES, profiles_json
-from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
+from .paths import (ensure_private_state_dir, managed_backend_path,
+                    resolve_backend, state_dir)
+from .profiles import (add_profile, canonical_profile, default_profile,
+                       list_profiles, migrate_legacy_session, remove_profile,
+                       selected_session_path, set_default_profile)
 from .projection import parse_fields, project_fields, unwrap_payload
-from .profiles import (
-    add_profile,
-    canonical_profile,
-    default_profile,
-    list_profiles,
-    migrate_legacy_session,
-    remove_profile,
-    selected_session_path,
-    set_default_profile,
-)
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
@@ -238,9 +234,14 @@ def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
     kind = str(entity.get("kind") or entity.get("type") or "").lower()
     text = " ".join(str(entity.get(k, "")) for k in ("name", "ship", "ship_class", "class", "role")).lower()
 
+    if entity.get("offline") is True:
+        return 0, "⬜", ["offline"]
     if "pirate" in kind or "pirate" in text:
         score += 3
         reasons.append("pirate")
+    if entity.get("is_boss") is True:
+        score += 3
+        reasons.append("boss")
     if entity.get("in_combat") is True:
         score += 2
         reasons.append("in combat")
@@ -284,16 +285,20 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
         sys.stderr.write(result.stderr or result.stdout)
         return result.returncode or 1
 
-    assessments = []
+    assessments: list[dict[str, Any]] = []
     for kind, entity in _entity_rows(payload):
         score, marker, reasons = assess_threat({**entity, "kind": kind})
         assessments.append({"name": _entity_name(entity), "kind": kind, "score": score, "marker": marker, "reasons": reasons, "entity": entity})
     assessments.sort(key=lambda row: row["score"], reverse=True)
 
+    content = unwrap_payload(payload)
+    unknown_signature = isinstance(content, dict) and content.get("unknown_signature") is True
     if ns.json:
-        print(json.dumps({"assessment": assessments, "source": payload}, indent=2, ensure_ascii=False))
+        print(json.dumps({"assessment": assessments, "unknown_signature": unknown_signature, "source": payload}, indent=2, ensure_ascii=False))
         return 0
 
+    if unknown_signature:
+        print("❔ Unknown signature at this POI (not listed below).")
     if not assessments:
         print("No visible nearby actors.")
         return 0
@@ -319,8 +324,11 @@ def cmd_missions(backend: Backend, argv: list[str]) -> int:
         sys.stderr.write(active_result.stderr or active_result.stdout)
         return active_result.returncode
     if available_result.returncode != 0:
-        sys.stderr.write(available_result.stderr or available_result.stdout)
-        return available_result.returncode
+        # Small POIs have no board (no_mission_service); keep active missions visible there.
+        error = available.get("error") if isinstance(available, dict) else None
+        if not (isinstance(error, dict) and error.get("code") == "no_mission_service"):
+            sys.stderr.write(available_result.stderr or available_result.stdout)
+            return available_result.returncode
 
     combined = {"active": active, "available": available}
     if ns.json:
@@ -639,9 +647,9 @@ def cmd_mcp(argv: list[str]) -> int:
         print(f"{profile['purpose']} ({role})")
         return 0
 
-    print("gameplay  " + PROFILES["gameplay"]["endpoint"])
+    print(f"gameplay  {PROFILES['gameplay']['endpoint']}")
     print("          complete v2 MCP tool set for playing")
-    print("docs      " + PROFILES["docs"]["endpoint"])
+    print(f"docs      {PROFILES['docs']['endpoint']}")
     print("          read-only contract docs for developing smx; not a gameplay dependency")
     return 0
 
@@ -700,11 +708,19 @@ def _project_backend_payload(backend: Backend, args: list[str], fields: list[str
 
 WATCH_SAFE_EXACT = {"accounts", "catalog", "help"}
 WATCH_SAFE_PREFIXES = ("get_", "list_", "view_", "find_", "search_")
+# Prefix matches that are live mutations (docs MCP marks them [mutation]).
+WATCH_UNSAFE_EXACT = {"list_for_sale", "list_ship_for_sale"}
 
 
-def watch_command_is_read_only(command: str) -> bool:
+def watch_command_is_read_only(command: str, args: Iterable[str] = ()) -> bool:
     normalized = ALIASES.get(normalize_command(command), normalize_command(command))
     action = normalized.split("/", 1)[-1]
+    if action in WATCH_UNSAFE_EXACT:
+        return False
+    if action == "get_notifications":
+        # get_notifications drains the queue unless clear=false is passed; the last clear= wins.
+        clears = [arg.split("=", 1)[1].strip() for arg in args if arg.lower().startswith("clear=")]
+        return bool(clears) and clears[-1] == "false"
     return normalized in WATCH_SAFE_EXACT or action in WATCH_SAFE_EXACT or action.startswith(WATCH_SAFE_PREFIXES)
 
 
@@ -778,10 +794,11 @@ def cmd_watch(backend: Backend, argv: list[str]) -> int:
     command = command_args[0]
     normalized = ALIASES.get(normalize_command(command), normalize_command(command))
     official_args = [normalized, *command_args[1:]]
-    if not watch_command_is_read_only(command):
+    if not watch_command_is_read_only(command, command_args[1:]):
         print(
             f'smx: refusing to watch potentially mutating command "{command}". '
-            "Use watch only with read-only get/list/view/find/search commands.",
+            "Use watch only with read-only get/list/view/find/search commands "
+            "(get_notifications only with clear=false).",
             file=sys.stderr,
         )
         return 2
@@ -1030,6 +1047,19 @@ def _passthrough(backend: Backend, argv: list[str], fields: list[str] | None = N
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except BrokenPipeError:
+        # Output piped into head/less that closed early; exit quietly like coreutils.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(devnull, sys.stdout.fileno())
+        finally:
+            os.close(devnull)
+        return 141
+
+
+def _main(argv: list[str] | None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
         profile, fields, argv = extract_smx_globals(argv)

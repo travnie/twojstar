@@ -55,8 +55,8 @@ internal static class Com
 internal sealed class WidgetProviderFactory<T> : Com.IClassFactory
     where T : IWidgetProvider, new()
 {
-    private const int ClassENoAggregation = -2147221232;
-    private const int ENoInterface = -2147467262;
+    private const int ClassENoAggregation = -2_147_221_232;
+    private const int ENoInterface = -2_147_467_262;
 
     public int CreateInstance(IntPtr pUnkOuter, ref Guid riid, out IntPtr ppvObject)
     {

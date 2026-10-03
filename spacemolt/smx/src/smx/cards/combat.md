@@ -14,7 +14,7 @@
 - Battles use Outer → Mid → Inner → Engaged rings.
 - If your reach is longer, create distance. If your guns are short-range, close hard.
 - Speed affects tracking, maneuvering and escape.
-- `get_battle_status` is your main per-tick dashboard.
+- `spacemolt_battle/status` (`smx spacemolt_battle/status`) is your main per-tick dashboard.
 
 ## Damage cheat sheet
 
