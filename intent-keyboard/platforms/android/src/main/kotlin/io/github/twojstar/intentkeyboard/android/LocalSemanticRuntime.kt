@@ -273,8 +273,6 @@ class LocalSemanticRuntime(
             throw error
         } catch (error: IllegalArgumentException) {
             failure = LocalModelLoadFailure("Model file is unavailable.", error)
-        } catch (error: LiteRtLmJniException) {
-            failure = LocalModelLoadFailure("LiteRT-LM could not initialize this model.", error)
         } catch (error: IllegalStateException) {
             failure = LocalModelLoadFailure("LiteRT-LM engine initialization failed.", error)
         } catch (error: UnsatisfiedLinkError) {
@@ -337,8 +335,6 @@ class LocalSemanticRuntime(
                 engine.close()
             } catch (error: LiteRtLmJniException) {
                 Log.w(TAG, "LiteRT-LM engine cleanup failed", error)
-            } catch (error: IllegalStateException) {
-                Log.w(TAG, "LiteRT-LM engine was already unavailable during cleanup", error)
             } catch (error: UnsatisfiedLinkError) {
                 Log.w(TAG, "LiteRT-LM native runtime disappeared during cleanup", error)
             }

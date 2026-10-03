@@ -94,8 +94,6 @@ private suspend fun closeCancelledInitialization(
             engine.close()
         } catch (error: LiteRtLmJniException) {
             cancellation.addSuppressed(error)
-        } catch (error: IllegalStateException) {
-            cancellation.addSuppressed(error)
         } catch (error: UnsatisfiedLinkError) {
             cancellation.addSuppressed(error)
         }
@@ -142,8 +140,6 @@ class LiteRtLmCompletionClient(
             throw error
         } catch (error: LiteRtLmJniException) {
             CompletionOutcome.Failure("LiteRT-LM inference failed.", error)
-        } catch (error: IllegalStateException) {
-            CompletionOutcome.Failure("LiteRT-LM engine is unavailable.", error)
         } catch (error: UnsatisfiedLinkError) {
             CompletionOutcome.Failure("LiteRT-LM native runtime is unavailable.", error)
         }

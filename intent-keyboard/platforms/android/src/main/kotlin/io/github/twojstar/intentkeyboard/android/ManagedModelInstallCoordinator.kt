@@ -89,13 +89,6 @@ class ManagedModelInstallCoordinator private constructor(context: Context) {
                         cause = error,
                     ),
                 )
-            } catch (error: Exception) {
-                publish(
-                    ManagedModelInstallState.Failed(
-                        message = "Offline model installation failed unexpectedly.",
-                        cause = error,
-                    ),
-                )
             } finally {
                 installJob = null
             }

@@ -115,11 +115,6 @@ class LocalModelStore(context: Context) {
                 "The verified model could not be moved into private storage.",
                 error,
             )
-        } catch (error: SecurityException) {
-            throw LocalModelStoreException(
-                "Android denied access while activating the verified model.",
-                error,
-            )
         } finally {
             if (!committed) target?.let(::deleteBestEffort)
         }
@@ -220,8 +215,6 @@ class LocalModelStore(context: Context) {
             queryDisplayName(uri) ?: "selected-model.litertlm"
         } catch (error: SecurityException) {
             throw LocalModelStoreException("Android did not grant access to the selected model.", error)
-        } catch (error: IllegalArgumentException) {
-            throw LocalModelStoreException("The selected document provider could not be read.", error)
         }
 
         if (!displayName.endsWith(".litertlm", ignoreCase = true)) {

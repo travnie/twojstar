@@ -153,8 +153,6 @@ class ManagedModelInstaller(
                     cacheDir = null,
                 ),
             )
-        } catch (error: CancellationException) {
-            throw error
         } catch (error: LiteRtLmJniException) {
             throw ManagedModelInstallException("The offline model could not initialize.", error)
         } catch (error: IllegalStateException) {
@@ -190,8 +188,6 @@ class ManagedModelInstaller(
                 try {
                     engine.close()
                 } catch (error: LiteRtLmJniException) {
-                    closeFailure = error
-                } catch (error: IllegalStateException) {
                     closeFailure = error
                 } catch (error: UnsatisfiedLinkError) {
                     closeFailure = error
@@ -235,8 +231,6 @@ class ManagedModelInstaller(
                 onProgress = onProgress,
             )
         } catch (error: CancellationException) {
-            throw error
-        } catch (error: ManagedModelInstallException) {
             throw error
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
@@ -402,8 +396,6 @@ class ManagedModelInstaller(
             StatFs(appContext.filesDir.absolutePath).availableBytes
         } catch (error: IllegalArgumentException) {
             throw ManagedModelInstallException("Could not inspect available storage.", error)
-        } catch (error: SecurityException) {
-            throw ManagedModelInstallException("Android blocked the storage availability check.", error)
         }
 
         val requiredBytes = (spec.sizeBytes * 2L) + MIN_FREE_SPACE_BYTES

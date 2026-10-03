@@ -163,10 +163,6 @@ class OpenAiCompatibleCompletionClient(
         TransportOutcome.Failure(
             CompletionOutcome.Failure("Provider network request failed.", error),
         )
-    } catch (error: UnresolvedAddressException) {
-        TransportOutcome.Failure(
-            CompletionOutcome.Failure("Provider network request failed.", error),
-        )
     }
 
     private fun endpoint(): String = URLBuilder(config.baseUrl.trimEnd('/'))
