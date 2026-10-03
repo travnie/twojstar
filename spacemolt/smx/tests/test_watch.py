@@ -2,13 +2,8 @@ import io
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from smx.cli import (
-    BackendResult,
-    _passthrough,
-    cmd_watch,
-    extract_smx_globals,
-    watch_command_is_read_only,
-)
+from smx.cli import (BackendResult, _passthrough, cmd_watch,
+                     extract_smx_globals, watch_command_is_read_only)
 
 
 class FakeBackend:
