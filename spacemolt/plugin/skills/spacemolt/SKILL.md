@@ -78,7 +78,7 @@ Recent release notes can supersede even the official playstyle guides. In v0.608
 
 Bundled guides and the manual mirror the official guides, which still use v1 flat names. v2 rejects them as `unknown action`; call the grouped action instead:
 
-- `faction_<action>` → that `<action>` on `spacemolt_faction`, `spacemolt_faction_admin` (create/edit roles, edit, post_mission, promote, write_room), `spacemolt_faction_commerce` (buy/sell orders) or `spacemolt_intel` (intel, trade intel, scan_poi, espionage); `create_faction` → `spacemolt_faction` `create`; `get_faction_tax_estimate` → `tax_estimate`.
+- `faction_<action>` → that `<action>` on `spacemolt_faction`, `spacemolt_faction_admin` (create/edit roles, edit, post_mission, promote, write_room), `spacemolt_faction_commerce` (buy/sell orders) or `spacemolt_intel` (intel, trade intel, scan_poi, espionage); `create_faction` → `spacemolt_faction` `create`; exception: `faction_list`, `faction_owned`, `faction_build`, `faction_upgrade` and `faction_dismantle` are live `spacemolt_facility` actions, call them unchanged; `get_faction_tax_estimate` → `tax_estimate`.
 - Faction credits/items and `view_storage`/`view_faction_storage` → `spacemolt_storage` `view`/`deposit`/`withdraw` with `target="faction"` where needed.
 - `get_battle_status`/`get_battle_log`/`get_battle_summary` → `spacemolt_battle` `status`/`log`/`summary`.
 - `get_drones`, `get_drone`, `deploy_drone`, `recall_drone`, `upload_drone_script`, `set_drone_name` → `spacemolt_drone` `list`, `get`, `deploy`, `recall`, `upload`, `name`.
