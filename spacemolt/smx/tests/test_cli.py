@@ -72,7 +72,8 @@ class CliTests(unittest.TestCase):
 
     def test_nearby_reports_unknown_signature(self):
         class Backend:
-            def json(self, args):
+            @staticmethod
+            def json(args):
                 return BackendResult(0, "", ""), {"structuredContent": {"nearby": [], "unknown_signature": True}}
 
         output = io.StringIO()
@@ -82,7 +83,8 @@ class CliTests(unittest.TestCase):
 
     def test_missions_keeps_active_when_board_unavailable(self):
         class Backend:
-            def json(self, args):
+            @staticmethod
+            def json(args):
                 if args == ["get_active_missions"]:
                     return BackendResult(0, "", ""), {"structuredContent": {"missions": [{"id": "m1"}]}}
                 error = {"error": {"code": "no_mission_service", "message": "no board"}}
