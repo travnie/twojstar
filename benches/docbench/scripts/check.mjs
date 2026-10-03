@@ -103,6 +103,21 @@ for (const capability of [
     throw new Error(`Document workspace is missing ${capability} support.`);
   }
 }
+for (const saveGuard of [
+  "function canWriteHandle(handle)",
+  'typeof handle.createWritable === "function"',
+  'state.handle = canWriteHandle(handle) ? handle : null',
+  'saveButton.textContent = directSave ? "Save" : nativeSaveSupported ? "Save as…" : "Download"',
+  "This browser cannot overwrite the opened file",
+]) {
+  if (!documentEnhancements.includes(saveGuard)) {
+    throw new Error(`Document save fallback is missing guard: ${saveGuard}`);
+  }
+}
+if (!app.includes("textFormats.detectFormat(name, text)")
+  || !documentEnhancements.includes("textFormats.detectFormat(name, text)")) {
+  throw new Error("Document open paths must share content-aware format detection.");
+}
 if (!documentEnhancements.includes("printDocument")
   || !documentEnhancements.includes('document.body.dataset.printWorkspace = "document"')) {
   throw new Error("Document workspace is missing local print support.");

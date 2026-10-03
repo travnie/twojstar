@@ -361,8 +361,8 @@
     }
   }
 
-  function setFormatFromFilename(name) {
-    formatSelect.value = textFormats.formatFromFilename(name);
+  function setFormatFromFile(name, text) {
+    formatSelect.value = textFormats.detectFormat(name, text);
   }
 
   async function readTextFile(file) {
@@ -518,7 +518,7 @@
     editor.value = normalizeEol(raw);
     eolSelect.value = eol.target;
     filenameLabel.textContent = state.filename;
-    setFormatFromFilename(state.filename);
+    setFormatFromFile(state.filename, raw);
     document.dispatchEvent(new Event("docbench:document-change"));
     renderValidation();
   }
