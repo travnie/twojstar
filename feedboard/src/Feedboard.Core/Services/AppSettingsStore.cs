@@ -10,6 +10,7 @@ public sealed class AppSettingsStore
     public static readonly IReadOnlyList<int> SupportedRefreshIntervals = new[] { 5, 15, 30, 60 };
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    private static readonly AppSettings DefaultSettings = new();
     private readonly string _path;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -25,18 +26,18 @@ public sealed class AppSettingsStore
         try
         {
             await using var processLock = await AcquireProcessLockAsync(cancellationToken);
-            if (!File.Exists(_path)) return new AppSettings();
+            if (!File.Exists(_path)) return DefaultSettings;
 
             try
             {
                 await using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-                var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, cancellationToken) ?? new AppSettings();
+                var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, cancellationToken) ?? DefaultSettings;
                 return Normalize(settings);
             }
             catch (JsonException)
             {
                 QuarantineCorruptStore();
-                return new AppSettings();
+                return DefaultSettings;
             }
         }
         finally
@@ -65,7 +66,7 @@ public sealed class AppSettingsStore
     private static AppSettings Normalize(AppSettings settings) =>
         SupportedRefreshIntervals.Contains(settings.RefreshIntervalMinutes)
             ? settings
-            : new AppSettings();
+            : DefaultSettings;
 
     private async Task WriteAsync(AppSettings settings, CancellationToken cancellationToken)
     {
