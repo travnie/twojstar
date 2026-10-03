@@ -5,6 +5,14 @@ import android.os.StatFs
 import com.google.ai.edge.litertlm.LiteRtLmJniException
 import io.github.twojstar.intentkeyboard.CompletionOutcome
 import io.github.twojstar.intentkeyboard.ModelPrompt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -15,14 +23,6 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 data class ManagedModelSpec(
     val id: String,

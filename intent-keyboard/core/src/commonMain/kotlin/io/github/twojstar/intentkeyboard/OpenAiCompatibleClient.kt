@@ -16,7 +16,6 @@ import io.ktor.http.Url
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.IOException

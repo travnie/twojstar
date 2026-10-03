@@ -9,13 +9,13 @@ import com.google.ai.edge.litertlm.LiteRtLmJniException
 import io.github.twojstar.intentkeyboard.CompletionOutcome
 import io.github.twojstar.intentkeyboard.ModelPrompt
 import io.github.twojstar.intentkeyboard.SemanticCompletionClient
-import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 
 data class LiteRtLmCpuConfig(
     val modelPath: String,

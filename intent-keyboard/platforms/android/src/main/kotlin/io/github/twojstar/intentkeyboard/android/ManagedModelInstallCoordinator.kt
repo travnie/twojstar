@@ -1,7 +1,6 @@
 package io.github.twojstar.intentkeyboard.android
 
 import android.content.Context
-import java.util.concurrent.CopyOnWriteArraySet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +9,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.CopyOnWriteArraySet
 
 sealed interface ManagedModelInstallState {
     data object Idle : ManagedModelInstallState
