@@ -8,27 +8,25 @@ const GATEWAY_HARD_DENY = new Set(["self_destruct"]);
 // Commands that run without allow_irreversible=true: reads plus routine, recoverable
 // gameplay. Everything else, including any action added to the game later, needs the override.
 const SAFE_ACTIONS = new Set([
-  // reads (flat names)
+  // reads (core and uniquely named actions)
   "analyze_market","browse_ships","captains_log_get","captains_log_list","catalog",
   "commission_quote","commission_status","completed_missions","estimate_purchase",
-  "faction_garages","faction_get_invites","faction_info","faction_intel_status","faction_list",
-  "faction_list_missions","faction_query_intel","faction_query_trade_intel","faction_rooms",
-  "faction_trade_intel_status","find_route","forum_get_thread","forum_list",
-  "get_achievements","get_action_log","get_active_missions","get_base","get_base_cost",
-  "get_battle_log","get_battle_status","get_battle_summary","get_cargo","get_chat_history",
-  "get_commands","get_drone","get_drones","get_empire_info","get_faction_achievements",
-  "get_faction_tax_estimate","get_guide","get_insurance_quote","get_location","get_map",
-  "get_missions","get_nearby","get_notes","get_notification_settings","get_player","get_poi",
-  "get_queue","get_ship","get_skills","get_state","get_status","get_system","get_system_agents",
-  "get_tax_estimate","get_trades","get_version","get_wrecks","help","inspect","list_ships","claim_insurance",
-  "read_note","search_systems","view_completed_mission","view_faction_storage","view_insurance",
-  "view_market","view_orders","view_ship_buy_orders","view_storage",
-  // reads (grouped v2 names, e.g. spacemolt_drone/list)
-  "get","list","info",
+  "find_route","forum_get_thread","forum_list",
+  "get_achievements","get_action_log","get_active_missions","get_base","get_cargo","get_chat_history",
+  "get_commands","get_empire_info","get_faction_achievements","get_guide","get_invites",
+  "get_location","get_map","get_missions","get_nearby","get_notes","get_notification_settings",
+  "get_player","get_poi","get_queue","get_ship","get_skills","get_state","get_status","get_system",
+  "get_system_agents","get_tax_estimate","get_trades","get_version","help","inspect","list_ships",
+  "read_note","search_systems","view_completed_mission","view_market","view_orders",
+  "view_ship_buy_orders",
+  "base_cost","faction_list","garages","intel_status","list_missions","query_intel","query_trade_intel","rooms",
+  "tax_estimate","trade_intel_status",
+  // reads (grouped v2 names shared by tools, e.g. spacemolt_drone/list; each is a read in every tool)
+  "get","list","info","status","log","summary","view","quote","wrecks","policies",
   // routine gameplay (captains_log_add is left out: on a full log it evicts the oldest entry)
   "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
   "accept_mission","complete_mission","decline_mission","chat",
-  "tow_wreck","loot_wreck","recall_drone","recall","buy"
+  "tow","loot","recall","buy"
 ]);
 // Self-defence inside a battle someone else started. These require an active battle, so they
 // cannot start a fight; attack, hunt, engage and advance still need the override.
@@ -460,7 +458,7 @@ const DAILY_ALLOWED = {
     "get_base","get_ship","get_cargo","get_skills","get_achievements","get_active_missions",
     "get_missions","completed_missions","view_completed_mission","get_notifications","get_map",
     "search_systems","find_route","get_commands","get_guide","inspect","scan",
-    "travel","jump","dock","undock","refuel","repair","mine","complete_mission","get_battle_status"
+    "travel","jump","dock","undock","refuel","repair","mine","complete_mission"
   ],
   spacemolt_social: [
     "get_chat_history","chat","captains_log_add","captains_log_list","captains_log_get",
@@ -468,7 +466,7 @@ const DAILY_ALLOWED = {
   ],
   spacemolt_ship: ["list_ships","browse_ships","view_ship_buy_orders","commission_status"],
   spacemolt_drone: ["list","get","recall"],
-  spacemolt_battle: ["retreat","stance","target","reload"]
+  spacemolt_battle: ["status","retreat","stance","target","reload"]
 };
 
 function dget(obj, path) {
@@ -522,7 +520,7 @@ function dailyAllowed(tool, action, args) {
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
     if (!args || !args.content || String(args.content).length > 800) return false;
   }
-  if (tool === "spacemolt_battle" && !isDefensiveBattleAction(action, args)) return false;
+  if (tool === "spacemolt_battle" && action !== "status" && !isDefensiveBattleAction(action, args)) return false;
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
   if ((action === "refuel" || action === "repair") && args?.quantity != null) {
     const qty = Number(args.quantity);
@@ -598,7 +596,7 @@ const DAILY_SYSTEM_PROMPT =
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
   "Return exactly one JSON object and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
   "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
