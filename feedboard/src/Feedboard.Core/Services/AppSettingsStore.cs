@@ -19,24 +19,26 @@ public sealed class AppSettingsStore
         _path = path ?? Path.Combine(root, "settings.json");
     }
 
+    private static readonly AppSettings DefaultSettings = new AppSettings();
+
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
         try
         {
             await using var processLock = await AcquireProcessLockAsync(cancellationToken);
-            if (!File.Exists(_path)) return new AppSettings();
+            if (!File.Exists(_path)) return DefaultSettings;
 
             try
             {
                 await using var stream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-                var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, cancellationToken) ?? new AppSettings();
+                var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, JsonOptions, cancellationToken) ?? DefaultSettings;
                 return Normalize(settings);
             }
             catch (JsonException)
             {
                 QuarantineCorruptStore();
-                return new AppSettings();
+                return DefaultSettings;
             }
         }
         finally
@@ -62,11 +64,12 @@ public sealed class AppSettingsStore
         }
     }
 
+    private static readonly AppSettings DefaultAppSettings = new AppSettings();
+
     private static AppSettings Normalize(AppSettings settings) =>
         SupportedRefreshIntervals.Contains(settings.RefreshIntervalMinutes)
             ? settings
-            : new AppSettings();
-
+            : DefaultAppSettings;
     private async Task WriteAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         var directory = GetDirectory();
