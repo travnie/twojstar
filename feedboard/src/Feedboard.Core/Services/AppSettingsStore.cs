@@ -10,6 +10,7 @@ public sealed class AppSettingsStore
     public static readonly IReadOnlyList<int> SupportedRefreshIntervals = new[] { 5, 15, 30, 60 };
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    private static readonly AppSettings DefaultSettings = new();
     private readonly string _path;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -18,8 +19,6 @@ public sealed class AppSettingsStore
         var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Feedboard");
         _path = path ?? Path.Combine(root, "settings.json");
     }
-
-    private static readonly AppSettings DefaultSettings = new AppSettings();
 
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -64,12 +63,11 @@ public sealed class AppSettingsStore
         }
     }
 
-    private static readonly AppSettings DefaultAppSettings = new AppSettings();
-
     private static AppSettings Normalize(AppSettings settings) =>
         SupportedRefreshIntervals.Contains(settings.RefreshIntervalMinutes)
             ? settings
-            : DefaultAppSettings;
+            : DefaultSettings;
+
     private async Task WriteAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         var directory = GetDirectory();
