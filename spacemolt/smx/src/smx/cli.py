@@ -238,9 +238,14 @@ def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
     kind = str(entity.get("kind") or entity.get("type") or "").lower()
     text = " ".join(str(entity.get(k, "")) for k in ("name", "ship", "ship_class", "class", "role")).lower()
 
+    if entity.get("offline") is True:
+        return 0, "⬜", ["offline"]
     if "pirate" in kind or "pirate" in text:
         score += 3
         reasons.append("pirate")
+    if entity.get("is_boss") is True:
+        score += 3
+        reasons.append("boss")
     if entity.get("in_combat") is True:
         score += 2
         reasons.append("in combat")
@@ -290,10 +295,14 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
         assessments.append({"name": _entity_name(entity), "kind": kind, "score": score, "marker": marker, "reasons": reasons, "entity": entity})
     assessments.sort(key=lambda row: row["score"], reverse=True)
 
+    content = unwrap_payload(payload)
+    unknown_signature = isinstance(content, dict) and content.get("unknown_signature") is True
     if ns.json:
-        print(json.dumps({"assessment": assessments, "source": payload}, indent=2, ensure_ascii=False))
+        print(json.dumps({"assessment": assessments, "unknown_signature": unknown_signature, "source": payload}, indent=2, ensure_ascii=False))
         return 0
 
+    if unknown_signature:
+        print("❔ Unknown signature at this POI (not listed below).")
     if not assessments:
         print("No visible nearby actors.")
         return 0
@@ -319,8 +328,10 @@ def cmd_missions(backend: Backend, argv: list[str]) -> int:
         sys.stderr.write(active_result.stderr or active_result.stdout)
         return active_result.returncode
     if available_result.returncode != 0:
-        sys.stderr.write(available_result.stderr or available_result.stdout)
-        return available_result.returncode
+        # The board is local (e.g. no_mission_service at small POIs); keep active missions visible.
+        if not (isinstance(available, dict) and "error" in available):
+            message = (available_result.stderr or available_result.stdout).strip()
+            available = {"error": {"message": message or f"backend exited {available_result.returncode}"}}
 
     combined = {"active": active, "available": available}
     if ns.json:
@@ -700,11 +711,18 @@ def _project_backend_payload(backend: Backend, args: list[str], fields: list[str
 
 WATCH_SAFE_EXACT = {"accounts", "catalog", "help"}
 WATCH_SAFE_PREFIXES = ("get_", "list_", "view_", "find_", "search_")
+# Prefix matches that are live mutations (docs MCP marks them [mutation]).
+WATCH_UNSAFE_EXACT = {"list_for_sale", "list_ship_for_sale"}
 
 
-def watch_command_is_read_only(command: str) -> bool:
+def watch_command_is_read_only(command: str, args: Iterable[str] = ()) -> bool:
     normalized = ALIASES.get(normalize_command(command), normalize_command(command))
     action = normalized.split("/", 1)[-1]
+    if action in WATCH_UNSAFE_EXACT:
+        return False
+    if action == "get_notifications":
+        # get_notifications drains the queue unless clear=false is passed.
+        return any(arg.replace(" ", "").lower() == "clear=false" for arg in args)
     return normalized in WATCH_SAFE_EXACT or action in WATCH_SAFE_EXACT or action.startswith(WATCH_SAFE_PREFIXES)
 
 
@@ -778,10 +796,11 @@ def cmd_watch(backend: Backend, argv: list[str]) -> int:
     command = command_args[0]
     normalized = ALIASES.get(normalize_command(command), normalize_command(command))
     official_args = [normalized, *command_args[1:]]
-    if not watch_command_is_read_only(command):
+    if not watch_command_is_read_only(command, command_args[1:]):
         print(
             f'smx: refusing to watch potentially mutating command "{command}". '
-            "Use watch only with read-only get/list/view/find/search commands.",
+            "Use watch only with read-only get/list/view/find/search commands "
+            "(get_notifications only with clear=false).",
             file=sys.stderr,
         )
         return 2
@@ -1030,6 +1049,16 @@ def _passthrough(backend: Backend, argv: list[str], fields: list[str] | None = N
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except BrokenPipeError:
+        # Output piped into head/less that closed early; exit quietly like coreutils.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        return 141
+
+
+def _main(argv: list[str] | None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
         profile, fields, argv = extract_smx_globals(argv)

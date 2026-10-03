@@ -3,7 +3,7 @@ import io
 import json
 import unittest
 
-from smx.cli import BackendResult, assess_threat, cmd_nearby, cmd_sell_all, extract_cargo_items, extract_global_profile, normalize_command, parse_help_commands, suggest
+from smx.cli import BackendResult, assess_threat, cmd_missions, cmd_nearby, cmd_sell_all, extract_cargo_items, extract_global_profile, normalize_command, parse_help_commands, suggest
 
 
 class CliTests(unittest.TestCase):
@@ -62,6 +62,38 @@ class CliTests(unittest.TestCase):
             "player": "Scout", "pirate": "Raider", "empire NPC": "Patrol",
         })
         self.assertGreater(next(row["score"] for row in rows if row["kind"] == "pirate"), 0)
+
+    def test_threat_scores_boss_pirates_and_ignores_offline_players(self):
+        boss, _, reasons = assess_threat({"kind": "pirate", "is_boss": True})
+        regular, _, _ = assess_threat({"kind": "pirate"})
+        self.assertGreater(boss, regular)
+        self.assertIn("boss", reasons)
+        self.assertEqual(assess_threat({"kind": "player", "offline": True, "in_combat": True})[0], 0)
+
+    def test_nearby_reports_unknown_signature(self):
+        class Backend:
+            def json(self, args):
+                return BackendResult(0, "", ""), {"structuredContent": {"nearby": [], "unknown_signature": True}}
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(cmd_nearby(Backend(), []), 0)
+        self.assertIn("Unknown signature", output.getvalue())
+
+    def test_missions_keeps_active_when_board_unavailable(self):
+        class Backend:
+            def json(self, args):
+                if args == ["get_active_missions"]:
+                    return BackendResult(0, "", ""), {"structuredContent": {"missions": [{"id": "m1"}]}}
+                error = {"error": {"code": "no_mission_service", "message": "no board"}}
+                return BackendResult(1, json.dumps(error), ""), error
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(cmd_missions(Backend(), ["--json"]), 0)
+        combined = json.loads(output.getvalue())
+        self.assertEqual(combined["active"]["structuredContent"]["missions"], [{"id": "m1"}])
+        self.assertEqual(combined["available"]["error"]["code"], "no_mission_service")
 
     def test_sell_all_reports_actual_fill_and_unsold_items(self):
         calls = []
