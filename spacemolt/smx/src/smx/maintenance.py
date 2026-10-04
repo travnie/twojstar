@@ -251,7 +251,7 @@ def backend_status(*, online: bool = True) -> dict[str, Any]:
     current: str | None = None
     error: str | None = None
 
-    candidate = managed if managed.is_file() else Path(resolved)
+    candidate = Path(resolved)
     try:
         if candidate.is_file() or shutil.which(str(candidate)):
             current = backend_version(candidate)
