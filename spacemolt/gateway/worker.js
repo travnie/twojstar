@@ -1,5 +1,5 @@
 const GAME = "https://game.spacemolt.com";
-const VERSION = "2026-10-03.1";
+const VERSION = "2026-10-04.1";
 const STATE_KEY = "session:v2";
 
 const TOOL_RE = /^spacemolt(?:_[a-z0-9_]+)?$/;
@@ -298,11 +298,13 @@ function mcpTools() {
     {
       name:"spacemolt_state",
       description:"Get Gremlin-5 current SpaceMolt status through the secure gateway.",
+      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:true, openWorldHint:true},
       inputSchema:{type:"object",properties:{}}
     },
     {
       name:"spacemolt_command",
       description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, buy, missions, chat, ...) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
+      annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
       inputSchema:{
         type:"object",
         properties:{
@@ -317,11 +319,13 @@ function mcpTools() {
     {
       name:"spacemolt_ensure_docked",
       description:"Best-effort safety action: if not docked, dock at the current POI or a station/outpost in the current system. Does not jump systems.",
+      annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
       inputSchema:{type:"object",properties:{}}
     },
     {
       name:"spacemolt_health",
       description:"Check gateway readiness without exposing secrets.",
+      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:true, openWorldHint:false},
       inputSchema:{type:"object",properties:{}}
     }
   ];
@@ -526,7 +530,8 @@ function dailyAllowed(tool, action, args) {
   if (tool === "spacemolt_social" && action === "chat") {
     const ch = String(args?.target || "");
     if (["private","faction","local","system"].indexOf(ch) < 0) return false;
-    if (!args || !args.content || String(args.content).length > 800) return false;
+    if (typeof args?.content !== "string" || !args.content || [...args.content].length > 500) return false;
+    if (ch === "private" && (typeof args.target_id !== "string" || !args.target_id)) return false;
   }
   if (tool === "spacemolt_battle" && action !== "status" && !isDefensiveBattleAction(action, args)) return false;
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
