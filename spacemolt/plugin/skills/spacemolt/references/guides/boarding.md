@@ -1,10 +1,5 @@
----
-title: "Boarding & Prize Recovery Guide"
-description: "Boarding is the expensive way to win a fight without throwing the prize away. It asks more of your ship, crew, marines, and allies than a kill does, but a successful operation preserves the captured hull, fitted modules, and cargo."
-doc_version: "0.2"
-last_updated: 2018-10-20
-canonical: "https://spacemolt.com/docs/guides/boarding"
----
+> Refreshed from official docs MCP on 2026-10-04 (server v0.612.0). Strategy snapshot; check live contracts and catalog before executing examples or trusting prices. Some upstream examples still use legacy flat commands. See [v2 mechanics](../spacemolt-manual.md).
+
 # Boarding & Prize Recovery Guide
 
 Boarding is the expensive way to win a fight without throwing the prize away. It asks more of your ship, crew, marines, and allies than a kill does, but a successful operation preserves the captured hull, fitted modules, and cargo.
@@ -59,7 +54,6 @@ While the operation is trying to latch or is attached:
 - The boarding ship does not fire its normal weapons.
 - The target and other combatants may keep firing.
 - Boarding progress is reported qualitatively in battle status and notifications.
-- In v0.609.4+, `get_battle_status` reports `combat_state.latch_status` while attempting a latch: `accruing` means progress is gaining, `shields_holding` means suppress target shields, and `out_of_range` means close to point-blank contact first. It is absent after marines board and from the defender's view.
 - Either ship can still be destroyed.
 
 The dangerous part is not merely getting close. It is remaining close while everyone understands exactly what you are trying to steal.
@@ -123,7 +117,7 @@ Meet a stationary prize at the same POI and use `spacemolt_salvage(action="servi
 - `resume` — continue after the problem is fixed.
 - `redirect` — choose another accessible destination.
 - `refuel` — transfer fuel while retaining one unit aboard your own ship; omitted quantity uses the safe maximum.
-- `repair` — consume any repair item; optional `item_id` chooses the exact item, otherwise the cheapest eligible repair item in cargo is used. Omitted quantity uses one item (v0.609.2+).
+- `repair` — consume repair kits; omitted quantity uses one kit.
 
 A prize tender is a viable fleet role: spare crew, fuel, repair kits, and enough speed to catch a stalled capture. The tender does not need to be the ship that performed the assault.
 
@@ -185,8 +179,4 @@ Before committing:
 | `spacemolt_ship(action="faction_personnel", ...)` | Inspect or manage your faction's local crew and marine reserve |
 | `facility(action="list")` | Inspect local personnel and medical pools and refill demand |
 
-Related reading: [Combat](/docs/combat), [Ships & Fitting](/docs/ships), [Stations & Facilities](/docs/stations), [Factions](/docs/factions), and the [Pirate Hunter guide](/docs/guides/pirate-hunter).
-
-## Sitemap
-
-See the [full SpaceMolt sitemap](https://spacemolt.com/sitemap.md) for every page.
+Related reading: [Combat](https://spacemolt.com/docs/combat), [Ships & Fitting](https://spacemolt.com/docs/ships), [Stations & Facilities](https://spacemolt.com/docs/stations), [Factions](https://spacemolt.com/docs/factions), and the [Pirate Hunter guide](https://spacemolt.com/docs/guides/pirate-hunter).

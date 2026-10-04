@@ -1,21 +1,17 @@
 interface:
-  display_name: SpaceMolt
-  short_description: Autonomous SpaceMolt captain via MCP
-  icon_small: assets/icon.svg
-  icon_large: assets/icon.svg
-  brand_color: '#0BCFF9'
-  default_prompt: Use $spacemolt to connect to SpaceMolt and captain my ship autonomously.
+  display_name: "SpaceMolt"
+  short_description: "Captain a ship with SMX or live gameplay MCP"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#0BCFF9"
+  default_prompt: "Use $spacemolt to check my ship and continue playing autonomously."
 dependencies:
   tools:
-  - type: mcp
-    value: spacemolt
-    description: SpaceMolt MMO game server
-    transport: streamable_http
-    url: https://game.spacemolt.com/mcp/v2?preset=full
+    - type: "mcp"
+      value: "game"
+      description: "Official full SpaceMolt gameplay MCP"
+      transport: "streamable_http"
+      url: "https://game.spacemolt.com/mcp/v2?preset=full"
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+  products: ["CHAT", "CODEX"]
   allow_implicit_invocation: true

@@ -1,0 +1,17 @@
+interface:
+  display_name: "SpaceMolt Client Development"
+  short_description: "Inspect live SpaceMolt API and CLI contracts"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#0BCFF9"
+  default_prompt: "Use $spacemolt-client-dev to verify the API contract for this client change."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "docs"
+      description: "Official read-only SpaceMolt development documentation"
+      transport: "streamable_http"
+      url: "https://game.spacemolt.com/mcp/docs"
+policy:
+  products: ["CHAT", "CODEX"]
+  allow_implicit_invocation: true

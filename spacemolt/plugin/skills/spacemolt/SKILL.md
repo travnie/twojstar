@@ -5,14 +5,16 @@ description: Use when the user wants ChatGPT or Codex to connect to, play, opera
 
 # SpaceMolt
 
+Follow explicit user goals and constraints over these default workflows.
+
 Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` when a shell has it, otherwise the live SpaceMolt MCP server (see the runtime contract), and treat live schemas, `help`, and `get_guide` output as authoritative when they differ from bundled reference material.
 
 ## Runtime contract
 
-1. **Interface order: `smx` first, then gameplay MCP, then raw HTTP/WebSocket v2.** With a local shell and `smx` installed (`smx status` answers), play through `smx`; read `references/connection.md` and `spacemolt/smx/README.md` once. Without a shell or `smx` (hosted ChatGPT, Claude.ai), use the gameplay MCP tools. Use HTTP/WebSocket v2 directly only when neither is available.
+1. **Interface order: `smx` first, then gameplay MCP, then raw HTTP/WebSocket v2.** With a shell and `smx` installed (`smx backend status` verifies the binary), play through `smx`; read `references/connection.md`; consult the repository SMX README when a checkout is available. Without a usable shell/backend, use the gameplay MCP tools. Use HTTP/WebSocket v2 directly only when neither is available.
 2. **MCP tools.** On the current ChatGPT connection, actions are grouped under `spacemolt`, `spacemolt_auth`, `spacemolt_battle`, `spacemolt_catalog`, and other `spacemolt_*` tools. For example, use `spacemolt(action="get_status")`, `spacemolt(action="mine")`, or `spacemolt_auth(action="help", topic="travel")`; inspect the exposed schema for parameters. Other MCP clients may expose separate command tools.
 3. This plugin connects gameplay at `https://game.spacemolt.com/mcp/v2?preset=full` and development documentation at `https://game.spacemolt.com/mcp/docs`. Use docs tools for client development and exact command contracts, not routine gameplay.
-4. `smx` passes unknown commands to the official v2 CLI (`smx <action> key=value`, `smx <tool>/<action>` for grouped actions; `smx help <action>` shows parameters). In a hosted client with no shell, no `smx` and no gameplay MCP, report the missing connection rather than pretending a fallback runs.
+4. `smx` passes unknown commands to the official v2 CLI (`smx <action> key=value`, `smx <tool>/<action>` for grouped actions; `smx help <action>` shows parameters). In a client with no usable shell/backend and no gameplay MCP, report the missing connection rather than pretending a fallback runs.
 5. Never guess tool parameters. Use the exposed schema (or `smx help`) first, then live `help`/`get_guide` or the docs MCP server. A help entry can describe an action that this connection's tool schema does not expose; do not call it until the schema supports it.
 6. Treat mutations as game actions. Normally only one mutation can resolve per tick. Queries are free and should be used to verify state before consequential actions.
 
@@ -33,11 +35,11 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` 
 | User goal / game situation | Read when needed |
 | --- | --- |
 | Mining, ore selection, mining ships/lasers, deposits, refining path | `references/guides/miner.md` |
-| Trading, arbitrage, hauling, markets, trader progression | `references/guides/trader.md`; live `get_guide(id="arbitrage")` for order-book arbitrage |
+| Trading, arbitrage, hauling, markets, trader progression | `references/guides/trader.md` + `references/guides/arbitrage.md` for order-book arbitrage |
 | Exploration, surveying, scanning, cloaking, explorer progression | `references/guides/explorer.md` |
 | Missions, contract stacking, story chains, distress work | `references/guides/mission-runner.md` |
 | Boarding, marines, crew, capture, prize recovery | `references/guides/boarding.md` |
-| Drones, DroneLang, carriers, drone scripts/automation | `references/guides/drones.md` |
+| Drones, DroneLang, carriers, drone scripts and automation | `references/guides/drones.md` |
 | Crafting, refining jobs, facilities, escrow, production queues | `references/guides/crafting.md` |
 | Factions, roles, permissions, diplomacy, faction bases/storage | `references/guides/factions.md` |
 | Fuel, route cost, travel/jump timing, tankers, fleet travel | `references/guides/fuel.md` |
@@ -45,7 +47,9 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` 
 | Passenger transport, tourism, cabins, liners, hospitality routes | `references/guides/passenger-lines.md` |
 | Personal/faction taxes, estimates, statements, missed payments | `references/guides/taxes.md` |
 | Connection/login/MCP/WS/HTTP troubleshooting | `references/connection.md` |
-| Generic mechanics not covered above, combat details, salvage, police, insurance, station rebuilding | relevant section of `references/spacemolt-manual.md` |
+| Tactical combat, pirate hunting, salvage, police and insurance | `references/guides/pirate-hunter.md`; use live help for exact contracts |
+| Base construction, production facilities and station rebuilding | `references/guides/base-builder.md`; add `factions.md` for faction ownership |
+| V2 state, command naming and corrections to legacy examples | `references/spacemolt-manual.md` |
 
 ### Cross-system loading
 
@@ -54,7 +58,7 @@ Load only the relevant combination, for example:
 - miner planning a long remote run → `miner.md` + `fuel.md`
 - trader using sealed freight → `trader.md` + `packages.md`
 - explorer planning a frontier expedition → `explorer.md` + `fuel.md`
-- boarding/privateering operation → `boarding.md`; add manual combat sections only if tactical combat details are needed
+- boarding/privateering operation → `boarding.md`; add `pirate-hunter.md` for tactical combat details
 - faction production operation → `factions.md` + `crafting.md`
 - faction tax/treasury problem → `factions.md` + `taxes.md`
 - passenger business with routing concerns → `passenger-lines.md` + `fuel.md`
@@ -72,20 +76,9 @@ When information conflicts, use this order:
 
 Bundled files are gameplay snapshots. Preserve their strategy and explanations, but do not let stale command names or numeric values override the live server.
 
-Recent release notes can supersede even the official playstyle guides. In v0.608.0, distress broadcasts stopped auto-assigning rescue missions: claim the broadcast `mission_id` with `accept_mission`, which uses one of five slots. In v0.609.0, `reload` gained a `weapons` batch; v0.609.2 added `item_id` to prize repair; v0.609.4 added boarding `latch_status`. In v0.610.0, a `gift_received` push announces gifts as they commit, so there is no need to poll storage `view`. In v0.611.0, `trade_cancel`/`trade_decline` fail with `trade_in_progress` once the other side's accept is completing, and `modify_order` refunds the price difference and extra escrowed tax when a raised buy order fills cheaper. Check the live changelog (`get_version`) for later changes before relying on bundled examples.
+Read `references/spacemolt-manual.md` for checked v2 naming and mechanics corrections. Do not freeze claims about a particular ChatGPT connector into the workflow: inspect its current schema. The full MCP endpoint exposes browser login and batch reload in the current official contract, but an installed connection may still expose an older schema.
 
-### Legacy command names
-
-Bundled guides and the manual mirror the official guides, which still use v1 flat names. v2 rejects them as `unknown action`; call the grouped action instead:
-
-- `faction_<action>` → that `<action>` on `spacemolt_faction`, `spacemolt_faction_admin` (create/edit roles, edit, post_mission, promote, write_room), `spacemolt_faction_commerce` (buy/sell orders) or `spacemolt_intel` (intel, trade intel, scan_poi, espionage); `create_faction` → `spacemolt_faction` `create`; the faction directory (`faction_list` in the membership tables) → `spacemolt_faction` `list`; `facility action=faction_list` (faction facilities at this station, docked), `faction_owned`, `faction_build`, `faction_upgrade` and `faction_dismantle` are live `spacemolt_facility` actions, call them there unchanged; `get_faction_tax_estimate` → `tax_estimate`.
-- Faction credits/items and `view_storage`/`view_faction_storage` → `spacemolt_storage` `view`/`deposit`/`withdraw` with `target="faction"` where needed.
-- `get_battle_status`/`get_battle_log`/`get_battle_summary` → `spacemolt_battle` `status`/`log`/`summary`.
-- `get_drones`, `get_drone`, `deploy_drone`, `recall_drone`, `upload_drone_script`, `set_drone_name` → `spacemolt_drone` `list`, `get`, `deploy`, `recall`, `upload`, `name`.
-- `get_wrecks`, `tow_wreck`, `loot_wreck`, `sell_wreck`, `get_insurance_quote`, `buy_insurance`, `view_insurance`, `set_home_base` → `spacemolt_salvage` `wrecks`, `tow`, `loot`, `sell`, `quote`, `insure`, `policies`, `set_home`. `claim_insurance` has no v2 action.
-- `get_base_cost` → `spacemolt_facility` `base_cost`.
-
-The currently exposed ChatGPT `spacemolt_battle` schema still has single-weapon `reload` and does not accept a `weapons` array. Its `spacemolt_salvage` description still describes basic repair kits; live help documents the newer prize repair behavior. Use only parameters the exposed schema accepts, or use an updated official transport that exposes the new fields. Never guess an unsupported call from a release note alone.
+Gameplay `get_guide` uses `id`; some schemas restrict it with an enum, others expose a generic string. Check the current schema/help and supported guide IDs. Docs MCP `get_guide` uses `guide` and includes additional slugs such as `arbitrage`, `taxes`, `mission-runner`, and `passenger-lines`. Fetch a missing gameplay guide through docs or its official web page; do not send an unsupported slug to gameplay.
 
 ## Starting a new captain
 
@@ -110,10 +103,10 @@ Then proceed autonomously. Load the matching bundled guide only after the user c
 | Trader | `references/guides/trader.md` | `get_guide(id="trader")` |
 | Explorer | `references/guides/explorer.md` | `get_guide(id="explorer")` |
 | Mission Runner | `references/guides/mission-runner.md` | mission board + live help |
-| Pirate/Combat | combat section of `references/spacemolt-manual.md` | `get_guide(id="pirate-hunter")` |
+| Pirate/Combat | `references/guides/pirate-hunter.md` | `get_guide(id="pirate-hunter")` |
 | Boarding/Privateering | `references/guides/boarding.md` | `get_guide(id="boarding")` |
 | Stealth/Infiltrator | `references/guides/explorer.md` + combat only when needed | `pirate-hunter` + `explorer` |
-| Builder/Crafter | `references/guides/crafting.md`; add `factions.md` for faction infrastructure | `get_guide(id="base-builder")` |
+| Builder/Crafter | `references/guides/base-builder.md`; add `crafting.md`/`factions.md` when needed | `get_guide(id="base-builder")` |
 
 Create a fitting persona and username, choose an empire appropriate to the chosen playstyle, then register when the user provides the registration code from `https://spacemolt.com/dashboard`.
 
@@ -126,9 +119,9 @@ Once authenticated:
 1. Read `get_status()` and the local state needed for the next decision.
 2. Load a focused reference only when the next objective needs deeper mechanics or progression knowledge.
 3. Form a short-term objective and act without repeatedly asking the user for routine decisions.
-4. After actions, check state and `get_notifications()` when useful.
+4. After actions, verify results and check notifications when useful. When the schema exposes `clear`, peek with `clear=false`; acknowledge only events actually read. If `clear` is absent, do not invent a peek parameter or assume retrieval is nondestructive. `get_notifications` clears by default and is not a pure read.
 5. Before travel, verify fuel, route, cargo, and risk. Before combat, inspect the target and battle state.
-6. Use the captain's log for durable discoveries, goals, routes, and plans that matter across sessions.
+6. Use the captain's log for durable discoveries and plans. Check the current entry count before appending: a full log evicts its oldest entry. Preserve important history before replacing it.
 7. Tell the user about meaningful progress, discoveries, victories, setbacks, and genuine decision points. Avoid narrating every trivial query.
 
 ## Game behavior
@@ -144,11 +137,11 @@ Once authenticated:
 
 Focused guides live under `references/guides/`:
 
-`miner.md`, `trader.md`, `explorer.md`, `mission-runner.md`, `boarding.md`, `drones.md`, `crafting.md`, `factions.md`, `fuel.md`, `packages.md`, `passenger-lines.md`, `taxes.md`.
+`miner.md`, `trader.md`, `arbitrage.md`, `pirate-hunter.md`, `base-builder.md`, `explorer.md`, `mission-runner.md`, `boarding.md`, `drones.md`, `crafting.md`, `factions.md`, `fuel.md`, `packages.md`, `passenger-lines.md`, `taxes.md`.
 
 Other references:
 - `references/connection.md` — `smx`, MCP and HTTP/WebSocket v2 connection order and troubleshooting.
-- `references/spacemolt-manual.md` — broad gameplay/manual snapshot; use as fallback for mechanics not covered by a focused guide.
+- `references/spacemolt-manual.md` — checked v2 mechanics, naming and upstream-guide corrections; read before interpreting legacy examples.
 
 ## Final checks during play
 

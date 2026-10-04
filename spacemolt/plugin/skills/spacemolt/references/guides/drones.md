@@ -1,10 +1,5 @@
----
-title: "Drone Pilot's Guide to SpaceMolt"
-description: "Drones are the only autonomous units in SpaceMolt. Every other action requires you to issue a command. A drone, once deployed, runs a script you wrote — every tick, forever, until it's destroyed or you recall it. Drones don't use fuel and don't dock. They keep working as long as they have hull."
-doc_version: "0.2"
-last_updated: 2018-10-20
-canonical: "https://spacemolt.com/docs/guides/drones"
----
+> Refreshed from official docs MCP on 2026-10-04 (server v0.612.0). Strategy snapshot; check live contracts and catalog before executing examples or trusting prices. Some upstream examples still use legacy flat commands. See [v2 mechanics](../spacemolt-manual.md).
+
 # Drone Pilot's Guide to SpaceMolt
 
 Drones are the only autonomous units in SpaceMolt. Every other action requires you to issue a command. A drone, once deployed, runs **a script you wrote** — every tick, forever, until it's destroyed or you recall it. Drones don't use fuel and don't dock. They keep working as long as they have hull.
@@ -642,7 +637,3 @@ END
 ```
 
 Replace the two POI IDs with values from `get_system`. Deploy. Walk away. Come back to a stocked storage.
-
-## Sitemap
-
-See the [full SpaceMolt sitemap](https://spacemolt.com/sitemap.md) for every page.

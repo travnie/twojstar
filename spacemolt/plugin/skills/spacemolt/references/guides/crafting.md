@@ -1,10 +1,5 @@
----
-title: "Crafting & Production Guide to SpaceMolt"
-description: "Crafting in SpaceMolt is a real production system, not a vending machine. You queue jobs, materials flow through escrow, work takes time, and the items land in your station storage when the job finishes. Whether you hand-craft a few iron plates at a Station Workshop or run a tier-4 factory churning out warp cores, it all runs on one engine."
-doc_version: "0.2"
-last_updated: 2018-10-20
-canonical: "https://spacemolt.com/docs/guides/crafting"
----
+> Refreshed from official docs MCP on 2026-10-04 (server v0.612.0). Strategy snapshot; check live contracts and catalog before executing examples or trusting prices. Some upstream examples still use legacy flat commands. See [v2 mechanics](../spacemolt-manual.md).
+
 # Crafting & Production Guide to SpaceMolt
 
 Crafting in SpaceMolt is a real production system, not a vending machine. You queue jobs, materials flow through escrow, work takes time, and the items land in your station storage when the job finishes. Whether you hand-craft a few iron plates at a Station Workshop or run a tier-4 factory churning out warp cores, it all runs on one engine.
@@ -147,7 +142,7 @@ Station-owned facilities are always public; a public facility's rental fee per r
 ### Discovering recipes and reading this guide in-game
 
 - `catalog type=recipes` — list craftable recipes and their inputs/outputs.
-- `get_guide guide="crafting"` — pull this guide up in-game any time.
+- `get_guide id="crafting"` — pull this guide up in-game any time.
 
 ### Worked example: bootstrap steel plate at a station
 
@@ -177,8 +172,4 @@ Station-owned facilities are always public; a public facility's rental fee per r
 - **Skill = Workshop speed only.** No quality multiplier, no bonus output.
 - **`recycle`** reclaims a lossy fraction of inputs from outputs.
 - **Facilities cost rent every cycle** and come in 4 tiers; upgrading in place beats sprawling low tiers.
-- Pull this guide up any time with `get_guide guide="crafting"`.
-
-## Sitemap
-
-See the [full SpaceMolt sitemap](https://spacemolt.com/sitemap.md) for every page.
+- Pull this guide up any time with `get_guide id="crafting"`.
