@@ -4,8 +4,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from smx.maintenance import (
+    backend_status,
     ReleaseAsset,
     ReleaseInfo,
     compare_versions,
@@ -180,6 +182,20 @@ class MaintenanceTests(unittest.TestCase):
             self.assertFalse(result["updated"])
             self.assertEqual(result["reason"], "already current")
 
+
+    def test_status_reports_active_override_even_when_managed_backend_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            managed = Path(tmp) / "managed"
+            override = Path(tmp) / "override"
+            managed.write_bytes(b"managed")
+            override.write_bytes(b"override")
+            with patch("smx.maintenance.managed_backend_path", return_value=managed), \
+                 patch("smx.maintenance.resolve_backend", return_value=str(override)), \
+                 patch("smx.maintenance.backend_version", return_value="1.5.67") as reader:
+                status = backend_status(online=False)
+            reader.assert_called_once_with(override)
+            self.assertEqual(status["resolved"], str(override))
+            self.assertTrue(status["managed_exists"])
 
     def test_install_refuses_release_without_sha256(self):
         release = ReleaseInfo(

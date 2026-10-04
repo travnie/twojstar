@@ -19,7 +19,7 @@ The official `spacemolt` binary remains authoritative for API models, auth and s
 
 ## Install
 
-The installers put `smx` on the user PATH through pipx and keep the managed official backend in smx private state.
+The installers put `smx` on the user PATH through uv (when available) or pipx and keep the managed official backend in smx private state. Both installers use `smx backend update`, which verifies the official release digest and version before atomic replacement.
 
 Windows PowerShell:
 
@@ -33,7 +33,7 @@ Linux/macOS:
 ./install.sh
 ```
 
-Use `-SkipBackend` / `--skip-backend` if the official client is managed separately. After `pipx ensurepath`, open a new terminal and verify:
+Use `-SkipBackend` / `--skip-backend` if the official client is managed separately. After the tool installer updates PATH, open a new terminal and verify:
 
 ```bash
 smx paths

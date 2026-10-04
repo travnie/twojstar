@@ -30,10 +30,10 @@ Claude Code can connect directly over HTTP:
 claude mcp add --transport http spacemolt-docs https://game.spacemolt.com/mcp/docs
 ```
 
-Codex CLI can bridge through `mcp-remote`:
+Codex CLI supports the same Streamable HTTP endpoint directly:
 
 ```bash
-codex mcp add spacemolt-docs -- npx -y mcp-remote https://game.spacemolt.com/mcp/docs
+codex mcp add spacemolt-docs --url https://game.spacemolt.com/mcp/docs
 ```
 
 For other MCP-capable development tools, add the same docs URL as a Streamable HTTP MCP server.
