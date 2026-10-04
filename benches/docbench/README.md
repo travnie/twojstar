@@ -18,8 +18,8 @@ foreign extension blocks intact. PDF→DOCX extracts text in the current page or
 
 ## Local
 
-The planned ChatGPT file-viewer integration is recorded in
-[`CHATGPT_PLUGIN.md`](CHATGPT_PLUGIN.md).
+The ChatGPT plugin foundation and planned file-viewer integration are recorded in
+[`CHATGPT_PLUGIN.md`](CHATGPT_PLUGIN.md); the portable package lives in [`plugin/`](plugin/).
 
 ```sh
 cd benches

@@ -1,12 +1,32 @@
 {
   "name": "twojstar",
-  "interface": { "displayName": "twojstar" },
+  "interface": {
+    "displayName": "twojstar"
+  },
   "plugins": [
     {
       "name": "spacemolt",
-      "source": { "source": "local", "path": "./spacemolt/plugin" },
-      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "source": {
+        "source": "local",
+        "path": "./spacemolt/plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
       "category": "Entertainment"
+    },
+    {
+      "name": "docbench",
+      "source": {
+        "source": "local",
+        "path": "./benches/docbench/plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

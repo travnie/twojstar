@@ -1,6 +1,13 @@
 # ChatGPT file viewer idea
 
-Status: planned, not implemented. Recorded 2026-10-01.
+Status: portable plugin foundation scaffolded; MCP App/file entrypoint not implemented. Recorded 2026-10-01.
+
+## Current foundation
+
+The portable Agent Plugins 1.0 scaffold lives in `plugin/` with root
+`plugin.json`, a bundled `docbench-files` Skill and existing Docbench branding.
+It is listed in the repo marketplace for local authoring/testing. It intentionally
+has no `mcp.json` or app binding yet; those arrive only with a real MCP App/runtime.
 
 Reuse Docbench's existing document parsers, previews and preservation rules in
 an MCP App rather than building another document editor. OpenAI MCP Extensions

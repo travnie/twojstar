@@ -1,0 +1,39 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "docbench",
+  "version": "0.1.0",
+  "description": "Local-first document and PDF workflow guidance for Docbench.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/benches/docbench/plugin",
+  "repository": "https://github.com/travnie/twojstar",
+  "keywords": [
+    "docbench",
+    "documents",
+    "pdf",
+    "local-first"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Docbench",
+        "shortDescription": "Local-first document workflow",
+        "longDescription": "Use Docbench's local-first document and PDF workflows while preserving text and document fidelity. This foundation packages workflow guidance only; MCP App file entrypoints are intentionally deferred until a real host-integrated runtime is implemented.",
+        "developerName": "travnie",
+        "category": "Productivity",
+        "capabilities": [
+          "Document workflows"
+        ],
+        "websiteURL": "https://docbench.travny.workers.dev",
+        "defaultPrompt": [
+          "Help me work with this document using Docbench's local-first rules.",
+          "Check this file workflow for fidelity risks before I edit or convert it."
+        ],
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      }
+    }
+  }
+}
