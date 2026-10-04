@@ -20,7 +20,7 @@ For a personal/private plugin, follow the [official MCP registration instruction
 1. Enable Developer mode in ChatGPT under Settings → Security and login.
 2. Open Plugins, choose the plus button, and register the gameplay URL above. Register the docs URL separately to retain both MCP integrations.
 3. Copy each actual technical ID (`plugin_asdk_app...`) from its connection URL. Do not substitute this package's `plugins_...` ID.
-4. Use Plugin Creator to bind both registered apps in `.app.json`, and set `extensions.com.openai.apps` to `"./.app.json"` in the private package. Keep its compatibility manifest synchronized. Use only IDs returned by registration; never guessed IDs.
+4. Build the private package with both verified IDs, using the command below, or ask Plugin Creator to bind them. The packager adds `.app.json` and `extensions.com.openai.apps` to the staged archive and synchronizes its compatibility manifest. Use only IDs returned by registration; never guessed IDs. Reuse an existing connection when its URL matches.
 5. Open a new chat with the updated plugin and verify tool discovery for both apps. Character login remains a separate game operation.
 
 Account-specific bindings are deliberately absent from this portable source. A public directory submission instead uses the **With MCP** dashboard flow and must exclude `.app.json` and `apps` declarations. Package validation and successful account upload alone do not verify hosted app availability or mobile icon display.
@@ -28,3 +28,5 @@ Account-specific bindings are deliberately absent from this portable source. A p
 ## Package
 
 Run `python spacemolt/scripts/package_plugin.py OUTPUT.zip` from the repository root. Portable root metadata stays canonical; the packager generates synchronized Codex compatibility files in its staging directory. It validates skills, paths and assets and builds a deterministic archive.
+
+For a **private ChatGPT account** package, append `--game-app-id GAME_ID --docs-app-id DOCS_ID`, replacing both placeholders with the actual `plugin_asdk_app...` IDs verified in that account. Both apps must already exist there. The packager converts their page IDs to the underlying `asdk_app...` App IDs required by `.app.json`; verify those in Manage → Information. This adds account-specific bindings only to the archive, never to this repository's portable source. Omit both flags for public submission or portable distribution; do not submit the private archive to the public directory.
