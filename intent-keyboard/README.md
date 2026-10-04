@@ -77,7 +77,7 @@ Revert is deliberately pre-commit only. It restores the unchanged raw draft, sup
 - `OpenAiCompatibleCompletionClient` talks to configurable Chat Completions-compatible endpoints over Ktor.
 - OkHttp, Darwin and CIO engines keep the transport available across Android, iOS and desktop targets.
 
-Android can now use a local LiteRT-LM 0.16.1 model end to end:
+Android can now use a local LiteRT-LM model end to end; the exact runtime version is pinned in `gradle/libs.versions.toml`:
 
 - The setup screen offers a managed install of a compact Qwen3 0.6B INT4 no-think model from the LiteRT Community catalog under Apache-2.0, while manual `.litertlm` import remains available as an advanced path.
 - Managed model metadata lives in `ManagedModelCatalog`; the download is pinned to an immutable upstream revision, expected byte count and SHA-256 rather than a moving `main` URL.
