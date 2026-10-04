@@ -34,7 +34,7 @@ The shared engine lives in Kotlin Multiplatform `commonMain`; platform input hoo
 
 - **Android:** real `InputMethodService` IME with a private intent buffer, Raw/Natural/Civilized modes, debounced preview, explicit Render/Revert/Commit and optional translation/tone/recipient settings.
 - **Local model:** LiteRT-LM path with a managed Qwen3 0.6B INT4 no-think model or manual `.litertlm` import. The exact runtime version lives in `gradle/libs.versions.toml`.
-- **Remote fallback:** optional OpenAI-compatible provider, disabled by default. A ready local model is tried first.
+- **Remote fallback:** optional OpenAI-compatible provider, disabled by default. It runs only when no local model is ready or local rendering fails; successful local output is not quality-rerouted.
 - **iOS/iPadOS:** Keyboard Extension with debounced preview and safe commit/Revert; `RequestsOpenAccess=false`, so the current extension has no remote-provider path.
 - **Desktop:** JVM/Swing proof using the same core and an explicit clipboard output boundary; it does not install an input method or global hooks.
 
@@ -46,7 +46,7 @@ See [docs/concept.md](docs/concept.md) for architecture and detailed implementat
 2. Install the recommended offline model or import a `.litertlm` model.
 3. Enable Intent Keyboard in Android settings.
 4. Type into the keyboard-owned draft, choose a render mode, review the preview, then Commit.
-5. Configure a remote provider only if local fallback behavior is insufficient.
+5. Configure a remote provider only as a failure fallback: it is used when no local model is ready or local rendering fails, not to replace a successful local render based on quality.
 
 The keyboard mirrors its owned draft into host composing text. Cursor movement, editor changes and host-side composition loss are treated as ownership boundaries rather than guessed around.
 
