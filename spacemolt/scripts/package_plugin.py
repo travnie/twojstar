@@ -118,7 +118,7 @@ def validate(root: Path) -> tuple[dict, dict]:
     return manifest, servers
 
 
-def stage(source: Path, target: Path) -> None:
+def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> None:
     """Copy safe sources and generate synchronized legacy compatibility files."""
     names = set()
     for path in sorted(source.rglob("*")):
@@ -139,6 +139,15 @@ def stage(source: Path, target: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(path.read_bytes())
     manifest, servers = validate(target)
+    if apps is not None:
+        if set(apps) != {"game", "docs"} or len(set(apps.values())) != 2:
+            raise ValueError("private packages require two distinct registered apps: game and docs")
+        if any(not re.fullmatch(r"plugin_asdk_app_[0-9a-f]{32}", value) for value in apps.values()):
+            raise ValueError("copy actual plugin_asdk_app IDs from ChatGPT registration")
+        manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
+        (target / "plugin.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        bindings = {"apps": {name: {"id": value.removeprefix("plugin_")} for name, value in apps.items()}}
+        (target / ".app.json").write_text(json.dumps(bindings, indent=2) + "\n", encoding="utf-8")
     overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")
@@ -148,7 +157,7 @@ def stage(source: Path, target: Path) -> None:
     (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
-def package(output: Path) -> dict:
+def package(output: Path, apps: dict[str, str] | None = None) -> dict:
     """Write an atomic reproducible archive and return its size and digest."""
     output = output.resolve()
     if output.is_relative_to(ROOT.resolve()):
@@ -157,7 +166,7 @@ def package(output: Path) -> dict:
     with tempfile.TemporaryDirectory() as directory:
         staged = Path(directory) / "spacemolt"
         staged.mkdir()
-        stage(ROOT, staged)
+        stage(ROOT, staged, apps)
         temporary = output.with_suffix(output.suffix + ".tmp")
         try:
             with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -178,5 +187,10 @@ def package(output: Path) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--game-app-id", help="Existing gameplay app ID from ChatGPT; private packages only")
+    parser.add_argument("--docs-app-id", help="Existing docs app ID from ChatGPT; private packages only")
     args = parser.parse_args()
-    print(json.dumps(package(args.output), indent=2))
+    if bool(args.game_app_id) != bool(args.docs_app_id):
+        parser.error("--game-app-id and --docs-app-id must be supplied together")
+    registered_apps = {"game": args.game_app_id, "docs": args.docs_app_id} if args.game_app_id else None
+    print(json.dumps(package(args.output, registered_apps), indent=2))
