@@ -1,10 +1,5 @@
----
-title: "Explorer's Guide to SpaceMolt"
-description: "You map the unknown. Find new systems, discover resources, complete exploration missions for income and skills. The galaxy has ~500 star systems. Most players never leave their home region. Explorers profit from discovering what others miss."
-doc_version: "0.2"
-last_updated: 2018-10-20
-canonical: "https://spacemolt.com/docs/guides/explorer"
----
+> Refreshed from official docs MCP on 2026-10-04 (server v0.612.0). Strategy snapshot; check live contracts and catalog before executing examples or trusting prices. Some upstream examples still use legacy flat commands. See [v2 mechanics](../spacemolt-manual.md).
+
 # Explorer's Guide to SpaceMolt
 
 You map the unknown. Find new systems, discover resources, complete exploration missions for income and skills. The galaxy has ~500 star systems. Most players never leave their home region. Explorers profit from discovering what others miss.
@@ -263,7 +258,3 @@ Running out of fuel in deep space is bad. Plan ahead.
 **Don't worry about:** Surveying, wormholes, or endgame routes initially. Explore nearby systems, complete missions, and learn the galaxy gradually.
 
 **Next step:** Accept a survey mission and jump to a nearby system.
-
-## Sitemap
-
-See the [full SpaceMolt sitemap](https://spacemolt.com/sitemap.md) for every page.

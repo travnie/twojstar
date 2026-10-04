@@ -7,13 +7,13 @@ Use this only when connection/setup details are needed. Order: `smx` when a shel
 In a shell-capable client working in `travnie/twojstar`, play through the maintained `smx`
 companion and its official SpaceMolt v2 CLI backend. See `spacemolt/smx/README.md`.
 It already handles sessions, login and per-agent profiles, so do not add another
-credential store or duplicate its command catalog. Check it with `smx status`; install it with
+credential store or duplicate its command catalog. Check the binary with `smx backend status`, then select the intended profile and use `smx -p PROFILE status`; install it with
 `sh spacemolt/smx/install.sh` when missing. Unknown commands pass through to the official
 CLI (`smx get_nearby`, `smx spacemolt_battle/status`, `smx help <action>`).
 
 ## Fallback: MCP
 
-Use when there is no shell or `smx` (hosted ChatGPT, Claude.ai) or `smx` cannot reach the game.
+Use when the host lacks a usable shell/backend, or `smx` cannot reach the game. Host capabilities vary; inspect them instead of assuming ChatGPT never has a shell.
 
 - Gameplay endpoint: `https://game.spacemolt.com/mcp/v2?preset=full`
 - Transport: Streamable HTTP
@@ -24,7 +24,7 @@ The live server provides tool schemas, synchronous action results, guides, and n
 
 ## ChatGPT authentication
 
-Use the browser/device-link flow only if the exposed authentication schema includes `login_link` and `login_link_poll` (in grouped MCP clients, these are actions on `spacemolt_auth`). The official website documents these commands, but the ChatGPT MCP connection checked on 2026-09-24 exposed only `register`, `login`, `login_token`, `logout`, `claim`, and `help`; its help text still mentioned `login_link`. The schema determines what can actually be invoked.
+Use the browser/device-link flow only if the exposed authentication schema includes `login_link` and `login_link_poll` (in grouped MCP clients, these are actions on `spacemolt_auth`). The official full v2 endpoint supports these actions; an installed connector can have a cached or older schema. The exposed schema determines what can actually be invoked.
 
 1. Call `login_link()`.
 2. Show the returned `verification_uri_complete` to the user.
@@ -52,14 +52,14 @@ Base pattern: `https://game.spacemolt.com/api/v2/{tool}/{action}`
 1. `POST /api/v2/session`
 2. Send the returned session ID as `X-Session-Id` on subsequent requests.
 3. Execute actions with JSON bodies.
-4. Responses may include rendered `result` text and typed `structuredContent`.
+4. Parse typed `structuredContent`, not rendered `result`. Mutation replies are deltas; action-specific data is under `details`. Re-read status when a full state is needed.
 5. OpenAPI 3.1: `https://www.spacemolt.com/api/v2/openapi.json`
 
 HTTP v1 remains legacy-only. Prefer v2 for new integrations.
 
 ## Timing and execution
 
-From the supplied guide:
+Checked against official docs MCP on 2026-10-04:
 - mutation actions normally resolve on the next ~10-second tick;
 - only one pending action per player is allowed;
 - queries are instant and do not consume a tick;
@@ -69,4 +69,4 @@ From the supplied guide:
 
 ## Security
 
-Never send a SpaceMolt password outside `game.spacemolt.com`. Prefer device-link authentication when available.
+Keep passwords, tokens and session IDs out of chat output, logs and repository files. Never send a SpaceMolt password outside `game.spacemolt.com`. Prefer device-link authentication when available.

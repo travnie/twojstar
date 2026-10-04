@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Package the canonical portable plugin with generated Codex compatibility files."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import re
+import stat
+import tempfile
+import zipfile
+from pathlib import Path
+from xml.parsers import expat
+
+ROOT = Path(__file__).resolve().parents[1] / "plugin"
+FIXED_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def asset(root: Path, value: str) -> Path:
+    """Resolve a package-local regular asset without traversal or symlinks."""
+    if not value.startswith("./") or "\\" in value or ".." in value.split("/"):
+        raise ValueError(f"unsafe asset path: {value}")
+    path = root / value[2:]
+    path.resolve().relative_to(root.resolve())
+    if not path.is_file() or path.is_symlink():
+        raise ValueError(f"missing/unsafe asset: {value}")
+    return path
+
+
+def validate_svg(path: Path) -> None:
+    """Parse static SVG with DTD/entity expansion and active content forbidden."""
+    data = path.read_bytes()
+    if len(data) > 64 * 1024:
+        raise ValueError("SVG exceeds branding size limit")
+    svg_parser = expat.ParserCreate(namespace_separator="}")
+    root: list[dict[str, str]] = []
+
+    def reject(*_args):
+        raise ValueError("SVG declarations/entities are forbidden")
+
+    def start(name, attrs):
+        if not root:
+            if name != "http://www.w3.org/2000/svg}svg":
+                raise ValueError("invalid SVG root")
+            root.append(attrs)
+        if name.split("}")[-1] in {"script", "foreignObject", "image", "use"}:
+            raise ValueError("active/referenced SVG content is forbidden")
+        for key, value in attrs.items():
+            local = key.split("}")[-1].lower()
+            if local.startswith("on") or local in {"href", "style"} or "url(" in value.lower():
+                raise ValueError("active/external SVG attributes are forbidden")
+
+    svg_parser.StartDoctypeDeclHandler = reject
+    svg_parser.EntityDeclHandler = reject
+    svg_parser.ExternalEntityRefHandler = reject
+    svg_parser.SetParamEntityParsing(expat.XML_PARAM_ENTITY_PARSING_NEVER)
+    svg_parser.StartElementHandler = start
+    svg_parser.Parse(data, True)
+    if not root:
+        raise ValueError("empty SVG")
+    width, height = (float(root[0][key]) for key in ("width", "height"))
+    if not math.isfinite(width) or width <= 0 or width != height:
+        raise ValueError("branding must be finite, positive and square")
+
+
+def validate(root: Path) -> tuple[dict, dict]:
+    """Check canonical manifests, branding, two MCPs and intended skill metadata."""
+    manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
+    if manifest.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
+        raise ValueError("expected portable Agent Plugins 1.0 manifest")
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", manifest["name"]):
+        raise ValueError("invalid package name")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", manifest["version"]):
+        raise ValueError("expected strict release semver")
+    ui = manifest["extensions"]["com.openai"]["interface"]
+    if len(ui["shortDescription"]) > 30:
+        raise ValueError("subtitle exceeds 30 characters")
+    for key in ("logo", "composerIcon"):
+        path = asset(root, ui[key])
+        if path.suffix == ".svg":
+            validate_svg(path)
+    servers = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
+    if servers.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+        raise ValueError("expected portable MCP schema")
+    expected = {
+        "game": "https://game.spacemolt.com/mcp/v2?preset=full",
+        "docs": "https://game.spacemolt.com/mcp/docs",
+    }
+    actual = servers["mcpServers"]
+    if set(actual) != set(expected):
+        raise ValueError("expected exactly the gameplay and docs MCP servers")
+    for name, url in expected.items():
+        if actual[name] != {"type": "streamable-http", "url": url}:
+            raise ValueError(f"unexpected server configuration: {name}")
+    names = set()
+    for child in sorted((root / "skills").iterdir()):
+        if not child.is_dir() or child.is_symlink():
+            raise ValueError(f"invalid skill directory: {child.name}")
+        text = (child / "SKILL.md").read_text(encoding="utf-8")
+        front = re.fullmatch(r"---\nname: ([a-z0-9-]+)\ndescription: ([^\n]+)\n---\n(.+)", text, re.S)
+        if not front or front[1] in names:
+            raise ValueError(f"invalid/duplicate skill: {child.name}")
+        names.add(front[1])
+    if not {"spacemolt", "spacemolt-client-dev", "host-workspace-operator"} <= names:
+        raise ValueError("missing intended skills")
+    return manifest, servers
+
+
+def stage(source: Path, target: Path) -> None:
+    """Copy safe sources and generate synchronized legacy compatibility files."""
+    names = set()
+    for path in sorted(source.rglob("*")):
+        rel = path.relative_to(source)
+        if path.is_symlink():
+            raise ValueError(f"symlink: {rel}")
+        if path.is_dir():
+            continue
+        if not path.is_file() or any(part in {"__pycache__", ".git", "node_modules"} for part in rel.parts):
+            raise ValueError(f"unexpected package member: {rel}")
+        if path.name.startswith(".env") or path.suffix in {".pyc", ".pem", ".key"}:
+            raise ValueError(f"secret/transient-shaped file: {rel}")
+        key = str(rel).casefold()
+        if key in names:
+            raise ValueError(f"case-colliding path: {rel}")
+        names.add(key)
+        destination = target / rel
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(path.read_bytes())
+    manifest, servers = validate(target)
+    overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
+    overlay.update(manifest["extensions"]["com.openai"])
+    overlay.update(skills="./skills/", mcpServers="./.mcp.json")
+    (target / ".codex-plugin").mkdir()
+    (target / ".codex-plugin/plugin.json").write_text(json.dumps(overlay, indent=2) + "\n", encoding="utf-8")
+    legacy = {"mcpServers": {name: {"url": value["url"]} for name, value in servers["mcpServers"].items()}}
+    (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
+
+
+def package(output: Path) -> dict:
+    """Write an atomic reproducible archive and return its size and digest."""
+    output = output.resolve()
+    if output.is_relative_to(ROOT.resolve()):
+        raise ValueError("archive must live outside plugin source")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as directory:
+        staged = Path(directory) / "spacemolt"
+        staged.mkdir()
+        stage(ROOT, staged)
+        temporary = output.with_suffix(output.suffix + ".tmp")
+        try:
+            with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+                for path in sorted(staged.rglob("*")):
+                    if not path.is_file():
+                        continue
+                    name = "spacemolt/" + path.relative_to(staged).as_posix()
+                    info = zipfile.ZipInfo(name, FIXED_TIME)
+                    info.create_system = 3
+                    info.external_attr = (stat.S_IFREG | 0o644) << 16
+                    archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            temporary.replace(output)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return {"archive": str(output), "sha256": hashlib.sha256(output.read_bytes()).hexdigest(), "bytes": output.stat().st_size}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+    print(json.dumps(package(args.output), indent=2))

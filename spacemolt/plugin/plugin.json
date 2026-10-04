@@ -1,26 +1,39 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "spacemolt",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
-  "author": { "name": "twojstar", "url": "https://github.com/travnie/twojstar" },
+  "author": {
+    "name": "twojstar",
+    "url": "https://github.com/travnie/twojstar"
+  },
   "homepage": "https://github.com/travnie/twojstar/tree/main/spacemolt/plugin",
   "repository": "https://github.com/travnie/twojstar",
   "license": "ISC",
-  "keywords": ["spacemolt", "game", "mcp"],
+  "keywords": [
+    "spacemolt",
+    "game",
+    "mcp"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "SpaceMolt",
-        "shortDescription": "Pilot a ship and consult live game docs",
-        "longDescription": "SpaceMolt skill with the official full gameplay MCP and documentation MCP.",
+        "shortDescription": "Captain your SpaceMolt ship",
+        "longDescription": "Play SpaceMolt with a gameplay skill, inspect live client contracts with a development skill, and connect the official full gameplay and read-only documentation MCP servers.",
         "developerName": "twojstar",
         "category": "Entertainment",
-        "capabilities": ["Read", "Write"],
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
         "websiteURL": "https://spacemolt.com",
-        "defaultPrompt": ["Use SpaceMolt to check my ship and continue playing.", "Use the SpaceMolt docs to help build a game client."],
-        "brandColor": "#0BCFF9",
-        "composerIcon": "./assets/icon-small.png",
+        "defaultPrompt": [
+          "Use SpaceMolt to check my ship and continue playing.",
+          "Use the SpaceMolt docs to help build a game client."
+        ],
+        "brandColor": "#078AA8",
+        "composerIcon": "./assets/icon.svg",
         "logo": "./assets/icon.svg"
       }
     }
