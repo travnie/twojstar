@@ -8,6 +8,7 @@ import json
 import math
 import re
 import stat
+import struct
 import tempfile
 import zipfile
 from pathlib import Path
@@ -80,6 +81,16 @@ def validate(root: Path) -> tuple[dict, dict]:
         path = asset(root, ui[key])
         if path.suffix == ".svg":
             validate_svg(path)
+        elif path.suffix == ".png":
+            data = path.read_bytes()
+            if len(data) > 5 * 1024 * 1024 or data[:16] != b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR":
+                raise ValueError("invalid/oversized PNG branding")
+            width, height = struct.unpack(">II", data[16:24])
+            if width != height or not 48 <= width <= 4096:
+                raise ValueError("PNG branding must be square and 48–4096 pixels")
+        else:
+            raise ValueError("expected SVG or PNG branding")
+    validate_svg(asset(root, "./assets/icon.svg"))
     servers = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
     if servers.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
         raise ValueError("expected portable MCP schema")
