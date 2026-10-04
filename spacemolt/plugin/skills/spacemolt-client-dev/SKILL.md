@@ -31,6 +31,6 @@ If docs MCP is missing, use the current official OpenAPI at
 State what could not be verified. Do not freeze the full catalog into a wrapper.
 Do not send credentials to docs tools, package them, or expose them in logs.
 
-Gameplay MCP uses `get_guide` with `id`; docs MCP uses `guide` and includes more
-published slugs. Cached connectors can expose older schemas than the live server.
-Describe that mismatch; do not invent unsupported calls.
+Gameplay and docs MCP guide tools may differ in parameter names and published
+guide coverage. Inspect each live schema. Cached connectors can lag the live
+server; describe the mismatch and do not invent unsupported calls.

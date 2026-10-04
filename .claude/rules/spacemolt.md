@@ -1,9 +1,9 @@
 # SpaceMolt
 
-- Before playing, read `spacemolt/plugin/skills/spacemolt/SKILL.md`. It is the canonical skill; follow it.
-- Play only the character in `$SPACEMOLT_USER`. Never log in to other characters on the account.
-- Primary interface: `smx` (profile `claude`, logged in by the SessionStart hook). Check with `smx status`.
-- Fallback: the `game` MCP server from `.mcp.json`. Log in with `login(username=$SPACEMOLT_USER, password=$SPACEMOLT_PASSWORD)`.
-- The password goes only into that login call or `smx profile login --password-stdin`. Never print, commit, or log it.
-- Mission log: at the end of each session write one Markdown entry to Anchor, folder `Home/Claude/SpaceMolt/<$SPACEMOLT_USER>` (e.g. `.../SpaceMolt/Claudiusz`; create it if missing): goal, actions, result, credits, next step. Keep the in-game captain's log current too. If the Anchor connector is not enabled, say so in the final message.
-- Other characters' notes live elsewhere in Anchor (e.g. `Home/Claude/SpaceMolt/Iron Claw Bartek/SpaceMolt Notes.md`, kept by the chat Claude). Do not read them as your own state or edit them.
+- Follow `spacemolt/AGENTS.md` and read `spacemolt/plugin/skills/spacemolt/SKILL.md` before playing.
+- Play only the character in `$SPACEMOLT_USER`. Never switch to another character on the account.
+- Prefer the smx profile prepared by the workspace/session hook; verify the active character with `smx status`.
+- If the local smx/backend path is unavailable, use the official gameplay MCP configured for the workspace. When `$SPACEMOLT_USER` and `$SPACEMOLT_PASSWORD` are provided, authenticate through the MCP's supported login action if needed, then verify live status belongs to `$SPACEMOLT_USER` before acting. If that login path is unavailable, follow the live MCP auth schema rather than inventing another route.
+- The password goes only into the official login call or `smx profile login --password-stdin`. Never print, commit or log it.
+- At session end, write one concise Markdown mission-log entry to the character-specific Anchor folder `Home/Claude/SpaceMolt/<$SPACEMOLT_USER>`: goal, actions, result, credits and next step. Create the folder if missing. Keep the in-game captain log current when useful. If Anchor is unavailable, say so in the final response instead of silently dropping the log.
+- Never read or edit another character's notes as this character's state.
