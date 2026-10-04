@@ -19,13 +19,13 @@ platform text input
 Example:
 
 ```text
-jutro chyba byc 18 nie wiem jeszcze
+tomorrow maybe 6 not sure yet
 ```
 
 can become:
 
 ```text
-Jutro powinienem być około 18:00, ale jeszcze nie mam pewności.
+I should be there around 6 PM tomorrow, but I am not certain yet.
 ```
 
 ## Current prototype
