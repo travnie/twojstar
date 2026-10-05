@@ -557,7 +557,7 @@ function parseArgs(argv) {
 
     if (token === "--help" || token === "-h") {
       console.log(usage());
-      process.exit(0);
+      return null;
     }
 
     throw new Error(`Unknown argument: ${token}`);
@@ -572,6 +572,9 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args === null) {
+    return;
+  }
 
   const appSlug = toSlug(args.appName);
   const toolName = toToolName(args.toolName || appSlug);
@@ -602,5 +605,5 @@ try {
   main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+  process.exitCode = 1;
 }

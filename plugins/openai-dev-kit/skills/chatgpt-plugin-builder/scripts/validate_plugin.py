@@ -83,9 +83,9 @@ def main() -> int:
             if any(field in manifest for field in (*PATH_FIELDS, "interface")):
                 errors.append("portable manifest contains top-level compatibility fields")
             extensions = manifest.get("extensions", {})
+            extension: Any = {}
             if not isinstance(extensions, dict):
                 errors.append("extensions must be an object")
-                extension = {}
             else:
                 extension = extensions.get("com.openai")
             if extension is None:
@@ -94,8 +94,11 @@ def main() -> int:
             if not isinstance(extension, dict):
                 errors.append("OpenAI extension must be an object")
                 extension = {}
-            manifest = {**extension, **manifest}
-            manifest["skills"] = "./skills/" if (root / "skills").is_dir() else None
+            manifest = {
+                **extension,
+                **manifest,
+                "skills": "./skills/" if (root / "skills").is_dir() else None,
+            }
             mcp_path = root / "mcp.json"
             if mcp_path.is_file():
                 try:
