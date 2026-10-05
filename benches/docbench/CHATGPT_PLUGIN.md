@@ -32,6 +32,49 @@ path; test host capabilities and provide a clear fallback. A sidebar or thread
 entrypoint can be a later addition. This UI integration is independent of Sign
 in with ChatGPT and does not require adding user accounts.
 
+## Aistee workspace and Cloudflare boundary
+
+Docbench should not grow a second file library. Aistee Project Library is the
+canonical workspace/storage model for Aistee-owned projects, documents, prompts,
+instructions, skills and generated artifacts; Docbench supplies editing,
+inspection, validation and conversion capabilities over those assets.
+
+Keep the standalone Docbench website and ChatGPT file-entrypoint flow local-first.
+A host-provided attachment should still be read and written through the host
+resource APIs when available, without routing the file through Cloudflare just
+because the MCP server is remote.
+
+For optional Aistee cross-device sync, stay on the existing Cloudflare stack:
+
+- Worker: narrow sync/auth/MCP control plane.
+- R2: file/object bytes.
+- D1: asset metadata, revisions, origin/storage references and searchable index
+  state.
+- Durable Objects: deferred until live collaboration, leases or stronger
+  coordination are actually required.
+
+The initial sync model should use stable asset IDs plus optimistic
+revision/ETag checks. Conflicts must be surfaced rather than last-write-wins
+overwriting a newer copy. Local use remains fully functional with sync disabled;
+cloud enablement is explicit and does not create an Aistee account wall.
+
+Docbench transformations exposed to Aistee should use a small typed result
+contract such as `kind`, `content`, `warnings` and `sourceIds`, then let the
+user preview/save the result into Project Library. Cloudflare storage, local
+Aistee storage and provider-hosted files have separate lifecycles and deletion
+receipts.
+
+Suggested implementation order:
+
+1. Keep the existing skills-only plugin package as the workflow foundation.
+2. Add the MCP App/file entrypoint for Markdown, UTF-8 text and JSON/JSONC,
+   preserving host-native resource access and conflict handling.
+3. Wire Docbench typed transforms to Aistee Project Library editing/save-back.
+4. Add optional Aistee Cloudflare sync using R2 + D1 after local revision
+   semantics are stable.
+5. Add richer indexing or collaborative coordination only when the simpler model
+   proves insufficient.
+
 First prototype validation: attachment opens, edits round-trip without changing
 text fidelity, external changes update the viewer, stale ETags show conflicts,
 read-only files cannot be saved, and unsupported hosts retain the website path.
