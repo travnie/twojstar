@@ -94,7 +94,7 @@ def main() -> int:
             if not isinstance(extension, dict):
                 errors.append("OpenAI extension must be an object")
                 extension = {}
-            manifest = {**manifest, **extension}
+            manifest = {**extension, **manifest}
             manifest["skills"] = "./skills/" if (root / "skills").is_dir() else None
             mcp_path = root / "mcp.json"
             if mcp_path.is_file():

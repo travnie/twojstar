@@ -79,7 +79,7 @@ class PackageTests(unittest.TestCase):
             server = json.loads((target / "mcp.json").read_text())["mcpServers"]["docs"]
             self.assertEqual(server["type"], "streamable-http")
             actual = json.loads((target / ".app.json").read_text())
-            self.assertEqual(actual["apps"]["docs-probe"]["id"], "asdk_app_" + "b" * 32)
+            self.assertEqual(actual["apps"]["docs"]["id"], "asdk_app_" + "b" * 32)
             result = subprocess.run([sys.executable, str(BUILDER / "validate_plugin.py"), str(target)], capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

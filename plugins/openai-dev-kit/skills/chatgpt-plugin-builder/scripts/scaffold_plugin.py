@@ -82,7 +82,7 @@ def main() -> int:
         write(
             root / ".app.json",
             json.dumps(
-                {"apps": {args.name: {"id": app_id}}},
+                {"apps": {args.bundled_mcp_name or args.name: {"id": app_id}}},
                 indent=2,
             ) + "\n",
         )
