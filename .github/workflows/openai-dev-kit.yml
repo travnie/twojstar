@@ -1,0 +1,34 @@
+name: OpenAI Dev Kit
+
+on:
+  pull_request:
+    paths:
+      - "plugins/openai-dev-kit/**"
+      - ".github/workflows/openai-dev-kit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/openai-dev-kit/**"
+      - ".github/workflows/openai-dev-kit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Validate portable package
+        run: python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py plugins/openai-dev-kit
+      - name: Check packaging and scaffold behavior
+        run: python -m unittest discover -s plugins/openai-dev-kit/tests -v
+      - name: Build portable archive
+        run: python plugins/openai-dev-kit/scripts/package_plugin.py "$RUNNER_TEMP/openai-dev-kit-0.1.0.zip"

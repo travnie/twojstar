@@ -1,0 +1,5 @@
+Plugin Builder icon sources
+
+- Small icon: OpenAI blossom geometry from the official openai/openai-agents-python repository, composed with a simple plug symbol for this skill.
+- Large icon: user-supplied artwork for this skill.
+OpenAI marks remain subject to OpenAI brand usage terms.

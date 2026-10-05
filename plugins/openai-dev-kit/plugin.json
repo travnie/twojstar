@@ -1,0 +1,43 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "openai-dev-kit",
+  "version": "0.1.0",
+  "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/openai-dev-kit",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "openai",
+    "developer-docs",
+    "chatgpt",
+    "codex",
+    "plugin-builder",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "OpenAI Dev Kit",
+        "shortDescription": "Build with live OpenAI docs",
+        "longDescription": "Build and review ChatGPT/Codex plugins with ChatGPT Plugin Builder and OpenAI Dev Workflows. Consult the official read-only OpenAI documentation MCP for current API, Codex, plugin, and submission contracts. Personal toolkit maintained by travnie; not an official OpenAI plugin.",
+        "developerName": "travnie",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read"
+        ],
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/openai-dev-kit",
+        "defaultPrompt": [
+          "Build a ChatGPT plugin with these skills and verify the package against current OpenAI documentation.",
+          "Use the official docs to review my OpenAI API integration and suggest the smallest safe update."
+        ],
+        "brandColor": "#10A37F",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      }
+    }
+  }
+}
