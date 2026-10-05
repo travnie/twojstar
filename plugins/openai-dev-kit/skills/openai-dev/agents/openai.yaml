@@ -1,0 +1,20 @@
+interface:
+  display_name: OpenAI Dev Workflows
+  short_description: Official docs, MCP apps, plugins and submissions
+  icon_small: assets/icon.png
+  default_prompt: Use $openai-dev to build an OpenAI MCP plugin and verify it against current official documentation.
+  icon_large: assets/icon-large.png
+dependencies:
+  tools:
+  - type: mcp
+    value: openaiDeveloperDocs
+    description: Official read-only OpenAI developer documentation
+    transport: streamable_http
+    url: https://developers.openai.com/mcp
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

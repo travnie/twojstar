@@ -1,0 +1,22 @@
+interface:
+  display_name: ChatGPT Plugin Builder
+  short_description: Build, migrate, validate, and package ChatGPT plugins
+  icon_small: assets/icon.png
+  icon_large: assets/icon-large.png
+  brand_color: '#10A37F'
+  default_prompt: Use $chatgpt-plugin-builder to choose the smallest plugin shape, fetch current official OpenAI
+    Plugins docs, scaffold or review the package, validate every manifest path, and report the deepest test level
+    actually reached.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+  - type: mcp
+    value: openaiDeveloperDocs
+    description: Official read-only OpenAI developer documentation
+    transport: streamable_http
+    url: https://developers.openai.com/mcp
