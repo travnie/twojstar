@@ -1,0 +1,22 @@
+interface:
+  display_name: gcloud Guardrails
+  short_description: Validated, scoped gcloud work
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $gcloud to validate the exact leaf command, scope it to the intended project and location, reduce output, and gate risky changes.
+dependencies:
+  tools:
+  - type: mcp
+    value: googleCloudCli
+    description: Validated Google Cloud CLI execution
+    transport: streamable_http
+    url: https://cloudcli.googleapis.com/mcp
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Current Google Cloud documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

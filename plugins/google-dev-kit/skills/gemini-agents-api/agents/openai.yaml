@@ -1,0 +1,27 @@
+interface:
+  display_name: Gemini Managed Agents
+  short_description: Managed agent control plane
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $gemini-agents-api to manage persistent Agent Platform resources with live API docs, explicit state inspection, and safe long-running-operation handling.
+dependencies:
+  tools:
+  - type: mcp
+    value: geminiApiDocs
+    description: Current Gemini and Agent Platform docs
+    transport: streamable_http
+    url: https://gemini-api-docs-mcp.dev
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Current Google Cloud control-plane documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+  - type: mcp
+    value: googleCloudStorage
+    description: Mounted storage inspection when relevant
+    transport: streamable_http
+    url: https://storage.googleapis.com/storage/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true
