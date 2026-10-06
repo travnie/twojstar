@@ -30,8 +30,11 @@ ChatGPT assigns each registered connection an account/workspace-specific
 installation can bind them later through `.app.json` /
 `extensions.com.openai.apps`.
 
-The Gemini API Docs MCP server needs no authentication. Developer Knowledge can
-avoid OAuth by supplying a restricted API key in the `X-Goog-Api-Key` header.
+The Gemini API Docs MCP server needs no authentication. For Developer
+Knowledge in ChatGPT, use OAuth: ChatGPT cannot present customer-supplied API
+keys or arbitrary custom authentication headers to an MCP server. The
+`X-Goog-Api-Key` option is therefore only for local clients that can inject
+that header themselves.
 
 ## Codex local / desktop
 
@@ -50,6 +53,15 @@ codex mcp add googleCloudRun \
 ```
 
 Register the exact callback URL printed by Codex with the Google OAuth client.
+The first `codex mcp add` can fail its immediate login before that callback is
+registered. After registering it, retry login explicitly with the
+least-privileged scope required by the task, for example:
+
+```sh
+codex mcp login googleCloudRun \
+  --scopes https://www.googleapis.com/auth/run.readonly
+```
+
 Complete any client-secret step through a host-managed authentication UI or
 credential store when available. Do not expand a client secret into a shell
 command line, because process listings and monitoring can expose command

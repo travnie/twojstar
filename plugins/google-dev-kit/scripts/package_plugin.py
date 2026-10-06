@@ -222,13 +222,16 @@ def validate(root: Path):
         oauth = profile.get("oauth")
         if not isinstance(oauth, dict) or not set(oauth) <= OAUTH_POLICY_KEYS:
             raise ValueError(f"unexpected OAuth policy fields: {name}")
-        scopes = oauth.get("scopes")
-        if (
-            not isinstance(scopes, list)
-            or not scopes
-            or not all(isinstance(scope, str) and scope for scope in scopes)
-        ):
-            raise ValueError(f"missing OAuth scopes: {name}")
+        for scope_key in OAUTH_POLICY_KEYS & set(oauth):
+            scopes = oauth[scope_key]
+            if (
+                not isinstance(scopes, list)
+                or not scopes
+                or not all(isinstance(scope, str) and scope for scope in scopes)
+            ):
+                raise ValueError(
+                    f"invalid OAuth scope list: {name}/{scope_key}"
+                )
 
     developer_key = auth_servers["googleDeveloperKnowledge"].get("apiKey")
     if developer_key != {
