@@ -212,7 +212,7 @@ def validate(root: Path):
 
     serialized_auth = json.dumps(auth)
     if re.search(
-        r'"(?:clientId|clientSecret|accessToken|refreshToken)"\\s*:',
+        r'"(?:clientId|clientSecret|accessToken|refreshToken)"\s*:',
         serialized_auth,
     ):
         raise ValueError("account credentials must not be stored in mcp-auth.json")
