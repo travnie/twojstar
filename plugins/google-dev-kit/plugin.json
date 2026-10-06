@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "google-dev-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
   "author": {
     "name": "travnie",

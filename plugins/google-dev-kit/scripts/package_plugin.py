@@ -20,7 +20,7 @@ EXPECTED_SERVERS = {
     "googleDeveloperKnowledge": "https://developerknowledge.googleapis.com/mcp",
     "googleCloudCli": "https://cloudcli.googleapis.com/mcp",
     "googleCloudStorage": "https://storage.googleapis.com/storage/mcp",
-    "googleApplicationDesignCenter": "https://design.googleapis.com/mcp",
+    "googleApplicationDesignCenter": "https://designcenter.googleapis.com/mcp",
     "googleAndroidManagement": "https://androidmanagement.googleapis.com/mcp",
     "googleCloudRun": "https://run.googleapis.com/mcp",
     "googleApiKeys": "https://apikeys.googleapis.com/mcp",
@@ -36,6 +36,48 @@ EXPECTED_SKILLS = {
     "gemini-api",
     "gemini-agents-api",
     "application-design-center",
+}
+EXPECTED_AUTH_MODES = {
+    "googleDeveloperKnowledge": "api_key_or_oauth",
+    "googleCloudCli": "oauth",
+    "googleCloudStorage": "oauth",
+    "googleApplicationDesignCenter": "oauth",
+    "googleAndroidManagement": "oauth",
+    "googleCloudRun": "oauth",
+    "googleApiKeys": "oauth",
+    "googleCloudAssist": "oauth",
+    "googleIam": "oauth",
+    "geminiApiDocs": "none",
+}
+EXPECTED_AUTH_PROFILE_KEYS = {
+    "googleDeveloperKnowledge": {"mode", "preferred", "apiKey", "oauth"},
+    "googleCloudCli": {"mode", "oauth", "lifecycle"},
+    "googleCloudStorage": {"mode", "oauth"},
+    "googleApplicationDesignCenter": {"mode", "oauth", "lifecycle"},
+    "googleAndroidManagement": {"mode", "oauth", "lifecycle"},
+    "googleCloudRun": {"mode", "oauth"},
+    "googleApiKeys": {"mode", "oauth", "sensitive"},
+    "googleCloudAssist": {"mode", "oauth", "lifecycle"},
+    "googleIam": {"mode", "oauth", "sensitive"},
+    "geminiApiDocs": {"mode"},
+}
+GOOGLE_OAUTH_KEYS = {
+    "clientRegistration",
+    "dynamicClientRegistration",
+    "clientIdMetadataDocuments",
+    "credentialStorage",
+}
+OAUTH_POLICY_KEYS = {"scopes", "readOnlyScopes", "alternativeScopes"}
+EXPECTED_READ_ONLY_SCOPES = {
+    "googleCloudStorage": [
+        "https://www.googleapis.com/auth/devstorage.read_only"
+    ],
+    "googleCloudRun": [
+        "https://www.googleapis.com/auth/run.readonly"
+    ],
+    "googleApiKeys": [
+        "https://www.googleapis.com/auth/cloud-platform.read-only"
+    ],
 }
 
 
@@ -160,6 +202,64 @@ def validate(root: Path):
         if actual[name] != {"type": "streamable-http", "url": url}:
             raise ValueError(f"unexpected MCP config: {name}")
 
+    auth = json.loads((root / "mcp-auth.json").read_text(encoding="utf-8"))
+    if set(auth) != {"version", "googleOAuth", "servers"}:
+        raise ValueError("unexpected MCP auth top-level fields")
+    if auth.get("version") != 1:
+        raise ValueError("unsupported MCP auth metadata version")
+    google_oauth = auth.get("googleOAuth", {})
+    if set(google_oauth) != GOOGLE_OAUTH_KEYS:
+        raise ValueError("unexpected Google OAuth metadata fields")
+    if (
+        google_oauth.get("clientRegistration") != "pre-registered"
+        or google_oauth.get("dynamicClientRegistration") is not False
+        or google_oauth.get("clientIdMetadataDocuments") is not False
+        or google_oauth.get("credentialStorage") != "host-managed"
+    ):
+        raise ValueError("unexpected Google OAuth client-registration policy")
+
+    auth_servers = auth.get("servers", {})
+    if set(auth_servers) != set(EXPECTED_SERVERS):
+        raise ValueError("unexpected MCP auth server set")
+    for name, expected_mode in EXPECTED_AUTH_MODES.items():
+        profile = auth_servers[name]
+        if set(profile) != EXPECTED_AUTH_PROFILE_KEYS[name]:
+            raise ValueError(f"unexpected MCP auth profile fields: {name}")
+        if profile.get("mode") != expected_mode:
+            raise ValueError(f"unexpected MCP auth mode: {name}")
+        if expected_mode == "none":
+            continue
+
+        oauth = profile.get("oauth")
+        if not isinstance(oauth, dict) or not set(oauth) <= OAUTH_POLICY_KEYS:
+            raise ValueError(f"unexpected OAuth policy fields: {name}")
+        if "scopes" not in oauth:
+            raise ValueError(f"missing OAuth scopes: {name}")
+        for scope_key in OAUTH_POLICY_KEYS & set(oauth):
+            scopes = oauth[scope_key]
+            if (
+                not isinstance(scopes, list)
+                or not scopes
+                or not all(isinstance(scope, str) and scope for scope in scopes)
+            ):
+                raise ValueError(
+                    f"invalid OAuth scope list: {name}/{scope_key}"
+                )
+
+        expected_read_only = EXPECTED_READ_ONLY_SCOPES.get(name)
+        if (
+            expected_read_only is not None
+            and oauth.get("readOnlyScopes") != expected_read_only
+        ):
+            raise ValueError(f"unexpected read-only OAuth scopes: {name}")
+
+    developer_key = auth_servers["googleDeveloperKnowledge"].get("apiKey")
+    if developer_key != {
+        "header": "X-Goog-Api-Key",
+        "env": "GOOGLE_DEVELOPER_KNOWLEDGE_API_KEY",
+    }:
+        raise ValueError("unexpected Developer Knowledge API-key policy")
+
     names = set()
     for child in sorted((root / "skills").iterdir()):
         if not child.is_dir() or child.is_symlink():
@@ -194,7 +294,7 @@ def validate(root: Path):
 
     if names != EXPECTED_SKILLS:
         raise ValueError("missing intended skills")
-    return manifest, config
+    return manifest, config, auth
 
 
 def stage(source: Path, target: Path) -> None:
@@ -217,7 +317,7 @@ def stage(source: Path, target: Path) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(path.read_bytes())
 
-    manifest, config = validate(target)
+    manifest, config, _ = validate(target)
     overlay = {
         key: value
         for key, value in manifest.items()
