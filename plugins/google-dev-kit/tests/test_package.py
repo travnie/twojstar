@@ -66,16 +66,29 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
     def test_auth_metadata_rejects_credentials(self):
-        with tempfile.TemporaryDirectory() as directory:
-            target = Path(directory) / "google-dev-kit"
-            target.mkdir()
-            PACK.stage(ROOT, target)
-            path = target / "mcp-auth.json"
-            auth = json.loads(path.read_text())
-            auth["servers"]["googleCloudRun"]["oauth"]["clientSecret"] = "nope"
-            path.write_text(json.dumps(auth))
-            with self.assertRaisesRegex(ValueError, "must not be stored"):
-                PACK.validate(target)
+        mutations = [
+            ("oauth-client-secret", ("oauth", "clientSecret"), "nope"),
+            ("protected-api-key", ("apiKey",), {"value": "nope"}),
+        ]
+        for label, keys, value in mutations:
+            with self.subTest(label=label):
+                with tempfile.TemporaryDirectory() as directory:
+                    target = Path(directory) / "google-dev-kit"
+                    target.mkdir()
+                    PACK.stage(ROOT, target)
+                    path = target / "mcp-auth.json"
+                    auth = json.loads(path.read_text())
+                    profile = auth["servers"]["googleCloudRun"]
+                    if len(keys) == 2:
+                        profile[keys[0]][keys[1]] = value
+                    else:
+                        profile[keys[0]] = value
+                    path.write_text(json.dumps(auth))
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "unexpected (MCP auth profile|OAuth policy) fields",
+                    ):
+                        PACK.validate(target)
 
     def test_bad_product_policy(self):
         with tempfile.TemporaryDirectory() as directory:

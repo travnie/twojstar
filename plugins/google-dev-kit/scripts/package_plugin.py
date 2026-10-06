@@ -49,6 +49,25 @@ EXPECTED_AUTH_MODES = {
     "googleIam": "oauth",
     "geminiApiDocs": "none",
 }
+EXPECTED_AUTH_PROFILE_KEYS = {
+    "googleDeveloperKnowledge": {"mode", "preferred", "apiKey", "oauth"},
+    "googleCloudCli": {"mode", "oauth", "lifecycle"},
+    "googleCloudStorage": {"mode", "oauth"},
+    "googleApplicationDesignCenter": {"mode", "oauth", "lifecycle"},
+    "googleAndroidManagement": {"mode", "oauth", "lifecycle"},
+    "googleCloudRun": {"mode", "oauth"},
+    "googleApiKeys": {"mode", "oauth", "sensitive"},
+    "googleCloudAssist": {"mode", "oauth", "lifecycle"},
+    "googleIam": {"mode", "oauth", "sensitive"},
+    "geminiApiDocs": {"mode"},
+}
+GOOGLE_OAUTH_KEYS = {
+    "clientRegistration",
+    "dynamicClientRegistration",
+    "clientIdMetadataDocuments",
+    "credentialStorage",
+}
+OAUTH_POLICY_KEYS = {"scopes", "readOnlyScopes", "alternativeScopes"}
 
 
 class StrictLoader(yaml.SafeLoader):
@@ -176,10 +195,13 @@ def validate(root: Path):
     if auth.get("version") != 1:
         raise ValueError("unsupported MCP auth metadata version")
     google_oauth = auth.get("googleOAuth", {})
+    if set(google_oauth) != GOOGLE_OAUTH_KEYS:
+        raise ValueError("unexpected Google OAuth metadata fields")
     if (
         google_oauth.get("clientRegistration") != "pre-registered"
         or google_oauth.get("dynamicClientRegistration") is not False
         or google_oauth.get("clientIdMetadataDocuments") is not False
+        or google_oauth.get("credentialStorage") != "host-managed"
     ):
         raise ValueError("unexpected Google OAuth client-registration policy")
 
@@ -188,14 +210,17 @@ def validate(root: Path):
         raise ValueError("unexpected MCP auth server set")
     for name, expected_mode in EXPECTED_AUTH_MODES.items():
         profile = auth_servers[name]
+        if set(profile) != EXPECTED_AUTH_PROFILE_KEYS[name]:
+            raise ValueError(f"unexpected MCP auth profile fields: {name}")
         if profile.get("mode") != expected_mode:
             raise ValueError(f"unexpected MCP auth mode: {name}")
         if expected_mode == "none":
-            if "oauth" in profile or "apiKey" in profile:
-                raise ValueError(f"no-auth server declares credentials: {name}")
             continue
+
         oauth = profile.get("oauth")
-        scopes = oauth.get("scopes") if isinstance(oauth, dict) else None
+        if not isinstance(oauth, dict) or not set(oauth) <= OAUTH_POLICY_KEYS:
+            raise ValueError(f"unexpected OAuth policy fields: {name}")
+        scopes = oauth.get("scopes")
         if (
             not isinstance(scopes, list)
             or not scopes
@@ -209,13 +234,6 @@ def validate(root: Path):
         "env": "GOOGLE_DEVELOPER_KNOWLEDGE_API_KEY",
     }:
         raise ValueError("unexpected Developer Knowledge API-key policy")
-
-    serialized_auth = json.dumps(auth)
-    if re.search(
-        r'"(?:clientId|clientSecret|accessToken|refreshToken)"\s*:',
-        serialized_auth,
-    ):
-        raise ValueError("account credentials must not be stored in mcp-auth.json")
 
     names = set()
     for child in sorted((root / "skills").iterdir()):

@@ -40,15 +40,21 @@ store OAuth credentials in its configured credential store. Current Codex
 supports pre-registered client IDs and client secrets. Register the exact
 callback URL printed by Codex rather than guessing it.
 
-Example shape:
+Use the client ID to register the server and obtain the exact callback URL
+without putting a client secret in source:
 
 ```sh
 codex mcp add googleCloudRun \
   --url https://run.googleapis.com/mcp \
-  --oauth-client-id "$GOOGLE_MCP_OAUTH_CLIENT_ID" \
-  --oauth-client-secret "$GOOGLE_MCP_OAUTH_CLIENT_SECRET"
-codex mcp login googleCloudRun
+  --oauth-client-id "$GOOGLE_MCP_OAUTH_CLIENT_ID"
 ```
+
+Register the exact callback URL printed by Codex with the Google OAuth client.
+Complete any client-secret step through a host-managed authentication UI or
+credential store when available. Do not expand a client secret into a shell
+command line, because process listings and monitoring can expose command
+arguments. If a local client only accepts the secret as a command-line
+argument, prefer the ChatGPT/desktop connection flow for secret-bearing setup.
 
 Use the endpoint-specific scope from `mcp-auth.json`. Prefer the read-only
 scope where the task does not need writes. Do not place the client secret in a
