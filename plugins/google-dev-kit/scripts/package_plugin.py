@@ -192,6 +192,8 @@ def validate(root: Path):
             raise ValueError(f"unexpected MCP config: {name}")
 
     auth = json.loads((root / "mcp-auth.json").read_text(encoding="utf-8"))
+    if set(auth) != {"version", "googleOAuth", "servers"}:
+        raise ValueError("unexpected MCP auth top-level fields")
     if auth.get("version") != 1:
         raise ValueError("unsupported MCP auth metadata version")
     google_oauth = auth.get("googleOAuth", {})

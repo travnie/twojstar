@@ -89,6 +89,21 @@ class PackageTests(unittest.TestCase):
                 ):
                     PACK.validate(target)
 
+    def test_auth_metadata_rejects_top_level_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "google-dev-kit"
+            target.mkdir()
+            PACK.stage(ROOT, target)
+            path = target / "mcp-auth.json"
+            auth = json.loads(path.read_text())
+            auth["clientSecret"] = "nope"
+            path.write_text(json.dumps(auth))
+            with self.assertRaisesRegex(
+                ValueError,
+                "unexpected MCP auth top-level fields",
+            ):
+                PACK.validate(target)
+
     def test_bad_product_policy(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "google-dev-kit"
