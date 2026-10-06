@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "googleOAuth": {
+    "clientRegistration": "pre-registered",
+    "dynamicClientRegistration": false,
+    "clientIdMetadataDocuments": false,
+    "credentialStorage": "host-managed"
+  },
+  "servers": {
+    "googleDeveloperKnowledge": {
+      "mode": "api_key_or_oauth",
+      "preferred": "api_key",
+      "apiKey": {
+        "header": "X-Goog-Api-Key",
+        "env": "GOOGLE_DEVELOPER_KNOWLEDGE_API_KEY"
+      },
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/devprofiles.full_control"
+        ]
+      }
+    },
+    "googleCloudCli": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      },
+      "lifecycle": "preview"
+    },
+    "googleCloudStorage": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/devstorage.read_write"
+        ],
+        "readOnlyScopes": [
+          "https://www.googleapis.com/auth/devstorage.read_only"
+        ]
+      }
+    },
+    "googleApplicationDesignCenter": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      },
+      "lifecycle": "preview"
+    },
+    "googleAndroidManagement": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/androidmanagement"
+        ]
+      },
+      "lifecycle": "preview"
+    },
+    "googleCloudRun": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/run"
+        ],
+        "readOnlyScopes": [
+          "https://www.googleapis.com/auth/run.readonly"
+        ]
+      }
+    },
+    "googleApiKeys": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      },
+      "sensitive": true
+    },
+    "googleCloudAssist": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      },
+      "lifecycle": "private-preview"
+    },
+    "googleIam": {
+      "mode": "oauth",
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/iam"
+        ],
+        "alternativeScopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      },
+      "sensitive": true
+    },
+    "geminiApiDocs": {
+      "mode": "none"
+    }
+  }
+}

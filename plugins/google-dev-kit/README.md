@@ -16,7 +16,9 @@ Personal Google Cloud and Gemini developer plugin for ChatGPT/Codex. Seven compa
 
 `mcp.json` declares Developer Knowledge, Cloud CLI, Cloud Storage, Application Design Center, Android Management, Cloud Run, API Keys, Gemini Cloud Assist, IAM, and Gemini API Docs MCP servers.
 
-Several endpoints require Google authentication, project permissions, API enablement, or preview access. Gemini Cloud Assist may require private-preview access. A server declaration is not proof that a ChatGPT account has a registered/authorized connection.
+Authentication policy lives in `mcp-auth.json`. Gemini API Docs is public. Developer Knowledge prefers a restricted `X-Goog-Api-Key`, with OAuth as an alternative. The protected Google Cloud endpoints use OAuth 2.0 + IAM and require a pre-registered Google OAuth client because Google MCP servers do not support DCR or CIMD. Secrets and account-specific ChatGPT App IDs are intentionally excluded from the package. See [AUTHENTICATION.md](AUTHENTICATION.md).
+
+Several endpoints also require project permissions, API enablement, or preview access. Gemini Cloud Assist is currently private preview. A server declaration is not proof that a ChatGPT account has a registered/authorized connection.
 
 The plugin exposes write capability because several servers can mutate cloud resources. Skills keep reads/planning lightweight, require exact scope, and gate security-sensitive or destructive writes.
 
@@ -24,7 +26,7 @@ The plugin exposes write capability because several servers can mutate cloud res
 
 ```sh
 python -m pip install -r plugins/google-dev-kit/requirements.txt
-python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-0.1.0.zip
+python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-0.1.1.zip
 ```
 
 Packaging validates Agent Plugins 1.0 manifests, MCP endpoints, skill metadata, assets, and `[CHAT, CODEX]` policy. It generates `.codex-plugin/plugin.json` and `.mcp.json` compatibility files.

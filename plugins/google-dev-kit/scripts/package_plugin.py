@@ -20,7 +20,7 @@ EXPECTED_SERVERS = {
     "googleDeveloperKnowledge": "https://developerknowledge.googleapis.com/mcp",
     "googleCloudCli": "https://cloudcli.googleapis.com/mcp",
     "googleCloudStorage": "https://storage.googleapis.com/storage/mcp",
-    "googleApplicationDesignCenter": "https://design.googleapis.com/mcp",
+    "googleApplicationDesignCenter": "https://designcenter.googleapis.com/mcp",
     "googleAndroidManagement": "https://androidmanagement.googleapis.com/mcp",
     "googleCloudRun": "https://run.googleapis.com/mcp",
     "googleApiKeys": "https://apikeys.googleapis.com/mcp",
@@ -36,6 +36,18 @@ EXPECTED_SKILLS = {
     "gemini-api",
     "gemini-agents-api",
     "application-design-center",
+}
+EXPECTED_AUTH_MODES = {
+    "googleDeveloperKnowledge": "api_key_or_oauth",
+    "googleCloudCli": "oauth",
+    "googleCloudStorage": "oauth",
+    "googleApplicationDesignCenter": "oauth",
+    "googleAndroidManagement": "oauth",
+    "googleCloudRun": "oauth",
+    "googleApiKeys": "oauth",
+    "googleCloudAssist": "oauth",
+    "googleIam": "oauth",
+    "geminiApiDocs": "none",
 }
 
 
@@ -160,6 +172,51 @@ def validate(root: Path):
         if actual[name] != {"type": "streamable-http", "url": url}:
             raise ValueError(f"unexpected MCP config: {name}")
 
+    auth = json.loads((root / "mcp-auth.json").read_text(encoding="utf-8"))
+    if auth.get("version") != 1:
+        raise ValueError("unsupported MCP auth metadata version")
+    google_oauth = auth.get("googleOAuth", {})
+    if (
+        google_oauth.get("clientRegistration") != "pre-registered"
+        or google_oauth.get("dynamicClientRegistration") is not False
+        or google_oauth.get("clientIdMetadataDocuments") is not False
+    ):
+        raise ValueError("unexpected Google OAuth client-registration policy")
+
+    auth_servers = auth.get("servers", {})
+    if set(auth_servers) != set(EXPECTED_SERVERS):
+        raise ValueError("unexpected MCP auth server set")
+    for name, expected_mode in EXPECTED_AUTH_MODES.items():
+        profile = auth_servers[name]
+        if profile.get("mode") != expected_mode:
+            raise ValueError(f"unexpected MCP auth mode: {name}")
+        if expected_mode == "none":
+            if "oauth" in profile or "apiKey" in profile:
+                raise ValueError(f"no-auth server declares credentials: {name}")
+            continue
+        oauth = profile.get("oauth")
+        scopes = oauth.get("scopes") if isinstance(oauth, dict) else None
+        if (
+            not isinstance(scopes, list)
+            or not scopes
+            or not all(isinstance(scope, str) and scope for scope in scopes)
+        ):
+            raise ValueError(f"missing OAuth scopes: {name}")
+
+    developer_key = auth_servers["googleDeveloperKnowledge"].get("apiKey")
+    if developer_key != {
+        "header": "X-Goog-Api-Key",
+        "env": "GOOGLE_DEVELOPER_KNOWLEDGE_API_KEY",
+    }:
+        raise ValueError("unexpected Developer Knowledge API-key policy")
+
+    serialized_auth = json.dumps(auth)
+    if re.search(
+        r'"(?:clientId|clientSecret|accessToken|refreshToken)"\\s*:',
+        serialized_auth,
+    ):
+        raise ValueError("account credentials must not be stored in mcp-auth.json")
+
     names = set()
     for child in sorted((root / "skills").iterdir()):
         if not child.is_dir() or child.is_symlink():
@@ -194,7 +251,7 @@ def validate(root: Path):
 
     if names != EXPECTED_SKILLS:
         raise ValueError("missing intended skills")
-    return manifest, config
+    return manifest, config, auth
 
 
 def stage(source: Path, target: Path) -> None:
@@ -217,7 +274,7 @@ def stage(source: Path, target: Path) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(path.read_bytes())
 
-    manifest, config = validate(target)
+    manifest, config, _ = validate(target)
     overlay = {
         key: value
         for key, value in manifest.items()

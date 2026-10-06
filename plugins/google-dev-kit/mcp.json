@@ -15,7 +15,7 @@
     },
     "googleApplicationDesignCenter": {
       "type": "streamable-http",
-      "url": "https://design.googleapis.com/mcp"
+      "url": "https://designcenter.googleapis.com/mcp"
     },
     "googleAndroidManagement": {
       "type": "streamable-http",

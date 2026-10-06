@@ -11,7 +11,7 @@ dependencies:
     value: googleApplicationDesignCenter
     description: Application Design Center design and deployment
     transport: streamable_http
-    url: https://design.googleapis.com/mcp
+    url: https://designcenter.googleapis.com/mcp
   - type: mcp
     value: googleDeveloperKnowledge
     description: Current ADC and Terraform guidance
