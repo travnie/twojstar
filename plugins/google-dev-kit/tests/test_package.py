@@ -71,24 +71,23 @@ class PackageTests(unittest.TestCase):
             ("protected-api-key", ("apiKey",), {"value": "nope"}),
         ]
         for label, keys, value in mutations:
-            with self.subTest(label=label):
-                with tempfile.TemporaryDirectory() as directory:
-                    target = Path(directory) / "google-dev-kit"
-                    target.mkdir()
-                    PACK.stage(ROOT, target)
-                    path = target / "mcp-auth.json"
-                    auth = json.loads(path.read_text())
-                    profile = auth["servers"]["googleCloudRun"]
-                    if len(keys) == 2:
-                        profile[keys[0]][keys[1]] = value
-                    else:
-                        profile[keys[0]] = value
-                    path.write_text(json.dumps(auth))
-                    with self.assertRaisesRegex(
-                        ValueError,
-                        "unexpected (MCP auth profile|OAuth policy) fields",
-                    ):
-                        PACK.validate(target)
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "google-dev-kit"
+                target.mkdir()
+                PACK.stage(ROOT, target)
+                path = target / "mcp-auth.json"
+                auth = json.loads(path.read_text())
+                profile = auth["servers"]["googleCloudRun"]
+                if len(keys) == 2:
+                    profile[keys[0]][keys[1]] = value
+                else:
+                    profile[keys[0]] = value
+                path.write_text(json.dumps(auth))
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "unexpected (MCP auth profile|OAuth policy) fields",
+                ):
+                    PACK.validate(target)
 
     def test_bad_product_policy(self):
         with tempfile.TemporaryDirectory() as directory:
