@@ -1,0 +1,27 @@
+interface:
+  display_name: Cloud Storage
+  short_description: GCS design and operations
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $google-cloud-storage to design a bucket or operate GCS with Storage MCP first, current docs second, and explicit gates for risky changes.
+dependencies:
+  tools:
+  - type: mcp
+    value: googleCloudStorage
+    description: Google Cloud Storage operations
+    transport: streamable_http
+    url: https://storage.googleapis.com/storage/mcp
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Current Cloud Storage documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+  - type: mcp
+    value: googleIam
+    description: IAM inspection when storage access depends on IAM
+    transport: streamable_http
+    url: https://iam.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

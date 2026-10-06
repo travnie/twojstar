@@ -1,0 +1,45 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "google-dev-kit",
+  "version": "0.1.0",
+  "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/google-dev-kit",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "google-cloud",
+    "gemini",
+    "gcloud",
+    "cloud-run",
+    "cloud-storage",
+    "mcp",
+    "developer-docs"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Google Dev Kit",
+        "shortDescription": "Google Cloud + Gemini dev",
+        "longDescription": "Build and operate Google Cloud and Gemini integrations with compact workflows backed by Google developer documentation and official Google MCP endpoints. Includes gcloud guardrails, Cloud Storage, Cloud Run, Gemini API, managed agents, and Application Design Center. Personal toolkit maintained by travnie; not an official Google plugin.",
+        "developerName": "travnie",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/google-dev-kit",
+        "defaultPrompt": [
+          "Use Google Dev Kit to find the current official Google guidance and build the smallest safe solution.",
+          "Use Google Dev Kit to review this Google Cloud or Gemini integration and verify commands against live documentation."
+        ],
+        "brandColor": "#4285F4",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      }
+    }
+  }
+}

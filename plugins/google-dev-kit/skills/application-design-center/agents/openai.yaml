@@ -1,0 +1,27 @@
+interface:
+  display_name: Application Design Center
+  short_description: ADC Terraform design/deploy
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $application-design-center to keep Terraform local-first, assess it, import to ADC, deploy safely, and troubleshoot from live state.
+dependencies:
+  tools:
+  - type: mcp
+    value: googleApplicationDesignCenter
+    description: Application Design Center design and deployment
+    transport: streamable_http
+    url: https://design.googleapis.com/mcp
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Current ADC and Terraform guidance
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+  - type: mcp
+    value: googleCloudAssist
+    description: Gemini Cloud Assist when account access permits
+    transport: streamable_http
+    url: https://geminicloudassist.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

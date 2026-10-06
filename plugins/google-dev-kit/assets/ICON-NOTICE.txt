@@ -1,0 +1,5 @@
+The root Google Dev Kit icon is an original repository asset using the Google product color palette for descriptive context. It is not a Google logo.
+
+Skill icons are adapted only by normalizing dimensions and markup from Google Cloud product icons published in GoogleCloudPlatform/devrel-demos: Cloud APIs, Cloud Run, Cloud Storage, and Vertex AI.
+
+Google, Google Cloud, Gemini, Vertex AI, and related marks remain trademarks of Google LLC. Their inclusion identifies covered products and does not imply endorsement or affiliation.

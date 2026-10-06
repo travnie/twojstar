@@ -1,0 +1,17 @@
+interface:
+  display_name: Google Developer
+  short_description: Live docs and product routing
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $google-dev to retrieve current official Google guidance, route to the narrowest workflow, and avoid stale API or CLI syntax.
+dependencies:
+  tools:
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Official Google developer documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

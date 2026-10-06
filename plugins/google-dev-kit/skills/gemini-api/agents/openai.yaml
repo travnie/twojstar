@@ -1,0 +1,22 @@
+interface:
+  display_name: Gemini API
+  short_description: Current Gen AI SDK workflows
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $gemini-api to select the right Gemini backend, fetch current model and SDK docs, and produce a minimal modern implementation.
+dependencies:
+  tools:
+  - type: mcp
+    value: geminiApiDocs
+    description: Current Gemini API documentation and examples
+    transport: streamable_http
+    url: https://gemini-api-docs-mcp.dev
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Google Cloud and Agent Platform documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

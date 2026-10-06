@@ -1,0 +1,45 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "googleDeveloperKnowledge": {
+      "type": "streamable-http",
+      "url": "https://developerknowledge.googleapis.com/mcp"
+    },
+    "googleCloudCli": {
+      "type": "streamable-http",
+      "url": "https://cloudcli.googleapis.com/mcp"
+    },
+    "googleCloudStorage": {
+      "type": "streamable-http",
+      "url": "https://storage.googleapis.com/storage/mcp"
+    },
+    "googleApplicationDesignCenter": {
+      "type": "streamable-http",
+      "url": "https://design.googleapis.com/mcp"
+    },
+    "googleAndroidManagement": {
+      "type": "streamable-http",
+      "url": "https://androidmanagement.googleapis.com/mcp"
+    },
+    "googleCloudRun": {
+      "type": "streamable-http",
+      "url": "https://run.googleapis.com/mcp"
+    },
+    "googleApiKeys": {
+      "type": "streamable-http",
+      "url": "https://apikeys.googleapis.com/mcp"
+    },
+    "googleCloudAssist": {
+      "type": "streamable-http",
+      "url": "https://geminicloudassist.googleapis.com/mcp"
+    },
+    "googleIam": {
+      "type": "streamable-http",
+      "url": "https://iam.googleapis.com/mcp"
+    },
+    "geminiApiDocs": {
+      "type": "streamable-http",
+      "url": "https://gemini-api-docs-mcp.dev"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+interface:
+  display_name: Cloud Run
+  short_description: Services, jobs, worker pools
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  brand_color: '#4285F4'
+  default_prompt: Use $cloud-run to choose the right Cloud Run resource, inspect live state, retrieve current docs, and deploy or troubleshoot with scoped changes.
+dependencies:
+  tools:
+  - type: mcp
+    value: googleCloudRun
+    description: Cloud Run resource management
+    transport: streamable_http
+    url: https://run.googleapis.com/mcp
+  - type: mcp
+    value: googleDeveloperKnowledge
+    description: Current Cloud Run documentation
+    transport: streamable_http
+    url: https://developerknowledge.googleapis.com/mcp
+  - type: mcp
+    value: googleCloudCli
+    description: Validated gcloud fallback
+    transport: streamable_http
+    url: https://cloudcli.googleapis.com/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true
