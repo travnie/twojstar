@@ -1,0 +1,8 @@
+interface:
+  display_name: "Claude API"
+  short_description: "Build with Claude and Anthropic SDKs"
+  brand_color: "#D97757"
+  default_prompt: "Use $claude-api to build or review this Claude API integration."
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true

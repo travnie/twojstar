@@ -36,3 +36,7 @@
 *.woff -text
 *.woff2 -text
 *.zip -text
+
+# Pinned third-party skill snapshots; keep upstream content byte-for-byte where practical.
+plugins/claude-dev-kit/skills/claude-api/** linguist-vendored
+plugins/claude-dev-kit/skills/mcp-builder/** linguist-vendored

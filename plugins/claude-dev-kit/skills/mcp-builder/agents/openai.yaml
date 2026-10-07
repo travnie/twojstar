@@ -1,0 +1,8 @@
+interface:
+  display_name: "MCP Builder"
+  short_description: "Design and evaluate MCP servers"
+  brand_color: "#D97757"
+  default_prompt: "Use $mcp-builder to design a focused, high-quality MCP server."
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true
