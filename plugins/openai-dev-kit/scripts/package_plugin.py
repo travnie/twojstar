@@ -14,8 +14,25 @@ import zipfile
 from pathlib import Path
 from xml.parsers import expat
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+class SkillMetadataLoader(yaml.SafeLoader):
+    """Load skill metadata without duplicate keys or YAML merge overrides."""
+
+    def construct_mapping(self, node, deep=False):
+        if isinstance(node, yaml.MappingNode):
+            keys = set()
+            for key, _value in node.value:
+                if not isinstance(key, yaml.ScalarNode) or key.tag != "tag:yaml.org,2002:str":
+                    raise ValueError("skill metadata requires plain string mapping keys")
+                if key.value in keys:
+                    raise ValueError(f"duplicate skill metadata key: {key.value}")
+                keys.add(key.value)
+        return super().construct_mapping(node, deep=deep)
 
 
 def asset(root: Path, value: str) -> Path:
@@ -110,6 +127,17 @@ def validate(root: Path) -> tuple[dict, dict]:
         if not front or front[1] != child.name or front[1] in names:
             raise ValueError(f"invalid/duplicate skill: {child.name}")
         names.add(front[1])
+        metadata_text = (child / "agents/openai.yaml").read_text(encoding="utf-8")
+        loader = SkillMetadataLoader(metadata_text)
+        try:
+            metadata = loader.get_single_data()
+        except yaml.YAMLError as error:
+            raise ValueError(f"invalid skill metadata: {child.name}") from error
+        finally:
+            loader.dispose()
+        policy = metadata.get("policy") if isinstance(metadata, dict) else None
+        if not isinstance(policy, dict) or policy.get("products") != ["CHAT", "CODEX"]:
+            raise ValueError(f"bundled skill must target CHAT and CODEX: {child.name}")
     if names != {"openai-dev", "chatgpt-plugin-builder"}:
         raise ValueError("missing intended skills")
     return manifest, servers

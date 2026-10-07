@@ -12,9 +12,5 @@ dependencies:
     transport: streamable_http
     url: https://developers.openai.com/mcp
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
+  products: [CHAT, CODEX]
   allow_implicit_invocation: true
