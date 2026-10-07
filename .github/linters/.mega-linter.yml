@@ -60,4 +60,4 @@ ACTION_ZIZMOR_ARGUMENTS:
   - "--min-severity=medium"
 
 # Generated/dependency state should not create lint chores in the monorepo.
-FILTER_REGEX_EXCLUDE: "(package-lock\\.json|(^|/)dist/|(^|/)build/|(^|/)node_modules/)"
+FILTER_REGEX_EXCLUDE: "(package-lock\\.json|(^|/)dist/|(^|/)build/|(^|/)node_modules/|^plugins/claude-dev-kit/skills/(claude-api|mcp-builder)/)"
