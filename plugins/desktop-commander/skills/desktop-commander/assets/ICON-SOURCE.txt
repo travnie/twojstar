@@ -1,0 +1,4 @@
+Desktop Commander icon.png, retrieved 2026-09-24 from:
+https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/main/icon.png
+Repository: https://github.com/wonderwhy-er/DesktopCommanderMCP
+The upstream repository includes an MIT LICENSE (copied at skill root). Desktop Commander name and logo identify the upstream product; their presence does not imply official endorsement of this personal skill.

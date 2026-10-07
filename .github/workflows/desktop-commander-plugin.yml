@@ -1,0 +1,40 @@
+name: Desktop Commander Plugin
+
+on:
+  pull_request:
+    paths:
+      - "plugins/desktop-commander/**"
+      - "plugins/_shared/**"
+      - "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py"
+      - ".agents/plugins/marketplace.json"
+      - ".github/workflows/desktop-commander-plugin.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/desktop-commander/**"
+      - "plugins/_shared/**"
+      - "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py"
+      - ".agents/plugins/marketplace.json"
+      - ".github/workflows/desktop-commander-plugin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - name: Install validation dependency
+        run: python -m pip install -r plugins/_shared/requirements.txt
+      - name: Validate portable package
+        run: python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py plugins/desktop-commander
+      - name: Build portable archive
+        run: python plugins/_shared/package_plugin.py plugins/desktop-commander "$RUNNER_TEMP/desktop-commander-0.1.0.zip"
