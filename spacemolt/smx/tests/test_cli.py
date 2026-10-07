@@ -45,7 +45,8 @@ class CliTests(unittest.TestCase):
         calls = []
 
         class Backend:
-            def json(self, args):
+            @staticmethod
+            def json(args):
                 calls.append(args)
                 return BackendResult(0, "", ""), {
                     "structuredContent": {
@@ -115,7 +116,8 @@ class CliTests(unittest.TestCase):
         calls = []
 
         class Backend:
-            def json(self, args):
+            @staticmethod
+            def json(args):
                 calls.append(args)
                 if args == ["get_cargo"]:
                     return BackendResult(0, "", ""), {"structuredContent": {
