@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "openai-dev-kit",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
   "author": {
     "name": "travnie",

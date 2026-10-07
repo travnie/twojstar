@@ -8,10 +8,7 @@ interface:
     Plugins docs, scaffold or review the package, validate every manifest path, and report the deepest test level
     actually reached.
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
+  products: [CHAT, CODEX]
   allow_implicit_invocation: true
 dependencies:
   tools:

@@ -26,9 +26,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      - name: Install packaging dependency
+        run: python -m pip install -r plugins/openai-dev-kit/requirements.txt
       - name: Validate portable package
         run: python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py plugins/openai-dev-kit
       - name: Check packaging and scaffold behavior
         run: python -m unittest discover -s plugins/openai-dev-kit/tests -v
       - name: Build portable archive
-        run: python plugins/openai-dev-kit/scripts/package_plugin.py "$RUNNER_TEMP/openai-dev-kit-0.1.0.zip"
+        run: python plugins/openai-dev-kit/scripts/package_plugin.py "$RUNNER_TEMP/openai-dev-kit-0.1.2.zip"

@@ -44,6 +44,38 @@ class PackageTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     PACK["stage"](ROOT, target, apps)
 
+    def test_lowercase_product_policy_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            PACK["stage"](ROOT, target)
+            metadata = target / "skills/openai-dev/agents/openai.yaml"
+            metadata.write_text(metadata.read_text().replace("[CHAT, CODEX]", "[chatgpt, codex, api, atlas]"))
+            with self.assertRaisesRegex(ValueError, "must target CHAT and CODEX"):
+                PACK["validate"](target)
+
+    def test_product_policy_uses_effective_yaml_mapping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            PACK["stage"](ROOT, target)
+            metadata = target / "skills/openai-dev/agents/openai.yaml"
+            original = metadata.read_text()
+            invalid = original.replace("[CHAT, CODEX]", "[chatgpt, codex, api, atlas]")
+            cases = (
+                invalid + "notes: |\n  products: [CHAT, CODEX]\n",
+                original.replace("  products: [CHAT, CODEX]", "  products: [CHAT, CODEX]\n  products: [chatgpt]"),
+                original + "policy:\n  products: [chatgpt]\n",
+                "defaults: &defaults\n  products: [CHAT, CODEX]\npolicy:\n  <<: *defaults\n",
+                "policy: [\n",
+                "policy: !!python/object:builtins.object {}\n",
+            )
+            for content in cases:
+                with self.subTest(content=content):
+                    metadata.write_text(content)
+                    with self.assertRaises(ValueError):
+                        PACK["validate"](target)
+            metadata.write_text(original.replace("  products: [CHAT, CODEX]", "  products:\n    - CHAT\n    - CODEX"))
+            PACK["validate"](target)
+
     def test_reproducible_archive(self):
         with tempfile.TemporaryDirectory() as directory:
             first = PACK["package"](Path(directory) / "first.zip")
