@@ -1,0 +1,44 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "desktop-commander",
+  "version": "0.1.0",
+  "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "MIT AND ISC",
+  "keywords": [
+    "desktop-commander",
+    "remote-mcp",
+    "files",
+    "terminal",
+    "computer",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Desktop Commander",
+        "shortDescription": "Your computer from chat",
+        "longDescription": "Work with files, terminals, processes, system health and local AI tooling on a connected computer through Desktop Commander Remote MCP. Personal integration maintained by travnie; not an official Desktop Commander plugin.",
+        "developerName": "travnie",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
+        "defaultPrompt": [
+          "Use Desktop Commander to inspect this computer and make the requested local change safely.",
+          "Use Desktop Commander to diagnose this machine and report the measured state before changing anything."
+        ],
+        "brandColor": "#2E9EFF",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      }
+    }
+  }
+}

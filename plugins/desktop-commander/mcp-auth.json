@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "servers": {
+    "desktopCommander": {
+      "authentication": "oauth",
+      "credentialStorage": "host-managed",
+      "notes": "Sign in to Desktop Commander and connect at least one device. Do not store account or device credentials in the plugin archive."
+    }
+  }
+}

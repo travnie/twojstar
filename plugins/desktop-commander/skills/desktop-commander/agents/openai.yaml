@@ -1,0 +1,17 @@
+interface:
+  display_name: "Desktop Commander"
+  short_description: "Work on your connected computer"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#2E9EFF"
+  default_prompt: "Use $desktop-commander to inspect my computer, work with local files, and handle a persistent terminal session."
+dependencies:
+  tools:
+  - type: mcp
+    value: desktopCommander
+    description: Remote Desktop Commander tools on the user's paired computer
+    transport: streamable_http
+    url: https://mcp.desktopcommander.app/mcp
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true
