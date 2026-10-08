@@ -1,23 +1,31 @@
 # Authentication
 
-`https://mcp.desktopcommander.app/mcp` is Desktop Commander Remote MCP. It requires a Desktop Commander account and a connected device. Authentication is completed through the provider's browser-based sign-in flow; this plugin stores no account password, access token, device token, or private App ID.
+Remote Desktop Commander has two separate trust steps: the computer must be paired with the hosted service, and the MCP client must authorize its own connection.
 
-## Device setup
+## 1. Pair a computer
 
-On each computer you want to control, install Node.js 18 or newer and start the Remote Device:
+On each computer you want the MCP to reach, run:
 
 ```sh
 npx @wonderwhy-er/desktop-commander@latest remote
 ```
 
-The command opens Desktop Commander's device-authorization flow. Confirm the browser code matches the terminal code, sign in, and keep this process running while the computer should be reachable. Closing it takes the device offline; starting the same command again normally reuses the saved device session.
+The device agent opens an OAuth device-verification page. Sign in, confirm that the browser code matches the terminal code, and keep the agent running. The machine is unreachable when that agent is stopped.
 
-## ChatGPT
+The local device session is managed by Desktop Commander. Its default session file is `~/.desktop-commander-device/device.json`. Do not commit or copy that file into this plugin.
 
-Connect the hosted MCP through the host's OAuth / connection flow using the same Desktop Commander account as the paired device. The AI-side connection and the local Remote Device must both be active. Any ChatGPT registered App ID is account- or workspace-specific and must not be committed to this portable repository.
+## 2. Authorize the MCP client
 
-## Other MCP clients
+Connect the host to:
 
-Add the HTTPS Streamable HTTP endpoint and complete the provider login when the client prompts. Desktop Commander also offers a separate local MCP server, but this plugin intentionally targets the hosted Remote MCP URL requested here.
+```text
+https://mcp.desktopcommander.app/mcp
+```
 
-Keep device access narrow: Desktop Commander's own allowed directories and blocked commands remain the enforcement boundary.
+The hosted MCP uses OAuth 2.0. ChatGPT should complete OAuth through its connector UI and keep credentials in host-managed storage. No OAuth tokens, cookies, account identifiers, pairing codes, or account-specific ChatGPT app IDs belong in this repository.
+
+For Codex or another OAuth-capable client, let the client perform the browser authorization flow for the same MCP endpoint. Do not invent static bearer tokens as a substitute.
+
+## Security boundary
+
+This MCP can read and modify files, run processes, and otherwise act with the permissions of the paired computer and device agent. Treat write/process tools as high impact: inspect first, use the smallest action, and keep destructive commands behind explicit user approval.

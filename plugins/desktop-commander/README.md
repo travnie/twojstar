@@ -1,13 +1,27 @@
-# Desktop Commander plugin
+# Desktop Commander
 
-Portable Agent Plugins 1.0 package combining the supplied `desktop-commander` skill with Desktop Commander Remote MCP.
+Portable Agent Plugins 1.0 package combining the upstream Desktop Commander skill bundle with the hosted Remote Desktop Commander MCP.
 
-- MCP: `https://mcp.desktopcommander.app/mcp`
-- Auth: provider-managed browser sign-in plus a local Remote Device (`Node.js 18+`, `npx @wonderwhy-er/desktop-commander@latest remote`) kept running on the target computer; see `AUTHENTICATION.md`.
-- Skill: files, terminal/process sessions, system health, local AI tooling and Markdown/Obsidian workflows.
-- Credentials and account-specific ChatGPT App IDs are intentionally not bundled.
+## Included workflows
 
-Package with the shared repository packager:
+The six skill bodies are vendored unchanged from `wonderwhy-er/DesktopCommanderMCP@ea3ed35a7be9f2a3ea3e89185ff9bbb03fe5ab57`:
+
+- `ai-tools-setup`
+- `computer-health-check`
+- `desktop-commander-overview`
+- `knowledge-base`
+- `obsidian-vault`
+- `terminal`
+
+This repository adds only host metadata under each skill's `agents/openai.yaml`.
+
+## MCP
+
+`https://mcp.desktopcommander.app/mcp` is the hosted Remote Desktop Commander Streamable HTTP endpoint. The remote service is not redistributed here.
+
+See [AUTHENTICATION.md](AUTHENTICATION.md) before first use. A paired device agent must be online in addition to the MCP client's OAuth session.
+
+## Package
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt

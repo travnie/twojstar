@@ -12,18 +12,18 @@
   "license": "MIT AND ISC",
   "keywords": [
     "desktop-commander",
-    "remote-mcp",
-    "files",
+    "remote-computer",
     "terminal",
-    "computer",
-    "mcp"
+    "filesystem",
+    "mcp",
+    "automation"
   ],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "Desktop Commander",
-        "shortDescription": "Your computer from chat",
-        "longDescription": "Work with files, terminals, processes, system health and local AI tooling on a connected computer through Desktop Commander Remote MCP. Personal integration maintained by travnie; not an official Desktop Commander plugin.",
+        "shortDescription": "Remote computer control",
+        "longDescription": "Operate a paired computer through Remote Desktop Commander with upstream workflows for terminal work, machine health, AI tooling, knowledge bases and Obsidian. Personal packaging maintained by travnie; not an official Desktop Commander plugin.",
         "developerName": "travnie",
         "category": "Developer Tools",
         "capabilities": [
@@ -32,10 +32,10 @@
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
         "defaultPrompt": [
-          "Use Desktop Commander to inspect this computer and make the requested local change safely.",
-          "Use Desktop Commander to diagnose this machine and report the measured state before changing anything."
+          "Use Desktop Commander to inspect this computer and make the smallest safe change needed.",
+          "Use Desktop Commander to diagnose this machine or terminal workflow, verify the result, and keep destructive actions behind explicit confirmation."
         ],
-        "brandColor": "#2E9EFF",
+        "brandColor": "#5B5BD6",
         "composerIcon": "./assets/icon.svg",
         "logo": "./assets/icon.svg"
       }
