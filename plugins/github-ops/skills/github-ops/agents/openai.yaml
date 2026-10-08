@@ -1,0 +1,19 @@
+interface:
+  display_name: GitHub Ops
+  short_description: GitHub ops for repos, PRs, Actions, merge gates, and Dependabot
+  icon_small: ./assets/icon.svg
+  icon_large: ./assets/icon.svg
+  brand_color: '#DF7757'
+  default_prompt: Use $github-ops to open and merge this PR correctly.
+policy:
+  products:
+  - CHAT
+  - CODEX
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+  - type: mcp
+    value: github
+    description: GitHub repository and pull-request tools
+    transport: streamable_http
+    url: https://api.githubcopilot.com/mcp/x/all

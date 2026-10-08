@@ -1,0 +1,44 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "github-ops",
+  "version": "0.1.0",
+  "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "ISC AND CC-BY-SA-4.0",
+  "keywords": [
+    "github",
+    "pull-requests",
+    "actions",
+    "dependabot",
+    "mcp",
+    "git"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "GitHub Ops",
+        "shortDescription": "GitHub repos + PR ops",
+        "longDescription": "Operate repositories, commits, pull requests, Actions, releases, Dependabot, and pre-merge gates with the supplied GitHub Ops workflow and GitHub's official remote MCP toolset. Personal packaging maintained by travnie; not an official GitHub plugin.",
+        "developerName": "travnie",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+        "defaultPrompt": [
+          "Use GitHub Ops to inspect this repository, make the requested change, and verify the resulting PR or checks.",
+          "Use the GitHub merge gate to decide whether this pull request is actually safe to merge."
+        ],
+        "brandColor": "#DF7757",
+        "composerIcon": "./skills/github-ops/assets/icon.svg",
+        "logo": "./skills/github-ops/assets/icon.svg"
+      }
+    }
+  }
+}

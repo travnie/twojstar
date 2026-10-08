@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "servers": {
+    "github": {
+      "mode": "oauth_or_pat",
+      "preferred": "oauth",
+      "oauth": {
+        "discovery": "server-advertised",
+        "credentialStorage": "host-managed"
+      },
+      "pat": {
+        "header": "Authorization",
+        "scheme": "Bearer",
+        "credentialStorage": "host-managed",
+        "customClientsOnly": true
+      }
+    }
+  }
+}
