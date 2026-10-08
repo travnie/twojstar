@@ -1,0 +1,19 @@
+interface:
+  display_name: Cloudflare Platform
+  short_description: Workers, Pages, KV/D1/R2, Workers AI, AI Gateway, Agents SDK
+  icon_small: ./assets/icon.svg
+  icon_large: ./assets/icon.svg
+  brand_color: '#F38020'
+  default_prompt: Use $cloudflare to design or implement this Cloudflare task.
+policy:
+  products:
+  - CHAT
+  - CODEX
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+  - type: mcp
+    value: cloudflareApi
+    description: Cloudflare API and documentation tools
+    transport: streamable_http
+    url: https://mcp.cloudflare.com/mcp

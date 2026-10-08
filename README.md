@@ -28,6 +28,7 @@
 | ☁️ **Google Dev Kit** | [`plugins/google-dev-kit/`](plugins/google-dev-kit/) | Seven deduplicated Google Cloud/Gemini workflows backed by ten Google MCP endpoints and live docs. |
 | 🟠 **Claude Dev Kit** | [`plugins/claude-dev-kit/`](plugins/claude-dev-kit/) | Anthropic Claude API and MCP Builder skills paired with the live Claude Code Docs MCP. |
 | 🖥️ **Desktop Commander** | [`plugins/desktop-commander/`](plugins/desktop-commander/) | Local-computer workflow skill paired with Desktop Commander Remote MCP. |
+| 🟧 **Cloudflare** | [`plugins/cloudflare/`](plugins/cloudflare/) | Cloudflare platform skill paired with the token-efficient Cloudflare API MCP. |
 | 🎨 **Paint.NET plugins** | [`plugins/paintdotnet/`](plugins/paintdotnet/) · [`ICO`](plugins/paintdotnet/ico/) · [`AI Restore`](plugins/paintdotnet/ai/) | ICO import/export plus local AI Restore, DeJPEG and Denoise effects. |
 | 🎚️ **Audacity plugins** | [`plugins/audacity/`](plugins/audacity/) · [`VST3`](plugins/audacity/vst3/) · [Windows](https://github.com/travnie/twojstar/releases/latest/download/audacity-auto-declip-windows.zip) · [Linux](https://github.com/travnie/twojstar/releases/latest/download/audacity-auto-declip-linux.zip) | Local-first audio restoration and workflow effects, starting with Auto Declip. |
 | ⌨️ **Intent Keyboard** | [`intent-keyboard/`](intent-keyboard/) | Multiplatform semantic input experiment: rough intent in, natural text out, with tone, translation and protected facts. |
