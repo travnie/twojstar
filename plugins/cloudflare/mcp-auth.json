@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "servers": {
+    "cloudflareApi": {
+      "mode": "oauth_or_bearer",
+      "preferred": "oauth",
+      "oauth": {
+        "permissions": "user-selected"
+      },
+      "bearer": {
+        "type": "cloudflare-api-token",
+        "storage": "host-managed"
+      }
+    }
+  }
+}
