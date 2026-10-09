@@ -38,3 +38,11 @@ jobs:
         run: python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py plugins/github-ops
       - name: Build portable archive
         run: python plugins/_shared/package_plugin.py plugins/github-ops "$RUNNER_TEMP/github-ops-0.1.0.zip"
+      - name: Upload installable plugin ZIP
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: github-ops-plugin
+          path: ${{ runner.temp }}/github-ops-0.1.0.zip
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
