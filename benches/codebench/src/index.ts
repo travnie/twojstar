@@ -34,6 +34,8 @@ const SCHEMA = JSON.stringify({
   "@type": "WebApplication",
   name: "Code Bench",
   url: SITE_URL,
+  creator: { "@id": "https://trfny.com/#creator" },
+  isPartOf: { "@id": "https://trfny.com/#website" },
   applicationCategory: "UtilitiesApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires a modern browser; camera scanning requires HTTPS.",
