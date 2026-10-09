@@ -42,4 +42,5 @@ jobs:
           name: claude-dev-kit-plugin
           path: ${{ runner.temp }}/claude-dev-kit-0.1.0.zip
           if-no-files-found: error
+          overwrite: true
           retention-days: 30
