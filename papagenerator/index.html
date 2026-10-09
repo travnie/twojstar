@@ -46,7 +46,7 @@ import { skibidiClamp, yeetIntoFrame, certifiedRizz, sigmaDistance } from './bra
 const canvas=document.querySelector('#canvas'), ctx=canvas.getContext('2d');
 const $=s=>document.querySelector(s), layers=[], history=[];
 let background=null, selected=-1, dragging=null, sourceWidth=900, sourceHeight=700;
-let blankCanvas=false, backgroundRequest=0, stickerRequest=0;
+let blankCanvas=false, backgroundRequest=0;
 const MAX_CANVAS_EDGE=4096, MAX_CANVAS_PIXELS=12_000_000;
 function safeCanvasSize(img){const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)throw Error('Invalid image dimensions');const scale=Math.min(1,MAX_CANVAS_EDGE/Math.max(w,h),Math.sqrt(MAX_CANVAS_PIXELS/(w*h)));return{width:Math.max(1,Math.floor(w*scale)),height:Math.max(1,Math.floor(h*scale)),scaled:scale<1};}
 function cancelDrag(){if(!dragging)return;try{canvas.releasePointerCapture(dragging.pointer);}catch{}dragging=null;}
@@ -62,7 +62,7 @@ const presets=[
 const encoded=svg=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 function imageFrom(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});}
 function commitSticker(img){cancelDrag();snapshot();layers.push({img,x:canvas.width/2,y:canvas.height/2,size:Math.min(canvas.width,canvas.height)*.27,rotation:0,opacity:1});selected=layers.length-1;sync();render();setStatus('Sticker acquired.');}
-const addSticker=async(src)=>{const request=++stickerRequest;try{const img=await imageFrom(src);if(request===stickerRequest)commitSticker(img);}catch{if(request===stickerRequest)setStatus('Could not load sticker.');}};
+const addSticker=async(src)=>{try{const img=await imageFrom(src);commitSticker(img);}catch{setStatus('Could not load sticker.');}};
 const stickerBox=$('#stickers');
 presets.forEach(([name,hat,eyes,mouth,extra],i)=>{const src=encoded(papajSVG(i===5?'#ffd05e':'#e5b377',hat,eyes,mouth,extra||''));const btn=document.createElement('button');btn.className='sticker';btn.title=name;btn.setAttribute('aria-label','Add '+name);const img=document.createElement('img');img.src=src;img.alt=name;btn.append(img);btn.onclick=()=>addSticker(src);stickerBox.append(btn);});
 function setStatus(s){$('#status').textContent=s;}
@@ -91,11 +91,11 @@ $('#clearBackground').onclick=()=>{++backgroundRequest;cancelDrag();snapshot();b
 async function loadFile(file,asBackground){
  if(!file||!file.type.startsWith('image/'))return setStatus('Please choose an image.');
  if(file.size>25*1024*1024)return setStatus('Maximum image size is 25 MB.');
- const request=asBackground?++backgroundRequest:++stickerRequest;
+ const request=asBackground?++backgroundRequest:0;
  const url=URL.createObjectURL(file);
  try{
   const img=await imageFrom(url);
-  if(request!==(asBackground?backgroundRequest:stickerRequest))return;
+  if(asBackground&&request!==backgroundRequest)return;
   if(asBackground){
    const dimensions=safeCanvasSize(img);
    cancelDrag();snapshot();background=img;blankCanvas=false;
@@ -104,7 +104,7 @@ async function loadFile(file,asBackground){
    layers.splice(0);selected=-1;sync();render();
    setStatus(dimensions.scaled?'Photo loaded and resized for safe PNG export.':'Photo loaded. Your files stay on this device.');
   }else{commitSticker(img);}
- }catch{if(request===(asBackground?backgroundRequest:stickerRequest))setStatus('Could not decode this image.');}
+ }catch{if(!asBackground||request===backgroundRequest)setStatus('Could not decode this image.');}
  finally{URL.revokeObjectURL(url);}
 }
 $('#backgroundFile').onchange=e=>{const file=e.target.files[0];e.target.value='';loadFile(file,true);};
