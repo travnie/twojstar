@@ -1,0 +1,58 @@
+---
+# Mirrors the latest official SpaceMolt/client-v2 tag as a linux-x64 binary on
+# release `spacemolt-backend`. Cloud Claude sessions can't reach that repo's
+# releases (GitHub proxy allows only attached repos), but can reach this one;
+# .claude/hooks/session-start.sh downloads from here.
+
+name: SpaceMolt backend mirror
+
+on: # yamllint disable-line rule:truthy
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/spacemolt-backend.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spacemolt-backend
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  REL: spacemolt-backend
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check versions
+        id: v
+        run: |
+          tag=$(git ls-remote --tags --refs https://github.com/SpaceMolt/client-v2 'v*' \
+            | sed 's#.*refs/tags/##' | sort -V | tail -1)
+          have=$(gh release download "$REL" --pattern VERSION --output - 2>/dev/null || true)
+          echo "upstream=$tag mirrored=${have:-none}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          [ -n "$tag" ] && [ "$tag" != "$have" ] && echo "build=1" >> "$GITHUB_OUTPUT" || true
+
+      - if: steps.v.outputs.build
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build and publish
+        if: steps.v.outputs.build
+        env:
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          git -c advice.detachedHead=false clone -q --depth 1 --branch "$TAG" https://github.com/SpaceMolt/client-v2 src
+          (cd src && bun install --frozen-lockfile && bun build src/main.ts --compile --outfile ../spacemolt)
+          ./spacemolt --version
+          gzip -9 spacemolt
+          echo "$TAG" > VERSION
+          gh release view "$REL" >/dev/null 2>&1 || gh release create "$REL" --latest=false \
+            --title "SpaceMolt backend mirror" \
+            --notes "Official SpaceMolt/client-v2 (MIT) built for linux-x64, for cloud agent sessions. Updated by spacemolt-backend.yml."
+          gh release upload "$REL" spacemolt.gz VERSION --clobber

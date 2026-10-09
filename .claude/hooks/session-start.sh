@@ -35,27 +35,38 @@ if ! command -v smx >/dev/null 2>&1; then
   sh spacemolt/smx/install.sh --skip-backend >&2 || echo "smx: install failed; use the game MCP server" >&2
 fi
 
-# Official backend. `smx backend update` reads api.github.com, which the cloud GitHub
-# proxy refuses (403) for repos not attached to the session; anonymous git reads of
-# public repos still pass. So: build the latest official release tag of
-# SpaceMolt/client-v2 from source with bun into ~/.local/bin/spacemolt, where smx
-# finds it on PATH. Rebuilt only when a newer tag exists.
+# Official backend. The cloud GitHub proxy refuses SpaceMolt/client-v2 releases (and
+# sometimes git) unless that repo is attached to the session. So:
+#  1. download the linux-x64 mirror that .github/workflows/spacemolt-backend.yml
+#     publishes on this repo's `spacemolt-backend` release (this repo is attached);
+#  2. else build the latest upstream tag from source with bun.
+# Lands in ~/.local/bin/spacemolt, where smx finds it on PATH.
+BIN="$HOME/.local/bin/spacemolt"; mkdir -p "${BIN%/*}"
+MIRROR=https://github.com/travnie/twojstar/releases/download/spacemolt-backend
+have=$("$BIN" --version 2>/dev/null | grep -oE 'v[0-9][0-9.]*' | head -1)
+want=$(curl -fsSL --max-time 20 "$MIRROR/VERSION" 2>/dev/null | tr -d '[:space:]')
+if [ -n "$want" ] && [ "$want" != "$have" ] \
+  && curl -fsSL --max-time 120 "$MIRROR/spacemolt.gz" | gunzip > "$BIN.tmp" \
+  && chmod +x "$BIN.tmp" && "$BIN.tmp" --version >/dev/null 2>&1; then
+  mv "$BIN.tmp" "$BIN"
+  echo "spacemolt backend: $want from mirror"
+else
+  rm -f "$BIN.tmp"
+fi
+have=$("$BIN" --version 2>/dev/null | grep -oE 'v[0-9][0-9.]*' | head -1)
 BUN=$(command -v bun || echo "$HOME/.bun/bin/bun")
-if command -v smx >/dev/null 2>&1 && [ -x "$BUN" ]; then
+if [ -z "$have" ] && [ -x "$BUN" ]; then
   tag=$(git ls-remote --tags --refs https://github.com/SpaceMolt/client-v2 'v*' 2>/dev/null \
     | sed 's#.*refs/tags/##' | sort -V | tail -1)
-  have=$("$HOME/.local/bin/spacemolt" --version 2>/dev/null | grep -oE 'v[0-9][0-9.]*' | head -1)
-  if [ -n "$tag" ] && [ "$tag" != "$have" ]; then
-    src="$HOME/.cache/spacemolt-client-v2"
-    rm -rf "$src"
-    if git -c advice.detachedHead=false clone -q --depth 1 --branch "$tag" https://github.com/SpaceMolt/client-v2 "$src" \
-      && (cd "$src" && "$BUN" build src/main.ts --compile --outfile "$HOME/.local/bin/spacemolt" >/dev/null); then
-      echo "spacemolt backend: built $tag from source"
-    else
-      echo "spacemolt backend: build of $tag failed; use the game MCP server" >&2
-    fi
+  src="$HOME/.cache/spacemolt-client-v2"
+  rm -rf "$src"
+  if [ -n "$tag" ] \
+    && git -c advice.detachedHead=false clone -q --depth 1 --branch "$tag" https://github.com/SpaceMolt/client-v2 "$src" \
+    && (cd "$src" && "$BUN" build src/main.ts --compile --outfile "$BIN" >/dev/null); then
+    echo "spacemolt backend: built $tag from source"
   fi
 fi
+"$BIN" --version >/dev/null 2>&1 || echo "spacemolt backend: unavailable (mirror and source build failed)" >&2
 
 if command -v smx >/dev/null 2>&1 && [ -n "${SPACEMOLT_USER:-}" ] && [ -n "${SPACEMOLT_PASSWORD:-}" ]; then
   if printf '%s\n' "$SPACEMOLT_PASSWORD" | smx profile login claude "$SPACEMOLT_USER" --use --password-stdin >/dev/null 2>&1; then
