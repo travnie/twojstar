@@ -37,7 +37,7 @@ fi
 
 # Official backend. The cloud GitHub proxy refuses SpaceMolt/client-v2 releases (and
 # sometimes git) unless that repo is attached to the session. So:
-#  1. download the linux-x64 mirror that .github/workflows/spacemolt-backend.yml
+#  1. download the linux-x64 mirror that .github/workflows/smx.yml
 #     publishes on this repo's `spacemolt-backend` release (this repo is attached);
 #  2. else build the latest upstream tag from source with bun.
 # Lands in ~/.local/bin/spacemolt, where smx finds it on PATH.
