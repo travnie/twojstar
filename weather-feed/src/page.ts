@@ -186,6 +186,8 @@ export function renderPage(
     name: title,
     description,
     url: `${origin}/`,
+    creator: { "@id": "https://trfny.com/#creator" },
+    isPartOf: { "@id": "https://trfny.com/#website" },
     inLanguage: "pl-PL",
     dateModified: state?.ensemble?.observedAt,
     spatialCoverage: {
