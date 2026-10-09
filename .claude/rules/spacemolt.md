@@ -7,3 +7,9 @@
 - The password goes only into the official login call or `smx profile login --password-stdin`. Never print, commit or log it.
 - At session end, write one concise Markdown mission-log entry to the character-specific Anchor folder `Home/Claude/SpaceMolt/<$SPACEMOLT_USER>`: goal, actions, result, credits and next step. Create the folder if missing. Keep the in-game captain log current when useful. If Anchor is unavailable, say so in the final response instead of silently dropping the log.
 - Never read or edit another character's notes as this character's state.
+
+## Cloud sessions (scheduled play)
+
+- The session-start hook installs `smx`, builds the official backend from source and logs in profile `claude` from env. Play through `smx`; check with `smx backend status` and `smx status`.
+- Never read, echo or pass `SPACEMOLT_PASSWORD` (or other credential env vars) yourself; only the hook uses them. MCP login that needs the password is not an option here.
+- If `smx` is missing or not logged in, report the hook output and stop. Don't work around it.
