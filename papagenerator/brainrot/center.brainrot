@@ -1,0 +1,9 @@
+skibidi main {
+    rizz canvas_width = 900;
+    rizz canvas_height = 700;
+    rizz papaj_x = canvas_width / 2;
+    rizz papaj_y = canvas_height / 2;
+
+    yapping("Papaj spawn: x=%d, y=%d", papaj_x, papaj_y);
+    bussin 0;
+}
