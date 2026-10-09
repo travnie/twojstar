@@ -44,4 +44,5 @@ jobs:
           name: desktop-commander-plugin
           path: ${{ runner.temp }}/desktop-commander-0.1.0.zip
           if-no-files-found: error
+          overwrite: true
           retention-days: 30
