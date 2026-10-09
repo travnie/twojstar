@@ -44,4 +44,5 @@ jobs:
           name: cloudflare-plugin
           path: ${{ runner.temp }}/cloudflare-0.1.0.zip
           if-no-files-found: error
+          overwrite: true
           retention-days: 30
