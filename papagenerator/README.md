@@ -4,10 +4,10 @@ A zero-backend, mobile-friendly image sticker editor. Runs entirely in the brows
 
 ## Features
 
-- Upload a photo or start with the demo gradient.
+- Upload a photo, use the demo gradient, or switch to a transparent blank canvas.
 - Add original papaj-inspired cartoon stickers, a yellow halo, or a custom transparent PNG.
 - Drag, rotate, resize, duplicate, layer, delete.
-- Export PNG at the source image resolution.
+- Export PNG at the source resolution when safe (max 4096 px per edge / 12 megapixels; larger photos are scaled down).
 - Browser-only rendering; no accounts, storage, cookies, or analytics.
 - Brainrot-flavored browser math in `brainrot.js`; production editor logic stays readable.
 - Executable Brainrot and Rickroll-Lang examples in `brainrot/` and `rickroll/`.
