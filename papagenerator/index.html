@@ -14,7 +14,7 @@ canvas{display:block;max-width:100%;max-height:72vh;touch-action:none;cursor:gra
 button,.filebtn{display:inline-flex;justify-content:center;align-items:center;gap:6px;border:1px solid #4b4a57;border-radius:10px;background:#30313e;color:#fff;padding:11px 12px;font:700 14px system-ui;cursor:pointer}
 button:hover,.filebtn:hover{border-color:#ffd866}button:focus-visible,.filebtn:focus-within{outline:2px solid #ffd866}
 .primary{background:#ffd866;border-color:#ffd866;color:#201701}.danger{color:#ffb0b0}.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.filebtn input{display:none}.side{display:grid;align-content:start;gap:15px}.side h2{font-size:16px;margin:0 0 12px}
+.filebtn{position:relative}.filebtn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;inset:50% auto auto 50%}.side{display:grid;align-content:start;gap:15px}.side h2{font-size:16px;margin:0 0 12px}
 .stickers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.sticker{height:76px;font-size:34px;background:#292a35;padding:4px;overflow:hidden}
 .sticker img{width:63px;height:63px;object-fit:contain}.control{display:grid;gap:6px;margin:12px 0;color:#c4c4d3;font-size:13px}
 .control input{width:100%;accent-color:#ffd866}select{width:100%;padding:10px;border-radius:8px;color:white;background:#30313e;border:1px solid #4b4a57}
@@ -46,6 +46,10 @@ import { skibidiClamp, yeetIntoFrame, certifiedRizz, sigmaDistance } from './bra
 const canvas=document.querySelector('#canvas'), ctx=canvas.getContext('2d');
 const $=s=>document.querySelector(s), layers=[], history=[];
 let background=null, selected=-1, dragging=null, sourceWidth=900, sourceHeight=700;
+let blankCanvas=false, backgroundRequest=0, stickerRequest=0;
+const MAX_CANVAS_EDGE=4096, MAX_CANVAS_PIXELS=12_000_000;
+function safeCanvasSize(img){const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)throw Error('Invalid image dimensions');const scale=Math.min(1,MAX_CANVAS_EDGE/Math.max(w,h),Math.sqrt(MAX_CANVAS_PIXELS/(w*h)));return{width:Math.max(1,Math.floor(w*scale)),height:Math.max(1,Math.floor(h*scale)),scaled:scale<1};}
+function cancelDrag(){if(!dragging)return;try{canvas.releasePointerCapture(dragging.pointer);}catch{}dragging=null;}
 const papajSVG=(face,hat,eyes,mouth,extra='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><filter id="s"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-opacity=".25"/></filter></defs><g filter="url(#s)"><path d="M37 138Q19 114 40 90Q35 45 100 38Q165 45 160 90Q181 115 163 138L142 178H59Z" fill="${face}" stroke="#5b391c" stroke-width="5"/><path d="${hat}" fill="#f4f0e5" stroke="#bea85f" stroke-width="4"/><ellipse cx="73" cy="107" rx="8" ry="5" fill="#563625"/><ellipse cx="128" cy="107" rx="8" ry="5" fill="#563625"/><path d="${eyes}" stroke="#493324" stroke-width="4" fill="none" stroke-linecap="round"/><path d="${mouth}" stroke="#663923" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M91 110Q100 128 111 114" fill="none" stroke="#b47c43" stroke-width="4"/>${extra}</g></svg>`;
 const presets=[
 ['Classic','M62 63L75 12 125 12 140 63Z','M66 87q8 -6 16 0 M119 87q8 -6 16 0','M80 145q20 14 42 0'],
@@ -57,34 +61,54 @@ const presets=[
 ];
 const encoded=svg=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 function imageFrom(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});}
-const addSticker=async(src)=>{try{const img=await imageFrom(src);snapshot();layers.push({img,x:canvas.width/2,y:canvas.height/2,size:Math.min(canvas.width,canvas.height)*.27,rotation:0,opacity:1});selected=layers.length-1;sync();render();setStatus('Sticker acquired.');}catch{setStatus('Could not load sticker.');}};
+function commitSticker(img){cancelDrag();snapshot();layers.push({img,x:canvas.width/2,y:canvas.height/2,size:Math.min(canvas.width,canvas.height)*.27,rotation:0,opacity:1});selected=layers.length-1;sync();render();setStatus('Sticker acquired.');}
+const addSticker=async(src)=>{const request=++stickerRequest;try{const img=await imageFrom(src);if(request===stickerRequest)commitSticker(img);}catch{if(request===stickerRequest)setStatus('Could not load sticker.');}};
 const stickerBox=$('#stickers');
 presets.forEach(([name,hat,eyes,mouth,extra],i)=>{const src=encoded(papajSVG(i===5?'#ffd05e':'#e5b377',hat,eyes,mouth,extra||''));const btn=document.createElement('button');btn.className='sticker';btn.title=name;btn.setAttribute('aria-label','Add '+name);const img=document.createElement('img');img.src=src;img.alt=name;btn.append(img);btn.onclick=()=>addSticker(src);stickerBox.append(btn);});
 function setStatus(s){$('#status').textContent=s;}
-function snapshot(){history.push({layers:layers.map(({img,...props})=>({img,...props})),selected,background,sourceWidth,sourceHeight});if(history.length>30)history.shift();}
-function sync(){const l=layers[selected];$('#size').value=l?Math.round(l.size):170;$('#rotation').value=l?l.rotation:0;$('#opacity').value=l?Math.round(l.opacity*100):100;}
-function draw(includeSelection=true){ctx.clearRect(0,0,canvas.width,canvas.height);if(background){ctx.drawImage(background,0,0,canvas.width,canvas.height);}else{ctx.fillStyle='#f7efd8';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#e7d9b5';ctx.font=`${Math.round(canvas.width*.053)}px system-ui`;ctx.textAlign='center';ctx.fillText('YOUR MEME GOES HERE',canvas.width/2,canvas.height/2);}
+function snapshot(){history.push({layers:layers.map(({img,...props})=>({img,...props})),selected,background,blankCanvas,sourceWidth,sourceHeight});if(history.length>30)history.shift();}
+function sync(){sliderEdits.clear();const l=layers[selected],shortSide=Math.min(canvas.width,canvas.height);$('#size').min=Math.max(12,Math.floor(shortSide*.02));$('#size').max=Math.max(650,Math.ceil(shortSide*1.3));$('#size').value=l?Math.round(l.size):170;$('#rotation').value=l?l.rotation:0;$('#opacity').value=l?Math.round(l.opacity*100):100;}
+function draw(includeSelection=true){ctx.clearRect(0,0,canvas.width,canvas.height);if(background){ctx.drawImage(background,0,0,canvas.width,canvas.height);}else if(!blankCanvas){const gradient=ctx.createLinearGradient(0,0,canvas.width,canvas.height);gradient.addColorStop(0,'#f7efd8');gradient.addColorStop(1,'#dec6e4');ctx.fillStyle=gradient;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#7d6178';ctx.font=`${Math.round(canvas.width*.053)}px system-ui`;ctx.textAlign='center';ctx.fillText('YOUR MEME GOES HERE',canvas.width/2,canvas.height/2);}
 layers.forEach((l,i)=>{ctx.save();ctx.translate(l.x,l.y);ctx.rotate(l.rotation*Math.PI/180);ctx.globalAlpha=l.opacity;const h=l.size*l.img.height/l.img.width;ctx.drawImage(l.img,-l.size/2,-h/2,l.size,h);ctx.globalAlpha=1;if(includeSelection&&i===selected){ctx.strokeStyle='#f6d55c';ctx.lineWidth=Math.max(2,canvas.width/320);ctx.setLineDash([9,6]);ctx.strokeRect(-l.size/2,-h/2,l.size,h);ctx.setLineDash([]);}ctx.restore();});}
 function render(){draw();}
 function hit(l,x,y){const a=-l.rotation*Math.PI/180,dx=x-l.x,dy=y-l.y,rx=dx*Math.cos(a)-dy*Math.sin(a),ry=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(rx)<l.size/2 && Math.abs(ry)<l.size*l.img.height/l.img.width/2;}
 function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};}
-canvas.addEventListener('pointerdown',e=>{const p=pos(e);let index=-1;for(let i=layers.length-1;i>=0;i--){if(hit(layers[i],p.x,p.y)){index=i;break;}}selected=index;sync();if(index>=0){snapshot();dragging={x:p.x-layers[index].x,y:p.y-layers[index].y,pointer:e.pointerId};canvas.setPointerCapture(e.pointerId);}render();});
-canvas.addEventListener('pointermove',e=>{if(!dragging||dragging.pointer!==e.pointerId||selected<0)return;const p=pos(e),l=layers[selected];Object.assign(l,yeetIntoFrame({...l,x:p.x-dragging.x,y:p.y-dragging.y},canvas.width,canvas.height));render();});
+canvas.addEventListener('pointerdown',e=>{const p=pos(e);let index=-1;for(let i=layers.length-1;i>=0;i--){if(hit(layers[i],p.x,p.y)){index=i;break;}}selected=index;sync();if(index>=0){dragging={x:p.x-layers[index].x,y:p.y-layers[index].y,pointer:e.pointerId,moved:false};canvas.setPointerCapture(e.pointerId);}render();});
+canvas.addEventListener('pointermove',e=>{if(!dragging||dragging.pointer!==e.pointerId||selected<0)return;const p=pos(e),l=layers[selected];const next=yeetIntoFrame({...l,x:p.x-dragging.x,y:p.y-dragging.y},canvas.width,canvas.height);if(next.x===l.x&&next.y===l.y)return;if(!dragging.moved){snapshot();dragging.moved=true;}Object.assign(l,next);render();});
 const release=()=>dragging=null;canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
-function edit(fn){const l=layers[selected];if(!l)return; snapshot();fn(l);render();}
-$('#size').oninput=e=>edit(l=>l.size=Number(e.target.value));
-$('#rotation').oninput=e=>edit(l=>l.rotation=Number(e.target.value));
-$('#opacity').oninput=e=>edit(l=>l.opacity=Number(e.target.value)/100);
-$('#remove').onclick=()=>{if(selected<0)return;snapshot();layers.splice(selected,1);selected=Math.min(selected,layers.length-1);sync();render();};
-$('#duplicate').onclick=()=>{if(selected<0)return;snapshot();layers.push({...layers[selected],x:layers[selected].x+35,y:layers[selected].y+35});selected=layers.length-1;sync();render();};
-$('#forward').onclick=()=>{if(selected<0||selected===layers.length-1)return;snapshot();const l=layers.splice(selected,1)[0];layers.push(l);selected=layers.length-1;render();};
-$('#backward').onclick=()=>{if(selected<=0)return;snapshot();const l=layers.splice(selected,1)[0];layers.unshift(l);selected=0;render();};
-$('#undo').onclick=()=>{const h=history.pop();if(!h)return;layers.splice(0,layers.length,...h.layers);selected=h.selected;background=h.background;sourceWidth=h.sourceWidth;sourceHeight=h.sourceHeight;canvas.width=sourceWidth;canvas.height=sourceHeight;sync();render();};
-$('#reset').onclick=()=>{snapshot();layers.splice(0);selected=-1;sync();render();};
-$('#clearBackground').onclick=()=>{snapshot();background=null;canvas.width=900;canvas.height=700;sourceWidth=900;sourceHeight=700;layers.splice(0);selected=-1;sync();render();};
-async function loadFile(file,asBackground){if(!file||!file.type.startsWith('image/'))return setStatus('Please choose an image.');if(file.size>25*1024*1024)return setStatus('Maximum image size is 25 MB.');const url=URL.createObjectURL(file);try{const img=await imageFrom(url);if(asBackground){snapshot();background=img;sourceWidth=img.naturalWidth;sourceHeight=img.naturalHeight;canvas.width=sourceWidth;canvas.height=sourceHeight;layers.splice(0);selected=-1;sync();render();setStatus('Photo loaded. Your files stay on this device.');}else{await addSticker(url);}}catch{setStatus('Could not decode this image.');}finally{URL.revokeObjectURL(url);}}
-$('#backgroundFile').onchange=e=>loadFile(e.target.files[0],true);
-$('#stickerFile').onchange=e=>loadFile(e.target.files[0],false);
+const sliderEdits=new Set();
+function slider(selector,update){const el=$(selector);el.addEventListener('input',e=>{const l=layers[selected];if(!l)return;if(!sliderEdits.has(el)){snapshot();sliderEdits.add(el);}update(l,Number(e.target.value));render();});el.addEventListener('change',()=>sliderEdits.delete(el));el.addEventListener('blur',()=>sliderEdits.delete(el));}
+slider('#size',(l,v)=>l.size=v);
+slider('#rotation',(l,v)=>l.rotation=v);
+slider('#opacity',(l,v)=>l.opacity=v/100);
+$('#remove').onclick=()=>{if(selected<0)return;cancelDrag();snapshot();layers.splice(selected,1);selected=Math.min(selected,layers.length-1);sync();render();};
+$('#duplicate').onclick=()=>{if(selected<0)return;cancelDrag();snapshot();layers.push({...layers[selected],x:layers[selected].x+35,y:layers[selected].y+35});selected=layers.length-1;sync();render();};
+$('#forward').onclick=()=>{if(selected<0||selected===layers.length-1)return;cancelDrag();snapshot();const l=layers.splice(selected,1)[0];layers.push(l);selected=layers.length-1;render();};
+$('#backward').onclick=()=>{if(selected<=0)return;cancelDrag();snapshot();const l=layers.splice(selected,1)[0];layers.unshift(l);selected=0;render();};
+$('#undo').onclick=()=>{cancelDrag();sliderEdits.clear();const h=history.pop();if(!h)return;layers.splice(0,layers.length,...h.layers);selected=h.selected;background=h.background;blankCanvas=h.blankCanvas;sourceWidth=h.sourceWidth;sourceHeight=h.sourceHeight;canvas.width=sourceWidth;canvas.height=sourceHeight;sync();render();};
+$('#reset').onclick=()=>{cancelDrag();snapshot();layers.splice(0);selected=-1;sync();render();};
+$('#clearBackground').onclick=()=>{++backgroundRequest;cancelDrag();snapshot();background=null;blankCanvas=true;canvas.width=900;canvas.height=700;sourceWidth=900;sourceHeight=700;layers.splice(0);selected=-1;sync();render();};
+async function loadFile(file,asBackground){
+ if(!file||!file.type.startsWith('image/'))return setStatus('Please choose an image.');
+ if(file.size>25*1024*1024)return setStatus('Maximum image size is 25 MB.');
+ const request=asBackground?++backgroundRequest:++stickerRequest;
+ const url=URL.createObjectURL(file);
+ try{
+  const img=await imageFrom(url);
+  if(request!==(asBackground?backgroundRequest:stickerRequest))return;
+  if(asBackground){
+   const dimensions=safeCanvasSize(img);
+   cancelDrag();snapshot();background=img;blankCanvas=false;
+   sourceWidth=dimensions.width;sourceHeight=dimensions.height;
+   canvas.width=sourceWidth;canvas.height=sourceHeight;
+   layers.splice(0);selected=-1;sync();render();
+   setStatus(dimensions.scaled?'Photo loaded and resized for safe PNG export.':'Photo loaded. Your files stay on this device.');
+  }else{commitSticker(img);}
+ }catch{if(request===(asBackground?backgroundRequest:stickerRequest))setStatus('Could not decode this image.');}
+ finally{URL.revokeObjectURL(url);}
+}
+$('#backgroundFile').onchange=e=>{const file=e.target.files[0];e.target.value='';loadFile(file,true);};
+$('#stickerFile').onchange=e=>{const file=e.target.files[0];e.target.value='';loadFile(file,false);};
 $('#download').onclick=()=>{draw(false);canvas.toBlob(blob=>{if(!blob){setStatus('Export failed.');return;}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='papagenerator.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);render();setStatus('PNG exported. Certified holy.');},'image/png');};
 document.addEventListener('keydown',e=>{if(e.key==='Delete'||e.key==='Backspace'){if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;$('#remove').click();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();$('#undo').click();}});
 render();
