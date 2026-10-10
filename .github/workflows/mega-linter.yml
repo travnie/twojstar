@@ -63,7 +63,7 @@ jobs:
 
       - name: Archive MegaLinter reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: MegaLinter reports
           include-hidden-files: "true"
