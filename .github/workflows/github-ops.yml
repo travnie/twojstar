@@ -38,11 +38,20 @@ jobs:
         run: python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py plugins/github-ops
       - name: Build portable archive
         run: python plugins/_shared/package_plugin.py plugins/github-ops "$RUNNER_TEMP/github-ops-0.1.0.zip"
-      - name: Upload installable plugin ZIP
+      # Artifacts are ZIPs already. Upload the plugin *files* directly so
+      # the downloaded ZIP has manifests and skills at archive root.
+      - name: Prepare ChatGPT-importable artifact
+        run: |
+          python -m zipfile -e "$RUNNER_TEMP/github-ops-0.1.0.zip" "$RUNNER_TEMP/github-ops-import"
+          test -f "$RUNNER_TEMP/github-ops-import/plugin.json"
+          test -f "$RUNNER_TEMP/github-ops-import/.codex-plugin/plugin.json"
+          test -f "$RUNNER_TEMP/github-ops-import/mcp.json"
+      - name: Upload directly installable plugin ZIP
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: github-ops-plugin
-          path: ${{ runner.temp }}/github-ops-0.1.0.zip
+          path: ${{ runner.temp }}/github-ops-import/
+          include-hidden-files: true
           if-no-files-found: error
           overwrite: true
           retention-days: 30
