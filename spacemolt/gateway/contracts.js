@@ -221,13 +221,14 @@ export function positiveInt(raw, fallback, max) {
 // Actual fill above the credit cap (price moved after the estimate); null when within it.
 export function buyFillOverCap(result, env) {
   const {maxCredits} = buyLimits(env);
-  const total = Number(sc(result)?.details?.total_cost);
+  const total = sc(result)?.details?.total_cost;
   return Number.isFinite(total) && total > maxCredits ? {total_cost:total, max_credits:maxCredits} : null;
 }
 
 export function buyEstimateRejection(estimate, env) {
   const {maxCredits} = buyLimits(env);
-  const total = Number(sc(estimate)?.total_cost);
+  // Number.isFinite without coercion: null, "", false or [] must not read as 0 credits.
+  const total = sc(estimate)?.total_cost;
   if (!Number.isFinite(total)) return {error:"buy_estimate_unavailable", status:409};
   if (total > maxCredits) return {error:"buy_over_safe_limit", status:409, total_cost:total, max_credits:maxCredits};
   return null;

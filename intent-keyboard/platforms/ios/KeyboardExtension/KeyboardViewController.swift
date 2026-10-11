@@ -373,7 +373,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handleEnter() {
         let requestedReturnKey = textDocumentProxy.returnKeyType ?? .default
-        guard bypassDraftForLiteralField() || commitBuffer() else { return }
+        guard commitBuffer() else { return }
         textDocumentProxy.insertText("\n")
         if requestedReturnKey == .done {
             dismissKeyboard()
@@ -382,6 +382,7 @@ final class KeyboardViewController: UIInputViewController {
 
     @discardableResult
     private func commitBuffer() -> Bool {
+        if bypassDraftForLiteralField() { return true }
         switch renderState.commitDecision() {
         case .nothing:
             return true
@@ -469,6 +470,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func renderBuffer(fromAutoPreview: Bool = false) {
+        guard !bypassDraftForLiteralField() else { return }
         if !fromAutoPreview {
             renderState.clearAutoRenderSuppression()
             autoRenderTask?.cancel()
@@ -558,6 +560,8 @@ final class KeyboardViewController: UIInputViewController {
             clearBuffer()
             statusLabel.text = "Draft cleared after switching text context."
         }
+        // Focus moved to an exact-value field inside the same document: drop the stale draft now.
+        _ = bypassDraftForLiteralField()
 
         activeDocumentIdentifier = documentIdentifier
         refreshReturnKey()

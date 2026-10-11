@@ -48,7 +48,9 @@ test("capped buy refuses an estimate over the credit cap or without a total", ()
   assert.equal(over.error, "buy_over_safe_limit");
   assert.equal(over.max_credits, 2000);
   assert.equal(buyEstimateRejection({structuredContent:{total_cost:150}}, {}), null);
-  assert.equal(buyEstimateRejection({structuredContent:{}}, {})?.error, "buy_estimate_unavailable");
+  for (const total_cost of [undefined, null, "", " ", false, [], "150"]) {
+    assert.equal(buyEstimateRejection({structuredContent:{total_cost}}, {})?.error, "buy_estimate_unavailable", String(total_cost));
+  }
   assert.equal(buyEstimateRejection({structuredContent:{total_cost:2500}}, {BUY_SAFE_MAX_CREDITS:"3000"}), null);
 });
 
