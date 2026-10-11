@@ -187,7 +187,7 @@ def package(source: Path, output: Path) -> dict:
                 members = set(built.namelist())
                 required = {"plugin.json", "mcp.json", ".codex-plugin/plugin.json"}
                 if not required.issubset(members) or not any(
-                    re.fullmatch(r"skills/[^/]+/SKILL\\.md", name) for name in members
+                    name.startswith("skills/") and name.endswith("/SKILL.md") and name.count("/") == 2 for name in members
                 ):
                     raise ValueError("plugin ZIP does not contain root-level manifests and skills")
             temp.replace(output)
