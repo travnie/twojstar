@@ -335,14 +335,20 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    /// A draft left from another field must not absorb, render or commit into an exact-value field.
+    /// Returns true when the host field is literal and the caller should bypass the draft.
+    private func bypassDraftForLiteralField() -> Bool {
+        guard hostFieldIsLiteral else { return false }
+        if !renderState.rawIntent.isEmpty {
+            clearBuffer()
+            statusLabel.text = "Exact-value field: previous draft discarded, typing as-is."
+            refreshCompactLayout()
+        }
+        return true
+    }
+
     private func append(_ text: String) {
-        if hostFieldIsLiteral {
-            // A draft left from another field must not absorb or render exact-value input.
-            if !renderState.rawIntent.isEmpty {
-                clearBuffer()
-                statusLabel.text = "Exact-value field: previous draft discarded, typing as-is."
-                refreshCompactLayout()
-            }
+        if bypassDraftForLiteralField() {
             textDocumentProxy.insertText(text)
             return
         }
@@ -354,7 +360,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func backspace() {
-        guard !renderState.rawIntent.isEmpty else {
+        guard !bypassDraftForLiteralField(), !renderState.rawIntent.isEmpty else {
             textDocumentProxy.deleteBackward()
             return
         }
@@ -367,7 +373,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handleEnter() {
         let requestedReturnKey = textDocumentProxy.returnKeyType ?? .default
-        guard commitBuffer() else { return }
+        guard bypassDraftForLiteralField() || commitBuffer() else { return }
         textDocumentProxy.insertText("\n")
         if requestedReturnKey == .done {
             dismissKeyboard()

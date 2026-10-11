@@ -22,6 +22,12 @@ class ModelOutputSanitizerTest {
     }
 
     @Test
+    fun keepsThinkTagsTheUserWrote() {
+        val raw = "wrap it in <think>draft</think> tags"
+        assertEquals("Wrap it in <think>draft</think> tags.", ModelOutputSanitizer.clean("Wrap it in <think>draft</think> tags.", raw))
+    }
+
+    @Test
     fun flagsRunawayOutput() {
         assertFalse(ModelOutputSanitizer.isRunaway("I will be there around six tomorrow.", "tmrw 6"))
         assertTrue(ModelOutputSanitizer.isRunaway("x".repeat(200), "ok"))

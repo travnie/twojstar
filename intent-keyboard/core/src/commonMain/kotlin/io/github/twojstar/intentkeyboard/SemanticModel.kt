@@ -126,7 +126,13 @@ internal object ModelOutputSanitizer {
     private const val RUNAWAY_SLACK_CHARS = 80
 
     fun clean(output: String, rawIntent: String): String {
-        var text = unterminatedThink.replace(thinkBlock.replace(output, ""), "").trim()
+        // User-authored <think> tags (XML, prompt text) are content, not provider reasoning.
+        val userWroteThink = rawIntent.contains("<think", ignoreCase = true)
+        var text = if (userWroteThink) {
+            output.trim()
+        } else {
+            unterminatedThink.replace(thinkBlock.replace(output, ""), "").trim()
+        }
         val raw = rawIntent.trim()
         for ((open, close) in quotePairs) {
             val wrapped = text.length >= 2 && text.first() == open && text.last() == close
