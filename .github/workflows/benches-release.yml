@@ -59,6 +59,16 @@ jobs:
         working-directory: benches
         run: npm run check:docbench
 
+      - name: Fail on stale generated files
+        # Builds regenerate synced/emitted files; any tracked diff means a committed copy is stale.
+        run: |
+          if [ -n "$(git status --porcelain --untracked-files=all -- benches)" ]; then
+            git status --short --untracked-files=all -- benches
+            git diff --stat -- benches
+            echo "::error::Benches build changed tracked or unignored files. Run npm run build in benches/ and commit the result."
+            exit 1
+          fi
+
       - name: Package portable builds
         run: |
           mkdir -p dist
