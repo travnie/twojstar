@@ -10,6 +10,7 @@ import {
   dailyAllowed,
   positiveInt,
   buyEstimateRejection,
+  buyFillOverCap,
 } from "./contracts.js";
 
 const GAME = "https://game.spacemolt.com";
@@ -242,11 +243,15 @@ async function buyCostRejection(env, payload) {
 async function runCommand(env, tool, action, payload, allowIrreversible) {
   const rejection = commandRejection(tool, action, allowIrreversible, payload, env);
   if (rejection) return {rejection};
-  if (action === "buy" && allowIrreversible !== true) {
+  const capped = action === "buy" && allowIrreversible !== true;
+  if (capped) {
     const overLimit = await buyCostRejection(env, payload);
     if (overLimit) return {rejection:overLimit};
   }
-  return {data:await gameCall(env, tool, action, payload || {})};
+  const data = await gameCall(env, tool, action, payload || {});
+  const overCap = capped ? buyFillOverCap(data, env) : null;
+  // Not undoable; surface it so the caller sees the cap was exceeded by a price move.
+  return {data:overCap ? {...data, gateway_warning:{code:"buy_filled_over_cap", ...overCap}} : data};
 }
 
 async function runTool(name, args, env) {

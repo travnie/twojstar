@@ -16,6 +16,12 @@ class ModelOutputSanitizerTest {
     }
 
     @Test
+    fun unterminatedReasoningLeavesNothingToCommit() {
+        assertEquals("", ModelOutputSanitizer.clean("<think>still thinking about", "ok"))
+        assertEquals("Fine.", ModelOutputSanitizer.clean("Fine.<think>trailing", "fine"))
+    }
+
+    @Test
     fun flagsRunawayOutput() {
         assertFalse(ModelOutputSanitizer.isRunaway("I will be there around six tomorrow.", "tmrw 6"))
         assertTrue(ModelOutputSanitizer.isRunaway("x".repeat(200), "ok"))

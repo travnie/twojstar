@@ -336,7 +336,13 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func append(_ text: String) {
-        if hostFieldIsLiteral && renderState.rawIntent.isEmpty {
+        if hostFieldIsLiteral {
+            // A draft left from another field must not absorb or render exact-value input.
+            if !renderState.rawIntent.isEmpty {
+                clearBuffer()
+                statusLabel.text = "Exact-value field: previous draft discarded, typing as-is."
+                refreshCompactLayout()
+            }
             textDocumentProxy.insertText(text)
             return
         }

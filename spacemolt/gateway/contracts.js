@@ -28,7 +28,9 @@ export const SAFE_ACTIONS = new Set([
 ]);
 
 // buy skips the override only as a capped market buy: core tool, no auto_list (escrowed order
-// plus listing fee), quantity and estimate_purchase total within these caps. Override per Worker
+// plus listing fee), quantity and estimate_purchase total within these caps. The credit cap is a
+// best-effort pre-check: the game has no max-price buy, so prices can move before the fill; the
+// quantity cap bounds that, and buyFillOverCap flags it afterwards. Override per Worker
 // with BUY_SAFE_MAX_QUANTITY / BUY_SAFE_MAX_CREDITS vars.
 export const BUY_DEFAULT_MAX_QUANTITY = 100;
 
@@ -98,7 +100,7 @@ export function mcpTools() {
     },
     {
       name:"spacemolt_command",
-      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, missions, chat, ...), capped market buys (spacemolt/buy without auto_list, up to the gateway quantity and credit caps) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
+      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, missions, chat, ...), capped market buys (spacemolt/buy without auto_list, up to the gateway quantity cap and a best-effort estimate_purchase credit check; prices can move before the fill) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
       annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
       inputSchema:{
         type:"object",
@@ -214,6 +216,13 @@ export function positiveInt(raw, fallback, max) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
   return Math.min(parsed, max);
+}
+
+// Actual fill above the credit cap (price moved after the estimate); null when within it.
+export function buyFillOverCap(result, env) {
+  const {maxCredits} = buyLimits(env);
+  const total = Number(sc(result)?.details?.total_cost);
+  return Number.isFinite(total) && total > maxCredits ? {total_cost:total, max_credits:maxCredits} : null;
 }
 
 export function buyEstimateRejection(estimate, env) {

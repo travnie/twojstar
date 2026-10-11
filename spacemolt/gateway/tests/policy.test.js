@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {buyEstimateRejection, commandRejection, dailyAllowed, findDockTargets, gameRejection, isDocked} from "../contracts.js";
+import {buyEstimateRejection, buyFillOverCap, commandRejection, dailyAllowed, findDockTargets, gameRejection, isDocked} from "../contracts.js";
 
 // Security boundary of the gateway: which commands run without allow_irreversible.
 const reject = (tool, action, payload = {}, allow = false, env = {}) =>
@@ -50,6 +50,12 @@ test("capped buy refuses an estimate over the credit cap or without a total", ()
   assert.equal(buyEstimateRejection({structuredContent:{total_cost:150}}, {}), null);
   assert.equal(buyEstimateRejection({structuredContent:{}}, {})?.error, "buy_estimate_unavailable");
   assert.equal(buyEstimateRejection({structuredContent:{total_cost:2500}}, {BUY_SAFE_MAX_CREDITS:"3000"}), null);
+});
+
+test("a fill above the credit cap is flagged after the buy", () => {
+  assert.deepEqual(buyFillOverCap({structuredContent:{details:{total_cost:2600}}}, {}), {total_cost:2600, max_credits:2000});
+  assert.equal(buyFillOverCap({structuredContent:{details:{total_cost:1900}}}, {}), null);
+  assert.equal(buyFillOverCap({structuredContent:{}}, {}), null);
 });
 
 test("game refusals map to short codes; auth and rate limits stay gateway errors", () => {

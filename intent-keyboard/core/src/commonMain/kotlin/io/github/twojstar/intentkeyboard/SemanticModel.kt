@@ -117,6 +117,8 @@ class ModelSemanticRenderer(
  */
 internal object ModelOutputSanitizer {
     private val thinkBlock = Regex("""<think>[\s\S]*?</think>""", RegexOption.IGNORE_CASE)
+    // Truncated reasoning with no closing tag: drop to the end, which leaves an empty (failed) render.
+    private val unterminatedThink = Regex("""<think>[\s\S]*$""", RegexOption.IGNORE_CASE)
     private val quotePairs = listOf('"' to '"', '“' to '”', '„' to '”', '\'' to '\'')
 
     // A rewrite of a keyboard draft stays near input size; generous slack for translation and polish.
@@ -124,7 +126,7 @@ internal object ModelOutputSanitizer {
     private const val RUNAWAY_SLACK_CHARS = 80
 
     fun clean(output: String, rawIntent: String): String {
-        var text = thinkBlock.replace(output, "").trim()
+        var text = unterminatedThink.replace(thinkBlock.replace(output, ""), "").trim()
         val raw = rawIntent.trim()
         for ((open, close) in quotePairs) {
             val wrapped = text.length >= 2 && text.first() == open && text.last() == close

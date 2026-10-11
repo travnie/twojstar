@@ -8,7 +8,7 @@ Daily gameplay planning uses the Worker's dedicated Workers AI binding first. `@
 
 ## Command policy
 
-`spacemolt_command` and `/v1/command` run reads, routine gameplay and in-battle self-defence directly; anything else needs `allow_irreversible=true`, and `self_destruct` is always refused. `spacemolt/buy` runs without the override only as a capped market buy: no `auto_list`, quantity up to `BUY_SAFE_MAX_QUANTITY` (default 100) and an `estimate_purchase` total up to `BUY_SAFE_MAX_CREDITS` (default 2000). Set either var in `wrangler.jsonc` to change the cap. Fuel goes through `refuel`, which is not capped.
+`spacemolt_command` and `/v1/command` run reads, routine gameplay and in-battle self-defence directly; anything else needs `allow_irreversible=true`, and `self_destruct` is always refused. `spacemolt/buy` runs without the override only as a capped market buy: no `auto_list`, quantity up to `BUY_SAFE_MAX_QUANTITY` (default 100) and an `estimate_purchase` total up to `BUY_SAFE_MAX_CREDITS` (default 2000). The credit check is best-effort: the game has no max-price buy, so the price can move between estimate and fill; the quantity cap bounds that, and a fill above the credit cap returns `gateway_warning.code = "buy_filled_over_cap"`. Set either var in `wrangler.jsonc` to change the caps. Fuel goes through `refuel`, which is not capped.
 
 ## Deployment
 
