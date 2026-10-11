@@ -1,5 +1,5 @@
 const GAME = "https://game.spacemolt.com";
-const VERSION = "2026-10-04.1";
+const VERSION = "2026-10-11.1";
 const STATE_KEY = "session:v2";
 
 const TOOL_RE = /^spacemolt(?:_[a-z0-9_]+)?$/;
@@ -26,8 +26,13 @@ const SAFE_ACTIONS = new Set([
   // routine gameplay (captains_log_add is left out: on a full log it evicts the oldest entry)
   "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
   "accept_mission","complete_mission","decline_mission","chat",
-  "tow","loot","recall","buy"
+  "tow","loot","recall"
 ]);
+// buy skips the override only as a capped market buy: core tool, no auto_list (escrowed order
+// plus listing fee), quantity and estimate_purchase total within these caps. Override per Worker
+// with BUY_SAFE_MAX_QUANTITY / BUY_SAFE_MAX_CREDITS vars.
+const BUY_DEFAULT_MAX_QUANTITY = 100;
+const BUY_DEFAULT_MAX_CREDITS = 2000;
 // Self-defence inside a battle someone else started. These require an active battle, so they
 // cannot start a fight; attack, hunt, engage and advance still need the override.
 const DEFENSIVE_BATTLE_ACTIONS = new Set(["retreat","stance","target","reload"]);
@@ -303,7 +308,7 @@ function mcpTools() {
     },
     {
       name:"spacemolt_command",
-      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, buy, missions, chat, ...) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
+      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, missions, chat, ...), capped market buys (spacemolt/buy without auto_list, up to the gateway quantity and credit caps) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
       annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
       inputSchema:{
         type:"object",
@@ -339,7 +344,21 @@ function isDefensiveBattleAction(action, payload) {
   return stances.length > 0 && stances.every((value) => DEFENSIVE_STANCES.has(String(value)));
 }
 
-function isSafeAction(action, payload) {
+function buyLimits(env) {
+  return {
+    maxQuantity:positiveInt(env?.BUY_SAFE_MAX_QUANTITY, BUY_DEFAULT_MAX_QUANTITY, 100_000),
+    maxCredits:positiveInt(env?.BUY_SAFE_MAX_CREDITS, BUY_DEFAULT_MAX_CREDITS, 10_000_000)
+  };
+}
+
+function isCappedBuy(tool, payload, limits) {
+  const qty = payload?.quantity;
+  return tool === "spacemolt" && payload?.auto_list !== true &&
+    Number.isInteger(qty) && qty >= 1 && qty <= limits.maxQuantity;
+}
+
+function isSafeAction(tool, action, payload, env) {
+  if (action === "buy") return isCappedBuy(tool, payload, buyLimits(env));
   // get_notifications clears the queue unless clear:false is passed.
   if (action === "get_notifications") return payload?.clear === false;
   // The flat battle dispatcher carries the real action in payload.action.
@@ -348,19 +367,41 @@ function isSafeAction(action, payload) {
   return SAFE_ACTIONS.has(action);
 }
 
-function commandRejection(action, allowIrreversible, payload) {
+function commandRejection(tool, action, allowIrreversible, payload, env) {
   action = String(action || "");
   // The flat battle dispatcher carries the real action in payload.action (e.g. self_destruct).
   const nested = action === "battle" ? String(payload?.action || "") : "";
   if (GATEWAY_HARD_DENY.has(action) || GATEWAY_HARD_DENY.has(nested)) return {error:"action_hard_denied", status:403};
-  if (!isSafeAction(action, payload) && allowIrreversible !== true) {
+  if (!isSafeAction(String(tool || ""), action, payload, env) && allowIrreversible !== true) {
     // Error code kept for existing clients; it now covers every action outside SAFE_ACTIONS.
     return {error:"irreversible_action_requires_explicit_override", status:409};
   }
   return null;
 }
 
-function runTool(name, args, env) {
+// Price is checked right before the buy; quantity cap bounds any move between the two calls.
+async function buyCostRejection(env, payload) {
+  const {maxCredits} = buyLimits(env);
+  const estimate = sc(await gameCall(env, "spacemolt_market", "estimate_purchase",
+    {item_id:String(payload?.id || ""), quantity:payload?.quantity}));
+  const total = Number(estimate?.total_cost);
+  if (!Number.isFinite(total)) return {error:"buy_estimate_unavailable", status:409};
+  if (total > maxCredits) return {error:"buy_over_safe_limit", status:409, total_cost:total, max_credits:maxCredits};
+  return null;
+}
+
+// Shared by MCP and HTTP: {rejection} (with HTTP status) or {data}.
+async function runCommand(env, tool, action, payload, allowIrreversible) {
+  const rejection = commandRejection(tool, action, allowIrreversible, payload, env);
+  if (rejection) return {rejection};
+  if (action === "buy" && allowIrreversible !== true) {
+    const overLimit = await buyCostRejection(env, payload);
+    if (overLimit) return {rejection:overLimit};
+  }
+  return {data:await gameCall(env, tool, action, payload || {})};
+}
+
+async function runTool(name, args, env) {
   if (name === "spacemolt_health") {
     const clerk = Boolean(env.SPACEMOLT_CLERK_API_KEY);
     const player = Boolean(env.SPACEMOLT_PLAYER_ID);
@@ -372,9 +413,12 @@ function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    const rejection = commandRejection(action, args?.allow_irreversible, args?.payload);
-    if (rejection) return {error:rejection.error, action};
-    return gameCall(env, tool, action, args?.payload || {});
+    const out = await runCommand(env, tool, action, args?.payload, args?.allow_irreversible);
+    if (out.rejection) {
+      const {status: _status, ...body} = out.rejection;
+      return {...body, action};
+    }
+    return out.data;
   }
   return {error:"unknown_tool"};
 }
@@ -988,9 +1032,12 @@ export default {
         const body = await req.json().catch(() => undefined);
         // JSON null, arrays and scalars parse fine but are not a command object.
         if (body === null || typeof body !== "object" || Array.isArray(body)) return jsonResponse({error:"invalid_json"},400);
-        const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
-        if (rejection) return jsonResponse({error:rejection.error,action:body.action},rejection.status);
-        return jsonResponse(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
+        const out = await runCommand(env, String(body.tool || ""), String(body.action || ""), body.payload, body.allow_irreversible);
+        if (out.rejection) {
+          const {status, ...rest} = out.rejection;
+          return jsonResponse({...rest, action:body.action}, status);
+        }
+        return jsonResponse(out.data);
       }
       return jsonResponse({error:"not_found"},404);
     } catch (err) {
