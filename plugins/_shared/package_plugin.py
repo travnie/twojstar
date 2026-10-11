@@ -176,11 +176,20 @@ def package(source: Path, output: Path) -> dict:
                 for path in sorted(staged.rglob("*")):
                     if not path.is_file():
                         continue
-                    name = f"{source.name}/" + path.relative_to(staged).as_posix()
+                    name = path.relative_to(staged).as_posix()
                     info = zipfile.ZipInfo(name, FIXED_TIME)
                     info.create_system = 3
                     info.external_attr = (stat.S_IFREG | 0o644) << 16
                     archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            # The ChatGPT ZIP importer inspects plugin files at archive root.
+            # A parent directory would hide plugin.json and skills/ from it.
+            with zipfile.ZipFile(temp) as built:
+                members = set(built.namelist())
+                required = {"plugin.json", "mcp.json", ".codex-plugin/plugin.json"}
+                if not required.issubset(members) or not any(
+                    re.fullmatch(r"skills/[^/]+/SKILL\\.md", name) for name in members
+                ):
+                    raise ValueError("plugin ZIP does not contain root-level manifests and skills")
             temp.replace(output)
         finally:
             temp.unlink(missing_ok=True)
