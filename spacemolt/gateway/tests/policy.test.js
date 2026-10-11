@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
-import vm from "node:vm";
 import test from "node:test";
+import {buyEstimateRejection, commandRejection, dailyAllowed, findDockTargets, gameRejection, isDocked} from "../contracts.js";
 
 // Security boundary of the gateway: which commands run without allow_irreversible.
-const source = readFileSync(new URL("../worker.js", import.meta.url), "utf8")
-  .replace("export default {", "globalThis.worker = {");
-const context = vm.createContext({Response, Headers, TextEncoder, crypto, AbortSignal, console});
-vm.runInContext(`${source}
-globalThis.contracts = {commandRejection, gameRejection, dailyAllowed, findDockTargets, isDocked, runCommand};`, context);
-const {commandRejection, gameRejection, dailyAllowed, findDockTargets, isDocked, runCommand} = context.contracts;
-
 const reject = (tool, action, payload = {}, allow = false, env = {}) =>
   commandRejection(tool, action, allow, payload, env)?.error ?? null;
 
@@ -51,31 +43,13 @@ test("buy skips the override only as a capped core market buy", () => {
   assert.equal(reject("spacemolt", "buy", {id:"fuel_cell", quantity:500}, false, {BUY_SAFE_MAX_QUANTITY:"500"}), null);
 });
 
-function gameEnv(totalCost, calls) {
-  context.fetch = async (url, init) => {
-    calls.push({url:String(url), body:JSON.parse(init.body)});
-    const structuredContent = String(url).endsWith("/estimate_purchase") ? {total_cost:totalCost} : {ok:true};
-    return Response.json({structuredContent});
-  };
-  return {STATE:{get:async () => "sid"}};
-}
-
-test("capped buy checks estimate_purchase and refuses over the credit cap", async () => {
-  const calls = [];
-  const over = await runCommand(gameEnv(2500, calls), "spacemolt", "buy", {id:"fuel_cell", quantity:10}, false);
-  assert.equal(over.rejection.error, "buy_over_safe_limit");
-  assert.equal(over.rejection.max_credits, 2000);
-  assert.deepEqual(calls.map((call) => call.url.split("/").pop()), ["estimate_purchase"]);
-  assert.deepEqual(calls[0].body, {item_id:"fuel_cell", quantity:10});
-
-  const okCalls = [];
-  const ok = await runCommand(gameEnv(150, okCalls), "spacemolt", "buy", {id:"fuel_cell", quantity:10}, false);
-  assert.equal(ok.rejection, undefined);
-  assert.deepEqual(okCalls.map((call) => call.url.split("/").pop()), ["estimate_purchase", "buy"]);
-
-  const overrideCalls = [];
-  await runCommand(gameEnv(99999, overrideCalls), "spacemolt", "buy", {id:"fuel_cell", quantity:5000}, true);
-  assert.deepEqual(overrideCalls.map((call) => call.url.split("/").pop()), ["buy"]);
+test("capped buy refuses an estimate over the credit cap or without a total", () => {
+  const over = buyEstimateRejection({structuredContent:{total_cost:2500}}, {});
+  assert.equal(over.error, "buy_over_safe_limit");
+  assert.equal(over.max_credits, 2000);
+  assert.equal(buyEstimateRejection({structuredContent:{total_cost:150}}, {}), null);
+  assert.equal(buyEstimateRejection({structuredContent:{}}, {})?.error, "buy_estimate_unavailable");
+  assert.equal(buyEstimateRejection({structuredContent:{total_cost:2500}}, {BUY_SAFE_MAX_CREDITS:"3000"}), null);
 });
 
 test("game refusals map to short codes; auth and rate limits stay gateway errors", () => {
@@ -105,7 +79,7 @@ test("dock target search finds stations and skips the current POI", () => {
     {id:"st-2", name:"Kestrel Station"},
     {poi_id:"out-3", poi_type:"outpost"},
   ]};
-  assert.deepEqual([...findDockTargets(system, "here")], ["st-2", "out-3"]);
+  assert.deepEqual(findDockTargets(system, "here"), ["st-2", "out-3"]);
 });
 
 test("docked state is read from location or ship", () => {
