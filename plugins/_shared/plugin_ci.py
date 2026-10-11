@@ -67,7 +67,7 @@ def plan() -> None:
             packages = sorted(PLUGINS)  # first push of a new branch
         else:
             diff = subprocess.check_output(
-                ["git", "diff", "--name-only", "--diff-filter=ACMRT", base, "HEAD"],
+                ["git", "diff", "--name-only", "--diff-filter=ACDMRT", base, "HEAD"],
                 cwd=ROOT,
                 text=True,
             )
