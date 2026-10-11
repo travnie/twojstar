@@ -1,0 +1,83 @@
+name: Plugin Packages
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - "spacemolt/plugin/**"
+      - "spacemolt/scripts/package_plugin.py"
+      - ".agents/plugins/marketplace.json"
+      - ".github/workflows/plugin-packages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/**"
+      - "spacemolt/plugin/**"
+      - "spacemolt/scripts/package_plugin.py"
+      - ".agents/plugins/marketplace.json"
+      - ".github/workflows/plugin-packages.yml"
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: "Package one plugin or all plugins"
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - claude-dev-kit
+          - cloudflare
+          - desktop-commander
+          - github-ops
+          - google-dev-kit
+          - openai-dev-kit
+          - spacemolt
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: ubuntu-slim
+    outputs:
+      plugins: ${{ steps.plan.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select affected packages
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SELECTED_PLUGIN: ${{ inputs.plugin }}
+        run: python plugins/_shared/plugin_ci.py plan >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: select
+    if: needs.select.outputs.plugins != '[]'
+    name: Package ${{ matrix.plugin }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.select.outputs.plugins) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - name: Validate, test and package
+        run: python plugins/_shared/plugin_ci.py build "${{ matrix.plugin }}" "$RUNNER_TEMP/plugin-artifacts"
+      - name: Upload ChatGPT-importable plugin ZIP
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.plugin }}-plugin
+          path: ${{ runner.temp }}/plugin-artifacts/${{ matrix.plugin }}/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
