@@ -3,7 +3,7 @@ import test from "node:test";
 import { FEED_ID, renderAtom, warningEntries } from "../src/feed";
 import worker, { completePendingCurrent, pushEntries } from "../src/index";
 import { renderPage } from "../src/page";
-import { fetchPirateWeather, type Env } from "../src/sources";
+import { fetchOpenMeteo, fetchOpenWeather, fetchPirateWeather, type Env } from "../src/sources";
 import type { CurrentState, FeedEntry, Warning } from "../src/types";
 import {
   reconcileWarnings, warningEndTimeMs,
@@ -292,4 +292,45 @@ test("pending current transaction retries without duplicating entries", async ()
   assert.ok(store.has("warnings:active"));
   const entries = JSON.parse(store.get("entries") ?? "[]") as FeedEntry[];
   assert.deepEqual(entries.map((item) => item.id), ["pending-current"]);
+});
+
+async function withFetch<T>(handler: (url: string) => Response, run: () => Promise<T>): Promise<T> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => handler(String(input))) as typeof fetch;
+  try {
+    return await run();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+test("non-retryable HTTP errors throw instead of silently returning nothing", async () => {
+  let calls = 0;
+  await withFetch(() => { calls += 1; return new Response("bad key", { status: 401 }); }, async () => {
+    await assert.rejects(fetchOpenWeather({ OPENWEATHER_KEY: "dead" } as Env, "current"), /HTTP 401/);
+  });
+  assert.equal(calls, 1);
+});
+
+test("Open-Meteo local wall time is converted to UTC and current mode skips daily data", async () => {
+  let requested = "";
+  const result = await withFetch((url) => {
+    requested = url;
+    return Response.json({ utc_offset_seconds: 7200, current: { time: "2026-10-11T14:00", temperature_2m: 12 } });
+  }, () => fetchOpenMeteo("current"));
+  assert.equal(result.current?.observedAt, "2026-10-11T12:00:00.000Z");
+  assert.doesNotMatch(requested, /daily=/);
+  assert.deepEqual(result.days, []);
+});
+
+test("OpenWeather drops partial forecast days built from too few 3h slots", async () => {
+  // 2 slots on Oct 11 (partial), 8 slots on Oct 12 (full), all in Europe/Warsaw (UTC+2).
+  const start = Date.parse("2026-10-11T18:00:00Z") / 1000;
+  const list = Array.from({ length: 10 }, (_, i) => ({
+    dt: start + i * 3 * 3600, main: { temp: 10 + i }, weather: [{ id: 800 }], pop: 0,
+  }));
+  const result = await withFetch(() => Response.json({ list }), () =>
+    fetchOpenWeather({ OPENWEATHER_KEY: "k" } as Env, "forecast"));
+  assert.deepEqual(result.days.map((day) => day.date), ["2026-10-12"]);
+  assert.equal(result.current, null);
 });
