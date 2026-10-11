@@ -2,3 +2,9 @@ node_modules/
 worker-configuration.d.ts
 public/vendor/
 public/portable.html
+
+# tsc client output (client/*.ts -> public/*.js)
+public/*.js
+!public/i18n.js
+!public/i18n-runtime.js
+!public/webmcp-lifecycle.js
