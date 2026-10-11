@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload Windows Auto Declip package
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audacity-auto-declip-Windows-${{ github.run_attempt }}
           path: ${{ runner.temp }}/audacity-auto-declip-windows.zip
@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload Windows Smart Transition package
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audacity-smart-transition-Windows-${{ github.run_attempt }}
           path: ${{ runner.temp }}/audacity-smart-transition-windows.zip
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload Linux Auto Declip package
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audacity-auto-declip-Linux-${{ github.run_attempt }}
           path: ${{ runner.temp }}/audacity-auto-declip-linux.zip
@@ -163,7 +163,7 @@ jobs:
 
       - name: Upload Linux Smart Transition package
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audacity-smart-transition-Linux-${{ github.run_attempt }}
           path: ${{ runner.temp }}/audacity-smart-transition-linux.zip
