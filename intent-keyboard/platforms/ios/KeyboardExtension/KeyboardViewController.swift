@@ -325,7 +325,22 @@ final class KeyboardViewController: UIInputViewController {
         refreshCompactLayout()
     }
 
+    /// Exact-value fields (email, URL, numbers, phone): type as-is, never draft or rewrite.
+    private var hostFieldIsLiteral: Bool {
+        switch textDocumentProxy.keyboardType ?? .default {
+        case .emailAddress, .URL, .numberPad, .phonePad, .namePhonePad, .decimalPad, .asciiCapableNumberPad:
+            return true
+        default:
+            return false
+        }
+    }
+
     private func append(_ text: String) {
+        if hostFieldIsLiteral && renderState.rawIntent.isEmpty {
+            textDocumentProxy.insertText(text)
+            return
+        }
+
         cancelRenderWork()
         renderState.append(text)
         refreshViews()

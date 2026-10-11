@@ -40,6 +40,7 @@ class IntentKeyboardService : InputMethodService() {
     private var renderedCanCommit = true
     private var autoRenderSuppressedSource: String? = null
     private var sensitiveField = false
+    private var fieldMode = InputFieldPolicy.Mode.SEMANTIC
     private var activeEditorInfo: EditorInfo? = null
     private var renderGeneration = 0L
     private var autoRenderJob: Job? = null
@@ -125,7 +126,9 @@ class IntentKeyboardService : InputMethodService() {
         super.onStartInput(attribute, restarting)
 
         activeEditorInfo = attribute
-        val nextSensitive = isSensitive(attribute)
+        val nextMode = InputFieldPolicy.classify(attribute?.inputType ?: 0, attribute?.imeOptions ?: 0)
+        // Literal fields (email, URL, numbers) bypass the draft exactly like password fields.
+        val nextSensitive = nextMode == InputFieldPolicy.Mode.SENSITIVE || nextMode == InputFieldPolicy.Mode.LITERAL
         val mustFinalizePrevious = HostCompositionPolicy.shouldFinalizeBeforeStart(
             hostCompositionOwned = hostCompositionOwned,
             nextFieldSensitive = nextSensitive,
@@ -134,6 +137,7 @@ class IntentKeyboardService : InputMethodService() {
         val previousFinalized = !mustFinalizePrevious || finishOwnedHostComposition()
 
         sensitiveField = nextSensitive
+        fieldMode = nextMode
 
         if (nextSensitive || !restarting) {
             clearInternalBuffer()
@@ -143,6 +147,9 @@ class IntentKeyboardService : InputMethodService() {
         }
 
         when {
+            nextMode == InputFieldPolicy.Mode.LITERAL -> {
+                statusView?.text = "Sensitive field: exact value, typed as-is."
+            }
             nextSensitive -> {
                 statusView?.text = "Sensitive field: semantic buffering disabled."
             }
@@ -159,6 +166,7 @@ class IntentKeyboardService : InputMethodService() {
             statusView?.text = "Draft finalization failed; host composition ownership retained."
         }
         sensitiveField = false
+        fieldMode = InputFieldPolicy.Mode.SEMANTIC
         activeEditorInfo = null
         super.onFinishInput()
     }
@@ -459,6 +467,7 @@ class IntentKeyboardService : InputMethodService() {
                         register = requestedRegister,
                         locks = ConservativeLockDetector.detect(raw),
                     ),
+                    allowRemote = fieldMode != InputFieldPolicy.Mode.LOCAL_ONLY,
                 )
 
                 if (
@@ -763,22 +772,6 @@ class IntentKeyboardService : InputMethodService() {
         EditorInfo.IME_ACTION_DONE -> "Done"
         EditorInfo.IME_ACTION_PREVIOUS -> "Prev"
         else -> "↵"
-    }
-
-    private fun isSensitive(info: EditorInfo?): Boolean {
-        val inputType = info?.inputType ?: return false
-        val inputClass = inputType and InputType.TYPE_MASK_CLASS
-        val variation = inputType and InputType.TYPE_MASK_VARIATION
-
-        return when (inputClass) {
-            InputType.TYPE_CLASS_TEXT -> variation in setOf(
-                InputType.TYPE_TEXT_VARIATION_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-            )
-            InputType.TYPE_CLASS_NUMBER -> variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            else -> false
-        }
     }
 
     private fun matchWidth() = LinearLayout.LayoutParams(

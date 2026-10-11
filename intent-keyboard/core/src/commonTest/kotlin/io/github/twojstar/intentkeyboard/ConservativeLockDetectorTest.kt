@@ -79,4 +79,15 @@ class ConservativeLockDetectorTest {
         assertTrue("https://example.com/O'Reilly" in values)
         assertTrue("https://example.com/path)]" in values)
     }
+
+    @Test
+    fun locksPolishDottedTimeGroupedAmountsAndEmails() {
+        val values = ConservativeLockDetector.detect(
+            "Bądź o 18.30, wpłać 1 000 zł i napisz na jan.kowalski+test@example.co.uk.",
+        ).map { it.value }
+
+        assertTrue("18.30" in values)
+        assertTrue("1 000 zł" in values)
+        assertTrue("jan.kowalski+test@example.co.uk" in values)
+    }
 }

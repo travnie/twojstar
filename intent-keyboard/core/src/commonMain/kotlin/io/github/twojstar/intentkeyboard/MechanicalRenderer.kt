@@ -54,9 +54,14 @@ class MechanicalRenderer : SemanticRenderer {
 /** Conservative automatic locks for obvious values a renderer must not alter. */
 object ConservativeLockDetector {
     private const val CURRENCY_PATTERN = "(?:zł|PLN|EUR|USD|€|\\$)"
-    private const val NUMBER_PATTERN = "\\d+(?:[.,]\\d+)?"
+    // Grouped thousands ("1 000", NBSP or narrow NBSP) before plain digits so the whole amount locks.
+    private const val NUMBER_PATTERN = "(?:\\d{1,3}(?:[ \u00A0\u202F]\\d{3})+|\\d+)(?:[.,]\\d+)?"
 
-    private val timePattern = Regex("""\b(?:[01]?\d|2[0-3]):[0-5]\d\b""")
+    // 18:30 and the Polish 18.30 form.
+    private val timePattern = Regex("""\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b""")
+    private val emailPattern = Regex(
+        """(?<![\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+(?<!\.)""",
+    )
     private val suffixMoneyPattern = Regex(
         """(?<!\w)[+-]?$NUMBER_PATTERN\s?$CURRENCY_PATTERN(?!\w)""",
         RegexOption.IGNORE_CASE,
@@ -87,7 +92,7 @@ object ConservativeLockDetector {
     private val urlWrapperTrailingPunctuation = setOf('.', ',', ';', ':', '!', '?')
 
     fun detect(text: String): List<SemanticLock> = buildList {
-        sequenceOf(timePattern, suffixMoneyPattern, prefixMoneyPattern)
+        sequenceOf(timePattern, suffixMoneyPattern, prefixMoneyPattern, emailPattern)
             .flatMap { pattern -> pattern.findAll(text).map { SemanticLock(it.value) } }
             .forEach { lock -> add(lock) }
 

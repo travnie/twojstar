@@ -93,7 +93,8 @@ class LocalSemanticRuntime(
         reload()
     }
 
-    suspend fun render(request: RenderRequest): RenderResult {
+    /** [allowRemote] false (incognito fields) keeps the draft on device even when a provider is configured. */
+    suspend fun render(request: RenderRequest, allowRemote: Boolean = true): RenderResult {
         val preferences = renderPreferenceStore.current()
         val effectiveRequest = request.copy(
             tone = preferences.tone,
@@ -108,7 +109,7 @@ class LocalSemanticRuntime(
             }
 
             if (activeEngine == null) {
-                renderRemoteOrMechanical(effectiveRequest)
+                renderRemoteOrMechanical(effectiveRequest, allowRemote)
             } else {
                 val startedAtNanos = System.nanoTime()
                 try {
@@ -121,7 +122,7 @@ class LocalSemanticRuntime(
                     result
                 } catch (_: SemanticRenderException) {
                     LocalInferenceMetrics.recordFailure()
-                    renderRemoteAfterLocalFailure(effectiveRequest)
+                    renderRemoteAfterLocalFailure(effectiveRequest, allowRemote)
                 }
             }
         }
@@ -154,8 +155,8 @@ class LocalSemanticRuntime(
         }
     }
 
-    private suspend fun renderRemoteAfterLocalFailure(request: RenderRequest): RenderResult {
-        val remote = remotePipeline()
+    private suspend fun renderRemoteAfterLocalFailure(request: RenderRequest, allowRemote: Boolean): RenderResult {
+        val remote = if (allowRemote) remotePipeline() else null
         return executeFallback(
             request = request,
             remote = remote,
@@ -163,8 +164,8 @@ class LocalSemanticRuntime(
         )
     }
 
-    private suspend fun renderRemoteOrMechanical(request: RenderRequest): RenderResult {
-        val remote = remotePipeline()
+    private suspend fun renderRemoteOrMechanical(request: RenderRequest, allowRemote: Boolean): RenderResult {
+        val remote = if (allowRemote) remotePipeline() else null
         return executeFallback(
             request = request,
             remote = remote,
