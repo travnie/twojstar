@@ -95,10 +95,12 @@ class ModelSemanticRenderer(
 
         return when (val outcome = client.complete(SemanticPromptCompiler.compile(request))) {
             is CompletionOutcome.Success -> {
-                if (outcome.text.isBlank()) {
-                    RendererOutcome.Failure("Provider returned an empty semantic render.")
-                } else {
-                    RendererOutcome.Success(RenderResult(outcome.text.trim()))
+                val text = ModelOutputSanitizer.clean(outcome.text, request.rawIntent)
+                when {
+                    text.isBlank() -> RendererOutcome.Failure("Provider returned an empty semantic render.")
+                    ModelOutputSanitizer.isRunaway(text, request.rawIntent) ->
+                        RendererOutcome.Failure("Provider returned a runaway or truncated render.")
+                    else -> RendererOutcome.Success(RenderResult(text))
                 }
             }
             is CompletionOutcome.Failure -> RendererOutcome.Failure(
@@ -107,4 +109,42 @@ class ModelSemanticRenderer(
             )
         }
     }
+}
+
+/**
+ * Provider-neutral cleanup of small-model habits. Never rewrites content: only strips
+ * reasoning blocks and a quote pair the input did not have, and flags runaway output.
+ */
+internal object ModelOutputSanitizer {
+    private val thinkBlock = Regex("""<think>[\s\S]*?</think>""", RegexOption.IGNORE_CASE)
+    // Truncated reasoning with no closing tag: drop to the end, which leaves an empty (failed) render.
+    private val unterminatedThink = Regex("""<think>[\s\S]*$""", RegexOption.IGNORE_CASE)
+    private val quotePairs = listOf('"' to '"', '“' to '”', '„' to '”', '\'' to '\'')
+
+    // A rewrite of a keyboard draft stays near input size; generous slack for translation and polish.
+    private const val RUNAWAY_FACTOR = 4
+    private const val RUNAWAY_SLACK_CHARS = 80
+
+    fun clean(output: String, rawIntent: String): String {
+        // User-authored <think> tags (XML, prompt text) are content, not provider reasoning.
+        val userWroteThink = rawIntent.contains("<think", ignoreCase = true)
+        var text = if (userWroteThink) {
+            output.trim()
+        } else {
+            unterminatedThink.replace(thinkBlock.replace(output, ""), "").trim()
+        }
+        val raw = rawIntent.trim()
+        for ((open, close) in quotePairs) {
+            val wrapped = text.length >= 2 && text.first() == open && text.last() == close
+            val inputWrapped = raw.isNotEmpty() && raw.first() == open && raw.last() == close
+            if (wrapped && !inputWrapped) {
+                text = text.substring(1, text.length - 1).trim()
+                break
+            }
+        }
+        return text
+    }
+
+    fun isRunaway(text: String, rawIntent: String): Boolean =
+        text.length > rawIntent.trim().length * RUNAWAY_FACTOR + RUNAWAY_SLACK_CHARS
 }

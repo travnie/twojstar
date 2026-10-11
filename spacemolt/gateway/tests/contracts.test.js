@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
-import vm from "node:vm";
 import test from "node:test";
-
-const source = readFileSync(new URL("../worker.js", import.meta.url), "utf8")
-  .replace("export default {", "globalThis.worker = {");
-const context = vm.createContext({});
-vm.runInContext(`${source}\nglobalThis.contracts = {dailyAllowed, mcpTools};`, context);
-const {dailyAllowed, mcpTools} = context.contracts;
+import {dailyAllowed, mcpTools} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});

@@ -119,6 +119,8 @@ const K = {
   pendingForecast: "pending:forecast",
 } as const;
 
+const KV_ROUTES = new Set(["/feed.atom", "/warnings.atom", "/state.json", "/healthz", "/"]);
+
 const POINT_SOURCES: readonly SourceId[] = ["openmeteo", "openweather", "visualcrossing", "xweather", "pirateweather"];
 type LastGood = Partial<Record<SourceId, { reading: Reading; storedAt: number }>>;
 interface CycleStatus {
@@ -189,9 +191,9 @@ async function completePendingForecast(env: Env): Promise<boolean> {
 async function runCurrent(env: Env): Promise<void> {
   await completePendingCurrent(env);
   const [om, ow, vc, xw, pw, air, warningFetch, station] = await Promise.all([
-    fetchOpenMeteo().catch(asNull("openmeteo")),
-    fetchOpenWeather(env).catch(asNull("openweather")),
-    fetchVisualCrossing(env).catch(asNull("visualcrossing")),
+    fetchOpenMeteo("current").catch(asNull("openmeteo")),
+    fetchOpenWeather(env, "current").catch(asNull("openweather")),
+    fetchVisualCrossing(env, "current").catch(asNull("visualcrossing")),
     fetchXweather(env, "current").catch(asNull("xweather")),
     fetchPirateWeather(env, "current").catch(asNull("pirateweather")),
     fetchOpenMeteoAirQuality().catch(asNull("airquality")),
@@ -292,9 +294,9 @@ async function runCurrent(env: Env): Promise<void> {
 async function runForecast(env: Env): Promise<void> {
   await completePendingForecast(env);
   const [om, ow, vc, xw, pw] = await Promise.all([
-    fetchOpenMeteo().catch(asNull("openmeteo")),
-    fetchOpenWeather(env).catch(asNull("openweather")),
-    fetchVisualCrossing(env).catch(asNull("visualcrossing")),
+    fetchOpenMeteo("forecast").catch(asNull("openmeteo")),
+    fetchOpenWeather(env, "forecast").catch(asNull("openweather")),
+    fetchVisualCrossing(env, "forecast").catch(asNull("visualcrossing")),
     fetchXweather(env, "forecast").catch(asNull("xweather")),
     fetchPirateWeather(env, "forecast").catch(asNull("pirateweather")),
   ]);
@@ -343,6 +345,7 @@ export default {
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;
 
+    if (!KV_ROUTES.has(pathname)) return new Response("not found", { status: 404 });
     const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
 
     switch (pathname) {

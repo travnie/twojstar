@@ -1,38 +1,24 @@
+import {
+  gameRejection,
+  sc,
+  currentLocation,
+  isDocked,
+  findDockTargets,
+  mcpTools,
+  commandRejection,
+  DAILY_HARD_DENY,
+  dailyAllowed,
+  positiveInt,
+  buyEstimateRejection,
+  buyFillOverCap,
+} from "./contracts.js";
+
 const GAME = "https://game.spacemolt.com";
-const VERSION = "2026-10-04.1";
+const VERSION = "2026-10-11.1";
 const STATE_KEY = "session:v2";
 
 const TOOL_RE = /^spacemolt(?:_[a-z0-9_]+)?$/;
 const ACTION_RE = /^[a-z0-9_]+$/;
-const GATEWAY_HARD_DENY = new Set(["self_destruct"]);
-// Commands that run without allow_irreversible=true: reads plus routine, recoverable
-// gameplay. Everything else, including any action added to the game later, needs the override.
-const SAFE_ACTIONS = new Set([
-  // reads (core and uniquely named actions)
-  "analyze_market","browse_ships","captains_log_get","captains_log_list","catalog",
-  "commission_quote","commission_status","completed_missions","estimate_purchase",
-  "find_route","forum_get_thread","forum_list",
-  "get_achievements","get_action_log","get_active_missions","get_base","get_cargo","get_chat_history",
-  "get_commands","get_empire_info","get_faction_achievements","get_guide","get_invites",
-  "get_location","get_map","get_missions","get_nearby","get_notes","get_notification_settings",
-  "get_player","get_poi","get_queue","get_ship","get_skills","get_state","get_status","get_system",
-  "get_system_agents","get_tax_estimate","get_trades","get_version","help","inspect","list_ships",
-  "read_note","search_systems","view_completed_mission","view_market","view_orders",
-  "view_ship_buy_orders",
-  "base_cost","faction_list","garages","intel_status","list_missions","query_intel","query_trade_intel","rooms",
-  "tax_estimate","trade_intel_status",
-  // reads (grouped v2 names shared by tools, e.g. spacemolt_drone/list; each is a read in every tool)
-  "get","list","info","status","log","summary","view","quote","wrecks","policies",
-  // routine gameplay (captains_log_add is left out: on a full log it evicts the oldest entry)
-  "travel","jump","dock","undock","refuel","repair","mine","scan","survey_system",
-  "accept_mission","complete_mission","decline_mission","chat",
-  "tow","loot","recall","buy"
-]);
-// Self-defence inside a battle someone else started. These require an active battle, so they
-// cannot start a fight; attack, hunt, engage and advance still need the override.
-const DEFENSIVE_BATTLE_ACTIONS = new Set(["retreat","stance","target","reload"]);
-// The board stance captures the enemy ship rather than defending against it.
-const DEFENSIVE_STANCES = new Set(["fire","evade","brace","flee"]);
 
 function jsonResponse(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
@@ -202,55 +188,8 @@ async function gameCall(env, tool, action, payload = {}, signal = undefined) {
   return resp.data;
 }
 
-// Upstream refused the command itself (bad args, no fuel, ...): not retryable, report as 4xx.
-function gameRejection(error) {
-  const match = /^(game_error|game_http_4(?!01|03|29)\d\d|command_not_allowed)(?::(.*))?$/s.exec(String(error?.message || ""));
-  if (!match) return null;
-  const detail = String(match[2] || match[1]).trim();
-  return /^[a-z0-9_]{1,64}$/i.test(detail) ? detail.toLowerCase() : "rejected";
-}
-
-function sc(input) {
-  return input?.structuredContent ?? input?.data?.structuredContent ?? input?.result?.structuredContent ?? input;
-}
-
-function currentLocation(input) {
-  const status = sc(input);
-  return status?.location || status?.state?.location || status?.structuredContent?.location || {};
-}
-
-function isDocked(input) {
-  const loc = currentLocation(input);
-  if (typeof loc.docked === "boolean") return loc.docked;
-  const status = sc(input);
-  const ship = status?.ship || status?.state?.ship || status?.structuredContent?.ship || {};
-  if (typeof ship.docked === "boolean") return ship.docked;
-  return Boolean(loc.docked_at || loc.dockedAt);
-}
-
 // Each candidate may cost a long travel, so ensureDocked tries only the first few.
 const DOCK_CANDIDATE_MAX = 3;
-
-function findDockTargets(root, excludeId) {
-  const seen = new Set();
-  const found = [];
-  function walk(node) {
-    if (node == null || typeof node !== "object" || seen.has(node)) return;
-    seen.add(node);
-    if (!Array.isArray(node)) {
-      const id = node.poi_id || node.id || node.base_id;
-      const type = String(node.poi_type || node.type || node.kind || "").toLowerCase();
-      const name = String(node.poi_name || node.name || node.base_name || "").toLowerCase();
-      if (id && String(id) !== excludeId && !found.includes(String(id)) && (/station|outpost|base/.test(type) || /station|outpost/.test(name))) {
-        found.push(String(id));
-        return;
-      }
-    }
-    for (const key of Object.keys(node)) walk(node[key]);
-  }
-  walk(root);
-  return found;
-}
 
 async function ensureDocked(env) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
@@ -293,74 +232,29 @@ async function ensureDocked(env) {
   return {docked:isDocked(after), changed:true, reason:"all_dock_candidates_failed", localDockError, refused, status:after};
 }
 
-function mcpTools() {
-  return [
-    {
-      name:"spacemolt_state",
-      description:"Get Gremlin-5 current SpaceMolt status through the secure gateway.",
-      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:true, openWorldHint:true},
-      inputSchema:{type:"object",properties:{}}
-    },
-    {
-      name:"spacemolt_command",
-      description:"Call an authenticated SpaceMolt v2 tool/action. Only reads, routine actions (travel, dock, mine, refuel, buy, missions, chat, ...) and self-defence in an active battle (retreat, target, reload, stance other than board) run as-is; anything else requires allow_irreversible=true.",
-      annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
-      inputSchema:{
-        type:"object",
-        properties:{
-          tool:{type:"string",description:"SpaceMolt tool, e.g. spacemolt or spacemolt_social"},
-          action:{type:"string"},
-          payload:{type:"object",additionalProperties:true},
-          allow_irreversible:{type:"boolean",default:false}
-        },
-        required:["tool","action"]
-      }
-    },
-    {
-      name:"spacemolt_ensure_docked",
-      description:"Best-effort safety action: if not docked, dock at the current POI or a station/outpost in the current system. Does not jump systems.",
-      annotations:{readOnlyHint:false, destructiveHint:true, idempotentHint:false, openWorldHint:true},
-      inputSchema:{type:"object",properties:{}}
-    },
-    {
-      name:"spacemolt_health",
-      description:"Check gateway readiness without exposing secrets.",
-      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:true, openWorldHint:false},
-      inputSchema:{type:"object",properties:{}}
-    }
-  ];
+// Price is checked right before the buy; quantity cap bounds any move between the two calls.
+async function buyCostRejection(env, payload) {
+  const estimate = await gameCall(env, "spacemolt_market", "estimate_purchase",
+    {item_id:String(payload?.id || ""), quantity:payload?.quantity});
+  return buyEstimateRejection(estimate, env);
 }
 
-function isDefensiveBattleAction(action, payload) {
-  if (!DEFENSIVE_BATTLE_ACTIONS.has(action)) return false;
-  if (action !== "stance") return true;
-  // Grouped spacemolt_battle/stance takes `id`; the flat battle dispatcher takes `stance`.
-  const stances = [payload?.id, payload?.stance].filter((value) => value !== undefined);
-  return stances.length > 0 && stances.every((value) => DEFENSIVE_STANCES.has(String(value)));
-}
-
-function isSafeAction(action, payload) {
-  // get_notifications clears the queue unless clear:false is passed.
-  if (action === "get_notifications") return payload?.clear === false;
-  // The flat battle dispatcher carries the real action in payload.action.
-  if (action === "battle") return isDefensiveBattleAction(String(payload?.action || ""), payload);
-  if (DEFENSIVE_BATTLE_ACTIONS.has(action)) return isDefensiveBattleAction(action, payload);
-  return SAFE_ACTIONS.has(action);
-}
-
-function commandRejection(action, allowIrreversible, payload) {
-  action = String(action || "");
-  // The flat battle dispatcher carries the real action in payload.action (e.g. self_destruct).
-  const nested = action === "battle" ? String(payload?.action || "") : "";
-  if (GATEWAY_HARD_DENY.has(action) || GATEWAY_HARD_DENY.has(nested)) return {error:"action_hard_denied", status:403};
-  if (!isSafeAction(action, payload) && allowIrreversible !== true) {
-    // Error code kept for existing clients; it now covers every action outside SAFE_ACTIONS.
-    return {error:"irreversible_action_requires_explicit_override", status:409};
+// Shared by MCP and HTTP: {rejection} (with HTTP status) or {data}.
+async function runCommand(env, tool, action, payload, allowIrreversible) {
+  const rejection = commandRejection(tool, action, allowIrreversible, payload, env);
+  if (rejection) return {rejection};
+  const capped = action === "buy" && allowIrreversible !== true;
+  if (capped) {
+    const overLimit = await buyCostRejection(env, payload);
+    if (overLimit) return {rejection:overLimit};
   }
-  return null;
+  const data = await gameCall(env, tool, action, payload || {});
+  const overCap = capped ? buyFillOverCap(data, env) : null;
+  // Not undoable; surface it so the caller sees the cap was exceeded by a price move.
+  return {data:overCap ? {...data, gateway_warning:{code:"buy_filled_over_cap", ...overCap}} : data};
 }
 
-function runTool(name, args, env) {
+async function runTool(name, args, env) {
   if (name === "spacemolt_health") {
     const clerk = Boolean(env.SPACEMOLT_CLERK_API_KEY);
     const player = Boolean(env.SPACEMOLT_PLAYER_ID);
@@ -372,9 +266,12 @@ function runTool(name, args, env) {
   if (name === "spacemolt_command") {
     const tool = String(args?.tool || "");
     const action = String(args?.action || "");
-    const rejection = commandRejection(action, args?.allow_irreversible, args?.payload);
-    if (rejection) return {error:rejection.error, action};
-    return gameCall(env, tool, action, args?.payload || {});
+    const out = await runCommand(env, tool, action, args?.payload, args?.allow_irreversible);
+    if (out.rejection) {
+      const {status: _status, ...body} = out.rejection;
+      return {...body, action};
+    }
+    return out.data;
   }
   return {error:"unknown_tool"};
 }
@@ -443,7 +340,6 @@ async function handleMcpMessage(msg, env) {
   return {reply:{jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}}};
 }
 
-
 const DAILY_MAX_STEPS = 6;
 // Small enough that the whole peeked batch fits the planner's per-observation budget.
 const DAILY_NOTIFICATION_PEEK = 5;
@@ -463,23 +359,6 @@ const WORKERS_AI_OUTPUT_NEURONS_PER_MILLION = 36_400;
 const WORKERS_AI_HIDDEN_OUTPUT_TOKEN_FACTOR = 2;
 const WORKERS_AI_RESERVATION_SAFETY_FACTOR = 1.25;
 const WORKERS_AI_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
-const DAILY_HARD_DENY = new Set(["self_destruct","attack","hunt","jettison","abandon_mission","scrap_ship","refit_ship","buy_listed_ship","commission_ship","sell_ship_to_order","leave_faction","disband","transfer_ownership"]);
-const DAILY_ALLOWED = {
-  spacemolt: [
-    "get_status","get_state","get_player","get_location","get_queue","get_system","get_poi",
-    "get_base","get_ship","get_cargo","get_skills","get_achievements","get_active_missions",
-    "get_missions","completed_missions","view_completed_mission","get_notifications","get_map",
-    "search_systems","find_route","get_commands","get_guide","inspect","scan",
-    "travel","jump","dock","undock","refuel","repair","mine","complete_mission"
-  ],
-  spacemolt_social: [
-    "get_chat_history","chat","captains_log_add","captains_log_list","captains_log_get",
-    "get_action_log","get_notes","read_note"
-  ],
-  spacemolt_ship: ["list_ships","browse_ships","view_ship_buy_orders","commission_status"],
-  spacemolt_drone: ["list","get","recall"],
-  spacemolt_battle: ["status","retreat","stance","target","reload"]
-};
 
 function dget(obj, path) {
   let cur = obj;
@@ -522,26 +401,6 @@ function parsePlannerDecision(text) {
   return JSON.parse(cleaned.slice(first, last + 1));
 }
 
-function dailyAllowed(tool, action, args) {
-  if (DAILY_HARD_DENY.has(action)) return false;
-  // Own-property check: planner output may name inherited keys such as "constructor".
-  const allowed = Object.hasOwn(DAILY_ALLOWED, tool) ? DAILY_ALLOWED[tool] : null;
-  if (!Array.isArray(allowed) || !allowed.includes(action)) return false;
-  if (tool === "spacemolt_social" && action === "chat") {
-    const ch = String(args?.target || "");
-    if (["private","faction","local","system"].indexOf(ch) < 0) return false;
-    if (typeof args?.content !== "string" || !args.content || [...args.content].length > 500) return false;
-    if (ch === "private" && (typeof args.target_id !== "string" || !args.target_id)) return false;
-  }
-  if (tool === "spacemolt_battle" && action !== "status" && !isDefensiveBattleAction(action, args)) return false;
-  if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
-  if ((action === "refuel" || action === "repair") && args?.quantity != null) {
-    const qty = Number(args.quantity);
-    if (!isFinite(qty) || qty < 0 || qty > 200) return false;
-  }
-  return true;
-}
-
 // The log keeps a fixed number of entries and silently drops the oldest on append.
 async function captainsLogHasRoom(env) {
   try {
@@ -580,14 +439,6 @@ function nextProviderRotation(current, provider) {
   const idx = DAILY_PROVIDER_ORDER.indexOf(String(provider || ""));
   if (idx >= 0) return (idx + 1) % DAILY_PROVIDER_ORDER.length;
   return (current + 1) % DAILY_PROVIDER_ORDER.length;
-}
-
-function positiveInt(raw, fallback, max) {
-  const value = String(raw || "").trim();
-  if (!/^\d+$/.test(value)) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
-  return Math.min(parsed, max);
 }
 
 function workersAiSettings(env) {
@@ -988,9 +839,12 @@ export default {
         const body = await req.json().catch(() => undefined);
         // JSON null, arrays and scalars parse fine but are not a command object.
         if (body === null || typeof body !== "object" || Array.isArray(body)) return jsonResponse({error:"invalid_json"},400);
-        const rejection = commandRejection(body?.action, body?.allow_irreversible, body?.payload);
-        if (rejection) return jsonResponse({error:rejection.error,action:body.action},rejection.status);
-        return jsonResponse(await gameCall(env,String(body?.tool||""),String(body?.action||""),body?.payload||{}));
+        const out = await runCommand(env, String(body.tool || ""), String(body.action || ""), body.payload, body.allow_irreversible);
+        if (out.rejection) {
+          const {status, ...rest} = out.rejection;
+          return jsonResponse({...rest, action:body.action}, status);
+        }
+        return jsonResponse(out.data);
       }
       return jsonResponse({error:"not_found"},404);
     } catch (err) {

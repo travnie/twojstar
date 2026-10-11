@@ -17,6 +17,12 @@ export interface Env {
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
+}
+
 async function getJson(url: string, init?: RequestInit): Promise<unknown | null> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= CONFIG.sourceRetries; attempt++) {
@@ -25,10 +31,12 @@ async function getJson(url: string, init?: RequestInit): Promise<unknown | null>
     }
     try {
       const res = await fetch(url, { ...(init ?? {}), signal: AbortSignal.timeout(CONFIG.sourceTimeoutMs) });
-      if (res.ok) return res.json();
-      if (RETRYABLE_STATUS.has(res.status)) { lastErr = new Error(`HTTP ${res.status}`); continue; }
-      return null;
+      if (res.ok) return await res.json();
+      // Non-retryable (401 dead key, 404, ...): throw so asNull logs it instead of a silent dropout.
+      if (!RETRYABLE_STATUS.has(res.status)) throw new HttpError(res.status);
+      lastErr = new HttpError(res.status);
     } catch (e) {
+      if (e instanceof HttpError && !RETRYABLE_STATUS.has(e.status)) throw e;
       lastErr = e;
     }
   }
@@ -41,6 +49,14 @@ function num(v: unknown): number | null {
 }
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
+}
+
+// allSettled keeps one endpoint's failure from dropping the other; throw only when nothing came back.
+function throwIfAllRejected(results: readonly PromiseSettledResult<unknown>[]): void {
+  const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (rejected.length > 0 && results.every((r) => r.status === "rejected" || r.value === null)) {
+    throw rejected[0]!.reason;
+  }
 }
 
 // ── condition normalization ─────────────────────────────────────────────
@@ -120,18 +136,35 @@ function majorityCondition(conditions: readonly Condition[]): Condition {
   return best;
 }
 
+// current cycle needs only current data; forecast cycle only days.
+export type FetchMode = "current" | "forecast" | "both";
+
+// Open-Meteo `time` is local wall time without offset; pin it to UTC via utc_offset_seconds.
+function openMeteoTime(data: Record<string, unknown>, value: unknown): string {
+  const offset = num(data["utc_offset_seconds"]);
+  const parsed = typeof value === "string" ? Date.parse(`${value}Z`) : NaN;
+  if (offset === null || !Number.isFinite(parsed)) return new Date().toISOString();
+  return new Date(parsed - offset * 1000).toISOString();
+}
+
 // ── Open-Meteo (no key) ───────────────────────────────────────────────
-export async function fetchOpenMeteo(): Promise<{ current: Reading | null; days: DayForecast[] }> {
+export async function fetchOpenMeteo(
+  mode: FetchMode = "both",
+): Promise<{ current: Reading | null; days: DayForecast[] }> {
   const u = new URL("https://api.open-meteo.com/v1/forecast");
   u.searchParams.set("latitude", String(CONFIG.lat));
   u.searchParams.set("longitude", String(CONFIG.lon));
   u.searchParams.set("timezone", CONFIG.tz);
   u.searchParams.set("wind_speed_unit", "ms");
-  u.searchParams.set("forecast_days", String(CONFIG.forecastDays));
-  u.searchParams.set("current",
-    "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,uv_index");
-  u.searchParams.set("daily",
-    "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,uv_index_max,weather_code");
+  if (mode !== "forecast") {
+    u.searchParams.set("current",
+      "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,uv_index");
+  }
+  if (mode !== "current") {
+    u.searchParams.set("forecast_days", String(CONFIG.forecastDays));
+    u.searchParams.set("daily",
+      "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,uv_index_max,weather_code");
+  }
 
   const data = await getJson(u.toString());
   if (!isObj(data)) return { current: null, days: [] };
@@ -150,7 +183,7 @@ export async function fetchOpenMeteo(): Promise<{ current: Reading | null; days:
       precipMm: num(c["precipitation"]),
       uvIndex: num(c["uv_index"]),
       condition: wmo(num(c["weather_code"])),
-      observedAt: typeof c["time"] === "string" ? c["time"] : new Date().toISOString(),
+      observedAt: openMeteoTime(data, c["time"]),
     };
   }
 
@@ -179,15 +212,22 @@ export async function fetchOpenMeteo(): Promise<{ current: Reading | null; days:
 }
 
 // ── OpenWeather (key; free /data/2.5) ───────────────────────────────────
-export async function fetchOpenWeather(env: Env): Promise<{ current: Reading | null; days: DayForecast[] }> {
+// Full local day = 8 slots; 7 tolerates the DST-short day.
+const OPENWEATHER_MIN_DAY_SLOTS = 7;
+
+export async function fetchOpenWeather(
+  env: Env,
+  mode: FetchMode = "both",
+): Promise<{ current: Reading | null; days: DayForecast[] }> {
   const key = env.OPENWEATHER_KEY;
   if (!key) return { current: null, days: [] };
   const q = `lat=${CONFIG.lat}&lon=${CONFIG.lon}&units=metric&appid=${key}`;
 
   const [currentResult, forecastResult] = await Promise.allSettled([
-    getJson(`https://api.openweathermap.org/data/2.5/weather?${q}`),
-    getJson(`https://api.openweathermap.org/data/2.5/forecast?${q}`),
+    mode === "forecast" ? Promise.resolve(null) : getJson(`https://api.openweathermap.org/data/2.5/weather?${q}`),
+    mode === "current" ? Promise.resolve(null) : getJson(`https://api.openweathermap.org/data/2.5/forecast?${q}`),
   ]);
+  throwIfAllRejected([currentResult, forecastResult]);
   let current: Reading | null = null;
   const w = currentResult.status === "fulfilled" ? currentResult.value : null;
   if (isObj(w) && isObj(w["main"]) && Array.isArray(w["weather"])) {
@@ -211,7 +251,7 @@ export async function fetchOpenWeather(env: Env): Promise<{ current: Reading | n
   const days: DayForecast[] = [];
   const f = forecastResult.status === "fulfilled" ? forecastResult.value : null;
   if (isObj(f) && Array.isArray(f["list"])) {
-    type Bucket = { max: number; min: number; precip: number; prob: number; conds: Condition[] };
+    type Bucket = { max: number; min: number; precip: number; prob: number; conds: Condition[]; slots: number };
     const byDay = new Map<string, Bucket>();
     const dateFormatter = new Intl.DateTimeFormat("en", {
       timeZone: CONFIG.tz, year: "numeric", month: "2-digit", day: "2-digit",
@@ -230,7 +270,8 @@ export async function fetchOpenWeather(env: Env): Promise<{ current: Reading | n
       const rain = isObj(slot["rain"]) ? slot["rain"] : {};
       const snow = isObj(slot["snow"]) ? slot["snow"] : {};
       const t = num(m["temp"]) ?? NaN;
-      const b = byDay.get(date) ?? { max: -Infinity, min: Infinity, precip: 0, prob: 0, conds: [] };
+      const b = byDay.get(date) ?? { max: -Infinity, min: Infinity, precip: 0, prob: 0, conds: [], slots: 0 };
+      b.slots += 1;
       if (Number.isFinite(t)) { b.max = Math.max(b.max, t); b.min = Math.min(b.min, t); }
       b.precip += (num(rain["3h"]) ?? 0) + (num(snow["3h"]) ?? 0);
       b.prob = Math.max(b.prob, (num(slot["pop"]) ?? 0) * 100);
@@ -238,6 +279,8 @@ export async function fetchOpenWeather(env: Env): Promise<{ current: Reading | n
       byDay.set(date, b);
     }
     for (const [date, b] of byDay) {
+      // 3h slots: partial first/last day would bias tMax/tMin/precip; other sources cover it.
+      if (b.slots < OPENWEATHER_MIN_DAY_SLOTS) continue;
       days.push({
         source: "openweather", date,
         tMaxC: b.max === -Infinity ? null : Math.round(b.max * 10) / 10,
@@ -253,11 +296,15 @@ export async function fetchOpenWeather(env: Env): Promise<{ current: Reading | n
 }
 
 // ── Visual Crossing (key; one call gives current + days) ─────────────────
-export async function fetchVisualCrossing(env: Env): Promise<{ current: Reading | null; days: DayForecast[] }> {
+export async function fetchVisualCrossing(
+  env: Env,
+  mode: FetchMode = "both",
+): Promise<{ current: Reading | null; days: DayForecast[] }> {
   const key = env.VISUALCROSSING_KEY;
   if (!key) return { current: null, days: [] };
   const u = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${CONFIG.lat},${CONFIG.lon}`
-    + `?unitGroup=metric&include=current,days&key=${key}&contentType=json`;
+    + `?unitGroup=metric&include=${mode === "both" ? "current,days" : mode === "current" ? "current" : "days"}`
+    + `&key=${key}&contentType=json`;
 
   const data = await getJson(u);
   if (!isObj(data)) return { current: null, days: [] };
@@ -299,7 +346,7 @@ export async function fetchVisualCrossing(env: Env): Promise<{ current: Reading 
 
 
 // ── Vaisala Xweather Weather API (keyed) ───────────────────────────────
-type XweatherMode = "current" | "forecast" | "both";
+type XweatherMode = FetchMode;
 
 function xweatherCredentials(env: Env): { clientId: string; clientSecret: string } | null {
   const clientId = env.XWEATHER_CLIENT_ID?.trim();
@@ -353,6 +400,7 @@ export async function fetchXweather(
     currentUrl ? getJson(currentUrl) : Promise.resolve(null),
     forecastUrl ? getJson(forecastUrl) : Promise.resolve(null),
   ]);
+  throwIfAllRejected([currentResult, forecastResult]);
 
   let current: Reading | null = null;
   const currentData = currentResult.status === "fulfilled" ? currentResult.value : null;
@@ -398,7 +446,7 @@ export async function fetchXweather(
 }
 
 // ── Pirate Weather (keyed; Dark Sky-compatible) ────────────────────────
-type PirateWeatherMode = "current" | "forecast" | "both";
+type PirateWeatherMode = FetchMode;
 
 function pirateWeatherUrl(mode: PirateWeatherMode): string {
   const u = new URL(`https://api.pirateweather.net/forecast/key/${CONFIG.lat},${CONFIG.lon}`);
@@ -505,7 +553,7 @@ export async function fetchOpenMeteoAirQuality(): Promise<AirQuality | null> {
   pollen.sort((a, b) => b.grains - a.grains);
 
   return {
-    observedAt: typeof c["time"] === "string" ? c["time"] : new Date().toISOString(),
+    observedAt: openMeteoTime(data, c["time"]),
     europeanAqi: num(c["european_aqi"]),
     pm25: num(c["pm2_5"]),
     pm10: num(c["pm10"]),

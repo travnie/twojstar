@@ -325,7 +325,34 @@ final class KeyboardViewController: UIInputViewController {
         refreshCompactLayout()
     }
 
+    /// Exact-value fields (email, URL, numbers, phone): type as-is, never draft or rewrite.
+    private var hostFieldIsLiteral: Bool {
+        switch textDocumentProxy.keyboardType ?? .default {
+        case .emailAddress, .URL, .numberPad, .phonePad, .namePhonePad, .decimalPad, .asciiCapableNumberPad:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// A draft left from another field must not absorb, render or commit into an exact-value field.
+    /// Returns true when the host field is literal and the caller should bypass the draft.
+    private func bypassDraftForLiteralField() -> Bool {
+        guard hostFieldIsLiteral else { return false }
+        if !renderState.rawIntent.isEmpty {
+            clearBuffer()
+            statusLabel.text = "Exact-value field: previous draft discarded, typing as-is."
+            refreshCompactLayout()
+        }
+        return true
+    }
+
     private func append(_ text: String) {
+        if bypassDraftForLiteralField() {
+            textDocumentProxy.insertText(text)
+            return
+        }
+
         cancelRenderWork()
         renderState.append(text)
         refreshViews()
@@ -333,7 +360,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func backspace() {
-        guard !renderState.rawIntent.isEmpty else {
+        guard !bypassDraftForLiteralField(), !renderState.rawIntent.isEmpty else {
             textDocumentProxy.deleteBackward()
             return
         }
@@ -355,6 +382,7 @@ final class KeyboardViewController: UIInputViewController {
 
     @discardableResult
     private func commitBuffer() -> Bool {
+        if bypassDraftForLiteralField() { return true }
         switch renderState.commitDecision() {
         case .nothing:
             return true
@@ -442,6 +470,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func renderBuffer(fromAutoPreview: Bool = false) {
+        guard !bypassDraftForLiteralField() else { return }
         if !fromAutoPreview {
             renderState.clearAutoRenderSuppression()
             autoRenderTask?.cancel()
@@ -531,6 +560,8 @@ final class KeyboardViewController: UIInputViewController {
             clearBuffer()
             statusLabel.text = "Draft cleared after switching text context."
         }
+        // Focus moved to an exact-value field inside the same document: drop the stale draft now.
+        _ = bypassDraftForLiteralField()
 
         activeDocumentIdentifier = documentIdentifier
         refreshReturnKey()
