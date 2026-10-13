@@ -22,20 +22,12 @@
 | 🔳 **Benches** | [`benches/`](benches/) · [download](https://github.com/travnie/twojstar/releases/latest/download/benches-portable.zip) · [Codebench](https://codebench.trfny.com) · [Docbench](https://docbench.travny.workers.dev) · [Streambench](https://streambench.trfny.com) | Browser-first QR/barcode, document/PDF and media workshops. |
 | 🌦️ **Weather Feed** | [`weather-feed/`](weather-feed/) · [weather.trfny.com](https://weather.trfny.com) | Multi-source weather, air-quality and IMGW alerts for Kościelec/Chrzanów, exposed as web, JSON and Atom. |
 | 📰 **Feedboard** | [`feedboard/`](feedboard/) · [download](https://github.com/travnie/twojstar/releases/latest/download/feedboard.zip) | Windows 11 feed widget/provider with RSS/Atom/JSON Feed support and a small settings app. |
-| 🛸 **SpaceMolt** | [`spacemolt/`](spacemolt/) · [`smx`](spacemolt/smx/) · [agent plugin](plugins/spacemolt/) | Official v2 CLI companion, game skill, and the full gameplay and documentation MCP servers. |
+| 🛸 **SpaceMolt** | [`spacemolt/`](spacemolt/) · [`smx`](spacemolt/smx/) | Official v2 CLI companion and SpaceMolt tooling. |
 | 📱 **Xiaomi ADB Tools** | [`xiaomi-adb-tools/`](xiaomi-adb-tools/) · [download](https://github.com/travnie/twojstar/releases/latest/download/xiaomi-adb-tools.zip) | Maintained desktop ADB/Fastboot utility with platform-specific JavaFX builds. |
-| 🧩 **OpenAI Dev Kit** | [`plugins/openai-dev-kit/`](plugins/openai-dev-kit/) | Two developer skills, Plugin Builder artwork, and the official read-only OpenAI docs MCP. |
-| ☁️ **Google Dev Kit** | [`plugins/google-dev-kit/`](plugins/google-dev-kit/) | Seven deduplicated Google Cloud/Gemini workflows backed by ten Google MCP endpoints and live docs. |
-| 🟠 **Claude Dev Kit** | [`plugins/claude-dev-kit/`](plugins/claude-dev-kit/) | Anthropic Claude API and MCP Builder skills paired with the live Claude Code Docs MCP. |
-| 🖥️ **Desktop Commander** | [`plugins/desktop-commander/`](plugins/desktop-commander/) | Local-computer workflow skill paired with Desktop Commander Remote MCP. |
-| 🟧 **Cloudflare** | [`plugins/cloudflare/`](plugins/cloudflare/) | Cloudflare platform skill paired with the token-efficient Cloudflare API MCP. |
-| 🐙 **GitHub Ops** | [`plugins/github-ops/`](plugins/github-ops/) | GitHub workflow and merge-gate skill paired with the full GitHub Copilot MCP toolset. |
 | 🎨 **Paint.NET plugins** | [`addons/paintdotnet/`](addons/paintdotnet/) · [`ICO`](addons/paintdotnet/ico/) · [`AI Restore`](addons/paintdotnet/ai/) | ICO import/export plus local AI Restore, DeJPEG and Denoise effects. |
 | 🎚️ **Audacity plugins** | [`addons/audacity/`](addons/audacity/) · [`VST3`](addons/audacity/vst3/) · [Windows](https://github.com/travnie/twojstar/releases/latest/download/audacity-auto-declip-windows.zip) · [Linux](https://github.com/travnie/twojstar/releases/latest/download/audacity-auto-declip-linux.zip) | Local-first audio restoration and workflow effects, starting with Auto Declip. |
 | ⌨️ **Intent Keyboard** | [`intent-keyboard/`](intent-keyboard/) | Multiplatform semantic input experiment: rough intent in, natural text out, with tone, translation and protected facts. |
 | 💾 **Remotely Save GDrive patch** | [`addons/remotely-save-gdrive-patch/`](addons/remotely-save-gdrive-patch/) | Personal-use Google Drive dedup/update patch with a non-redistributing verification harness. |
-
-`plugins/` contains **AI agent plugins** (skills and MCP). Native Audacity, Paint.NET and Obsidian extensions and patches live in [`addons/`](addons/).
 
 ## 📦 One rolling release
 
