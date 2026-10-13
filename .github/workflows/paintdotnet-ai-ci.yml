@@ -26,8 +26,8 @@ env:
   PLUGIN_DIR: plugins/paintdotnet/ai
   PDN_51_URL: https://github.com/paintdotnet/release/releases/download/v5.1.12/paint.net.5.1.12.portable.x64.zip
   PDN_51_SHA256: d5ae7043f2fb9d365b48dfe243a2aca1c74924de99b04b6445916c95354aefa3
-  PDN_52_URL: https://github.com/paintdotnet/release/releases/download/v5.2-alpha.5.200.9739.41506/paint.net.5.200.9739.41506.portable.x64.zip
-  PDN_52_SHA256: b0251c87f5c6de25a05c93abe58657327911262050ef50cc932515f8b5a1cba5
+  PDN_52_URL: https://github.com/paintdotnet/release/releases/download/v5.2-beta.5.200.9772.9330/paint.net.5.200.9772.9330.portable.x64.zip
+  PDN_52_SHA256: b39657f46b974964e8878b66e6d06d64fb6b6e8e19caa46267b5b35baeb4ba01
   MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
   MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
   FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
