@@ -35,6 +35,10 @@ def catalog() -> dict:
             raise ValueError(f"unsafe plugin source: {rel}")
         root = (ROOT / rel).resolve()
         root.relative_to(ROOT.resolve())
+        # Claude ignores marketplace-level MCPs when a Claude plugin manifest exists.
+        # Keep portable manifests canonical, with this marketplace as their adapter.
+        if (root / ".claude-plugin/plugin.json").exists():
+            raise ValueError(f"Claude manifest would override marketplace MCPs: {rel}")
         portable = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
         if portable["name"] != entry["name"]:
             raise ValueError(f"plugin identity differs from marketplace: {rel}")
