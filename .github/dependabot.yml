@@ -68,7 +68,7 @@ updates:
       - "/feedboard/src/Feedboard.Core"
       - "/feedboard/src/Feedboard.Settings"
       - "/feedboard/src/Feedboard.WidgetProvider"
-      - "/plugins/paintdotnet/**"
+      - "/addons/paintdotnet/**"
     schedule:
       interval: "weekly"
       time: "21:37"

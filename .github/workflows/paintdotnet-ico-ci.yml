@@ -5,13 +5,13 @@ on: # yamllint disable-line rule:truthy
   push:
     branches: [main]
     paths:
-      - plugins/paintdotnet/ico/**
+      - addons/paintdotnet/ico/**
       - .gitattributes
       - .github/workflows/paintdotnet-ico-ci.yml
   pull_request:
     branches: [main]
     paths:
-      - plugins/paintdotnet/ico/**
+      - addons/paintdotnet/ico/**
       - .gitattributes
       - .github/workflows/paintdotnet-ico-ci.yml
   workflow_dispatch:
@@ -23,7 +23,7 @@ concurrency:
 permissions: {}
 
 env:
-  PLUGIN_DIR: plugins/paintdotnet/ico
+  PLUGIN_DIR: addons/paintdotnet/ico
   PDN_51_URL: https://github.com/paintdotnet/release/releases/download/v5.1.12/paint.net.5.1.12.portable.x64.zip
   PDN_51_SHA256: d5ae7043f2fb9d365b48dfe243a2aca1c74924de99b04b6445916c95354aefa3
   PDN_52_URL: https://github.com/paintdotnet/release/releases/download/v5.2-beta.5.200.9772.9330/paint.net.5.200.9772.9330.portable.x64.zip
@@ -148,8 +148,8 @@ jobs:
         with:
           name: paintdotnet-ico-release
           path: |
-            plugins/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.dll
-            plugins/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.Modern.dll
-            plugins/paintdotnet/ico/dist/paintdotnet-ico.zip
-            plugins/paintdotnet/ico/dist/SHA256SUMS
+            addons/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.dll
+            addons/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.Modern.dll
+            addons/paintdotnet/ico/dist/paintdotnet-ico.zip
+            addons/paintdotnet/ico/dist/SHA256SUMS
           retention-days: 7

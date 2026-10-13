@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path
 from xml.parsers import expat
 
-ROOT = Path(__file__).resolve().parents[1] / "plugin"
+ROOT = Path(__file__).resolve().parents[2] / "plugins" / "spacemolt"
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 
 

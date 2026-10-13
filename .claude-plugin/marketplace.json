@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "spacemolt",
-      "source": "./spacemolt/plugin",
+      "source": "./plugins/spacemolt",
       "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
       "version": "0.2.3",
       "displayName": "SpaceMolt",
