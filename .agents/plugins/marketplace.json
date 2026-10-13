@@ -8,7 +8,7 @@
       "name": "spacemolt",
       "source": {
         "source": "local",
-        "path": "./spacemolt/plugin"
+        "path": "./plugins/spacemolt"
       },
       "policy": {
         "installation": "AVAILABLE",

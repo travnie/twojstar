@@ -7,7 +7,7 @@
     "name": "twojstar",
     "url": "https://github.com/travnie/twojstar"
   },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/spacemolt/plugin",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
   "repository": "https://github.com/travnie/twojstar",
   "license": "ISC",
   "keywords": [

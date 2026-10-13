@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - "spacemolt/smx/**"
-      - "spacemolt/plugin/**"
+      - "plugins/spacemolt/**"
       - ".github/workflows/smx.yml"
   push:
     branches:
       - main
     paths:
       - "spacemolt/smx/**"
-      - "spacemolt/plugin/**"
+      - "plugins/spacemolt/**"
       - ".github/workflows/smx.yml"
   schedule: # backend mirror: cheap tag check, copies only on a new upstream release
     - cron: "41 6 * * *"

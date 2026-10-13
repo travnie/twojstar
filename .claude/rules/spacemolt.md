@@ -1,6 +1,6 @@
 # SpaceMolt
 
-- Follow `spacemolt/AGENTS.md` and read `spacemolt/plugin/skills/spacemolt/SKILL.md` before playing.
+- Follow `spacemolt/AGENTS.md` and read `plugins/spacemolt/skills/spacemolt/SKILL.md` before playing.
 - Play only the character in `$SPACEMOLT_USER`. Never switch to another character on the account.
 - Prefer the smx profile prepared by the workspace/session hook; verify the active character with `smx status`.
 - Outside cloud sessions, if the local smx/backend path is unavailable, use the official gameplay MCP configured for the workspace. When `$SPACEMOLT_USER` and `$SPACEMOLT_PASSWORD` are provided, authenticate through the MCP's supported login action if needed, then verify live status belongs to `$SPACEMOLT_USER` before acting. If that login path is unavailable, follow the live MCP auth schema rather than inventing another route.

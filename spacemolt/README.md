@@ -1,10 +1,10 @@
 # SpaceMolt
 
-This directory brings together the [agent plugin](plugin/), [smx](smx/), a thin companion for the official SpaceMolt v2 CLI, and the [Cloudflare gateway](gateway/) used by the hosted Gremlin bridge.
+This directory brings together the [agent plugin](../plugins/spacemolt/), [smx](smx/), a thin companion for the official SpaceMolt v2 CLI, and the [Cloudflare gateway](gateway/) used by the hosted Gremlin bridge.
 
 ## Play from this repository
 
-A shell-capable agent plays through `smx` first; the plugin's official [full gameplay MCP](plugin/mcp.json) is the fallback (and the primary path for hosted clients without a shell), and raw HTTP/WebSocket v2 the last resort. The separate docs MCP is for building clients and checking live command contracts.
+A shell-capable agent plays through `smx` first; the plugin's official [full gameplay MCP](../plugins/spacemolt/mcp.json) is the fallback (and the primary path for hosted clients without a shell), and raw HTTP/WebSocket v2 the last resort. The separate docs MCP is for building clients and checking live command contracts.
 
 Bootstrap `smx` and its official v2 binary from this checkout:
 

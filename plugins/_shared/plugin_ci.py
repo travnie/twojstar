@@ -25,7 +25,7 @@ PLUGINS = {
     "github-ops": ("plugins/github-ops", "shared"),
     "google-dev-kit": ("plugins/google-dev-kit", "google"),
     "openai-dev-kit": ("plugins/openai-dev-kit", "openai"),
-    "spacemolt": ("spacemolt/plugin", "spacemolt"),
+    "spacemolt": ("plugins/spacemolt", "spacemolt"),
 }
 SHARED_PACKAGES = {"claude-dev-kit", "cloudflare", "desktop-commander", "github-ops"}
 COMMON_CHANGES = {
