@@ -1,0 +1,156 @@
+{
+  "name": "twojstar",
+  "description": "Plugin and MCP workflows from travnie/twojstar for Claude Code.",
+  "owner": {
+    "name": "travnie",
+    "url": "https://github.com/travnie/twojstar"
+  },
+  "plugins": [
+    {
+      "name": "spacemolt",
+      "source": "./spacemolt/plugin",
+      "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
+      "version": "0.2.3",
+      "displayName": "SpaceMolt",
+      "category": "Entertainment",
+      "mcpServers": {
+        "game": {
+          "type": "http",
+          "url": "https://game.spacemolt.com/mcp/v2?preset=full"
+        },
+        "docs": {
+          "type": "http",
+          "url": "https://game.spacemolt.com/mcp/docs"
+        }
+      }
+    },
+    {
+      "name": "docbench",
+      "source": "./benches/docbench/plugin",
+      "description": "Local-first document and PDF workflow guidance for Docbench.",
+      "version": "0.1.0",
+      "displayName": "Docbench",
+      "category": "Productivity"
+    },
+    {
+      "name": "openai-dev-kit",
+      "source": "./plugins/openai-dev-kit",
+      "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
+      "version": "0.1.2",
+      "displayName": "OpenAI Dev Kit",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "openaiDeveloperDocs": {
+          "type": "http",
+          "url": "https://developers.openai.com/mcp"
+        }
+      }
+    },
+    {
+      "name": "google-dev-kit",
+      "source": "./plugins/google-dev-kit",
+      "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
+      "version": "0.1.1",
+      "displayName": "Google Dev Kit",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "googleDeveloperKnowledge": {
+          "type": "http",
+          "url": "https://developerknowledge.googleapis.com/mcp"
+        },
+        "googleCloudCli": {
+          "type": "http",
+          "url": "https://cloudcli.googleapis.com/mcp"
+        },
+        "googleCloudStorage": {
+          "type": "http",
+          "url": "https://storage.googleapis.com/storage/mcp"
+        },
+        "googleApplicationDesignCenter": {
+          "type": "http",
+          "url": "https://designcenter.googleapis.com/mcp"
+        },
+        "googleAndroidManagement": {
+          "type": "http",
+          "url": "https://androidmanagement.googleapis.com/mcp"
+        },
+        "googleCloudRun": {
+          "type": "http",
+          "url": "https://run.googleapis.com/mcp"
+        },
+        "googleApiKeys": {
+          "type": "http",
+          "url": "https://apikeys.googleapis.com/mcp"
+        },
+        "googleCloudAssist": {
+          "type": "http",
+          "url": "https://geminicloudassist.googleapis.com/mcp"
+        },
+        "googleIam": {
+          "type": "http",
+          "url": "https://iam.googleapis.com/mcp"
+        },
+        "geminiApiDocs": {
+          "type": "http",
+          "url": "https://gemini-api-docs-mcp.dev"
+        }
+      }
+    },
+    {
+      "name": "devkit-claude",
+      "source": "./plugins/claude-dev-kit",
+      "description": "Claude API and MCP development workflows paired with the live Claude Code documentation MCP.",
+      "version": "0.1.0",
+      "displayName": "Claude Dev Kit",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "claudeCodeDocs": {
+          "type": "http",
+          "url": "https://code.claude.com/docs/mcp"
+        }
+      }
+    },
+    {
+      "name": "desktop-commander",
+      "source": "./plugins/desktop-commander",
+      "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
+      "version": "0.1.0",
+      "displayName": "Desktop Commander",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "desktopCommander": {
+          "type": "http",
+          "url": "https://mcp.desktopcommander.app/mcp"
+        }
+      }
+    },
+    {
+      "name": "cloudflare",
+      "source": "./plugins/cloudflare",
+      "description": "Cloudflare platform workflows paired with the token-efficient Cloudflare API MCP.",
+      "version": "0.1.0",
+      "displayName": "Cloudflare",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "cloudflareApi": {
+          "type": "http",
+          "url": "https://mcp.cloudflare.com/mcp"
+        }
+      }
+    },
+    {
+      "name": "github-ops",
+      "source": "./plugins/github-ops",
+      "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
+      "version": "0.1.0",
+      "displayName": "GitHub Ops",
+      "category": "Developer Tools",
+      "mcpServers": {
+        "github": {
+          "type": "http",
+          "url": "https://api.githubcopilot.com/mcp/x/all"
+        }
+      }
+    }
+  ]
+}
