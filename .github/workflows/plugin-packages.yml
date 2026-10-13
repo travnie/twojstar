@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "plugins/**"
+      - ".claude-plugin/**"
+      - "benches/docbench/plugin/**"
       - "spacemolt/plugin/**"
       - "spacemolt/scripts/package_plugin.py"
       - ".agents/plugins/marketplace.json"
@@ -12,6 +14,8 @@ on:
     branches: [main]
     paths:
       - "plugins/**"
+      - ".claude-plugin/**"
+      - "benches/docbench/plugin/**"
       - "spacemolt/plugin/**"
       - "spacemolt/scripts/package_plugin.py"
       - ".agents/plugins/marketplace.json"
@@ -37,6 +41,15 @@ permissions:
   contents: read
 
 jobs:
+  claude-marketplace:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Verify Claude marketplace is generated from canonical plugin metadata
+        run: python plugins/_shared/claude_marketplace.py --check
+
   select:
     runs-on: ubuntu-slim
     outputs:
