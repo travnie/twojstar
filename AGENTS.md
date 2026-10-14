@@ -5,5 +5,5 @@
 - `spacemolt/` - SpaceMolt integration, plugin and clients; scoped rules live in `spacemolt/AGENTS.md`, with extra smx rules in `spacemolt/smx/AGENTS.md`.
 - `feedboard/`, `intent-keyboard/`, `weather-feed/`, `xiaomi-adb-tools/` and `plugins/` - independent project roots with their own local manifests, docs and workflows.
 - `.agents/` - portable agent/plugin assets.
-- `.claude/` - Claude-specific rules.
+- Claude Code cloud sessions: hooks and settings live in the environment setup script, not in this repo (`.claude/` is gitignored).
 - `.github/` - repository-wide automation and CI.

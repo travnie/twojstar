@@ -54,7 +54,7 @@ jobs:
   # Copies the official SpaceMolt/client-v2 linux-x64 release onto this repo's
   # `spacemolt-backend` release. Cloud Claude sessions can't reach upstream
   # releases (GitHub proxy allows only attached repos) but can reach this repo;
-  # .claude/hooks/session-start.sh downloads from here.
+  # the cloud environment session-start hook downloads from here.
   backend-mirror:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

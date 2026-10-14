@@ -66,3 +66,6 @@ Desktop.ini
 # JVM crash logs
 hs_err_pid*
 replay_pid*
+
+# Claude Code: cloud hooks/settings live in the environment setup script; local .claude/ is per-machine
+.claude/
