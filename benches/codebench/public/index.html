@@ -144,6 +144,12 @@
   legend{font:700 10px/1 "Space Mono",monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); padding:0 6px}
   .toggle{display:flex; align-items:center; gap:8px; font:600 12px "Space Grotesk"; margin-bottom:12px; cursor:pointer}
   .toggle input{width:auto}
+  .answer-guide{margin:32px 0 0;padding:16px 20px;border:1px solid var(--line);border-radius:2px;background:var(--panel)}
+  .answer-guide summary{cursor:pointer;font:600 14px "Space Grotesk",sans-serif;color:var(--ink)}
+  .answer-guide[open] summary{margin-bottom:12px}
+  .answer-guide h2{font:600 13px "Space Grotesk",sans-serif;margin:12px 0 5px}
+  .answer-guide p{font:400 12px/1.65 "Space Mono",monospace;color:var(--muted);margin:0 0 12px}
+  .answer-guide a{color:var(--accent-ink)}
   footer{padding:24px clamp(16px,4vw,40px); border-top:1px solid var(--line); font:400 11px/1.5 "Space Mono",monospace; color:var(--muted); text-align:center}
   /* ---- print / modal ---- */
   .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -425,6 +431,15 @@
       </div>
     </div>
   </section>
+  <details class="answer-guide" id="about-codebench">
+    <summary>About Code Bench · formats, privacy and exports</summary>
+    <h2>What can Code Bench make and scan?</h2>
+    <p>Generate styled QR codes and barcodes, including Code 128, EAN, Data Matrix, Aztec and PDF417. Scan supported codes with your device camera where the browser permits camera access.</p>
+    <h2>Does it upload my codes or camera data?</h2>
+    <p>No. Code content, camera decoding and image generation run in your browser. The hosted app serves its own runtime libraries and fonts; camera scanning requires HTTPS or localhost.</p>
+    <h2>How do I save a result?</h2>
+    <p>Export supported results as PNG or SVG, copy an image or print it. <a href="https://github.com/travnie/twojstar/tree/main/benches/codebench">See features and source code</a>.</p>
+  </details>
 </main>
 
 <footer>Code Bench — a local, offline-capable studio. Built with qr-code-styling, bwip-js &amp; ZXing.</footer>

@@ -293,6 +293,12 @@ export function renderPage(
     font:inherit; font-size:.85rem; font-weight:600;
   }
   button.show-more:hover{border-color:var(--steel)}
+  .answer-guide{margin-top:24px;padding:15px 18px;border:1px solid var(--silver);border-radius:10px;background:#fff}
+  .answer-guide summary{cursor:pointer;font-size:.92rem;font-weight:700;color:var(--steel-dark)}
+  .answer-guide[open] summary{margin-bottom:10px}
+  .answer-guide h3{font-size:.9rem;margin:14px 0 4px;color:var(--ink)}
+  .answer-guide p{font-size:.88rem;line-height:1.6;color:var(--muted);margin:0 0 10px}
+  .answer-guide a{color:var(--steel-dark)}
   footer{margin-top:34px; font-size:.78rem; color:var(--muted); text-align:center}
   footer a{color:var(--steel)}
   .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
@@ -334,6 +340,16 @@ export function renderPage(
     <a class="btn ghost" href="/warnings.atom">⚠ Tylko ostrzeżenia</a>
     <button class="btn ghost" id="copy">Kopiuj URL feedu</button>
   </div>
+
+  <details class="answer-guide" id="about-weather">
+    <summary>Jak powstaje prognoza? Źródła i aktualizacje</summary>
+    <h3>Jak wyliczana jest temperatura?</h3>
+    <p>Odczyty z dostępnych modeli pogodowych są sprowadzane do mediany, a rozrzut pokazuje różnice między źródłami. Najbliższa stacja IMGW jest punktem odniesienia i nie jest dodawana do tej mediany.</p>
+    <h3>Jak często dane są odświeżane?</h3>
+    <p>Warunki bieżące, powietrze i ostrzeżenia są sprawdzane co 2 godziny. Nowa prognoza jest oceniana raz dziennie. To agregat dla Kościelca i Chrzanowa, nie pomiar z czujnika przy tej stronie.</p>
+    <h3>Kiedy pojawia się wpis w Atomie?</h3>
+    <p>Gdy nastąpi znacząca zmiana, np. warunków, temperatury o co najmniej 3°C lub początku czy końca opadów. Ostrzeżenia IMGW mają osobny <a href="/warnings.atom">kanał Atom</a>. <a href="https://github.com/travnie/twojstar/tree/main/weather-feed">Metodologia i źródło</a>.</p>
+  </details>
 
   <footer>
     Źródła: Open-Meteo · OpenWeather · Visual Crossing · Vaisala Xweather · Pirate Weather · IMGW-PIB · Open-Meteo Air Quality (CAMS).

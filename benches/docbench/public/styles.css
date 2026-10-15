@@ -1036,6 +1036,29 @@ footer a:hover {
 }
 
 
+.answer-guide {
+  margin: 24px 0;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.answer-guide summary {
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.answer-guide[open] summary { margin-bottom: 14px; }
+.answer-guide h2 { margin: 14px 0 5px; font-size: 0.95rem; }
+.answer-guide p { margin: 0 0 12px; color: var(--text-soft); font-size: 0.9rem; line-height: 1.6; }
+.answer-guide a { color: var(--focus); }
+
+@media print {
+  .answer-guide { display: none; }
+}
+
 @media print {
   @page {
     margin: 16mm;
