@@ -22,4 +22,4 @@ On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `s
 - [Concise LLM guide](https://codebench.trfny.com/llms.txt)
 - [Full LLM guide](https://codebench.trfny.com/llms-full.txt)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/codebench)
-- [TRAVNY hub](https://trfny.com/)
+- [TRAVNY hub](https://travny.pages.dev/)
