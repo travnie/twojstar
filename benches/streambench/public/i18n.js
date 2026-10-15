@@ -9,8 +9,6 @@
     ["Are my playlists uploaded?", "Czy moje playlisty trafiają na serwer?"],
     ["No. Your playlists, edits and library stay in your browser. The Worker fetches public catalogs; its relay allows bundled-playlist streams and signed provider URLs, not arbitrary user-submitted addresses.", "Nie. Własne playlisty, edycje i biblioteka pozostają w przeglądarce. Worker pobiera katalogi publiczne, a przekaźnik dopuszcza strumienie z wbudowanych playlist oraz podpisane adresy dostawców, nie dowolne adresy użytkownika."],
     ["Rules and limitations", "Zasady i ograniczenia"],
-    <p>No. Code content, camera decoding and image generation run in your browser. Camera scanning requires HTTPS or localhost.</p>
-      <p>Nie. Własne playlisty, edycje i biblioteka pozostają w przeglądarce. Worker pobiera katalogi publiczne, a przekaźnik dopuszcza strumienie z wbudowanych playlist oraz podpisane adresy dostawców, nie dowolne adresy użytkownika. <a href="https://github.com/travnie/twojstar/tree/main/benches/streambench">Zasady i ograniczenia</a>.</p>
     ["Streambench: IPTV, radio and M3U playlist tester", "Streambench: tester IPTV, radia i playlist M3U"],
     ["Streambench: IPTV, radio, HLS and M3U playlist tester", "Streambench: tester IPTV, radia, HLS i playlist M3U"],
     ["Browser workshop for locally testing IPTV streams, radio, HLS and M3U/M3U8 playlists with EPG, metadata and diagnostics.", "Przeglądarkowy warsztat do lokalnego testowania streamów IPTV, radia, HLS oraz playlist M3U i M3U8 z EPG, metadanymi i diagnostyką."],
