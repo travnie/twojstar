@@ -28,7 +28,7 @@ On browser hosts that implement WebMCP, Streambench exposes `read_stream_state`,
 
 ## Related TRAVNY tools
 
-- [TRAVNY hub](https://trfny.com/): family landing page.
+- [TRAVNY hub](https://travny.pages.dev/): family landing page.
 - [TVP IPTV](https://tvpi.travny.workers.dev/playlist.m3u): fresh TVP playlist endpoint.
 - [Codebench](https://codebench.trfny.com/): QR and code utility.
 - [Doc Bench](https://docbench.travny.workers.dev/): local-first document and PDF studio.
