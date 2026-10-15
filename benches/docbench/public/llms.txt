@@ -41,7 +41,7 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 
 ## Related TRAVNY tools
 
-- [TRAVNY hub](https://trfny.com/): family landing page.
+- [TRAVNY hub](https://travny.pages.dev/): family landing page.
 - [Streambench](https://streambench.trfny.com/): IPTV, radio, HLS, M3U and XMLTV workshop.
 - [Codebench](https://codebench.trfny.com/): local QR and barcode studio.
 - [Weather](https://weather.trfny.com/): local weather ensemble.

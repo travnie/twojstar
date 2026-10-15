@@ -23,7 +23,7 @@ On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `s
 
 ## Related TRAVNY tools
 
-- [TRAVNY hub](https://trfny.com/): family landing page.
+- [TRAVNY hub](https://travny.pages.dev/): family landing page.
 - [Streambench](https://streambench.trfny.com/): IPTV, radio, HLS and playlist workshop.
 - [Doc Bench](https://docbench.travny.workers.dev/): local-first document and PDF studio.
 - [Weather](https://weather.trfny.com/): local weather ensemble.
