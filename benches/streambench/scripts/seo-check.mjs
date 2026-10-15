@@ -59,7 +59,9 @@ assert(llms.includes(`${origin}/index.md`), "llms.txt Markdown application URL i
 assert(llms.includes(`${origin}/llms-full.txt`), "llms.txt full guide URL is missing");
 assert(llmsFull.startsWith("# Streambench full documentation"), "llms-full.txt title is missing");
 assert(indexMarkdown.startsWith("# Streambench"), "index.md title is missing");
-assert(llms.includes("https://trfny.com/"), "TRAVNY hub is missing from llms.txt");
+assert(llms.includes("https://travny.pages.dev/"), "TRAVNY hub is missing from llms.txt");
+assert(index.includes("https://travny.pages.dev/#creator"), "JSON-LD creator identity is stale");
+assert(index.includes("https://travny.pages.dev/#website"), "JSON-LD parent identity is stale");
 assert(index.includes('<script src="/webmcp-lifecycle.js"></script>'), "WebMCP lifecycle script is missing");
 assert(index.includes('<script type="module" src="/webmcp.js"></script>'), "WebMCP page module is missing");
 for (const toolName of ["read_stream_state", "search_streams", "start_stream_playback", "stop_stream_playback"]) {
