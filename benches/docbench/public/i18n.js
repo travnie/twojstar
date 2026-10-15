@@ -1,6 +1,24 @@
 "use strict";
 (() => {
   const pairs = [
+  ["About Doc Bench · supported files and privacy", "O Doc Bench · obsługiwane pliki i prywatność"],
+  ["Which documents can I open?", "Jakie dokumenty mogę otworzyć?"],
+  ["Doc Bench opens UTF-8 text files even when their extensions are unfamiliar. It recognizes Markdown, JSON-family formats, YAML, XML, common config and script files, and offers previews or validation where supported.", "Doc Bench otwiera tekstowe pliki UTF-8 także z nieznanymi rozszerzeniami. Rozpoznaje Markdown, formaty JSON, YAML, XML oraz popularne pliki konfiguracyjne i skrypty; tam, gdzie to możliwe, pokazuje podgląd lub walidację."],
+  ["What PDF operations are available?", "Jakie operacje PDF są dostępne?"],
+  ["Preview, merge, split, reorder and extract pages; edit bookmarks, metadata and attachments; optimize PDFs and convert to or from DOCX. PDF-to-DOCX is structure-first, not a pixel-perfect reproduction.", "Przeglądaj, łącz, dziel, przestawiaj i wyodrębniaj strony; edytuj zakładki, metadane i załączniki; optymalizuj PDF-y oraz konwertuj do i z DOCX. Konwersja PDF do DOCX odtwarza strukturę, a nie idealnie wygląd każdej strony."],
+  ["Are my documents uploaded?", "Czy moje dokumenty są wysyłane?"],
+  ["No. Editing and PDF operations run locally in your browser. Saving directly to a local file depends on browser support; downloading an edited copy is the fallback.", "Nie. Edycja i operacje PDF odbywają się lokalnie w przeglądarce. Zapis bezpośrednio do pliku zależy od przeglądarki; alternatywą jest pobranie zmienionej kopii."],
+  ["Read the feature details", "Przeczytaj szczegóły funkcji"],
+    ["How does Streambench work? Sources and privacy", "Jak działa Streambench? Obsługiwane źródła i prywatność"],
+    ["Which streams can I play?", "Jakie strumienie można odtwarzać?"],
+    ["Streambench plays direct HTTP/HTTPS streams, HLS and radio. It offers public provider catalogs. YouTube, Twitch and Vimeo pages open as external links, not as native streams.", "Streambench odtwarza bezpośrednie strumienie HTTP/HTTPS, HLS oraz radio. Udostępnia katalogi publicznych dostawców. Strony YouTube, Twitch i Vimeo otwiera jako linki zewnętrzne, nie jako natywne strumienie."],
+    ["Can I import my own playlist and EPG?", "Czy mogę zaimportować własną playlistę i EPG?"],
+    ["M3U/M3U8 and XMLTV files or pasted content are processed locally. You can edit entries, filter channels, view now/next programmes and export a playlist.", "Tak. Pliki lub wklejone treści M3U/M3U8 i XMLTV są przetwarzane lokalnie. Można edytować pozycje, filtrować kanały, sprawdzać bieżący i następny program oraz eksportować playlistę."],
+    ["Are my playlists uploaded?", "Czy moje playlisty trafiają na serwer?"],
+    ["No. Your playlists, edits and library stay in your browser. The Worker fetches public catalogs; its relay allows bundled-playlist streams and signed provider URLs, not arbitrary user-submitted addresses.", "Nie. Własne playlisty, edycje i biblioteka pozostają w przeglądarce. Worker pobiera katalogi publiczne, a przekaźnik dopuszcza strumienie z wbudowanych playlist oraz podpisane adresy dostawców, nie dowolne adresy użytkownika."],
+    ["Rules and limitations", "Zasady i ograniczenia"],
+    <p>No. Code content, camera decoding and image generation run in your browser. Camera scanning requires HTTPS or localhost.</p>
+      <p>Nie. Własne playlisty, edycje i biblioteka pozostają w przeglądarce. Worker pobiera katalogi publiczne, a przekaźnik dopuszcza strumienie z wbudowanych playlist oraz podpisane adresy dostawców, nie dowolne adresy użytkownika. <a href="https://github.com/travnie/twojstar/tree/main/benches/streambench">Zasady i ograniczenia</a>.</p>
   ["Doc Bench — Document & PDF Studio", "Doc Bench — studio dokumentów i PDF"],
   ["Local-first browser studio for editing and previewing TXT, Markdown, JSON, YAML and XML, plus merging, organizing and optimizing PDFs without uploads.", "Lokalne studio przeglądarkowe do edycji i podglądu TXT, Markdown, JSON, YAML i XML oraz łączenia, porządkowania i optymalizacji PDF bez wysyłania plików."],
   ["Doc Bench — local document & PDF studio", "Doc Bench — lokalne studio dokumentów i PDF"],
