@@ -152,7 +152,9 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /Powered by Vaisala Xweather/);
   assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
-  assert.match(html, /href="https:\/\/trfny\.com\/"/);
+  assert.match(html, /href="https:\/\/travny\.pages\.dev\/"/);
+  assert.match(html, /https:\/\/travny\.pages\.dev\/#creator/);
+  assert.match(html, /https:\/\/travny\.pages\.dev\/#website/);
 });
 
 test("weather page collapses long warning and change lists and keeps feed controls near the footer", () => {
