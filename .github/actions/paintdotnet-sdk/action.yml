@@ -33,14 +33,16 @@ runs:
       run: |
         $cacheDir = Join-Path $env:RUNNER_TEMP 'paintdotnet-sdk'
         New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
-        foreach ($sdk in @(
+        $sdks = @(
           @{ Name = '5.1'; Url = $env:SDK51_URL; SHA = $env:SDK51_SHA256; File = 'paintdotnet-5.1.zip'; Dir = 'pdn51' },
           @{ Name = '5.2'; Url = $env:SDK52_URL; SHA = $env:SDK52_SHA256; File = 'paintdotnet-5.2.zip'; Dir = 'pdn52' }
-        )) {
+        )
+        foreach ($sdk in $sdks) {
           $archive = Join-Path $cacheDir $sdk.File
           if (Test-Path $archive) {
             $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($actual -ne $sdk.SHA) {
+              Write-Warning "Cached Paint.NET $($sdk.Name) archive is invalid; re-downloading. Immutable cache key needs rotation to fix subsequent restores."
               Remove-Item $archive -Force
             }
           }
@@ -50,6 +52,9 @@ runs:
           if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sdk.SHA) {
             throw "Paint.NET $($sdk.Name) archive checksum mismatch."
           }
+        }
+        foreach ($sdk in $sdks) {
+          $archive = Join-Path $cacheDir $sdk.File
           Expand-Archive -Path $archive -DestinationPath (Join-Path $env:RUNNER_TEMP $sdk.Dir)
         }
 
