@@ -1,0 +1,61 @@
+name: Prepare verified Paint.NET SDK
+description: Restore SHA-pinned portable SDK archives, validate them, and extract both versions.
+inputs:
+  sdk51-url:
+    description: Portable Paint.NET 5.1 archive
+    default: 'https://github.com/paintdotnet/release/releases/download/v5.1.12/paint.net.5.1.12.portable.x64.zip'
+  sdk51-sha256:
+    description: Paint.NET 5.1 archive SHA-256
+    default: 'd5ae7043f2fb9d365b48dfe243a2aca1c74924de99b04b6445916c95354aefa3'
+  sdk52-url:
+    description: Portable Paint.NET 5.2 archive
+    default: 'https://github.com/paintdotnet/release/releases/download/v5.2-beta.5.200.9772.9330/paint.net.5.200.9772.9330.portable.x64.zip'
+  sdk52-sha256:
+    description: Paint.NET 5.2 archive SHA-256
+    default: 'b39657f46b974964e8878b66e6d06d64fb6b6e8e19caa46267b5b35baeb4ba01'
+runs:
+  using: composite
+  steps:
+    - name: Restore verified SDK archives
+      id: sdk-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ runner.temp }}/paintdotnet-sdk
+        key: paintdotnet-sdk-${{ runner.os }}-${{ inputs.sdk51-sha256 }}-${{ inputs.sdk52-sha256 }}
+
+    - name: Download, verify and expand SDK archives
+      shell: pwsh
+      env:
+        SDK51_URL: ${{ inputs.sdk51-url }}
+        SDK51_SHA256: ${{ inputs.sdk51-sha256 }}
+        SDK52_URL: ${{ inputs.sdk52-url }}
+        SDK52_SHA256: ${{ inputs.sdk52-sha256 }}
+      run: |
+        $cacheDir = Join-Path $env:RUNNER_TEMP 'paintdotnet-sdk'
+        New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+        foreach ($sdk in @(
+          @{ Name = '5.1'; Url = $env:SDK51_URL; SHA = $env:SDK51_SHA256; File = 'paintdotnet-5.1.zip'; Dir = 'pdn51' },
+          @{ Name = '5.2'; Url = $env:SDK52_URL; SHA = $env:SDK52_SHA256; File = 'paintdotnet-5.2.zip'; Dir = 'pdn52' }
+        )) {
+          $archive = Join-Path $cacheDir $sdk.File
+          if (Test-Path $archive) {
+            $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $sdk.SHA) {
+              Remove-Item $archive -Force
+            }
+          }
+          if (-not (Test-Path $archive)) {
+            Invoke-WebRequest -Uri $sdk.Url -OutFile $archive
+          }
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sdk.SHA) {
+            throw "Paint.NET $($sdk.Name) archive checksum mismatch."
+          }
+          Expand-Archive -Path $archive -DestinationPath (Join-Path $env:RUNNER_TEMP $sdk.Dir)
+        }
+
+    - name: Save verified SDK archives
+      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ runner.temp }}/paintdotnet-sdk
+        key: ${{ steps.sdk-cache.outputs.cache-primary-key }}

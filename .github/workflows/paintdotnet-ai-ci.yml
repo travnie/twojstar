@@ -8,12 +8,14 @@ on: # yamllint disable-line rule:truthy
       - addons/paintdotnet/ai/**
       - .gitattributes
       - .github/workflows/paintdotnet-ai-ci.yml
+      - .github/actions/paintdotnet-sdk/**
   pull_request:
     branches: [main]
     paths:
       - addons/paintdotnet/ai/**
       - .gitattributes
       - .github/workflows/paintdotnet-ai-ci.yml
+      - .github/actions/paintdotnet-sdk/**
   workflow_dispatch:
 
 concurrency:
@@ -24,10 +26,6 @@ permissions: {}
 
 env:
   PLUGIN_DIR: addons/paintdotnet/ai
-  PDN_51_URL: https://github.com/paintdotnet/release/releases/download/v5.1.12/paint.net.5.1.12.portable.x64.zip
-  PDN_51_SHA256: d5ae7043f2fb9d365b48dfe243a2aca1c74924de99b04b6445916c95354aefa3
-  PDN_52_URL: https://github.com/paintdotnet/release/releases/download/v5.2-beta.5.200.9772.9330/paint.net.5.200.9772.9330.portable.x64.zip
-  PDN_52_SHA256: b39657f46b974964e8878b66e6d06d64fb6b6e8e19caa46267b5b35baeb4ba01
   MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
   MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
   FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
@@ -80,19 +78,12 @@ jobs:
             throw "Adapter versions differ: legacy=$legacyVersion modern=$modernVersion"
           }
 
-      - name: Download verified Paint.NET SDK binaries
+      - name: Download and cache verified Paint.NET SDKs
+        uses: ./.github/actions/paintdotnet-sdk
+
+      - name: Locate Paint.NET reference assemblies
         shell: pwsh
         run: |
-          $legacyZip = Join-Path $env:RUNNER_TEMP 'paintdotnet-5.1.zip'
-          $modernZip = Join-Path $env:RUNNER_TEMP 'paintdotnet-5.2.zip'
-          Invoke-WebRequest $env:PDN_51_URL -OutFile $legacyZip
-          Invoke-WebRequest $env:PDN_52_URL -OutFile $modernZip
-          $legacyHash = (Get-FileHash $legacyZip -Algorithm SHA256).Hash.ToLowerInvariant()
-          $modernHash = (Get-FileHash $modernZip -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($legacyHash -ne $env:PDN_51_SHA256) { throw 'Paint.NET 5.1 archive checksum mismatch.' }
-          if ($modernHash -ne $env:PDN_52_SHA256) { throw 'Paint.NET 5.2 archive checksum mismatch.' }
-          Expand-Archive $legacyZip -DestinationPath "$env:RUNNER_TEMP/pdn51"
-          Expand-Archive $modernZip -DestinationPath "$env:RUNNER_TEMP/pdn52"
           $legacyProbe = Get-ChildItem "$env:RUNNER_TEMP/pdn51" -Recurse -Filter PaintDotNet.Data.dll | Select-Object -First 1
           $modernProbe = Get-ChildItem "$env:RUNNER_TEMP/pdn52" -Recurse -Filter PaintDotNet.Effects.Core.dll | Select-Object -First 1
           if (-not $legacyProbe -or -not $modernProbe) { throw 'Paint.NET reference assemblies not found.' }
