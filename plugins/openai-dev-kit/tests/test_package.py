@@ -48,7 +48,7 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             PACK["stage"](ROOT, target)
-            metadata = target / "skills/openai-dev/agents/openai.yaml"
+            metadata = target / "skills/chatgpt-plugin-builder/agents/openai.yaml"
             metadata.write_text(metadata.read_text().replace("[CHAT, CODEX]", "[chatgpt, codex, api, atlas]"))
             with self.assertRaisesRegex(ValueError, "must target CHAT and CODEX"):
                 PACK["validate"](target)
@@ -57,7 +57,7 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             PACK["stage"](ROOT, target)
-            metadata = target / "skills/openai-dev/agents/openai.yaml"
+            metadata = target / "skills/chatgpt-plugin-builder/agents/openai.yaml"
             original = metadata.read_text()
             invalid = original.replace("[CHAT, CODEX]", "[chatgpt, codex, api, atlas]")
             cases = (
@@ -75,6 +75,24 @@ class PackageTests(unittest.TestCase):
                         PACK["validate"](target)
             metadata.write_text(original.replace("  products: [CHAT, CODEX]", "  products:\n    - CHAT\n    - CODEX"))
             PACK["validate"](target)
+
+    def test_single_routed_skill_and_preserved_developer_workflows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            PACK["stage"](ROOT, target)
+            skills = sorted(path.parent.name for path in (target / "skills").glob("*/SKILL.md"))
+            self.assertEqual(skills, ["chatgpt-plugin-builder"])
+            skill = target / "skills/chatgpt-plugin-builder"
+            router = (skill / "SKILL.md").read_text()
+            self.assertIn("references/plugin-building.md", router)
+            self.assertIn("references/openai-workflows.md", router)
+            builder = (skill / "references/plugin-building.md").read_text()
+            developer = (skill / "references/openai-workflows.md").read_text()
+            self.assertIn("## Migration from ChatGPT Apps SDK", builder)
+            self.assertIn("## Route by task", developer)
+            self.assertIn("references/openai-dev/model-guidance.md", developer)
+            self.assertTrue((skill / "scripts/scaffold_node_ext_apps.mjs").is_file())
+            self.assertFalse((target / "skills/openai-dev").exists())
 
     def test_reproducible_archive(self):
         with tempfile.TemporaryDirectory() as directory:

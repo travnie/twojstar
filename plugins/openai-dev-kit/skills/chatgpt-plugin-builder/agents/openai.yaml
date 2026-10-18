@@ -1,12 +1,10 @@
 interface:
-  display_name: ChatGPT Plugin Builder
-  short_description: Build, migrate, validate, and package ChatGPT plugins
+  display_name: OpenAI Dev Kit
+  short_description: OpenAI docs and plugin workflows
   icon_small: assets/icon.png
   icon_large: assets/icon-large.png
   brand_color: '#10A37F'
-  default_prompt: Use $chatgpt-plugin-builder to choose the smallest plugin shape, fetch current official OpenAI
-    Plugins docs, scaffold or review the package, validate every manifest path, and report the deepest test level
-    actually reached.
+  default_prompt: Use $chatgpt-plugin-builder to route this OpenAI API, Codex, or plugin task to the relevant reference, verify current official docs, and validate changes.
 policy:
   products: [CHAT, CODEX]
   allow_implicit_invocation: true
