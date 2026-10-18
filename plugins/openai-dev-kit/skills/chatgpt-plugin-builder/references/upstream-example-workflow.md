@@ -4,7 +4,7 @@ Use current OpenAI plugin documentation and examples as the source of truth. Do 
 
 ## Pick the right starting point
 
-1. For plugin packaging and manifest work, prefer the built-in `plugin-creator` workflow when available.
+1. For plugin packaging and manifest work, use this kit's `scripts/scaffold_plugin.py`, `scripts/validate_plugin.py`, and portable package conventions. Other installed plugin tools are optional helpers, not dependencies.
 2. For a ChatGPT app with an MCP server or widget, start from the current OpenAI plugin examples and quickstart:
    - `https://developers.openai.com/plugins/build/examples`
    - `https://developers.openai.com/plugins/quickstart`
@@ -13,7 +13,7 @@ Use current OpenAI plugin documentation and examples as the source of truth. Do 
 
 ## Local scaffold in this skill
 
-`scripts/scaffold_plugin.py` only creates a lightweight plugin-package skeleton: `.codex-plugin/plugin.json`, optional `.mcp.json` / `.app.json`, and a starter skill directory. It does **not** scaffold an MCP server, widget UI, or Node app.
+`scripts/scaffold_plugin.py` creates a lightweight plugin-package skeleton: portable root `plugin.json`, optional root `mcp.json` and `.app.json`, a `.codex-plugin/plugin.json` compatibility overlay, optional `.mcp.json`, and starter skill directories. It does **not** scaffold an MCP server, widget UI, or Node app.
 
 Use it when the repository already has the runtime pieces and only needs the plugin wrapper. Validate the result with `scripts/validate_plugin.py` and then compare it against the current OpenAI plugin schema/documentation before shipping.
 

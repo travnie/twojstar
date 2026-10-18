@@ -21,6 +21,21 @@ PATH_FIELDS = {
 }
 
 
+
+class UniqueSkillLoader(yaml.SafeLoader):
+    """Reject ambiguous YAML metadata."""
+
+    def construct_mapping(self, node, deep=False):
+        if isinstance(node, yaml.MappingNode):
+            seen = set()
+            for key_node, _value in node.value:
+                key = self.construct_object(key_node, deep=deep)
+                if not isinstance(key, str) or key in seen:
+                    raise ValueError("duplicate or non-string skill metadata key")
+                seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
 def inside(root: Path, target: Path) -> bool:
     try:
         target.resolve().relative_to(root.resolve())
@@ -145,29 +160,41 @@ def main() -> int:
             )
 
         skills_value = manifest.get("skills")
-        if isinstance(skills_value, str) and skills_value.startswith("./"):
-            skills_dir = root / skills_value[2:]
-            if skills_dir.is_dir():
-                skill_files = list(skills_dir.glob("*/SKILL.md"))
-                if not skill_files:
-                    warnings.append("skills path exists but contains no */SKILL.md")
-                for skill_file in skill_files:
-                    text = skill_file.read_text(encoding="utf-8", errors="replace")
-                    header = re.match(r"\A---\r?\n(.*?)\r?\n---\r?\n", text, re.DOTALL)
-                    if header is None:
-                        errors.append(f"{skill_file.relative_to(root)} lacks YAML frontmatter")
-                        continue
-                    try:
-                        metadata = yaml.safe_load(header.group(1))
-                    except yaml.YAMLError as exc:
-                        errors.append(f"{skill_file.relative_to(root)} invalid YAML frontmatter: {exc}")
-                        continue
-                    if not isinstance(metadata, dict):
-                        errors.append(f"{skill_file.relative_to(root)} frontmatter must be a mapping")
-                    elif metadata.get("name") != skill_file.parent.name:
-                        errors.append(f"{skill_file.relative_to(root)} frontmatter name must match skill directory")
-                    elif not isinstance(metadata.get("description"), str) or not metadata["description"].strip():
-                        errors.append(f"{skill_file.relative_to(root)} requires a nonblank string description")
+        skill_paths = ([skills_value] if isinstance(skills_value, str)
+                       else skills_value if isinstance(skills_value, list) else [])
+        seen_skill_files: set[Path] = set()
+        for skill_path in skill_paths:
+            if not isinstance(skill_path, str) or not skill_path.startswith("./"):
+                continue  # Path diagnostics handled above.
+            skills_dir = root / skill_path[2:]
+            if not inside(root, skills_dir) or not skills_dir.is_dir():
+                continue
+            if (skills_dir / "SKILL.md").is_file():
+                skill_files = [skills_dir / "SKILL.md"]
+            else:
+                skill_files = sorted(skills_dir.glob("*/SKILL.md"))
+            if not skill_files:
+                warnings.append(f"{skill_path} contains no skill SKILL.md")
+            for skill_file in skill_files:
+                if skill_file in seen_skill_files:
+                    continue
+                seen_skill_files.add(skill_file)
+                text = skill_file.read_text(encoding="utf-8", errors="replace")
+                header = re.match(r"\A---\r?\n(.*?)\r?\n---\r?\n", text, re.DOTALL)
+                if header is None:
+                    errors.append(f"{skill_file.relative_to(root)} lacks YAML frontmatter")
+                    continue
+                try:
+                    metadata = yaml.load(header.group(1), Loader=UniqueSkillLoader)
+                except (yaml.YAMLError, ValueError) as exc:
+                    errors.append(f"{skill_file.relative_to(root)} invalid YAML frontmatter: {exc}")
+                    continue
+                if not isinstance(metadata, dict):
+                    errors.append(f"{skill_file.relative_to(root)} frontmatter must be a mapping")
+                elif metadata.get("name") != skill_file.parent.name:
+                    errors.append(f"{skill_file.relative_to(root)} frontmatter name must match skill directory")
+                elif not isinstance(metadata.get("description"), str) or not metadata["description"].strip():
+                    errors.append(f"{skill_file.relative_to(root)} requires a nonblank string description")
 
         interface = manifest.get("interface")
         if interface is not None and not isinstance(interface, dict):

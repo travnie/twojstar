@@ -73,8 +73,8 @@ def main() -> int:
                 root / "skills" / skill_name / "SKILL.md",
                 (
                     "---\n"
-                    f"name: {skill_name}\n"
-                    f"description: {json.dumps(args.description.strip(), ensure_ascii=False)}\n"
+                    f"name: {json.dumps(skill_name)}\n"
+                    f"description: {json.dumps(f'TODO: describe when {skill_name} should activate.', ensure_ascii=False)}\n"
                     "---\n\n"
                     f"# {skill_name.replace('-', ' ').title()}\n\n"
                     "Define expected input, workflow, output, boundaries, and stop rules.\n"
