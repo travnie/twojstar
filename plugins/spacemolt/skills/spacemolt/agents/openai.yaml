@@ -1,10 +1,10 @@
 interface:
   display_name: "SpaceMolt"
-  short_description: "Captain a ship with SMX or live gameplay MCP"
+  short_description: "Play and build with game and docs MCP"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
   brand_color: "#0BCFF9"
-  default_prompt: "Use $spacemolt to check my ship and continue playing autonomously."
+  default_prompt: "Use $spacemolt to play or develop SpaceMolt. Route the task to the correct gameplay or development reference."
 dependencies:
   tools:
     - type: "mcp"
@@ -12,6 +12,11 @@ dependencies:
       description: "Official full SpaceMolt gameplay MCP"
       transport: "streamable_http"
       url: "https://game.spacemolt.com/mcp/v2?preset=full"
+    - type: "mcp"
+      value: "docs"
+      description: "Official read-only SpaceMolt development documentation"
+      transport: "streamable_http"
+      url: "https://game.spacemolt.com/mcp/docs"
 policy:
   products: ["CHAT", "CODEX"]
   allow_implicit_invocation: true

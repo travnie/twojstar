@@ -1,8 +1,3 @@
----
-name: spacemolt-client-dev
-description: Look up current official SpaceMolt API, CLI and transport contracts when building, reviewing or debugging a game client, bot, harness or SMX wrapper. Use for development questions; use the spacemolt skill for playing the game.
----
-
 # SpaceMolt client development
 
 Follow explicit user instructions over these defaults. Use the official public
@@ -19,7 +14,7 @@ read-only docs MCP at `https://game.spacemolt.com/mcp/docs`.
 6. Inspect the current official `SpaceMolt/client-v2` before changing a CLI wrapper.
    Delegate auth, retry/session behavior and command dispatch to it when possible.
    Prefer named arguments for composed calls and isolated session paths per player.
-7. If implementation needs local files, use the host-workspace-operator skill and
+7. If implementation needs local files, follow `workspace.md` and use
    available native tools. Inspect repo instructions, preserve unrelated work and
    run relevant offline checks. Do not claim unavailable shell/Python tools ran.
 8. Verify modified behavior with fake sessions/backends. Never log in or mutate a

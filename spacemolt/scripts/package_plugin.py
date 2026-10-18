@@ -66,7 +66,7 @@ def validate_svg(path: Path) -> None:
 
 
 def validate(root: Path) -> tuple[dict, dict]:
-    """Check canonical manifests, branding, two MCPs and intended skill metadata."""
+    """Check manifests, branding, two MCPs and the single routed skill."""
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     if manifest.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
         raise ValueError("expected portable Agent Plugins 1.0 manifest")
@@ -113,8 +113,18 @@ def validate(root: Path) -> tuple[dict, dict]:
         if not front or front[1] in names:
             raise ValueError(f"invalid/duplicate skill: {child.name}")
         names.add(front[1])
-    if not {"spacemolt", "spacemolt-client-dev", "host-workspace-operator"} <= names:
-        raise ValueError("missing intended skills")
+    if names != {"spacemolt"}:
+        raise ValueError("expected exactly one SpaceMolt skill")
+    root_skill = (root / "skills" / "spacemolt")
+    main_skill = (root_skill / "SKILL.md").read_text(encoding="utf-8")
+    for reference in ("gameplay.md", "development.md", "workspace.md", "connection.md", "spacemolt-manual.md"):
+        if not (root_skill / "references" / reference).is_file():
+            raise ValueError(f"missing routed reference: {reference}")
+    for reference in ("gameplay.md", "development.md", "workspace.md"):
+        if f"references/{reference}" not in main_skill:
+            raise ValueError(f"missing route: {reference}")
+    if len(list((root_skill / "references" / "guides").glob("*.md"))) != 15:
+        raise ValueError("expected 15 bundled gameplay guides")
     return manifest, servers
 
 

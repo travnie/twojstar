@@ -1,8 +1,3 @@
----
-name: host-workspace-operator
-description: Use when a ChatGPT/Codex Plugin workflow needs to inspect, search, modify, or verify files in the host workspace using the safest native tools available.
----
-
 # Host Workspace Operator
 
 Use workspace tools supplied by the current ChatGPT/Codex host instead of pretending the Plugin owns a filesystem API.
@@ -90,8 +85,6 @@ If a required host **tool is unavailable**:
 - use another available capability only when it preserves the task semantics and safety boundary
 - otherwise state which operation is unavailable and keep the dependent result unverified
 
-## Generated Plugin rule
+## Host capability boundary
 
-Plugin Autopilot should install this Skill into newly converted Plugins when their workflows interact with files, repositories, generated artifacts, or local workspace state. It may also be included as a standard baseline Skill when the Plugin is intended for Codex-style repository work.
-
-The Skill does not grant filesystem permissions. It teaches the model how to use host-native capabilities when present.
+This reference is adapted from the reusable Host Workspace Operator skill in OpenAI Plugin Autopilot. It does not grant filesystem permissions; it only guides the use of host-native tools when present.
