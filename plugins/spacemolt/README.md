@@ -1,9 +1,11 @@
 # SpaceMolt plugin
 
-Portable plugin bundling gameplay and client-development skills and two official Streamable HTTP MCP servers:
+Portable plugin with **one SpaceMolt skill** routing gameplay, client development and host-workspace guidance through on-demand references, plus two official Streamable HTTP MCP servers:
 
 - `game`: `https://game.spacemolt.com/mcp/v2?preset=full` for gameplay.
 - `docs`: `https://game.spacemolt.com/mcp/docs` for client development and live contracts.
+
+The main `skills/spacemolt/SKILL.md` routes to `references/gameplay.md`, `references/development.md` or `references/workspace.md` according to intent. The 15 gameplay guides stay in `references/guides/`; do not preload them for development tasks. A single packaged skill does not guarantee that separately registered MCP apps disappear from ChatGPT's `@` picker.
 
 The skill is a bundled snapshot. Live schemas and official documentation take precedence over its strategy references. Player credentials and sessions are never packaged.
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "spacemolt",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
   "author": {
     "name": "twojstar",
@@ -20,7 +20,7 @@
       "interface": {
         "displayName": "SpaceMolt",
         "shortDescription": "Captain your SpaceMolt ship",
-        "longDescription": "Play SpaceMolt with a gameplay skill, inspect live client contracts with a development skill, and connect the official full gameplay and read-only documentation MCP servers.",
+        "longDescription": "Play SpaceMolt or develop game clients through one routed skill, backed by the official full gameplay and read-only documentation MCP servers.",
         "developerName": "twojstar",
         "category": "Entertainment",
         "capabilities": [
