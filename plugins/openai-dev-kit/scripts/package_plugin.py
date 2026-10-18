@@ -83,7 +83,7 @@ def validate_svg(path: Path) -> None:
 
 
 def validate(root: Path) -> tuple[dict, dict]:
-    """Check canonical manifests, branding, one MCP and intended skill metadata."""
+    """Check manifests, one MCP and the routed skill metadata."""
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     if manifest.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
         raise ValueError("expected portable Agent Plugins 1.0 manifest")
@@ -138,8 +138,20 @@ def validate(root: Path) -> tuple[dict, dict]:
         policy = metadata.get("policy") if isinstance(metadata, dict) else None
         if not isinstance(policy, dict) or policy.get("products") != ["CHAT", "CODEX"]:
             raise ValueError(f"bundled skill must target CHAT and CODEX: {child.name}")
-    if names != {"openai-dev", "chatgpt-plugin-builder"}:
-        raise ValueError("missing intended skills")
+    if names != {"chatgpt-plugin-builder"}:
+        raise ValueError("expected one routed OpenAI Dev Kit skill")
+    skill = root / "skills/chatgpt-plugin-builder"
+    router = (skill / "SKILL.md").read_text(encoding="utf-8")
+    for reference in ("plugin-building.md", "openai-workflows.md"):
+        if not (skill / "references" / reference).is_file():
+            raise ValueError(f"missing routed reference: {reference}")
+        if f"references/{reference}" not in router:
+            raise ValueError(f"missing routed skill link: {reference}")
+    for reference in ("build-apps.md", "interaction-patterns.md", "model-guidance.md", "submission.md"):
+        if not (skill / "references/openai-dev" / reference).is_file():
+            raise ValueError(f"missing developer guide: {reference}")
+    if not (skill / "scripts/scaffold_node_ext_apps.mjs").is_file():
+        raise ValueError("missing Node MCP Apps scaffold")
     return manifest, servers
 
 
