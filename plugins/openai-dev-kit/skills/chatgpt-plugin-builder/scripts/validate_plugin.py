@@ -9,7 +9,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+import yaml
+
+NAME_RE = re.compile(r"^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 PATH_FIELDS = {
     "skills": "directory",
@@ -151,8 +153,21 @@ def main() -> int:
                     warnings.append("skills path exists but contains no */SKILL.md")
                 for skill_file in skill_files:
                     text = skill_file.read_text(encoding="utf-8", errors="replace")
-                    if not text.startswith("---\n"):
+                    header = re.match(r"\A---\r?\n(.*?)\r?\n---\r?\n", text, re.DOTALL)
+                    if header is None:
                         errors.append(f"{skill_file.relative_to(root)} lacks YAML frontmatter")
+                        continue
+                    try:
+                        metadata = yaml.safe_load(header.group(1))
+                    except yaml.YAMLError as exc:
+                        errors.append(f"{skill_file.relative_to(root)} invalid YAML frontmatter: {exc}")
+                        continue
+                    if not isinstance(metadata, dict):
+                        errors.append(f"{skill_file.relative_to(root)} frontmatter must be a mapping")
+                    elif metadata.get("name") != skill_file.parent.name:
+                        errors.append(f"{skill_file.relative_to(root)} frontmatter name must match skill directory")
+                    elif not isinstance(metadata.get("description"), str) or not metadata["description"].strip():
+                        errors.append(f"{skill_file.relative_to(root)} requires a nonblank string description")
 
         interface = manifest.get("interface")
         if interface is not None and not isinstance(interface, dict):

@@ -94,6 +94,52 @@ class PackageTests(unittest.TestCase):
             self.assertTrue((skill / "scripts/scaffold_node_ext_apps.mjs").is_file())
             self.assertFalse((target / "skills/openai-dev").exists())
 
+    def test_standalone_docs_and_optional_integrations(self):
+        skill = ROOT / "skills/chatgpt-plugin-builder"
+        root = (skill / "SKILL.md").read_text()
+        building = (skill / "references/plugin-building.md").read_text()
+        legacy = (skill / "references/legacy-apps-sdk-migration.md").read_text()
+        self.assertIn("Other installed plugins are optional", root)
+        self.assertIn("kit's own scaffolding", building)
+        self.assertNotIn("prefer the current built-in", building)
+        self.assertIn("Root `plugin.json`", legacy)
+        self.assertNotIn("required package entry point", legacy)
+
+    def test_dotted_name_scaffold_and_frontmatter_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run([
+                sys.executable, str(BUILDER / "scaffold_plugin.py"), directory,
+                "--name", "build.tools", "--description", "Integrations: API and MCP",
+                "--skill", "build-tools", "--bundled-mcp-name", "docs",
+                "--mcp-url", "https://developers.openai.com/mcp",
+            ], capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            root = Path(directory) / "build.tools"
+            skill = root / "skills/build-tools/SKILL.md"
+            original = skill.read_text()
+            self.assertIn('description: "Integrations: API and MCP"', original)
+
+            def validate() -> subprocess.CompletedProcess:
+                return subprocess.run([
+                    sys.executable, str(BUILDER / "validate_plugin.py"), str(root)
+                ], capture_output=True, text=True, check=False)
+
+            self.assertEqual(validate().returncode, 0)
+            broken = (
+                original.replace('description: "Integrations: API and MCP"',
+                                 "description: TODO: invalid YAML"),
+                original.replace("name: build-tools", "name: wrong-skill"),
+                original.replace('description: "Integrations: API and MCP"',
+                                 'description: ""'),
+            )
+            for bad in broken:
+                with self.subTest(bad=bad):
+                    skill.write_text(bad)
+                    check = validate()
+                    self.assertNotEqual(check.returncode, 0, check.stdout)
+            skill.write_text(original)
+            self.assertEqual(validate().returncode, 0)
+
     def test_reproducible_archive(self):
         with tempfile.TemporaryDirectory() as directory:
             first = PACK["package"](Path(directory) / "first.zip")

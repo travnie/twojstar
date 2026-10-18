@@ -5,7 +5,7 @@ description: Use the OpenAI Dev Kit to build, review, migrate, scaffold, validat
 
 # OpenAI Dev Kit
 
-One skill for two related workflows. **Load only the reference needed for the user's request**, not both by default. Reference paths resolve from this skill root. This is a personal toolkit, not an official OpenAI plugin.
+One self-contained skill for two related workflows. **Load only the reference needed for the user's request**, not both by default. Reference paths resolve from this skill root. This is a personal toolkit, not an official OpenAI plugin. Other installed plugins are optional and must never be assumed or required.
 
 ## Route by intent
 
