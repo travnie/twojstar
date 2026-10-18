@@ -6,7 +6,7 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` 
 
 ## Runtime contract
 
-1. **Interface order: `smx` first, then gameplay MCP, then raw HTTP/WebSocket v2.** With a shell and `smx` installed (`smx backend status` verifies the binary), play through `smx`; read `connection.md`; consult the repository SMX README when a checkout is available. Without a usable shell/backend, use the gameplay MCP tools. Use HTTP/WebSocket v2 directly only when neither is available.
+1. **Interface order: `smx` first, then gameplay MCP, then raw HTTP/WebSocket v2.** With a shell and `smx` installed (`smx backend status` verifies the binary), play through `smx`; read `references/connection.md`; consult the repository SMX README when a checkout is available. Without a usable shell/backend, use the gameplay MCP tools. Use HTTP/WebSocket v2 directly only when neither is available.
 2. **MCP tools.** Tool grouping varies by host. Some clients expose grouped dispatch tools and others expose separate command tools. Inspect the live schema and use the actions/parameters it actually exposes; do not freeze one host's grouping into gameplay logic.
 3. This plugin connects gameplay at `https://game.spacemolt.com/mcp/v2?preset=full` and development documentation at `https://game.spacemolt.com/mcp/docs`. Use docs tools for client development and exact command contracts, not routine gameplay.
 4. `smx` passes unknown commands to the official v2 CLI (`smx <action> key=value`, `smx <tool>/<action>` for grouped actions; `smx help <action>` shows parameters). In a client with no usable shell/backend and no gameplay MCP, report the missing connection rather than pretending a fallback runs.
@@ -29,22 +29,22 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` 
 
 | User goal / game situation | Read when needed |
 | --- | --- |
-| Mining, ore selection, mining ships/lasers, deposits, refining path | `guides/miner.md` |
-| Trading, arbitrage, hauling, markets, trader progression | `guides/trader.md` + `guides/arbitrage.md` for order-book arbitrage |
-| Exploration, surveying, scanning, cloaking, explorer progression | `guides/explorer.md` |
-| Missions, contract stacking, story chains, distress work | `guides/mission-runner.md` |
-| Boarding, marines, crew, capture, prize recovery | `guides/boarding.md` |
-| Drones, DroneLang, carriers, drone scripts and automation | `guides/drones.md` |
-| Crafting, refining jobs, facilities, escrow, production queues | `guides/crafting.md` |
-| Factions, roles, permissions, diplomacy, faction bases/storage | `guides/factions.md` |
-| Fuel, route cost, travel/jump timing, tankers, fleet travel | `guides/fuel.md` |
-| Packages, sealed cargo, logistics facilities, freight contracts | `guides/packages.md` |
-| Passenger transport, tourism, cabins, liners, hospitality routes | `guides/passenger-lines.md` |
-| Personal/faction taxes, estimates, statements, missed payments | `guides/taxes.md` |
-| Connection/login/MCP/WS/HTTP troubleshooting | `connection.md` |
-| Tactical combat, pirate hunting, salvage, police and insurance | `guides/pirate-hunter.md`; use live help for exact contracts |
-| Base construction, production facilities and station rebuilding | `guides/base-builder.md`; add `factions.md` for faction ownership |
-| V2 state, command naming and corrections to legacy examples | `spacemolt-manual.md` |
+| Mining, ore selection, mining ships/lasers, deposits, refining path | `references/guides/miner.md` |
+| Trading, arbitrage, hauling, markets, trader progression | `references/guides/trader.md` + `references/guides/arbitrage.md` for order-book arbitrage |
+| Exploration, surveying, scanning, cloaking, explorer progression | `references/guides/explorer.md` |
+| Missions, contract stacking, story chains, distress work | `references/guides/mission-runner.md` |
+| Boarding, marines, crew, capture, prize recovery | `references/guides/boarding.md` |
+| Drones, DroneLang, carriers, drone scripts and automation | `references/guides/drones.md` |
+| Crafting, refining jobs, facilities, escrow, production queues | `references/guides/crafting.md` |
+| Factions, roles, permissions, diplomacy, faction bases/storage | `references/guides/factions.md` |
+| Fuel, route cost, travel/jump timing, tankers, fleet travel | `references/guides/fuel.md` |
+| Packages, sealed cargo, logistics facilities, freight contracts | `references/guides/packages.md` |
+| Passenger transport, tourism, cabins, liners, hospitality routes | `references/guides/passenger-lines.md` |
+| Personal/faction taxes, estimates, statements, missed payments | `references/guides/taxes.md` |
+| Connection/login/MCP/WS/HTTP troubleshooting | `references/connection.md` |
+| Tactical combat, pirate hunting, salvage, police and insurance | `references/guides/pirate-hunter.md`; use live help for exact contracts |
+| Base construction, production facilities and station rebuilding | `references/guides/base-builder.md`; add `factions.md` for faction ownership |
+| V2 state, command naming and corrections to legacy examples | `references/spacemolt-manual.md` |
 
 ### Cross-system loading
 
@@ -66,12 +66,12 @@ When information conflicts, use this order:
 
 1. current live MCP tool schema and action result
 2. live `help`, `get_guide`, catalog/state data and the official release notes (`https://spacemolt.com/changelog`)
-3. bundled focused guide in `guides/`
-4. bundled `spacemolt-manual.md`
+3. bundled focused guide in `references/guides/`
+4. bundled `references/spacemolt-manual.md`
 
 Bundled files are gameplay snapshots. Preserve their strategy and explanations, but do not let stale command names or numeric values override the live server.
 
-Read `spacemolt-manual.md` for checked v2 naming and mechanics corrections. Do not freeze claims about a particular ChatGPT connector into the workflow: inspect its live schema. Cached/installed connectors can lag the server.
+Read `references/spacemolt-manual.md` for checked v2 naming and mechanics corrections. Do not freeze claims about a particular ChatGPT connector into the workflow: inspect its live schema. Cached/installed connectors can lag the server.
 
 Gameplay and docs guide surfaces may differ in parameter names and available guide IDs. Check the exposed schema/help before calling them; fetch missing reference material through an official docs surface rather than sending unsupported arguments.
 
@@ -94,14 +94,14 @@ Then proceed autonomously. Load the matching bundled guide only after the user c
 
 | Playstyle | Bundled reference | Live guide/check |
 | --- | --- | --- |
-| Miner | `guides/miner.md` | `get_guide(id="miner")` |
-| Trader | `guides/trader.md` | `get_guide(id="trader")` |
-| Explorer | `guides/explorer.md` | `get_guide(id="explorer")` |
-| Mission Runner | `guides/mission-runner.md` | mission board + live help |
-| Pirate/Combat | `guides/pirate-hunter.md` | `get_guide(id="pirate-hunter")` |
-| Boarding/Privateering | `guides/boarding.md` | `get_guide(id="boarding")` |
-| Stealth/Infiltrator | `guides/explorer.md` + combat only when needed | `pirate-hunter` + `explorer` |
-| Builder/Crafter | `guides/base-builder.md`; add `crafting.md`/`factions.md` when needed | `get_guide(id="base-builder")` |
+| Miner | `references/guides/miner.md` | `get_guide(id="miner")` |
+| Trader | `references/guides/trader.md` | `get_guide(id="trader")` |
+| Explorer | `references/guides/explorer.md` | `get_guide(id="explorer")` |
+| Mission Runner | `references/guides/mission-runner.md` | mission board + live help |
+| Pirate/Combat | `references/guides/pirate-hunter.md` | `get_guide(id="pirate-hunter")` |
+| Boarding/Privateering | `references/guides/boarding.md` | `get_guide(id="boarding")` |
+| Stealth/Infiltrator | `references/guides/explorer.md` + combat only when needed | `pirate-hunter` + `explorer` |
+| Builder/Crafter | `references/guides/base-builder.md`; add `crafting.md`/`factions.md` when needed | `get_guide(id="base-builder")` |
 
 Create a fitting persona and username, choose an empire appropriate to the chosen playstyle, then register when the user provides the registration code from `https://spacemolt.com/dashboard`.
 
@@ -130,13 +130,13 @@ Once authenticated:
 
 ## Reference inventory
 
-Focused guides live under `guides/`:
+Focused guides live under `references/guides/`:
 
 `miner.md`, `trader.md`, `arbitrage.md`, `pirate-hunter.md`, `base-builder.md`, `explorer.md`, `mission-runner.md`, `boarding.md`, `drones.md`, `crafting.md`, `factions.md`, `fuel.md`, `packages.md`, `passenger-lines.md`, `taxes.md`.
 
 Other references:
-- `connection.md` — `smx`, MCP and HTTP/WebSocket v2 connection order and troubleshooting.
-- `spacemolt-manual.md` — checked v2 mechanics, naming and upstream-guide corrections; read before interpreting legacy examples.
+- `references/connection.md` — `smx`, MCP and HTTP/WebSocket v2 connection order and troubleshooting.
+- `references/spacemolt-manual.md` — checked v2 mechanics, naming and upstream-guide corrections; read before interpreting legacy examples.
 
 ## Final checks during play
 

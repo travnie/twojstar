@@ -7,6 +7,8 @@ description: Use for playing or troubleshooting SpaceMolt and for developing, re
 
 Follow the user's goal and constraints. Load **only the relevant reference**, not the entire bundle. This single skill routes two distinct workflows with separate MCP backends.
 
+All reference paths, including links mentioned inside reference documents, are **relative to this skill root** (`skills/spacemolt/`).
+
 ## Choose a workflow
 
 - **Play, manage a captain, register/login, mine, trade, explore, fight, or run missions:** read [gameplay.md](references/gameplay.md). Follow its intent router to load only the needed [guides](references/guides/) and [connection.md](references/connection.md).
