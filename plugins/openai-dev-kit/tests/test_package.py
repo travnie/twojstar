@@ -115,9 +115,13 @@ class PackageTests(unittest.TestCase):
             ], capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             root = Path(directory) / "build.tools"
+            manifest = json.loads((root / "plugin.json").read_text())
+            self.assertEqual(manifest["name"], "build.tools")
             skill = root / "skills/build-tools/SKILL.md"
             original = skill.read_text()
-            self.assertIn('description: "Integrations: API and MCP"', original)
+            self.assertIn('name: "build-tools"', original)
+            description = 'description: "TODO: describe when build-tools should activate."'
+            self.assertIn(description, original)
 
             def validate() -> subprocess.CompletedProcess:
                 return subprocess.run([
@@ -126,11 +130,11 @@ class PackageTests(unittest.TestCase):
 
             self.assertEqual(validate().returncode, 0)
             broken = (
-                original.replace('description: "Integrations: API and MCP"',
-                                 "description: TODO: invalid YAML"),
-                original.replace("name: build-tools", "name: wrong-skill"),
-                original.replace('description: "Integrations: API and MCP"',
-                                 'description: ""'),
+                original.replace(description, "description: TODO: invalid YAML"),
+                original.replace('name: "build-tools"', 'name: "wrong-skill"'),
+                original.replace(description, 'description: ""'),
+                original.replace('name: "build-tools"\n',
+                                 'name: "build-tools"\nname: "build-tools"\n'),
             )
             for bad in broken:
                 with self.subTest(bad=bad):
@@ -139,6 +143,38 @@ class PackageTests(unittest.TestCase):
                     self.assertNotEqual(check.returncode, 0, check.stdout)
             skill.write_text(original)
             self.assertEqual(validate().returncode, 0)
+
+            # Legacy array of skill directories must receive the same checks.
+            (root / "plugin.json").unlink()
+            overlay_path = root / ".codex-plugin/plugin.json"
+            overlay = json.loads(overlay_path.read_text())
+            overlay["skills"] = ["./skills/build-tools"]
+            overlay_path.write_text(json.dumps(overlay) + "\n")
+            skill.write_text(original.replace(description, "description: TODO: invalid YAML"))
+            self.assertNotEqual(validate().returncode, 0)
+            skill.write_text(original)
+            self.assertEqual(validate().returncode, 0)
+
+    def test_yaml_keyword_skill_names_and_distinct_activation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run([
+                sys.executable, str(BUILDER / "scaffold_plugin.py"), directory,
+                "--name", "keywords-plugin", "--description", "Useful plugin",
+                "--skill", "on", "--skill", "true",
+            ], capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            root = Path(directory) / "keywords-plugin"
+            descriptions = []
+            for name in ("on", "true"):
+                text = (root / "skills" / name / "SKILL.md").read_text()
+                self.assertIn(f'name: "{name}"', text)
+                self.assertIn(f"TODO: describe when {name} should activate.", text)
+                descriptions.append(text)
+            self.assertNotEqual(descriptions[0], descriptions[1])
+            check = subprocess.run([
+                sys.executable, str(BUILDER / "validate_plugin.py"), str(root)
+            ], capture_output=True, text=True, check=False)
+            self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
 
     def test_reproducible_archive(self):
         with tempfile.TemporaryDirectory() as directory:
