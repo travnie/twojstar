@@ -125,6 +125,12 @@ def validate(root: Path) -> tuple[dict, dict]:
             raise ValueError(f"missing route: {reference}")
     if len(list((root_skill / "references" / "guides").glob("*.md"))) != 15:
         raise ValueError("expected 15 bundled gameplay guides")
+    gameplay = (root_skill / "references" / "gameplay.md").read_text(encoding="utf-8")
+    development = (root_skill / "references" / "development.md").read_text(encoding="utf-8")
+    if "`references/guides/miner.md`" not in gameplay or "`references/connection.md`" not in gameplay:
+        raise ValueError("gameplay reference paths must be skill-root-relative")
+    if "`references/workspace.md`" not in development:
+        raise ValueError("development workspace path must be skill-root-relative")
     return manifest, servers
 
 
