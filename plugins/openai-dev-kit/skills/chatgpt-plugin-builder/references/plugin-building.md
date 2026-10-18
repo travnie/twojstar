@@ -16,10 +16,10 @@ UI is optional. Do not create a widget merely because the platform supports one.
 Before changing plugin architecture or metadata:
 
 1. Use the bundled `openaiDeveloperDocs` MCP search/fetch tools to retrieve current official OpenAI Plugins docs. If unavailable, browse the official docs directly; do not block an answer on installation.
-2. For straightforward plugin packaging, prefer the current built-in `plugin-creator` workflow when available; use this skill for repository-specific architecture, migration, and validation.
+2. Use this kit's own scaffolding, package format, and validation workflow by default. If an additional plugin-management tool is actually available and relevant to an account action, it can be used as an optional host capability. Never require, install, or assume another plugin.
 3. Treat `/plugins/...` as the canonical documentation surface.
 4. Treat old `/apps-sdk/...` links and “Apps SDK app” language as legacy compatibility terminology.
-5. Prefer the installed OpenAI Developers `build-chatgpt-app` workflow for detailed MCP Apps UI/server implementation when available.
+5. For detailed MCP Apps UI/server implementation, follow current official docs and bundled app references. Use another verified, available development tool only when useful, never as a prerequisite.
 6. Use bundled references for stable design patterns, never as a substitute for current product rules, schemas, or submission requirements.
 
 Read `references/plugin-docs-workflow.md` for page routing.

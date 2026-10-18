@@ -8,12 +8,19 @@ import json
 import re
 from pathlib import Path
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+NAME_RE = re.compile(r"^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?$")
+SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 
 def require_name(value: str) -> str:
     if not NAME_RE.fullmatch(value):
+        raise argparse.ArgumentTypeError("expected a lowercase plugin name (dots and hyphens allowed)")
+    return value
+
+
+def require_skill_name(value: str) -> str:
+    if not SKILL_NAME_RE.fullmatch(value):
         raise argparse.ArgumentTypeError("expected lowercase kebab-case")
     return value
 
@@ -35,9 +42,9 @@ def main() -> int:
     parser.add_argument("--name", required=True, type=require_name)
     parser.add_argument("--description", required=True)
     parser.add_argument("--version", default="0.1.0", type=require_version)
-    parser.add_argument("--skill", action="append", type=require_name)
+    parser.add_argument("--skill", action="append", type=require_skill_name)
     parser.add_argument("--registered-app-id")
-    parser.add_argument("--bundled-mcp-name", type=require_name)
+    parser.add_argument("--bundled-mcp-name", type=require_skill_name)
     parser.add_argument("--mcp-url")
     parser.add_argument("--command")
     parser.add_argument("--force", action="store_true")
@@ -67,7 +74,7 @@ def main() -> int:
                 (
                     "---\n"
                     f"name: {skill_name}\n"
-                    f"description: TODO: describe the workflow and when {skill_name} should activate.\n"
+                    f"description: {json.dumps(args.description.strip(), ensure_ascii=False)}\n"
                     "---\n\n"
                     f"# {skill_name.replace('-', ' ').title()}\n\n"
                     "Define expected input, workflow, output, boundaries, and stop rules.\n"

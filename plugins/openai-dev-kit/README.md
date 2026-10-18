@@ -1,6 +1,6 @@
 # OpenAI Dev Kit
 
-One routed OpenAI Dev Kit skill plus the official read-only OpenAI documentation MCP.
+One self-contained routed OpenAI Dev Kit skill plus the official read-only OpenAI documentation MCP. No other installed plugin is required.
 
 - **Plugin building:** `skills/chatgpt-plugin-builder/references/plugin-building.md`, plus existing focused references and validation/scaffolding scripts.
 - **OpenAI development:** `skills/chatgpt-plugin-builder/references/openai-workflows.md`, with topic-specific references for API/Codex, model migration, MCP Apps and submission.
@@ -16,7 +16,7 @@ From the repository root:
 
 ```sh
 python -m pip install -r plugins/openai-dev-kit/requirements.txt
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.3.zip
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.4.zip
 ```
 
 The source contains portable Agent Plugins 1.0 manifests. Packaging generates
@@ -30,7 +30,7 @@ connectable app. Register the official endpoint through developer mode, then
 copy its verified connection page or underlying App ID:
 
 ```sh
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.3-private.zip \
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.4-private.zip \
   --docs-app-id VERIFIED_ID_FROM_CHATGPT
 ```
 

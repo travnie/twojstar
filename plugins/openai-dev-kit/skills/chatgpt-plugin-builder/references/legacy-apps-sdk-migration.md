@@ -19,7 +19,7 @@ widget. The current plugin model is broader.
 - Repeatable workflow instructions can be bundled as skills.
 - A plugin can package registered or bundled MCP server connections.
 - Hooks and install-surface assets belong at plugin root.
-- `.codex-plugin/plugin.json` becomes the required package entry point.
+- Root `plugin.json` with the Agent Plugins 1.0 schema is the portable package entry point; `.codex-plugin/plugin.json` remains an optional compatibility overlay.
 
 ## Legacy terms and paths
 
