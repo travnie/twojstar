@@ -18,6 +18,19 @@ updates:
     groups:
       smx: { patterns: ["*"] }
 
+  - package-ecosystem: "pip"
+    directories:
+      - "/plugins/_shared"
+      - "/plugins/claude-dev-kit/skills/mcp-builder/scripts"
+      - "/plugins/google-dev-kit"
+      - "/plugins/openai-dev-kit"
+    schedule:
+      interval: "weekly"
+      time: "21:37"
+      timezone: "Europe/Warsaw"
+    groups:
+      plugin-requirements: { patterns: ["*"] }
+
   - package-ecosystem: "npm"
     directory: "/benches"
     schedule:
