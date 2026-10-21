@@ -123,8 +123,9 @@ def validate(root: Path) -> tuple[dict, dict]:
     for reference in ("gameplay.md", "development.md", "workspace.md"):
         if f"references/{reference}" not in main_skill:
             raise ValueError(f"missing route: {reference}")
-    if len(list((root_skill / "references" / "guides").glob("*.md"))) != 15:
-        raise ValueError("expected 15 bundled gameplay guides")
+    actual_guides = {p.name for p in (root_skill / "references" / "guides").glob("*.md")}
+    if actual_guides != set(GUIDE_NAMES):
+        raise ValueError(f"missing/unexpected bundled gameplay guides: {sorted(set(GUIDE_NAMES) ^ actual_guides)}")
     gameplay = (root_skill / "references" / "gameplay.md").read_text(encoding="utf-8")
     development = (root_skill / "references" / "development.md").read_text(encoding="utf-8")
     if "`references/guides/miner.md`" not in gameplay or "`references/connection.md`" not in gameplay:
@@ -132,6 +133,10 @@ def validate(root: Path) -> tuple[dict, dict]:
     if "`references/workspace.md`" not in development:
         raise ValueError("development workspace path must be skill-root-relative")
     return manifest, servers
+
+
+GUIDE_NAMES = ["arbitrage.md","base-builder.md","boarding.md","crafting.md","drones.md","explorer.md","factions.md","fuel.md","miner.md","mission-runner.md","packages.md","passenger-lines.md","pirate-hunter.md","taxes.md","trader.md"]
+REFERENCE_NAMES = ["connection.md","development.md","gameplay.md","spacemolt-manual.md","workspace.md"]
 
 
 def allowed_plugin_member(path: Path) -> bool:
@@ -147,8 +152,8 @@ def allowed_plugin_member(path: Path) -> bool:
     if tail in (("SKILL.md",), ("THIRD_PARTY_NOTICES.md",), ("agents", "openai.yaml"), ("assets", "icon.svg")):
         return True
     return (
-        (len(tail) == 2 and tail[0] == "references" and tail[1].endswith(".md"))
-        or (len(tail) == 3 and tail[:2] == ("references", "guides") and tail[2].endswith(".md"))
+        (len(tail) == 2 and tail[0] == "references" and tail[1] in REFERENCE_NAMES)
+        or (len(tail) == 3 and tail[:2] == ("references", "guides") and tail[2] in GUIDE_NAMES)
     )
 
 

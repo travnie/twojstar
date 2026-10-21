@@ -20,6 +20,8 @@ class SpaceMoltPackageTests(unittest.TestCase):
         for file in (".env", "credentials.json", "secrets/password.txt", "assets/auth.json",
                      "skills/spacemolt/credentials.json", "skills/spacemolt/agents/session.json",
                      "skills/spacemolt/references/guides/private.env",
+                     "skills/spacemolt/references/guides/credentials.md",
+                     "skills/spacemolt/references/private-session.md",
                      "scripts/secret.py", "other.md"):
             self.assertFalse(PACK["allowed_plugin_member"](Path(file)), file)
 
@@ -33,7 +35,10 @@ class SpaceMoltPackageTests(unittest.TestCase):
                 dest = Path(tmp) / str(i)
                 dest.mkdir()
                 PACK["stage"](ROOT, dest, apps)
-                self.assertEqual(len(list((dest / "skills/spacemolt/references/guides").glob("*.md"))), 15)
+                self.assertEqual(
+                    {p.name for p in (dest / "skills/spacemolt/references/guides").glob("*.md")},
+                    set(PACK["GUIDE_NAMES"]),
+                )
                 overlay = json.loads((dest / ".codex-plugin/plugin.json").read_text())
                 if apps:
                     actual = json.loads((dest / ".app.json").read_text())["apps"]
