@@ -22,6 +22,10 @@ class PackageTests(unittest.TestCase):
                 target.mkdir()
                 apps = {"openaiDeveloperDocs": app_id} if app_id else None
                 PACK["stage"](ROOT, target, apps)
+                skill = target / "skills/chatgpt-plugin-builder"
+                self.assertTrue((skill / "SKILL.md").is_file())
+                self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 16)
+                self.assertEqual(len([p for p in (skill / "scripts").iterdir() if p.is_file()]), 3)
                 root = json.loads((target / "plugin.json").read_text())
                 self.assertEqual(root["version"], "1.0.0")
                 overlay = json.loads((target / ".codex-plugin/plugin.json").read_text())
