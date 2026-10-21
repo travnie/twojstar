@@ -7,6 +7,7 @@ on:
       - ".claude-plugin/**"
       - "benches/docbench/plugin/**"
       - "spacemolt/scripts/package_plugin.py"
+      - "spacemolt/scripts/test_plugin_package.py"
       - ".agents/plugins/marketplace.json"
       - ".github/workflows/plugin-packages.yml"
   push:
@@ -16,6 +17,7 @@ on:
       - ".claude-plugin/**"
       - "benches/docbench/plugin/**"
       - "spacemolt/scripts/package_plugin.py"
+      - "spacemolt/scripts/test_plugin_package.py"
       - ".agents/plugins/marketplace.json"
       - ".github/workflows/plugin-packages.yml"
   workflow_dispatch:
