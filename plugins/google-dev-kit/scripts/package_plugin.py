@@ -297,7 +297,7 @@ def validate(root: Path):
     return manifest, config, auth
 
 
-def stage(source: Path, target: Path) -> None:
+def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> None:
     for path in sorted(source.rglob("*")):
         rel = path.relative_to(source)
         if path.is_symlink():
@@ -318,6 +318,25 @@ def stage(source: Path, target: Path) -> None:
         dest.write_bytes(path.read_bytes())
 
     manifest, config, _ = validate(target)
+    if apps is not None:
+        if not apps or set(apps) - set(EXPECTED_SERVERS):
+            raise ValueError("private app bindings require known non-empty MCP aliases")
+        for alias, app_id in apps.items():
+            if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
+                raise ValueError(f"invalid registered App ID for {alias}")
+        if len({app_id.removeprefix("plugin_") for app_id in apps.values()}) != len(apps):
+            raise ValueError("distinct MCP aliases need distinct registered Apps")
+        manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
+        (target / "plugin.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        (target / ".app.json").write_text(
+            json.dumps(
+                {"apps": {alias: {"id": app_id.removeprefix("plugin_")} for alias, app_id in apps.items()}},
+                indent=2,
+            ) + "\n",
+            encoding="utf-8",
+        )
     overlay = {
         key: value
         for key, value in manifest.items()
@@ -342,7 +361,7 @@ def stage(source: Path, target: Path) -> None:
     )
 
 
-def package(output: Path) -> dict:
+def package(output: Path, apps: dict[str, str] | None = None) -> dict:
     output = output.resolve()
     if output.is_relative_to(ROOT.resolve()):
         raise ValueError("archive must live outside plugin source")
@@ -351,7 +370,7 @@ def package(output: Path) -> dict:
     with tempfile.TemporaryDirectory() as directory:
         staged = Path(directory) / "google-dev-kit"
         staged.mkdir()
-        stage(ROOT, staged)
+        stage(ROOT, staged, apps)
 
         with zipfile.ZipFile(
             output,
@@ -385,5 +404,18 @@ def package(output: Path) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "--app-binding",
+        action="append",
+        default=[],
+        metavar="MCP_ALIAS=REGISTERED_APP_ID",
+        help="Bind one existing registered ChatGPT App to its declared MCP alias; repeat as needed",
+    )
     args = parser.parse_args()
-    print(json.dumps(package(args.output), indent=2))
+    bindings: dict[str, str] = {}
+    for item in args.app_binding:
+        alias, separator, app_id = item.partition("=")
+        if not separator or not alias or alias in bindings:
+            parser.error("--app-binding must be a unique MCP_ALIAS=REGISTERED_APP_ID")
+        bindings[alias] = app_id
+    print(json.dumps(package(args.output, bindings or None), indent=2))
