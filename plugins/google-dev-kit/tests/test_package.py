@@ -67,6 +67,19 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(len(list((target / "skills").glob("*/SKILL.md"))), 7)
             PACK.validate(target)
 
+    def test_registered_connector_and_templated_app_id_formats(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "private"
+            target.mkdir()
+            apps = {
+                "googleDeveloperKnowledge": "plugin_connector_abcd-01",
+                "geminiApiDocs": "templated_apps_0123-test",
+            }
+            PACK.stage(ROOT, target, apps)
+            bindings = json.loads((target / ".app.json").read_text())["apps"]
+            self.assertEqual(bindings["googleDeveloperKnowledge"]["id"], "connector_abcd-01")
+            self.assertEqual(bindings["geminiApiDocs"]["id"], "templated_apps_0123-test")
+
     def test_private_bindings_reject_unknown_duplicate_or_invalid_ids(self):
         with tempfile.TemporaryDirectory() as directory:
             cases = (

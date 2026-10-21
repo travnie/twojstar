@@ -1,9 +1,7 @@
 # MCP authentication
 
 `mcp-auth.json` is the source of truth for authentication policy. It contains
-only public configuration metadata. Never add OAuth client secrets, access
-tokens, refresh tokens, API-key values, or account-specific ChatGPT App IDs to
-the plugin archive.
+only public configuration metadata. Never add OAuth client secrets, access tokens, refresh tokens, or API-key values to any plugin archive. The portable/public archive must not contain account-specific ChatGPT App IDs; a deliberately generated private archive may contain verified App IDs in its generated `.app.json` binding. These IDs are not OAuth credentials.
 
 ## Authentication groups
 
@@ -26,9 +24,7 @@ OAuth client when the flow requires a web redirect and register the exact
 redirect URI shown by ChatGPT.
 
 ChatGPT assigns each registered connection an account/workspace-specific
-`plugin_asdk_app_...` ID. Keep those IDs out of the portable source. A private
-installation can bind them later through `.app.json` /
-`extensions.com.openai.apps`.
+`plugin_asdk_app_...` ID. Keep those IDs out of the portable source. A private installation can bind one or more registered apps using repeated `--app-binding MCP_ALIAS=REGISTERED_APP_ID` options; the packager stages `.app.json` and `extensions.com.openai.apps` only in the private archive. Use the actual registered ID from the ChatGPT connection page, never a guessed alias.
 
 The Gemini API Docs MCP server needs no authentication. For Developer
 Knowledge in ChatGPT, use OAuth: ChatGPT cannot present customer-supplied API

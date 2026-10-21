@@ -322,7 +322,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
         if not apps or set(apps) - set(EXPECTED_SERVERS):
             raise ValueError("private app bindings require known non-empty MCP aliases")
         for alias, app_id in apps.items():
-            if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
+            if not re.fullmatch(r"(?:plugin_)?(?:asdk_app|connector|templated_apps)_[A-Za-z0-9][A-Za-z0-9_-]*", app_id):
                 raise ValueError(f"invalid registered App ID for {alias}")
         if len({app_id.removeprefix("plugin_") for app_id in apps.values()}) != len(apps):
             raise ValueError("distinct MCP aliases need distinct registered Apps")
