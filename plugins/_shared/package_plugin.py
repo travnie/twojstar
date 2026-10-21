@@ -134,7 +134,7 @@ def validate(root: Path) -> tuple[dict, dict]:
     return manifest, mcp
 
 
-def stage(source: Path, target: Path) -> None:
+def stage(source: Path, target: Path, app_id: str | None = None) -> None:
     source = source.resolve()
     for path in sorted(source.rglob("*")):
         rel = path.relative_to(source)
@@ -151,6 +151,18 @@ def stage(source: Path, target: Path) -> None:
         dest.write_bytes(path.read_bytes())
 
     manifest, mcp = validate(target)
+    if app_id is not None:
+        if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
+            raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
+        if len(mcp["mcpServers"]) != 1:
+            raise ValueError("the --app-id shortcut requires exactly one declared MCP server")
+        alias = next(iter(mcp["mcpServers"]))
+        manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
+        (target / "plugin.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        (target / ".app.json").write_text(
+            json.dumps({"apps": {alias: {"id": app_id.removeprefix("plugin_")}}}, indent=2) + "\n",
+            encoding="utf-8",
+        )
     overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")
@@ -160,7 +172,7 @@ def stage(source: Path, target: Path) -> None:
     (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
-def package(source: Path, output: Path) -> dict:
+def package(source: Path, output: Path, app_id: str | None = None) -> dict:
     source = source.resolve()
     output = output.resolve()
     if output == source or output.is_relative_to(source):
@@ -169,7 +181,7 @@ def package(source: Path, output: Path) -> dict:
     with tempfile.TemporaryDirectory() as directory:
         staged = Path(directory) / source.name
         staged.mkdir()
-        stage(source, staged)
+        stage(source, staged, app_id)
         temp = output.with_suffix(output.suffix + ".tmp")
         try:
             with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -204,5 +216,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "--app-id",
+        help="Existing registered MCP app connection-page ID; adds an optional private binding",
+    )
     args = parser.parse_args()
-    print(json.dumps(package(args.source, args.output), indent=2))
+    print(json.dumps(package(args.source, args.output, args.app_id), indent=2))
