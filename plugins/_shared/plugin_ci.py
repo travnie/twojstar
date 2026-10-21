@@ -141,6 +141,8 @@ def build(plugin: str, upload_root: Path) -> None:
         run(sys.executable, "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py", source)
     if kind == "google":
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/google-dev-kit/tests", "-v")
+    if kind == "spacemolt":
+        run(sys.executable, "-m", "unittest", "discover", "-s", "spacemolt/scripts", "-p", "test_plugin_package.py", "-v")
     if kind == "openai":
         run(sys.executable, "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py", source)
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/openai-dev-kit/tests", "-v")

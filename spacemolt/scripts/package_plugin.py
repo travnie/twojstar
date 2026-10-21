@@ -134,6 +134,24 @@ def validate(root: Path) -> tuple[dict, dict]:
     return manifest, servers
 
 
+def allowed_plugin_member(path: Path) -> bool:
+    """Allow only canonical manifests, branding and SpaceMolt skill sources."""
+    parts = path.parts
+    if len(parts) == 1:
+        return parts[0] in {"plugin.json", "mcp.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md"}
+    if len(parts) == 2 and parts[0] == "assets":
+        return parts[1] in {"icon-small.png", "icon.png", "icon.svg", "logo-dark.svg", "logo-light.svg"}
+    if len(parts) < 3 or parts[:2] != ("skills", "spacemolt"):
+        return False
+    tail = parts[2:]
+    if tail in (("SKILL.md",), ("THIRD_PARTY_NOTICES.md",), ("agents", "openai.yaml"), ("assets", "icon.svg")):
+        return True
+    return (
+        (len(tail) == 2 and tail[0] == "references" and tail[1].endswith(".md"))
+        or (len(tail) == 3 and tail[:2] == ("references", "guides") and tail[2].endswith(".md"))
+    )
+
+
 def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> None:
     """Copy safe sources and generate synchronized legacy compatibility files."""
     names = set()
@@ -145,6 +163,8 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
             continue
         if not path.is_file() or any(part in {"__pycache__", ".git", "node_modules"} for part in rel.parts):
             raise ValueError(f"unexpected package member: {rel}")
+        if not allowed_plugin_member(rel):
+            raise ValueError(f"unexpected or sensitive plugin member: {rel}")
         if path.name.startswith(".env") or path.suffix in {".pyc", ".pem", ".key"}:
             raise ValueError(f"secret/transient-shaped file: {rel}")
         key = str(rel).casefold()
@@ -158,8 +178,10 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
     if apps is not None:
         if set(apps) != {"game", "docs"} or len(set(apps.values())) != 2:
             raise ValueError("private packages require two distinct registered apps: game and docs")
-        if any(not re.fullmatch(r"plugin_asdk_app_[0-9a-f]{32}", value) for value in apps.values()):
-            raise ValueError("copy actual plugin_asdk_app IDs from ChatGPT registration")
+        if any(not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", value) for value in apps.values()):
+            raise ValueError("copy actual asdk_app or plugin_asdk_app IDs from ChatGPT registration")
+        if len({value.removeprefix("plugin_") for value in apps.values()}) != 2:
+            raise ValueError("game and docs must point to different registered App IDs")
         manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
         (target / "plugin.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         bindings = {"apps": {name: {"id": value.removeprefix("plugin_")} for name, value in apps.items()}}
