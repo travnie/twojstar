@@ -22,6 +22,16 @@ Several endpoints also require project permissions, API enablement, or preview a
 
 The plugin exposes write capability because several servers can mutate cloud resources. Skills keep reads/planning lightweight, require exact scope, and gate security-sensitive or destructive writes.
 
+## Private ChatGPT bindings
+
+The portable ZIP contains skills and remote MCP URLs but does not register new ChatGPT connections. For an existing authorized connection, build a private App-backed ZIP by supplying a verified ID:
+
+```sh
+python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-private.zip --app-binding googleDeveloperKnowledge=plugin_asdk_app_REPLACE_WITH_ACTUAL_ID
+```
+
+Repeat `--app-binding` for other registered MCP aliases as required. Only the supplied aliases become registered ChatGPT actions; unregistered servers remain portable MCP declarations. Do not commit account-specific IDs, tokens or OAuth credentials.
+
 ## Package
 
 ```sh

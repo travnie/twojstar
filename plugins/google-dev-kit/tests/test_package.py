@@ -45,6 +45,57 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(overlay["skills"], "./skills/")
             self.assertEqual(overlay["mcpServers"], "./.mcp.json")
 
+    def test_private_bindings_preserve_all_sources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "private"
+            target.mkdir()
+            apps = {
+                "googleDeveloperKnowledge": "plugin_asdk_app_" + "a" * 32,
+                "geminiApiDocs": "asdk_app_" + "b" * 32,
+            }
+            PACK.stage(ROOT, target, apps)
+            root = json.loads((target / "plugin.json").read_text())
+            overlay = json.loads((target / ".codex-plugin/plugin.json").read_text())
+            self.assertEqual(root["extensions"]["com.openai"]["apps"], "./.app.json")
+            self.assertEqual(overlay["apps"], "./.app.json")
+            bindings = json.loads((target / ".app.json").read_text())["apps"]
+            self.assertEqual(bindings, {
+                "googleDeveloperKnowledge": {"id": "asdk_app_" + "a" * 32},
+                "geminiApiDocs": {"id": "asdk_app_" + "b" * 32},
+            })
+            self.assertEqual(len(json.loads((target / "mcp.json").read_text())["mcpServers"]), 10)
+            self.assertEqual(len(list((target / "skills").glob("*/SKILL.md"))), 7)
+            PACK.validate(target)
+
+    def test_registered_connector_and_templated_app_id_formats(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "private"
+            target.mkdir()
+            apps = {
+                "googleDeveloperKnowledge": "plugin_connector_abcd-01",
+                "geminiApiDocs": "templated_apps_0123-test",
+            }
+            PACK.stage(ROOT, target, apps)
+            bindings = json.loads((target / ".app.json").read_text())["apps"]
+            self.assertEqual(bindings["googleDeveloperKnowledge"]["id"], "connector_abcd-01")
+            self.assertEqual(bindings["geminiApiDocs"]["id"], "templated_apps_0123-test")
+
+    def test_private_bindings_reject_unknown_duplicate_or_invalid_ids(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cases = (
+                {"notGoogle": "asdk_app_" + "a" * 32},
+                {"googleDeveloperKnowledge": "not-an-id"},
+                {"googleDeveloperKnowledge": "asdk_app_" + "a" * 32,
+                 "geminiApiDocs": "plugin_asdk_app_" + "a" * 32},
+                {},
+            )
+            for index, apps in enumerate(cases):
+                with self.subTest(apps=apps):
+                    target = Path(directory) / str(index)
+                    target.mkdir()
+                    with self.assertRaises(ValueError):
+                        PACK.stage(ROOT, target, apps)
+
     def test_archive_contains_compatibility_manifests(self):
         with tempfile.TemporaryDirectory() as directory:
             archive_path = Path(directory) / "plugin.zip"
