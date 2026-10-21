@@ -23,6 +23,7 @@ class PackageTests(unittest.TestCase):
                 apps = {"openaiDeveloperDocs": app_id} if app_id else None
                 PACK["stage"](ROOT, target, apps)
                 root = json.loads((target / "plugin.json").read_text())
+                self.assertEqual(root["version"], "1.0.0")
                 overlay = json.loads((target / ".codex-plugin/plugin.json").read_text())
                 if app_id:
                     self.assertEqual(root["extensions"]["com.openai"]["apps"], "./.app.json")
@@ -92,6 +93,9 @@ class PackageTests(unittest.TestCase):
             self.assertIn("## Route by task", developer)
             self.assertIn("references/openai-dev/model-guidance.md", developer)
             self.assertTrue((skill / "scripts/scaffold_node_ext_apps.mjs").is_file())
+            self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 16)
+            self.assertEqual(len([p for p in (skill / "scripts").iterdir() if p.is_file()]), 3)
+
             self.assertFalse((target / "skills/openai-dev").exists())
 
     def test_standalone_docs_and_optional_integrations(self):
