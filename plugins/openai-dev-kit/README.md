@@ -16,7 +16,7 @@ From the repository root:
 
 ```sh
 python -m pip install -r plugins/openai-dev-kit/requirements.txt
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.4.zip
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.0.0.zip
 ```
 
 The source contains portable Agent Plugins 1.0 manifests. Packaging generates
@@ -30,7 +30,7 @@ connectable app. Register the official endpoint through developer mode, then
 copy its verified connection page or underlying App ID:
 
 ```sh
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-0.1.4-private.zip \
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.0.0-private.zip \
   --docs-app-id VERIFIED_ID_FROM_CHATGPT
 ```
 
