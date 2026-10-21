@@ -20,6 +20,6 @@
 
 ### Cloud sessions (scheduled play)
 
-- The environment's session-start hook (cloud setup script, not this repo) installs `smx`, fetches the official backend (mirror release, else source build) and logs in profile `claude` from env. Play through `smx`; check `smx backend status` and `smx status`.
+- The environment's session-start hook (cloud setup script) runs `spacemolt/smx/cloud-session.sh`: installs `smx`, fetches the official backend (mirror release, else source build) and logs in profile `claude` from env. Play through `smx`; check `smx backend status` and `smx status`.
 - Never read, echo or pass `SPACEMOLT_PASSWORD` yourself here; only the hook uses it (auto mode blocks it anyway), so password-based MCP login is out.
 - If `smx` isn't ready, report the hook output and stop. Don't install or build things yourself.
