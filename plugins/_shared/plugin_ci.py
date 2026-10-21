@@ -47,7 +47,7 @@ def changed_packages(paths: set[str]) -> list[str]:
         chosen.update(SHARED_PACKAGES)
     if "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py" in paths:
         chosen.update(SHARED_PACKAGES)
-    if "spacemolt/scripts/package_plugin.py" in paths:
+    if paths & {"spacemolt/scripts/package_plugin.py", "spacemolt/scripts/test_plugin_package.py"}:
         chosen.add("spacemolt")
     return sorted(chosen)
 
@@ -139,6 +139,7 @@ def build(plugin: str, upload_root: Path) -> None:
         run(sys.executable, "-m", "pip", "install", "-r", requirements)
     if kind == "shared":
         run(sys.executable, "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py", source)
+        run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/_shared", "-p", "test_app_bindings.py", "-v")
     if kind == "google":
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/google-dev-kit/tests", "-v")
     if kind == "spacemolt":
