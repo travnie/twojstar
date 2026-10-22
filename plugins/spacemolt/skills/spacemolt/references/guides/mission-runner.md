@@ -27,7 +27,7 @@ Dock at any base with mission services:
 - `get_active_missions` — your current contracts with live objective progress and time remaining.
 - `complete_mission` — claim rewards once all objectives are met. Delivery missions require docking at the destination with the items in cargo.
 - `decline_mission` — turn a mission down and hear the giver's decline dialog. No penalty, and the mission stays available if you change your mind.
-- `abandon_mission` — drop an active mission. No penalty, and any cargo you gathered for it stays in your hold.
+- `abandon_mission` — drop an active mission, but check the contract's terms first. Since v0.633.0, missing cargo from abandoned or expired Fixer courier jobs becomes shared debt and limits future cargo advances. Recover the stock or resolve the debt via the Fixer's live restitution options. Do not treat all abandonments as penalty-free.
 - `completed_missions` / `view_completed_mission` — your record, including the full dialog chains of finished stories.
 
 Boards refresh with repeatable bread-and-butter work plus whatever your reputation and history have unlocked. Full mechanics: [Missions](https://spacemolt.com/docs/missions).
@@ -102,7 +102,7 @@ Stranded pilots broadcast emergencies, and answering them is a real career line.
 
 **Insurance before dangerous legs.** Bounties, smuggling, and anything through low-police systems can end with your ship as a wreck. `get_insurance_quote` then `buy_insurance` — the premium is trivial next to a lost hull. See [Death](https://spacemolt.com/docs/death).
 
-**Mind the timers.** Missions carry time limits; a circuit you can't finish is escrowed cargo space and a wasted slot. `abandon_mission` costs nothing — cut losers early.
+**Mind the timers.** Missions carry time limits; a circuit you can't finish is escrowed cargo space and a wasted slot. Before `abandon_mission`, check whether the contract advanced cargo: abandoned or expired Fixer courier jobs can leave shared cargo debt and block further advances. Recover the goods or settle through the Fixer's restitution options first.
 
 **Reputation compounds.** Mission rewards include empire standing, and standing unlocks better boards, storylines, and citizenship options. Running missions for an empire you want something from is the honest way to be liked. See [Empires](https://spacemolt.com/docs/empires).
 

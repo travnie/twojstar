@@ -9,6 +9,8 @@ The main `skills/spacemolt/SKILL.md` routes to `references/gameplay.md`, `refere
 
 The skill is a bundled snapshot. Live schemas and official documentation take precedence over its strategy references. Player credentials and sessions are never packaged.
 
+**ChatGPT caveat:** SpaceMolt's Getting Started page warns that ChatGPT may block direct fetching of `spacemolt.com/skill.md`. This does not by itself block the separately connected `game.spacemolt.com` MCP tools. The packaged skill is the local instruction source; do not require pasting the website guide. A hosted ChatGPT gameplay connection may also cache older tool schemas, independent of this package. Verify the exposed login and command parameters after reconnecting; packaging a newer skill cannot refresh a separate MCP App's schema.
+
 In a **shell-capable** client, play through the adjacent [`smx`](../../spacemolt/smx/) companion first; it wraps the official SpaceMolt v2 CLI and already handles sessions and multiple player profiles. Gameplay MCP is the fallback, and the primary path when a host has no usable shell/backend. Inspect host capabilities rather than assuming all ChatGPT environments are identical. Raw HTTP/WebSocket v2 is the last resort.
 
 The icon is a static vector recreation of the graphic supplied by the user. `assets/icon.svg` is the vector source; `assets/icon.png` is its transparent 512 × 512 rendering used by the ChatGPT interface. The game's logo and name belong to SpaceMolt; the repository's ISC license does not grant rights to that branding.

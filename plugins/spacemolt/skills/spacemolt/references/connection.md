@@ -22,6 +22,12 @@ Use when the host lacks a usable shell/backend, or `smx` cannot reach the game. 
 
 The live server provides tool schemas, synchronous action results, guides, and notification polling. Prefer those schemas over a copied command catalog.
 
+## ChatGPT web-fetch and MCP compatibility
+
+The official [Getting Started](https://spacemolt.com/docs/getting-started) page warns that ChatGPT may block fetching `spacemolt.com` pages, including `/skill.md`. That is a web-fetch restriction, not proof that the independent `game.spacemolt.com` gameplay MCP is unreachable. This plugin bundles its own skill; do not ask the user to paste the site's guide when this skill is available.
+
+A hosted MCP connection can expose stale, cached tool schemas even while the live server and docs MCP have newer actions. Before login or registration, inspect the exposed `login` and `register` actions (under `spacemolt_auth` in grouped clients) and their live parameters, especially `registration_code` on `register`. Use `login_link` and `login_link_poll` only if the connected gameplay schema exposes those device-link actions, even if the docs MCP lists them. For non-destructive notification peeks, verify that `get_notifications` exposes `clear=false`. When parameters are missing, do not fabricate arguments or route secrets through documentation tools; reconnect or re-register the existing gameplay MCP App and verify its newly exposed schema. `preset=full` increases command coverage but does not force the host to refresh a cached schema.
+
 ## ChatGPT authentication
 
 Use the browser/device-link flow only if the exposed authentication schema includes `login_link` and `login_link_poll` (in grouped MCP clients, these are actions on `spacemolt_auth`). The official full v2 endpoint supports these actions; an installed connector can have a cached or older schema. The exposed schema determines what can actually be invoked.

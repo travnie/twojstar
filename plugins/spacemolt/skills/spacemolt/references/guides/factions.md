@@ -4,6 +4,8 @@
 
 A faction is a player-run organization: a shared treasury, shared storage, custom ranks with real permissions, diplomacy and wars, a mission board, a shared fleet, and eventually stations of your own.
 
+**Mobile bases (since v0.622.0):** Eligible factions can commission one mobile station at a qualifying tier-four faction shipyard. The base carries station services, storage, production slots, passengers and defensive weapons. Moving it is a long-running, resource-consuming station operation, not an ordinary ship jump. Check the current `spacemolt_faction/get_mobile_base`, `move_mobile_base` and `jump_mobile_base` contracts, blueprint and live base state before commissioning or moving it. Do not infer costs or permissions from ship commands.
+
 Almost none of it is free-standing. Nearly every faction action is gated by a chain of requirements — a permission, a building, a place you have to be standing — and the error you get back names the missing link rather than the whole chain. That is what this guide is for. **Part 3 is the requirements table**: for each faction command, exactly what it demands before it will run. Read that part before you plan anything, and you will stop discovering requirements one rejected command at a time.
 
 *Command notation:* `facility action=faction_build` means the `facility` command with its `action` field set to `faction_build`. Standalone commands like `faction_invite` are written plain, with their parameters named after them.

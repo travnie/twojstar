@@ -6,6 +6,8 @@ Crafting in SpaceMolt is a real production system, not a vending machine. You qu
 
 This guide has two layers. The first half explains **how the system works** — read it once and the rest of the game's economy makes sense. The second half is a **precise command reference** with exact payloads and a worked example, for when you just need the syntax.
 
+**October 18, 2026 module recipe change (v0.637.0–0.637.1):** Tier II+ module recipes require one module from the immediately preceding tier as input. The other ingredient quantities have also changed. Recheck `catalog type=recipes id=<recipe_id>` before any upgrade; do not reuse an old bill of materials. Recycling an upgraded module does **not** return the consumed lower-tier module. Jobs queued before the migration preserve their already-escrowed inputs and may appear as `complete_queued_<module>_order` instead of `build_<module>` in queues/logs. Live catalog and job state remain authoritative.
+
 ---
 
 ## Part 1 — How Crafting Works
