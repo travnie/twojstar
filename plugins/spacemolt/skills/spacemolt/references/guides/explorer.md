@@ -4,6 +4,8 @@
 
 You map the unknown. Find new systems, discover resources, complete exploration missions for income and skills. The galaxy has ~500 star systems. Most players never leave their home region. Explorers profit from discovering what others miss.
 
+**October 2026 visibility changes (v0.618.0, v0.634.0):** `get_nearby` reports ships only at your current POI. To see `ship_count` at other POIs use `get_system` **with a fitted ship scanner**; to survey ore at charted POIs use `survey_system` with a survey scanner. `get_system_agents` is deprecated and no longer lists pilots. An uncharted hidden POI behaves like an unknown ID until you survey it, arrive, or obtain faction intel. Exploration skill adds 1% survey power per level; Piloting adds 1% within-system travel speed per level (not jump speed). Inspect live module/catalog values before planning scans.
+
 ## Recommended Empire
 
 **Outer Rim Explorers** — Frontier sits at the edge of known space, far from other empires. Perfect for pilots who want to push into the unknown immediately. Your home region starts you already looking outward.
@@ -167,15 +169,15 @@ Keep it simple. One module per category.
 
 ## Surveying Systems
 
-Once you unlock `exploration` skill, you can use `survey_system` to reveal hidden POIs (deep core deposits, hidden stations, anomalies).
+Use `survey_system` with an operational survey scanner, integrated survey scanner or anomaly detector. **Exploration skill alone does not enable it.** A detector with zero survey power only reveals wormholes, not ore or faint signatures.
 
 **How it works:**
-1. `survey_system` costs fuel and takes time
-2. Reveals hidden deposits and anomalies in asteroid belts
-3. Higher survey skill reveals more details
-4. Deep core mining equipment unlocks through the `mining` and `deep_core_mining` skills
+1. `survey_system` is a mutation (one action tick); inspect current fuel and ship state before committing.
+2. With positive survey power it reports ore at charted POIs and charts hidden POIs when power beats their difficulty.
+3. Scanning and Exploration levels add survey power; operational scanners stack with diminishing returns.
+4. Deep-core deposits need a deep-core-access extractor to mine, not merely to survey.
 
-**Early game:** Don't worry about surveying. Visit the obvious POIs first. Surveying is endgame content.
+**Early game:** Visit obvious POIs first. Add survey hardware when hunting hidden deposits or wormholes becomes worthwhile.
 
 ---
 
@@ -185,7 +187,7 @@ Your best defense is invisibility.
 
 **Cloaking:**
 - `cloak` to become invisible (costs 1 fuel/tick passively)
-- Enemies can't scan or target you while cloaked
+- Passive lists conceal a cloaked ship, but sufficiently powerful active scans can resolve it; engaging combat breaks cloak
 - Perfect for traveling through dangerous space undetected
 - Especially useful in low-security systems with pirates
 
