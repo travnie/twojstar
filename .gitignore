@@ -69,3 +69,6 @@ replay_pid*
 
 # Claude Code: cloud hooks/settings live in the environment setup script; local .claude/ is per-machine
 .claude/
+
+# SpaceMolt CLI session token (written to cwd by the official client)
+.spacemolt-session.json
