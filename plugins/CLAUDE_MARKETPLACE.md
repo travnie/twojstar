@@ -1,7 +1,7 @@
 # twojstar Claude Code marketplace
 
 The same plugin sources are available in both ChatGPT/Codex and Claude Code.
-Do not duplicate skill files, OAuth credentials, or MCP URLs for Claude.
+Do not duplicate skill files, OAuth credentials, or MCP URLs for Claude. Keep the same vendor-neutral plugin identity across Claude Code, OpenAI/ChatGPT/Codex and compatible agent clients.
 
 ## Install in Claude Code
 
@@ -35,6 +35,7 @@ This is a **Claude Code plugin marketplace**, not the Claude.ai connector direct
 - `*/plugin.json`: names, descriptions, versions, display metadata
 - `*/mcp.json`: remote MCP endpoint URLs
 - `*/skills/`: original bundled skills
+- `*/branding.json`: explicit plugin/MCP/skill image slots; checked against native icon fields
 - `.claude-plugin/marketplace.json`: **generated Claude Code adapter**, do not edit
 
 To refresh after changing a canonical manifest:

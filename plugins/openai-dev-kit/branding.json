@@ -1,0 +1,17 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "mcpServers": {
+    "openaiDeveloperDocs": {
+      "logo": "./assets/icon.png"
+    }
+  },
+  "skills": {
+    "chatgpt-plugin-builder": {
+      "iconSmall": "./skills/chatgpt-plugin-builder/assets/icon.png",
+      "iconLarge": "./skills/chatgpt-plugin-builder/assets/icon-large.png"
+    }
+  }
+}

@@ -143,7 +143,7 @@ def allowed_plugin_member(path: Path) -> bool:
     """Allow only canonical manifests, branding and SpaceMolt skill sources."""
     parts = path.parts
     if len(parts) == 1:
-        return parts[0] in {"plugin.json", "mcp.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md"}
+        return parts[0] in {"plugin.json", "mcp.json", "branding.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md"}
     if len(parts) == 2 and parts[0] == "assets":
         return parts[1] in {"icon-small.png", "icon.png", "icon.svg", "logo-dark.svg", "logo-light.svg"}
     if len(parts) < 3 or parts[:2] != ("skills", "spacemolt"):

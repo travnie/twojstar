@@ -1,0 +1,21 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "claudeCodeDocs": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "claude-api": {
+      "iconSmall": "./assets/icon.svg",
+      "iconLarge": "./assets/icon.svg"
+    },
+    "mcp-builder": {
+      "iconSmall": "./assets/icon.svg",
+      "iconLarge": "./assets/icon.svg"
+    }
+  }
+}

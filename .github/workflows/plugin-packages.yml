@@ -49,6 +49,10 @@ jobs:
           persist-credentials: false
       - name: Verify Claude marketplace is generated from canonical plugin metadata
         run: python plugins/_shared/claude_marketplace.py --check
+      - name: Validate separate plugin, MCP and skill icons
+        run: python plugins/_shared/validate_branding.py --check
+      - name: Test skill icon mapping
+        run: python -m unittest discover -s plugins/_shared -p test_validate_branding.py -v
 
   select:
     runs-on: ubuntu-slim

@@ -1,0 +1,13 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "mcpServers": {},
+  "skills": {
+    "docbench-files": {
+      "iconSmall": "./assets/icon.png",
+      "iconLarge": "./assets/icon.png"
+    }
+  }
+}

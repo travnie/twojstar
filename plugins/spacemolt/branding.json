@@ -1,0 +1,20 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
+  },
+  "mcpServers": {
+    "game": {
+      "logo": "./assets/icon.png"
+    },
+    "docs": {
+      "logo": "./assets/icon.png"
+    }
+  },
+  "skills": {
+    "spacemolt": {
+      "iconSmall": "./skills/spacemolt/assets/icon.svg",
+      "iconLarge": "./skills/spacemolt/assets/icon.svg"
+    }
+  }
+}
