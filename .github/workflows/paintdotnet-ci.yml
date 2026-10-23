@@ -27,10 +27,6 @@ on: # yamllint disable-line rule:truthy
         type: choice
         options: [both, ai, ico]
 
-concurrency:
-  group: paintdotnet-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions: {}
 
 jobs:
@@ -87,6 +83,9 @@ jobs:
   ai:
     name: AI - build, smoke-test and package
     needs: changes
+    concurrency:
+      group: paintdotnet-ai-${{ github.ref }}
+      cancel-in-progress: true
     if: needs.changes.outputs.ai == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
@@ -337,6 +336,9 @@ jobs:
   ico:
     name: ICO - build and package
     needs: changes
+    concurrency:
+      group: paintdotnet-ico-${{ github.ref }}
+      cancel-in-progress: true
     if: needs.changes.outputs.ico == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
