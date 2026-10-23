@@ -1,0 +1,148 @@
+name: Gemini Super
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize]
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Zadanie / Prompt dla Gemini'
+        required: true
+        type: string
+
+jobs:
+  gemini-super:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
+      github.event_name == 'issues' ||
+      (github.event_name == 'issue_comment' &&
+        !github.event.comment.user.bot &&
+        (contains(github.event.comment.body, '@gemini') || contains(github.event.comment.body, '/gemini')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      # 1. Pobranie kodu repozytorium
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Setup Node.js z cache npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 3. Cache dla binarów (JADX, Ktlint)
+      - name: Cache Custom DevTools (JADX & Ktlint)
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin-cache
+          key: ${{ runner.os }}-devtools-jadx-ktlint-v1
+
+      # 4. Instalacja JADX i Ktlint (wykonuje się TYLKO gdy brak w Cache)
+      - name: Install JADX & Ktlint
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin-cache/jadx
+          mkdir -p ~/.local/bin-cache/bin
+
+          # Pobieranie najnowszej wersji JADX
+          JADX_VER=$(curl -s https://api.github.com/repos/skylot/jadx/releases/latest | jq -r .tag_name | sed 's/v//')
+          curl -L -o /tmp/jadx.zip "https://github.com/skylot/jadx/releases/download/v${JADX_VER}/jadx-${JADX_VER}.zip"
+          unzip -q /tmp/jadx.zip -d ~/.local/bin-cache/jadx
+          ln -sf ~/.local/bin-cache/jadx/bin/jadx ~/.local/bin-cache/bin/jadx
+
+          # Pobieranie Ktlint (LSP/Linter dla Kotlina)
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.2.1/ktlint
+          chmod a+x ktlint
+          mv ktlint ~/.local/bin-cache/bin/ktlint
+
+      # 5. Dodanie wycache'owanych binarów do PATH
+      - name: Add Tools to PATH
+        run: echo "$HOME/.local/bin-cache/bin" >> $GITHUB_PATH
+
+      # 6. Skanowanie LSP / Diagnostyka językowa (TS, Python, Kotlin)
+      - name: Run LSP Diagnostics & JADX Analysis
+        run: |
+          echo "=== DIAGNOSTYKA LINT / LSP ===" > diagnostics.txt
+
+          # TypeScript (Diagnostics)
+          if [ -f "tsconfig.json" ] || find . -maxdepth 3 -name "*.ts" -o -name "*.tsx" | grep -q .; then
+            echo -e "\n--- TypeScript Diagnostics (tsc) ---" >> diagnostics.txt
+            npx --yes typescript tsc --noEmit >> diagnostics.txt 2>&1 || true
+          fi
+
+          # Python (Diagnostics - Pyright)
+          if find . -maxdepth 3 -name "*.py" | grep -q .; then
+            echo -e "\n--- Python Diagnostics (Pyright) ---" >> diagnostics.txt
+            npx --yes pyright >> diagnostics.txt 2>&1 || true
+          fi
+
+          # Kotlin (Diagnostics - Ktlint)
+          if find . -maxdepth 3 -name "*.kt" -o -name "*.kts" | grep -q .; then
+            echo -e "\n--- Kotlin Diagnostics (ktlint) ---" >> diagnostics.txt
+            ktlint >> diagnostics.txt 2>&1 || true
+          fi
+
+          # JADX Analysis (uruchamiane, jeśli w repo/PR są pliki APK, DEX lub CLASS)
+          TARGET_BIN=$(find . -name "*.apk" -o -name "*.dex" -o -name "*.class" | head -n 1)
+          if [ -n "$TARGET_BIN" ]; then
+            echo -e "\n--- JADX Decompilation Analysis ($TARGET_BIN) ---" >> diagnostics.txt
+            jadx --no-res -d /tmp/jadx_out "$TARGET_BIN" || true
+            echo "Zdekompilowano pliki do /tmp/jadx_out. Wyciąganie podsumowania:" >> diagnostics.txt
+            find /tmp/jadx_out -type f | head -n 30 >> diagnostics.txt
+          fi
+
+      # 7. Przygotowanie pełnego kontekstu dla Gemini
+      - name: Prepare Context
+        id: context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EVENT_NAME="${{ github.event_name }}"
+          echo "=== STRUKTURA PROJEKTU ===" > full_context.txt
+          find . -maxdepth 3 -not -path '*/.*' -not -path './node_modules*' >> full_context.txt
+          
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo -e "\n=== PULL REQUEST DIFF ===" >> full_context.txt
+            gh pr diff ${{ github.event.pull_request.number }} >> full_context.txt
+          elif [ "$EVENT_NAME" = "issue_comment" ]; then
+            COMMENT_BODY="${{ github.event.comment.body }}"
+            CLEAN_PROMPT=$(echo "$COMMENT_BODY" | sed -e 's/@gemini//g' -e 's/\/gemini//g')
+            echo "USER_PROMPT=$CLEAN_PROMPT" >> $GITHUB_ENV
+            if [ -n "${{ github.event.issue.pull_request }}" ]; then
+              echo -e "\n=== PR DIFF ===" >> full_context.txt
+              gh pr diff ${{ github.event.issue.number }} >> full_context.txt
+            fi
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "USER_PROMPT=${{ inputs.prompt }}" >> $GITHUB_ENV
+          fi
+
+      # 8. Uruchomienie Gemini CLI
+      - name: Run Gemini CLI with LSP Context
+        uses: google-github-actions/run-gemini-cli@v1
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            Jesteś senior siarra frontend-backend-centralend super kozak madafaką
+            
+            ZADANIE UŻYTKOWNIKA:
+            ${{ env.USER_PROMPT || 'Przeanalizuj zgłoszenie/PR, przejrzyj raport z diagnostyki LSP i wskaż potencjalne błędy oraz rozwiązania.' }}
+            
+            DIAGNOSTYKA LINTERÓW / LSP / JADX:
+            $(cat diagnostics.txt)
+            
+            KONTEKST PROJEKTU I STRUKTURA:
+            $(cat full_context.txt)
