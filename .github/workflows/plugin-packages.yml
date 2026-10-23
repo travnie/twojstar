@@ -83,7 +83,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Validate, test and package
         run: python plugins/_shared/plugin_ci.py build "${{ matrix.plugin }}" "$RUNNER_TEMP/plugin-artifacts"
       - name: Upload ChatGPT-importable plugin ZIP
