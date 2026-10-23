@@ -50,8 +50,12 @@ marketplace-level MCP definitions because these plugin directories intentionally
 have no `.claude-plugin/plugin.json` overrides. This allows one source manifest
 and no duplicated `.mcp.json` endpoint list in Git.
 
-ChatGPT uses portable `plugin.json` + `mcp.json` ZIPs. **A ZIP import does not
-automatically create a single registered ChatGPT MCP App**, and manually
-registering MCP Apps may show additional entries in the ChatGPT UI. Claude Code's
-marketplace mechanism does not change those account-side connections. Do not
-delete or revoke working Apps or OAuth grants as a packaging migration.
+ChatGPT can display several Apps, MCP servers and skills **inside one installed
+plugin entry**. Private/local packages bind eligible existing App IDs via
+`extensions.com.openai.apps` + `.app.json`; portable ZIPs only supply bundled
+skills and MCP declarations and cannot create or sign into those Apps. A
+separately installed App might still have its own entry, but this is not a
+fundamental one-plugin/one-App restriction. Public submissions cannot include
+`.app.json`; submit their MCP through the portal's With MCP flow. Claude Code's
+marketplace keeps the same plugin sources and handles authentication separately.
+Do not delete working App registrations or OAuth grants during migration.
