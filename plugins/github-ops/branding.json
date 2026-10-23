@@ -1,0 +1,17 @@
+{
+  "plugin": {
+    "logo": "./skills/github-ops/assets/icon.svg",
+    "composerIcon": "./skills/github-ops/assets/icon.svg"
+  },
+  "mcpServers": {
+    "github": {
+      "logo": "./skills/github-ops/assets/icon.svg"
+    }
+  },
+  "skills": {
+    "github-ops": {
+      "iconSmall": "./skills/github-ops/assets/icon.svg",
+      "iconLarge": "./skills/github-ops/assets/icon.svg"
+    }
+  }
+}

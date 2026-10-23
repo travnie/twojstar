@@ -1,0 +1,68 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "googleDeveloperKnowledge": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleCloudCli": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleCloudStorage": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleApplicationDesignCenter": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleAndroidManagement": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleCloudRun": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleApiKeys": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleCloudAssist": {
+      "logo": "./assets/icon.svg"
+    },
+    "googleIam": {
+      "logo": "./assets/icon.svg"
+    },
+    "geminiApiDocs": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "application-design-center": {
+      "iconSmall": "./skills/application-design-center/assets/icon.svg",
+      "iconLarge": "./skills/application-design-center/assets/icon.svg"
+    },
+    "cloud-run": {
+      "iconSmall": "./skills/cloud-run/assets/icon.svg",
+      "iconLarge": "./skills/cloud-run/assets/icon.svg"
+    },
+    "gcloud": {
+      "iconSmall": "./skills/gcloud/assets/icon.svg",
+      "iconLarge": "./skills/gcloud/assets/icon.svg"
+    },
+    "gemini-agents-api": {
+      "iconSmall": "./skills/gemini-agents-api/assets/icon.svg",
+      "iconLarge": "./skills/gemini-agents-api/assets/icon.svg"
+    },
+    "gemini-api": {
+      "iconSmall": "./skills/gemini-api/assets/icon.svg",
+      "iconLarge": "./skills/gemini-api/assets/icon.svg"
+    },
+    "google-cloud-storage": {
+      "iconSmall": "./skills/google-cloud-storage/assets/icon.svg",
+      "iconLarge": "./skills/google-cloud-storage/assets/icon.svg"
+    },
+    "google-dev": {
+      "iconSmall": "./skills/google-dev/assets/icon.svg",
+      "iconLarge": "./skills/google-dev/assets/icon.svg"
+    }
+  }
+}

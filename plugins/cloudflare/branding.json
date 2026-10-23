@@ -1,0 +1,17 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "cloudflareApi": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "cloudflare": {
+      "iconSmall": "./skills/cloudflare/assets/icon.svg",
+      "iconLarge": "./skills/cloudflare/assets/icon.svg"
+    }
+  }
+}

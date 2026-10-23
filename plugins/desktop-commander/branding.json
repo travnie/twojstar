@@ -1,0 +1,17 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "desktopCommander": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "desktop-commander": {
+      "iconSmall": "./skills/desktop-commander/assets/icon.svg",
+      "iconLarge": "./skills/desktop-commander/assets/icon.svg"
+    }
+  }
+}
