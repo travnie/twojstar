@@ -7,7 +7,7 @@ name = "spacemolt-smx"
 version = "0.1.0"
 description = "Ergonomic companion shell for the official SpaceMolt v2 CLI"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 authors = [{ name = "travnie" }]
 keywords = ["spacemolt", "cli", "game", "agent"]
 classifiers = [
