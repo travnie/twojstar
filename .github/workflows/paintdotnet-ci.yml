@@ -1,46 +1,105 @@
 ---
-name: Paint.NET AI CI
+name: Paint.NET CI
 
 on: # yamllint disable-line rule:truthy
   push:
     branches: [main]
     paths:
       - addons/paintdotnet/ai/**
+      - addons/paintdotnet/ico/**
       - .gitattributes
-      - .github/workflows/paintdotnet-ai-ci.yml
+      - .github/workflows/paintdotnet-ci.yml
       - .github/actions/paintdotnet-sdk/**
   pull_request:
     branches: [main]
     paths:
       - addons/paintdotnet/ai/**
+      - addons/paintdotnet/ico/**
       - .gitattributes
-      - .github/workflows/paintdotnet-ai-ci.yml
+      - .github/workflows/paintdotnet-ci.yml
       - .github/actions/paintdotnet-sdk/**
   workflow_dispatch:
+    inputs:
+      plugin:
+        description: Plugin to build
+        required: true
+        default: both
+        type: choice
+        options: [both, ai, ico]
 
 concurrency:
-  group: paintdotnet-ai-${{ github.ref }}
+  group: paintdotnet-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: {}
 
-env:
-  PLUGIN_DIR: addons/paintdotnet/ai
-  MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
-  MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
-  FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
-  FBCNN_SHA256: 1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922
-  SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
-  SCUNET_SHA256: 8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a
-
 jobs:
-  build:
-    name: Build, smoke-test and package
+  changes:
+    name: Select Paint.NET builds
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      ai: ${{ steps.select.outputs.ai }}
+      ico: ${{ steps.select.outputs.ico }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: select
+        name: Detect plugin changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          REQUESTED_PLUGIN: ${{ inputs.plugin || 'both' }}
+        run: |
+          set -euo pipefail
+          ai=false
+          ico=false
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            case "$REQUESTED_PLUGIN" in
+              both) ai=true; ico=true ;;
+              ai) ai=true ;;
+              ico) ico=true ;;
+              *) echo '::error::Unknown plugin selection.'; exit 1 ;;
+            esac
+          elif [[ ! "$BASE_SHA" =~ ^[a-f0-9]{40}$ || "$BASE_SHA" =~ ^0+$ ]]; then
+            ai=true
+            ico=true
+          else
+            git diff --name-only -z "$BASE_SHA" HEAD > "$RUNNER_TEMP/paintdotnet-changes"
+            while IFS= read -r -d '' changed; do
+              case "$changed" in
+                .gitattributes|.github/workflows/paintdotnet-ci.yml|.github/actions/paintdotnet-sdk/*)
+                  ai=true; ico=true ;;
+                addons/paintdotnet/ai/*) ai=true ;;
+                addons/paintdotnet/ico/*) ico=true ;;
+              esac
+            done < "$RUNNER_TEMP/paintdotnet-changes"
+          fi
+          echo "ai=$ai" >> "$GITHUB_OUTPUT"
+          echo "ico=$ico" >> "$GITHUB_OUTPUT"
+
+  ai:
+    name: AI - build, smoke-test and package
+    needs: changes
+    if: needs.changes.outputs.ai == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
     permissions:
       contents: read
-
+    env:
+      PLUGIN_DIR: addons/paintdotnet/ai
+      MODEL_URL: https://huggingface.co/CoderViking/realesr-general-x4v3-onnx/resolve/main/realesr-general-x4v3.onnx?download=true
+      MODEL_SHA256: 1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112
+      FBCNN_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/fbcnn/fbcnn_color_fp16.onnx
+      FBCNN_SHA256: 1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922
+      SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
+      SCUNET_SHA256: 8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -273,4 +332,124 @@ jobs:
           path: |
             addons/paintdotnet/ai/dist/paintdotnet-ai.zip
             addons/paintdotnet/ai/dist/SHA256SUMS
+          retention-days: 7
+
+  ico:
+    name: ICO - build and package
+    needs: changes
+    if: needs.changes.outputs.ico == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      PLUGIN_DIR: addons/paintdotnet/ico
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify Windows installer line endings
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:GITHUB_WORKSPACE "$env:PLUGIN_DIR/Install.bat"
+          $text = [IO.File]::ReadAllText($installer)
+          if ($text -match "(?<!`r)`n") {
+            throw 'Install.bat must be checked out with CRLF line endings.'
+          }
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Set up .NET 11 preview
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
+
+      - name: Verify adapter versions
+        shell: pwsh
+        run: |
+          $legacy = [xml](Get-Content "$env:PLUGIN_DIR/PaintDotNetIco.csproj")
+          $modern = [xml](Get-Content "$env:PLUGIN_DIR/PaintDotNetIco.Modern.csproj")
+          $legacyVersion = $legacy.Project.PropertyGroup.Version | Select-Object -First 1
+          $modernVersion = $modern.Project.PropertyGroup.Version | Select-Object -First 1
+          if (-not $legacyVersion -or $legacyVersion -ne $modernVersion) {
+            throw "Adapter versions differ: legacy=$legacyVersion modern=$modernVersion"
+          }
+
+      - name: Download and cache verified Paint.NET SDKs
+        uses: ./.github/actions/paintdotnet-sdk
+
+      - name: Locate Paint.NET reference assemblies
+        shell: pwsh
+        run: |
+          $legacyProbe = Get-ChildItem "$env:RUNNER_TEMP/pdn51" -Recurse -Filter PaintDotNet.Data.dll | Select-Object -First 1
+          $modernProbe = Get-ChildItem "$env:RUNNER_TEMP/pdn52" -Recurse -Filter PaintDotNet.FileTypes.dll | Select-Object -First 1
+          if (-not $legacyProbe -or -not $modernProbe) { throw 'Paint.NET reference assemblies not found.' }
+          "PDN_51_DIR=$($legacyProbe.Directory.FullName)" >> $env:GITHUB_ENV
+          "PDN_52_DIR=$($modernProbe.Directory.FullName)" >> $env:GITHUB_ENV
+
+      - name: Build both adapters
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          dotnet build .\PaintDotNetIco.csproj -c Release -p:PaintDotNetDir="$env:PDN_51_DIR" --nologo
+          dotnet build .\PaintDotNetIco.Modern.csproj -c Release -p:PaintDotNetDir="$env:PDN_52_DIR" --nologo
+
+      - name: Smoke test ICO codec
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: dotnet run --project .\tests\CodecSmoke\CodecSmoke.csproj -c Release --nologo
+
+      - name: Package release assets
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          $dist = Join-Path $PWD 'dist'
+          $package = Join-Path $dist 'package'
+          New-Item "$package/Paint.NET-5.1" -ItemType Directory -Force | Out-Null
+          New-Item "$package/Paint.NET-5.2+" -ItemType Directory -Force | Out-Null
+          $legacyDll = 'bin/Release/net9.0-windows/Travny.PaintDotNet.IcoFileType.dll'
+          $modernDll = 'bin/Release/net11.0-windows/Travny.PaintDotNet.IcoFileType.Modern.dll'
+          Copy-Item $legacyDll "$package/Paint.NET-5.1/"
+          Copy-Item $modernDll "$package/Paint.NET-5.2+/"
+          Copy-Item Install.bat "$package/Install.bat"
+          Copy-Item $legacyDll "$dist/Travny.PaintDotNet.IcoFileType.dll"
+          Copy-Item $modernDll "$dist/Travny.PaintDotNet.IcoFileType.Modern.dll"
+          @'
+          Paint.NET ICO FileType
+
+          Run Install.bat and select the installation type and Paint.NET version. Classic builds install to
+          C:\Program Files\paint.net\FileTypes (admin required). Microsoft Store builds
+          fall back to Documents\Paint.NET App Files\FileTypes.
+
+          Portable users: copy the matching DLL from Paint.NET-5.1 or Paint.NET-5.2+
+          to the portable Paint.NET\FileTypes folder. Restart Paint.NET after installation.
+          '@ | Set-Content "$package/INSTALL.txt"
+          Compress-Archive -Path "$package/*" -DestinationPath "$dist/paintdotnet-ico.zip" -CompressionLevel Optimal
+          $assets = @(
+            "$dist/Travny.PaintDotNet.IcoFileType.dll",
+            "$dist/Travny.PaintDotNet.IcoFileType.Modern.dll",
+            "$dist/paintdotnet-ico.zip"
+          )
+          $lines = foreach ($asset in $assets) {
+            $file = Get-Item $asset
+            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          $lines | Set-Content "$dist/SHA256SUMS"
+
+      - name: Upload release package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: paintdotnet-ico-release
+          path: |
+            addons/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.dll
+            addons/paintdotnet/ico/dist/Travny.PaintDotNet.IcoFileType.Modern.dll
+            addons/paintdotnet/ico/dist/paintdotnet-ico.zip
+            addons/paintdotnet/ico/dist/SHA256SUMS
           retention-days: 7
