@@ -187,7 +187,7 @@ The official client stores credentials in session JSON and uses mode `0600` wher
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.14+
 - official `SpaceMolt/client-v2` CLI, managed by smx or supplied through `SMX_BACKEND`
 - no Python runtime dependencies
 
