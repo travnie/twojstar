@@ -7,8 +7,7 @@ on: # yamllint disable-line rule:truthy
       - Benches portable release
       - Feedboard CI
       - Xiaomi ADB Tools CI
-      - Paint.NET ICO CI
-      - Paint.NET AI CI
+      - Paint.NET CI
       - Audacity VST3 CI
     types: [completed]
     branches: [main]
@@ -82,6 +81,27 @@ jobs:
               return 2
             fi
             grep -Fxq "$artifact" <<< "$names"
+          }
+
+          latest_run_with_artifact() {
+            local workflow="$1" artifact="$2" candidates run_id attempt sha status
+            if ! candidates="$(gh api --method GET "repos/$GH_REPO/actions/workflows/$workflow/runs" \
+              -f branch=main -f status=success -F per_page=30 \
+              --jq '.workflow_runs[] | "\(.id)\t\(.run_attempt)\t\(.head_sha)"')"; then
+              echo "Failed to enumerate successful runs for $workflow." >&2
+              return 2
+            fi
+            while IFS=$'\t' read -r run_id attempt sha; do
+              [ -n "$run_id" ] || continue
+              if artifact_available "$run_id" "$artifact"; then
+                printf '%s\t%s\t%s\n' "$run_id" "$attempt" "$sha"
+                return 0
+              else
+                status=$?
+                [ "$status" -ne 2 ] || return 2
+              fi
+            done <<< "$candidates"
+            return 1
           }
 
           run_still_matches() {
@@ -169,10 +189,14 @@ jobs:
           resolve_product() {
             local product="$1" workflow="$2" artifact="$3" package="$4" downloader="$5"
             local info run_id attempt sha status published_run published_attempt
+            local lookup=latest_run
+            if [ "$workflow" = paintdotnet-ci.yml ]; then
+              lookup=latest_run_with_artifact
+            fi
             published_run="$(current_run "$product")"
             published_attempt="$(current_attempt "$product")"
 
-            if info="$(latest_run "$workflow")"; then
+            if info="$("$lookup" "$workflow" "$artifact")"; then
               IFS=$'\t' read -r run_id attempt sha <<< "$info"
               artifact="${artifact//@attempt@/$attempt}"
             else
@@ -322,8 +346,8 @@ jobs:
           resolve_product Benches benches-release.yml benches-portable-release benches-portable.zip bundle_benches
           resolve_product Feedboard feedboard-ci.yml feedboard-msix-x64 feedboard.zip bundle_feedboard
           resolve_product Xiaomi-ADB-Tools xiaomi-adb-tools-ci.yml XiaomiADBFastbootTools xiaomi-adb-tools.zip bundle_xiaomi
-          resolve_product Paint.NET-ICO paintdotnet-ico-ci.yml paintdotnet-ico-release paintdotnet-ico.zip bundle_paintdotnet
-          resolve_product Paint.NET-AI paintdotnet-ai-ci.yml paintdotnet-ai-release paintdotnet-ai.zip bundle_paintdotnet_ai
+          resolve_product Paint.NET-ICO paintdotnet-ci.yml paintdotnet-ico-release paintdotnet-ico.zip bundle_paintdotnet
+          resolve_product Paint.NET-AI paintdotnet-ci.yml paintdotnet-ai-release paintdotnet-ai.zip bundle_paintdotnet_ai
           resolve_product Audacity-Auto-Declip-Windows audacity-vst3-ci.yml audacity-auto-declip-Windows-@attempt@ audacity-auto-declip-windows.zip bundle_audacity_windows
           resolve_product Audacity-Auto-Declip-Linux audacity-vst3-ci.yml audacity-auto-declip-Linux-@attempt@ audacity-auto-declip-linux.zip bundle_audacity_linux
 

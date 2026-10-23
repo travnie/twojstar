@@ -26,4 +26,4 @@ SVG support belongs to this Paint.NET hub as a FileType/utility component. Paint
 
 True one-click 2x/4x document enlargement waits for a stable host API that can resize/create a destination document. Until then, use native resize followed by AI refinement rather than violating the effect contract.
 
-Each plugin keeps its own build/release workflow when its toolchain differs, while shared repository concerns such as Dependabot cover the whole `addons/paintdotnet/` tree.
+Both plugins share one CI workflow, with separate Windows build jobs and release artifacts. The rolling release keeps their downloadable packages independent.
