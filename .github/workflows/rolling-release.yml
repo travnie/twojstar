@@ -22,7 +22,7 @@ concurrency:
 jobs:
   release:
     name: Publish compact snapshot
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.conclusion == 'success' || (github.event.workflow_run.name == 'Paint.NET CI' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled'))))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -86,8 +86,8 @@ jobs:
           latest_run_with_artifact() {
             local workflow="$1" artifact="$2" candidates run_id attempt sha status
             if ! candidates="$(gh api --method GET "repos/$GH_REPO/actions/workflows/$workflow/runs" \
-              -f branch=main -f status=success -F per_page=30 \
-              --jq '.workflow_runs[] | "\(.id)\t\(.run_attempt)\t\(.head_sha)"')"; then
+              -f branch=main -f status=completed -F per_page=30 \
+              --jq '.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "cancelled") | "\(.id)\t\(.run_attempt)\t\(.head_sha)"')"; then
               echo "Failed to enumerate successful runs for $workflow." >&2
               return 2
             fi
@@ -106,6 +106,7 @@ jobs:
 
           run_still_matches() {
             local run_id="$1" expected_attempt="$2" expected_sha="$3"
+            local workflow="$4"
             local state actual_attempt status conclusion actual_sha
             if ! state="$(gh api "repos/$GH_REPO/actions/runs/$run_id" \
               --jq '"\(.run_attempt)\t\(.status)\t\(.conclusion)\t\(.head_sha)"')"; then
@@ -115,7 +116,9 @@ jobs:
             IFS=$'\t' read -r actual_attempt status conclusion actual_sha <<< "$state"
             [ "$actual_attempt" = "$expected_attempt" ] && \
               [ "$status" = completed ] && \
-              [ "$conclusion" = success ] && \
+              { [ "$conclusion" = success ] || \
+                { [ "$workflow" = paintdotnet-ci.yml ] && \
+                  [[ "$conclusion" = failure || "$conclusion" = cancelled ]]; }; } && \
               [ "$actual_sha" = "$expected_sha" ]
           }
 
@@ -222,7 +225,7 @@ jobs:
 
             if artifact_available "$run_id" "$artifact"; then
               "$downloader" "$run_id" "$artifact"
-              if ! run_still_matches "$run_id" "$attempt" "$sha"; then
+              if ! run_still_matches "$run_id" "$attempt" "$sha" "$workflow"; then
                 echo "$product source run changed while its artifact was being assembled; aborting this snapshot." >&2
                 exit 1
               fi
@@ -410,7 +413,7 @@ jobs:
             echo
             echo "### Source provenance"
             while IFS=$'\t' read -r product workflow run_id attempt sha; do
-              printf -- '- **%s** - %s run #%s attempt %s, commit `%s`\n' \
+              printf -- "- **%s** - %s run #%s attempt %s, commit \`%s\`\n" \
                 "$product" "$workflow" "$run_id" "$attempt" "$sha"
             done < work/ROLLING-PROVENANCE.tsv
             echo
