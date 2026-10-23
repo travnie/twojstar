@@ -154,9 +154,12 @@ jobs:
           set -euo pipefail
           # PR-supplied .gemini/ (settings, commands) out; action rewrites its own.
           rm -rf .gemini .gemini-ctx
+          # PR-supplied .env out: CLI loads it in a trusted workspace.
+          find . -name .env -not -path './.git/*' -delete
           C=.gemini-ctx
           mkdir -p "$C"
-          printf '%s\n' "$REQUEST" > "$C/request.md"
+          # Issue title can carry the @gemini request itself.
+          { [ -z "${TITLE:-}" ] || printf '# %s\n\n' "$TITLE"; printf '%s\n' "$REQUEST"; } > "$C/request.md"
           jq -n --arg repo "$GITHUB_REPOSITORY" --arg mode "$MODE" \
             --arg number "$NUMBER" --arg is_pr "$IS_PR" \
             --arg event "$GITHUB_EVENT_NAME" --arg actor "$GITHUB_ACTOR" \
@@ -367,7 +370,7 @@ jobs:
       # Model posts the review itself. This comments only for: failure, no
       # review submitted (fallback to model's text), repair result.
       - name: Post status
-        if: always() && steps.lint.outcome == 'success'
+        if: always() && env.NUMBER != ''  # earlier failure → failure note
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -426,6 +429,7 @@ jobs:
       REQUEST: ${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}
       REVIEW_PATH: ${{ github.event.comment.path }}
       REVIEW_HUNK: ${{ github.event.comment.diff_hunk }}
+      TITLE: ${{ github.event_name == 'issues' && github.event.issue.title || '' }}
     steps:
       - *checkout
       - *ctx
@@ -464,7 +468,7 @@ jobs:
 
       - &post
         name: Post reply
-        if: always() && env.NUMBER != '' && steps.gemini.outcome != 'skipped'
+        if: always() && env.NUMBER != ''  # skipped gemini → failure note
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -504,6 +508,7 @@ jobs:
       NUMBER: ${{ github.event.issue.number }}
       IS_PR: 'false'
       REQUEST: ${{ github.event.issue.body }}
+      TITLE: ${{ github.event.issue.title }}
     steps:
       - *checkout
       - *ctx
