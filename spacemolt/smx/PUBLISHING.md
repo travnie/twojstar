@@ -20,3 +20,9 @@ smx backend update
 ```
 
 The official SpaceMolt v2 binary stays the backend; SMX manages verified updates separately. Installs from the Git checkout remain supported.
+
+## Authenticated operator dispatch
+
+The publishing workflow also accepts the `publish_smx_pypi` GitHub `repository_dispatch` event on `main`. GPTomek can send it from the existing authenticated operator mailbox; no PyPI API token or second publishing implementation is required. The payload must explicitly contain `{"publish":true,"version":"0.1.0"}`. The build rejects a version that differs from the canonical `spacemolt/smx/pyproject.toml`. Other dispatches and pull requests build/test only; they never publish.
+
+The GitHub Actions environment `pypi` remains the release gate. Prefer restricting its deployment branches and requiring approval when supported. A PyPI version is immutable, so increment the canonical version before a subsequent release.
