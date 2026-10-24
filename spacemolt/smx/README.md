@@ -194,3 +194,7 @@ The official client stores credentials in session JSON and uses mode `0600` wher
 ## Inspiration
 
 The UX borrows ideas from [`vcarl/sm-cli`](https://github.com/vcarl/sm-cli), [`CoinAnole/spacemolt-cli`](https://github.com/CoinAnole/spacemolt-cli) and [`rsned/spacemolt`](https://github.com/rsned/spacemolt), while keeping the official v2 client as the source of truth.
+
+## Published package
+
+A public PyPI release is prepared through [the SMX packaging workflow](PUBLISHING.md). After the first successful publish, `uv tool install spacemolt-smx` installs the `smx` command. Until then, use the existing `install.sh` / `install.ps1` scripts above.

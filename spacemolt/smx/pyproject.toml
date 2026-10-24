@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,11 +9,18 @@ description = "Ergonomic companion shell for the official SpaceMolt v2 CLI"
 readme = "README.md"
 requires-python = ">=3.14"
 authors = [{ name = "travnie" }]
+license = "ISC"
+license-files = ["LICENSE"]
 keywords = ["spacemolt", "cli", "game", "agent"]
+
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: ISC License (ISCL)",
 ]
+
+[project.urls]
+Homepage = "https://github.com/travnie/twojstar/tree/main/spacemolt/smx"
+Source = "https://github.com/travnie/twojstar"
+Issues = "https://github.com/travnie/twojstar/issues"
 
 [project.scripts]
 smx = "smx.cli:main"
