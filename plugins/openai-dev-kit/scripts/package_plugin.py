@@ -138,17 +138,22 @@ def validate(root: Path) -> tuple[dict, dict]:
         policy = metadata.get("policy") if isinstance(metadata, dict) else None
         if not isinstance(policy, dict) or policy.get("products") != ["CHAT", "CODEX"]:
             raise ValueError(f"bundled skill must target CHAT and CODEX: {child.name}")
-    if names != {"chatgpt-plugin-builder"}:
-        raise ValueError("expected one routed OpenAI Dev Kit skill")
+    if names != {"chatgpt-plugin-builder", "openai-docs"}:
+        raise ValueError("expected independent builder and docs skills")
     skill = root / "skills/chatgpt-plugin-builder"
     router = (skill / "SKILL.md").read_text(encoding="utf-8")
-    for reference in ("plugin-building.md", "openai-workflows.md"):
-        if not (skill / "references" / reference).is_file():
-            raise ValueError(f"missing routed reference: {reference}")
-        if f"references/{reference}" not in router:
-            raise ValueError(f"missing routed skill link: {reference}")
+    if not (skill / "references/plugin-building.md").is_file():
+        raise ValueError("missing plugin building workflow")
+    if "references/plugin-building.md" not in router:
+        raise ValueError("missing plugin building router link")
+    docs = root / "skills/openai-docs"
+    docs_router = (docs / "SKILL.md").read_text(encoding="utf-8")
+    if not (docs / "references/openai-workflows.md").is_file():
+        raise ValueError("missing OpenAI docs workflow")
+    if "references/openai-workflows.md" not in docs_router:
+        raise ValueError("missing OpenAI docs router link")
     for reference in ("build-apps.md", "interaction-patterns.md", "model-guidance.md", "submission.md"):
-        if not (skill / "references/openai-dev" / reference).is_file():
+        if not (docs / "references/openai-dev" / reference).is_file():
             raise ValueError(f"missing developer guide: {reference}")
     if not (skill / "scripts/scaffold_node_ext_apps.mjs").is_file():
         raise ValueError("missing Node MCP Apps scaffold")
