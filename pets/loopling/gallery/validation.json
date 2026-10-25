@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "atlasSize": [
+    1536,
+    2288
+  ],
+  "grid": [
+    8,
+    11
+  ],
+  "cellSize": [
+    192,
+    208
+  ],
+  "stateFrames": 57,
+  "lookFrames": 16,
+  "transparentPixelsWithRgb": 0
+}
