@@ -5,7 +5,7 @@ Two focused OpenAI Dev Kit skills plus the official read-only OpenAI documentati
 - **Plugin building:** `skills/chatgpt-plugin-builder/SKILL.md`, with targeted build references and validation/scaffolding scripts.
 - **OpenAI documentation:** `skills/openai-docs/SKILL.md`, with `references/openai-workflows.md` and topic guides for API/Codex, models, MCP Apps and submission.
 - **MCP:** `https://developers.openai.com/mcp`, streamable HTTP, anonymous read-only documentation access.
-- **Branding:** supplied Plugin Builder PNG artwork, reused for the package and the consolidated skill.
+- **Branding:** supplied Plugin Builder PNG artwork, reused for the package and both skill icons.
 
 Personal toolkit maintained by travnie. Not an official OpenAI plugin. The MCP
 reads documentation; it does not run API requests, deploy servers, or submit apps.
@@ -16,7 +16,7 @@ From the repository root:
 
 ```sh
 python -m pip install -r plugins/openai-dev-kit/requirements.txt
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.0.0.zip
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.1.0.zip
 ```
 
 The source contains portable Agent Plugins 1.0 manifests. Packaging generates
@@ -30,7 +30,7 @@ connectable app. Register the official endpoint through developer mode, then
 copy its verified connection page or underlying App ID:
 
 ```sh
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.0.0-private.zip \
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.1.0-private.zip \
   --docs-app-id VERIFIED_ID_FROM_CHATGPT
 ```
 
@@ -54,7 +54,7 @@ python plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plu
 python -m unittest discover -s plugins/openai-dev-kit/tests -v
 ```
 
-Both upstream workflows retain their substance and Apache-2.0 licensing, with the developer sources and unique scaffold nested under the single skill. The second standalone skill is intentionally absent.
+Both upstream workflows retain their substance and Apache-2.0 licensing. Developer references live in `openai-docs`; build references and the unique scaffold live in `chatgpt-plugin-builder`.
 Packaging code: ISC, adapted from this repository's SpaceMolt packager.
 Original supplied archives remain the provenance source. Local validation does
 not prove account installation or live MCP discovery; verify those in ChatGPT.
