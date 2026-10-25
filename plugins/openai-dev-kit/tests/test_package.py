@@ -24,10 +24,10 @@ class PackageTests(unittest.TestCase):
                 PACK["stage"](ROOT, target, apps)
                 skill = target / "skills/chatgpt-plugin-builder"
                 self.assertTrue((skill / "SKILL.md").is_file())
-                self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 16)
+                self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 10)
                 self.assertEqual(len([p for p in (skill / "scripts").iterdir() if p.is_file()]), 3)
                 root = json.loads((target / "plugin.json").read_text())
-                self.assertEqual(root["version"], "1.0.0")
+                self.assertEqual(root["version"], "1.1.0")
                 overlay = json.loads((target / ".codex-plugin/plugin.json").read_text())
                 if app_id:
                     self.assertEqual(root["extensions"]["com.openai"]["apps"], "./.app.json")
@@ -81,33 +81,33 @@ class PackageTests(unittest.TestCase):
             metadata.write_text(original.replace("  products: [CHAT, CODEX]", "  products:\n    - CHAT\n    - CODEX"))
             PACK["validate"](target)
 
-    def test_single_routed_skill_and_preserved_developer_workflows(self):
+    def test_separate_docs_and_builder_skills_share_one_mcp(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             PACK["stage"](ROOT, target)
             skills = sorted(path.parent.name for path in (target / "skills").glob("*/SKILL.md"))
-            self.assertEqual(skills, ["chatgpt-plugin-builder"])
-            skill = target / "skills/chatgpt-plugin-builder"
-            router = (skill / "SKILL.md").read_text()
-            self.assertIn("references/plugin-building.md", router)
-            self.assertIn("references/openai-workflows.md", router)
-            builder = (skill / "references/plugin-building.md").read_text()
-            developer = (skill / "references/openai-workflows.md").read_text()
-            self.assertIn("## Migration from ChatGPT Apps SDK", builder)
-            self.assertIn("## Route by task", developer)
-            self.assertIn("references/openai-dev/model-guidance.md", developer)
-            self.assertTrue((skill / "scripts/scaffold_node_ext_apps.mjs").is_file())
-            self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 16)
-            self.assertEqual(len([p for p in (skill / "scripts").iterdir() if p.is_file()]), 3)
-
+            self.assertEqual(skills, ["chatgpt-plugin-builder", "openai-docs"])
+            builder = target / "skills/chatgpt-plugin-builder"
+            docs = target / "skills/openai-docs"
+            self.assertIn("references/plugin-building.md", (builder / "SKILL.md").read_text())
+            self.assertIn("references/openai-workflows.md", (docs / "SKILL.md").read_text())
+            self.assertIn("## Migration from ChatGPT Apps SDK", (builder / "references/plugin-building.md").read_text())
+            workflow = (docs / "references/openai-workflows.md").read_text()
+            self.assertIn("## Route by task", workflow)
+            self.assertIn("references/openai-dev/model-guidance.md", workflow)
+            self.assertTrue((builder / "scripts/scaffold_node_ext_apps.mjs").is_file())
+            self.assertEqual(len([p for p in (builder / "references").rglob("*") if p.is_file()]), 10)
+            self.assertEqual(len([p for p in (docs / "references").rglob("*") if p.is_file()]), 6)
+            self.assertEqual(len([p for p in (builder / "scripts").iterdir() if p.is_file()]), 3)
             self.assertFalse((target / "skills/openai-dev").exists())
+            self.assertEqual(len(json.loads((target / "mcp.json").read_text())["mcpServers"]), 1)
 
     def test_standalone_docs_and_optional_integrations(self):
         skill = ROOT / "skills/chatgpt-plugin-builder"
         root = (skill / "SKILL.md").read_text()
         building = (skill / "references/plugin-building.md").read_text()
         legacy = (skill / "references/legacy-apps-sdk-migration.md").read_text()
-        self.assertIn("Other installed plugins are optional", root)
+        self.assertIn("General API, Codex", root)
         self.assertIn("kit's own scaffolding", building)
         self.assertNotIn("prefer the current built-in", building)
         self.assertIn("Root `plugin.json`", legacy)
