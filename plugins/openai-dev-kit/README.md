@@ -1,9 +1,9 @@
 # OpenAI Dev Kit
 
-One self-contained routed OpenAI Dev Kit skill plus the official read-only OpenAI documentation MCP. No other installed plugin is required.
+Two focused OpenAI Dev Kit skills plus the official read-only OpenAI documentation MCP. No other installed plugin is required.
 
-- **Plugin building:** `skills/chatgpt-plugin-builder/references/plugin-building.md`, plus existing focused references and validation/scaffolding scripts.
-- **OpenAI development:** `skills/chatgpt-plugin-builder/references/openai-workflows.md`, with topic-specific references for API/Codex, model migration, MCP Apps and submission.
+- **Plugin building:** `skills/chatgpt-plugin-builder/SKILL.md`, with targeted build references and validation/scaffolding scripts.
+- **OpenAI documentation:** `skills/openai-docs/SKILL.md`, with `references/openai-workflows.md` and topic guides for API/Codex, models, MCP Apps and submission.
 - **MCP:** `https://developers.openai.com/mcp`, streamable HTTP, anonymous read-only documentation access.
 - **Branding:** supplied Plugin Builder PNG artwork, reused for the package and the consolidated skill.
 
@@ -39,7 +39,7 @@ This stages `.app.json` and matching OpenAI/compatibility declarations. A page I
 bindings out of repository source. Install the resulting private archive only
 after the user confirms that account changes may proceed.
 
-Use **OpenAI Dev Kit** for the combined workflows, selected on demand from a single skill. A separately
+Use **OpenAI Dev Kit** for both independently activated skills inside one plugin. A separately
 registered dependency may remain visible as **OpenAI Docs MCP**. Removing an old
 connection does not guarantee one directory entry. Avoid naming both the
 combined package and its connection identically.

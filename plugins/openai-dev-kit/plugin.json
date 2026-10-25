@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "openai-dev-kit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
   "author": {
     "name": "travnie",
@@ -23,7 +23,7 @@
       "interface": {
         "displayName": "OpenAI Dev Kit",
         "shortDescription": "Build with live OpenAI docs",
-        "longDescription": "Build and review ChatGPT/Codex plugins, API and Codex workflows through a single routed OpenAI Dev Kit skill. Consult the official read-only OpenAI documentation MCP for current API, Codex, plugin, and submission contracts. Personal toolkit maintained by travnie; not an official OpenAI plugin.",
+        "longDescription": "Build and review ChatGPT/Codex plugins, API and Codex workflows through two focused OpenAI Dev Kit skills. Consult the official read-only OpenAI documentation MCP for current API, Codex, plugin, and submission contracts. Personal toolkit maintained by travnie; not an official OpenAI plugin.",
         "developerName": "travnie",
         "category": "Developer Tools",
         "capabilities": [

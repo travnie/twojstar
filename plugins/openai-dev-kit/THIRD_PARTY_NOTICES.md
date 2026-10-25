@@ -1,7 +1,7 @@
 # Third-party notices
 
 - `skills/chatgpt-plugin-builder/`: user-supplied `chatgpt_builder.zip`, Apache-2.0.
-- `skills/chatgpt-plugin-builder/references/openai-workflows.md` and `references/openai-dev/`: migrated user-supplied `openai_dev.zip`, Apache-2.0.
+- `skills/openai-docs/references/openai-workflows.md` and `skills/openai-docs/references/openai-dev/`: migrated user-supplied `openai_dev.zip`, Apache-2.0.
 - Builder and developer license files and original notices retained. Their historical icon-source
   statements are not independently verified here.
 - Package and skill PNG branding copied from the supplied Plugin Builder assets.
