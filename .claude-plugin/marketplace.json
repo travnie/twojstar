@@ -36,7 +36,7 @@
       "name": "openai-dev-kit",
       "source": "./plugins/openai-dev-kit",
       "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "displayName": "OpenAI Dev Kit",
       "category": "Developer Tools",
       "mcpServers": {
