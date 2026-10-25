@@ -91,10 +91,12 @@ class PackageTests(unittest.TestCase):
             docs = target / "skills/openai-docs"
             self.assertIn("references/plugin-building.md", (builder / "SKILL.md").read_text())
             self.assertIn("references/openai-workflows.md", (docs / "SKILL.md").read_text())
-            self.assertIn("## Migration from ChatGPT Apps SDK", (builder / "references/plugin-building.md").read_text())
+            build_guide = (builder / "references/plugin-building.md").read_text()
+            for expected in ("## Migration from ChatGPT Apps SDK", "## Docs-first routing", "use MCP Apps UI as the portable baseline"):
+                self.assertIn(expected, build_guide)
             workflow = (docs / "references/openai-workflows.md").read_text()
-            self.assertIn("## Route by task", workflow)
-            self.assertIn("references/openai-dev/model-guidance.md", workflow)
+            for expected in ("## Route by task", "Use available OpenAI Developer Docs MCP search and fetch tools", "references/openai-dev/model-guidance.md", "skills/chatgpt-plugin-builder/scripts/scaffold_node_ext_apps.mjs"):
+                self.assertIn(expected, workflow)
             self.assertTrue((builder / "scripts/scaffold_node_ext_apps.mjs").is_file())
             self.assertEqual(len([p for p in (builder / "references").rglob("*") if p.is_file()]), 10)
             self.assertEqual(len([p for p in (docs / "references").rglob("*") if p.is_file()]), 6)
