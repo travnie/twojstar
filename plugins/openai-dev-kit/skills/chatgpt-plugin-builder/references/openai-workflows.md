@@ -5,7 +5,7 @@ Choose only the branch the request needs. The MCP endpoint below is **OpenAI doc
 ## Source route
 
 1. Use available OpenAI Developer Docs MCP search and fetch tools; check the OpenAPI spec tool for exact API shapes. For broad Codex behavior, use the current Codex manual when available. Search/fetch only the relevant pages, not the entire documentation.
-2. If those tools are absent or insufficient, retrieve the relevant page from `developers.openai.com` or `platform.openai.com`. Prefer the page's `.md` version when available. Verify volatile model IDs, SDK APIs, limits, schemas, and submission rules for this task. Cite the official source when answering with current facts.
+2. If those tools are absent or insufficient, retrieve the relevant page from `developers.openai.com`, `https://learn.chatgpt.com`, `https://help.openai.com` or `platform.openai.com`. Prefer the page's `.md` version when available. Verify volatile model IDs, SDK APIs, limits, schemas, and submission rules for this task. Cite the official source when answering with current facts.
 3. If no source is accessible, state the verification limit; do not invent current product behavior. Never require installation, restart, or authentication merely to answer from an accessible official source.
 
 Official entry points: [Docs MCP](https://developers.openai.com/learn/docs-mcp), [API docs](https://developers.openai.com/api/docs), [Codex docs](https://developers.openai.com/codex), [Plugins](https://developers.openai.com/plugins), [MCP endpoint](https://developers.openai.com/mcp).
