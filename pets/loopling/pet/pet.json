@@ -1,0 +1,17 @@
+{
+  "id": "loopling",
+  "displayName": "Loopling",
+  "description": "A tiny living loop-knot companion made for ChatGPT and Codex.",
+  "spritesheetPath": "spritesheet.webp",
+  "spriteVersionNumber": 2,
+  "version": "1.0.0",
+  "author": "trvny",
+  "license": "MIT",
+  "tags": [
+    "chatgpt",
+    "codex",
+    "loop",
+    "original",
+    "animated"
+  ]
+}
