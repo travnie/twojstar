@@ -1,10 +1,10 @@
 interface:
   display_name: OpenAI Dev Kit
-  short_description: OpenAI docs and plugin workflows
+  short_description: Build and validate plugins
   icon_small: assets/icon.png
   icon_large: assets/icon-large.png
   brand_color: '#10A37F'
-  default_prompt: Use $chatgpt-plugin-builder to route this OpenAI API, Codex, or plugin task to the relevant reference, verify current official docs, and validate changes.
+  default_prompt: Use $chatgpt-plugin-builder to build or review this ChatGPT/Codex plugin with focused references, verify current official docs, and validate changes.
 policy:
   products: [CHAT, CODEX]
   allow_implicit_invocation: true

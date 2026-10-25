@@ -1,0 +1,14 @@
+interface:
+  display_name: OpenAI Docs
+  short_description: Official OpenAI docs lookup
+  default_prompt: Use $openai-docs to find the current official docs and verify this API, SDK, model, or Codex question.
+policy:
+  products: [CHAT, CODEX]
+  allow_implicit_invocation: true
+dependencies:
+  tools:
+  - type: mcp
+    value: openaiDeveloperDocs
+    description: Official read-only OpenAI developer documentation
+    transport: streamable_http
+    url: https://developers.openai.com/mcp

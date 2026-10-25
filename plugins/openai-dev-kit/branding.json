@@ -12,6 +12,10 @@
     "chatgpt-plugin-builder": {
       "iconSmall": "./skills/chatgpt-plugin-builder/assets/icon.png",
       "iconLarge": "./skills/chatgpt-plugin-builder/assets/icon-large.png"
+    },
+    "openai-docs": {
+      "iconSmall": "./assets/icon.png",
+      "iconLarge": "./assets/icon.png"
     }
   }
 }
