@@ -52,6 +52,16 @@ if (!llms.includes("https://codebench.trfny.com/index.md")) throw new Error("llm
 if (!llms.includes("https://codebench.trfny.com/llms-full.txt")) throw new Error("llms.txt full guide URL is missing");
 if (!indexMarkdown.startsWith("# Code Bench")) throw new Error("index.md is missing its H1");
 if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("llms-full.txt is missing its H1");
+const indexHead = index.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1]?.replace(/<!--[\s\S]*?-->/g, "");
+const metaTags = indexHead?.match(/<meta\b[^>]*>/gi) ?? [];
+const hasBingVerification = metaTags.some((tag) => {
+  const attributes = Object.fromEntries(
+    [...tag.matchAll(/\b(name|content)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
+      .map(([, name, quoted, singleQuoted, bare]) => [name.toLowerCase(), quoted ?? singleQuoted ?? bare]),
+  );
+  return attributes.name?.toLowerCase() === "msvalidate.01" && attributes.content === "23A368B2C5F4DF3471A67EA6CB057149";
+});
+if (!hasBingVerification) throw new Error("Bing site verification must be an active <meta> in <head>");
 if (!index.includes('<script src="webmcp-lifecycle.js"></script>')) throw new Error("WebMCP lifecycle script is missing");
 if (!index.includes('<script src="webmcp.js"></script>')) throw new Error("WebMCP page script is missing");
 if (!webmcpLifecycle.includes("createRegistrationLifecycle")) throw new Error("Shared WebMCP lifecycle helper is missing");
