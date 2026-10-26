@@ -27,6 +27,17 @@ PLUGINS = {
     "openai-dev-kit": ("plugins/openai-dev-kit", "openai"),
     "spacemolt": ("plugins/spacemolt", "spacemolt"),
 }
+
+# Hardcoded allowlist of packaging scripts by plugin.
+PACKAGE_SCRIPTS = {
+    "claude-dev-kit": "plugins/_shared/package_plugin.py",
+    "cloudflare": "plugins/_shared/package_plugin.py",
+    "desktop-commander": "plugins/_shared/package_plugin.py",
+    "github-ops": "plugins/_shared/package_plugin.py",
+    "google-dev-kit": "plugins/google-dev-kit/scripts/package_plugin.py",
+    "openai-dev-kit": "plugins/openai-dev-kit/scripts/package_plugin.py",
+    "spacemolt": "spacemolt/scripts/package_plugin.py",
+}
 SHARED_PACKAGES = {"claude-dev-kit", "cloudflare", "desktop-commander", "github-ops"}
 COMMON_CHANGES = {
     ".github/workflows/plugin-packages.yml",
@@ -150,12 +161,11 @@ def build(plugin: str, upload_root: Path) -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / (plugin + ".zip")
+        script = PACKAGE_SCRIPTS[plugin]
         if kind == "shared":
-            run(sys.executable, "plugins/_shared/package_plugin.py", source, str(zip_path))
-        elif kind == "spacemolt":
-            run(sys.executable, "spacemolt/scripts/package_plugin.py", str(zip_path))
+            run(sys.executable, script, source, str(zip_path))
         else:
-            run(sys.executable, f"plugins/{plugin}/scripts/package_plugin.py", str(zip_path))
+            run(sys.executable, script, str(zip_path))
         upload_dir = upload_root / plugin
         upload_dir.mkdir(parents=True, exist_ok=True)
         unpack_importable(plugin, zip_path, upload_dir)
