@@ -52,6 +52,8 @@ if (!llms.includes("https://codebench.trfny.com/index.md")) throw new Error("llm
 if (!llms.includes("https://codebench.trfny.com/llms-full.txt")) throw new Error("llms.txt full guide URL is missing");
 if (!indexMarkdown.startsWith("# Code Bench")) throw new Error("index.md is missing its H1");
 if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("llms-full.txt is missing its H1");
+const indexHead = index.match(/<head>([\s\S]*?)<\/head>/)?.[1];
+if (!indexHead?.includes('<meta name="msvalidate.01" content="23A368B2C5F4DF3471A67EA6CB057149" />')) throw new Error("Bing site verification must be in <head>");
 if (!index.includes('<script src="webmcp-lifecycle.js"></script>')) throw new Error("WebMCP lifecycle script is missing");
 if (!index.includes('<script src="webmcp.js"></script>')) throw new Error("WebMCP page script is missing");
 if (!webmcpLifecycle.includes("createRegistrationLifecycle")) throw new Error("Shared WebMCP lifecycle helper is missing");
