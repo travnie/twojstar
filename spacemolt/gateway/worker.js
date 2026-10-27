@@ -354,6 +354,11 @@ const DAILY_DEFAULT_LOOP_BUDGET_SECONDS = 9 * 60;
 const DAILY_MOVE_CUTOFF_FRACTION = 2 / 3;
 const DAILY_HISTORY_ENTRIES = 16;
 const DAILY_HISTORY_PROMPT_MAX = 24000;
+// Free plan: 50 external fetches per invocation. Worst cases: cold login 4 (405 retry, session,
+// login_token), initial obs 7, mid-run relogin 5, ensureDocked 13 (3 candidates), clear 1.
+const DAILY_SUBREQUEST_LIMIT = 50;
+const DAILY_SUBREQUESTS_START = 4 + 7;
+const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
 const WORKERS_AI_DEFAULT_MODEL = "@cf/zai-org/glm-4.7-flash";
@@ -540,6 +545,8 @@ async function runPlannerModel(env, run, messages, rotateBy) {
   }
 
   if (env.KANAREK_PLANNER) {
+    // Service binding call counts toward the subrequest limit.
+    run.subrequests = (run.subrequests || 0) + 1;
     try {
       const routed = await env.KANAREK_PLANNER.plan({
         max_tokens:700,
@@ -691,6 +698,12 @@ async function executeDailyDecision(env, run, decision, provider) {
   run.blockedCount = 0;
   run.plannerInvalidCount = 0;
 
+  const cost = action === "captains_log_add" ? 2 : 1;
+  if (run.subrequests + cost > DAILY_SUBREQUEST_LIMIT - DAILY_SUBREQUESTS_RESERVE) {
+    run.history.push({kind:"subrequest_budget_exhausted", used:run.subrequests, skipped:action});
+    return "stop";
+  }
+  run.subrequests += cost;
   if (outOfTime(run, action)) {
     run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart, skipped:action});
     return "stop";
@@ -751,8 +764,9 @@ async function runDailyGremlin(env) {
     workersAiBudgetDay:"",
     workersAiNeuronsUsed:null,
     maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),
-    // Cap leaves ~4 min of the 15-min cron wall for docking and the summary write.
-    loopBudgetMs:positiveInt(env.DAILY_LOOP_BUDGET_SECONDS, DAILY_DEFAULT_LOOP_BUDGET_SECONDS, 11 * 60) * 1000
+    // Cap leaves >= 6 min of the 15-min cron wall for the return trip, docking and summary.
+    loopBudgetMs:positiveInt(env.DAILY_LOOP_BUDGET_SECONDS, DAILY_DEFAULT_LOOP_BUDGET_SECONDS, 9 * 60) * 1000,
+    subrequests:DAILY_SUBREQUESTS_START
   };
   const mechanics = await gatherDailyObservations(env, run);
 
