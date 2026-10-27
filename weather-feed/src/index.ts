@@ -15,8 +15,6 @@ import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
 const SITE_ORIGIN = "https://weather.trfny.com";
-const SITE_HOST = new URL(SITE_ORIGIN).hostname;
-const WORKERS_HOST = "weather.travny.workers.dev";
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
@@ -335,8 +333,7 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const { pathname, origin } = url;
-    if (pathname === "/index.html" || (url.hostname === WORKERS_HOST && pathname === "/")) {
-      if (url.hostname === WORKERS_HOST) url.hostname = SITE_HOST;
+    if (pathname === "/index.html") {
       url.protocol = "https:";
       url.pathname = "/";
       return Response.redirect(url.toString(), 301);
