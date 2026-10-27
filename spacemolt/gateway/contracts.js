@@ -234,13 +234,19 @@ export function buyEstimateRejection(estimate, env) {
   return null;
 }
 
-// Planner reply -> one decision. Strips <think> and the outer code fence only (fences inside
+// Planner reply -> one decision. Strips <think> and an outer code fence (fences inside
 // string values stay); a JSON array (model batching actions) yields its first object.
 export function parsePlannerDecision(text) {
   let cleaned = String(text || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*)```/i);
-  if (fenced) cleaned = fenced[1].trim();
   let value = tryJson(cleaned);
+  if (value === undefined) {
+    // Outer fence only, tried after plain JSON so fences inside string values never match.
+    const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*)```/i);
+    if (fenced) {
+      cleaned = fenced[1].trim();
+      value = tryJson(cleaned);
+    }
+  }
   if (value === undefined) {
     // Prose-wrapped: try the outer [..] or {..} slice, whichever opens first.
     const spans = [["[","]"], ["{","}"]]

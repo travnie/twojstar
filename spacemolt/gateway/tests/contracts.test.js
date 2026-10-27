@@ -46,4 +46,6 @@ test("planner prose-wrapped array and fence inside string", () => {
   const content = "see ```code``` here";
   const raw = "```json\n" + JSON.stringify({kind:"act", tool:"spacemolt_social", action:"chat", args:{content}}) + "\n```";
   assert.equal(parsePlannerDecision(raw).args.content, content);
+  const bare = JSON.stringify({kind:"act", tool:"spacemolt_social", action:"chat", args:{content}});
+  assert.equal(parsePlannerDecision(bare).args.content, content);
 });
