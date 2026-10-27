@@ -350,8 +350,7 @@ const DAILY_NOTIFICATION_PEEK = 5;
 const DAILY_HISTORY_ENTRY_MAX = 2500;
 // Leave room for the final ensureDocked and summary write; one travel/jump can block for minutes.
 const DAILY_DEFAULT_LOOP_BUDGET_SECONDS = 9 * 60;
-// Movement can long-poll for minutes, so only start it well inside the budget.
-// Fraction of the loop budget after which no new travel/jump starts.
+// Movement long-polls for minutes: no new travel/jump after this fraction of the loop budget.
 const DAILY_MOVE_CUTOFF_FRACTION = 2 / 3;
 const DAILY_HISTORY_ENTRIES = 16;
 const DAILY_HISTORY_PROMPT_MAX = 24000;
