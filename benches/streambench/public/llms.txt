@@ -2,7 +2,7 @@
 
 > Browser-based workshop for testing IPTV, internet radio, HLS and local M3U/M3U8 playlists.
 
-Streambench runs at https://streambench.trfny.com/. Local playlist files, XMLTV data, edits, favorites and history stay in the browser. Public provider catalogs are fetched through the Streambench Cloudflare Worker.
+Streambench is promoted at https://streambench.trfny.com/ and operates directly at https://streambench.travny.workers.dev/. Local playlist files, XMLTV data, edits, favorites and history stay in the browser. Public provider catalogs are fetched through the Streambench Cloudflare Worker.
 
 ## Main capabilities
 
@@ -20,17 +20,17 @@ On browser hosts that implement WebMCP, Streambench exposes `read_stream_state`,
 
 ## Public pages
 
-- [Application](https://streambench.trfny.com/index.md): Markdown version of the Streambench application page.
-- [Full LLM guide](https://streambench.trfny.com/llms-full.txt): complete Streambench documentation in one file.
-- [Health](https://streambench.trfny.com/health): service health JSON.
-- [Provider manifest](https://streambench.trfny.com/api/providers): available public provider definitions.
+- [Application](https://streambench.travny.workers.dev/index.md): Markdown version of the Streambench application page.
+- [Full LLM guide](https://streambench.travny.workers.dev/llms-full.txt): complete Streambench documentation in one file.
+- [Health](https://streambench.travny.workers.dev/health): service health JSON.
+- [Provider manifest](https://streambench.travny.workers.dev/api/providers): available public provider definitions.
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/streambench): application source.
 
 ## Related TRAVNY tools
 
 - [TRAVNY hub](https://travny.pages.dev/): family landing page.
 - [TVP IPTV](https://tvpi.travny.workers.dev/playlist.m3u): fresh TVP playlist endpoint.
-- [Codebench](https://codebench.trfny.com/): QR and code utility.
+- [Codebench](https://codebench.travny.workers.dev/): QR and code utility.
 - [Doc Bench](https://docbench.travny.workers.dev/): local-first document and PDF studio.
-- [Weather](https://weather.trfny.com/): local weather ensemble.
+- [Weather](https://weather.travny.workers.dev/): local weather ensemble.
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.

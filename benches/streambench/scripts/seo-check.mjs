@@ -58,7 +58,7 @@ assert(llms.includes("# Streambench"), "llms.txt title is missing");
 assert(llms.includes("https://streambench.travny.workers.dev/index.md"), "llms.txt durable Markdown application URL is missing");
 assert(llmsFull.includes("Source: https://streambench.travny.workers.dev/"), "llms-full.txt durable origin is missing");
 assert(indexMarkdown.includes("https://streambench.travny.workers.dev/"), "Markdown app guide durable origin is missing");
-assert(llms.includes(`${origin}/llms-full.txt`), "llms.txt full guide URL is missing");
+assert(llms.includes("https://streambench.travny.workers.dev/llms-full.txt"), "llms.txt durable full guide URL is missing");
 assert(llmsFull.startsWith("# Streambench full documentation"), "llms-full.txt title is missing");
 assert(indexMarkdown.startsWith("# Streambench"), "index.md title is missing");
 assert(llms.split("\n").some(line => line === "- [TRAVNY hub](https://travny.pages.dev/): family landing page."), "TRAVNY hub is missing from llms.txt");
