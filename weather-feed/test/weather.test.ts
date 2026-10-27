@@ -198,7 +198,7 @@ test("workers.dev serves the dashboard without depending on trfny.com", async ()
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("location"), null);
   const body = await response.text();
-  assert.match(body, /Pogoda/);
+  assert.match(body, /<div class="card" id="nowCard" aria-live="polite">/);
   assert.match(body, /rel="canonical" href="https:\/\/weather\.trfny\.com\//);
 });
 
