@@ -233,3 +233,38 @@ export function buyEstimateRejection(estimate, env) {
   if (total > maxCredits) return {error:"buy_over_safe_limit", status:409, total_cost:total, max_credits:maxCredits};
   return null;
 }
+
+// Planner reply -> one decision. Strips <think> and an outer code fence (fences inside
+// string values stay); a JSON array (model batching actions) yields its first object.
+export function parsePlannerDecision(text) {
+  let cleaned = String(text || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  let value = tryJson(cleaned);
+  if (value === undefined) {
+    // Outer fence only, tried after plain JSON so fences inside string values never match.
+    const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*)```/i);
+    if (fenced) {
+      cleaned = fenced[1].trim();
+      value = tryJson(cleaned);
+    }
+  }
+  if (value === undefined) {
+    // Prose-wrapped: try the outer [..] or {..} slice, whichever opens first.
+    const spans = [["[","]"], ["{","}"]]
+      .map(([open, close]) => [cleaned.indexOf(open), cleaned.lastIndexOf(close)])
+      .filter(([first, last]) => first >= 0 && last > first)
+      .sort((a, b) => a[0] - b[0]);
+    if (!spans.length) throw new Error("planner_no_json");
+    for (const [first, last] of spans) {
+      value = tryJson(cleaned.slice(first, last + 1));
+      if (value !== undefined) break;
+    }
+    if (value === undefined) throw new Error("planner_bad_json");
+  }
+  if (Array.isArray(value)) value = value.find((item) => item && typeof item === "object" && !Array.isArray(item));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("planner_no_object");
+  return value;
+}
+
+function tryJson(text) {
+  try { return JSON.parse(text); } catch { return undefined; }
+}
