@@ -55,7 +55,9 @@ assert(robots.includes("Content-Signal: ai-train=yes, search=yes, ai-input=yes")
 assert(robots.includes("Disallow: /api/"), "API crawler rule is missing");
 assert(sitemap.includes(`<loc>${origin}/</loc>`), "sitemap application URL is missing");
 assert(llms.includes("# Streambench"), "llms.txt title is missing");
-assert(llms.includes(`${origin}/index.md`), "llms.txt Markdown application URL is missing");
+assert(llms.includes("https://streambench.travny.workers.dev/index.md"), "llms.txt durable Markdown application URL is missing");
+assert(llmsFull.includes("Source: https://streambench.travny.workers.dev/"), "llms-full.txt durable origin is missing");
+assert(indexMarkdown.includes("https://streambench.travny.workers.dev/"), "Markdown app guide durable origin is missing");
 assert(llms.includes(`${origin}/llms-full.txt`), "llms.txt full guide URL is missing");
 assert(llmsFull.startsWith("# Streambench full documentation"), "llms-full.txt title is missing");
 assert(indexMarkdown.startsWith("# Streambench"), "index.md title is missing");
