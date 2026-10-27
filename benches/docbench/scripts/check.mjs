@@ -418,6 +418,9 @@ if (!llms.includes("https://docbench.travny.workers.dev/index.md") || !llms.incl
 if (!llmsFull.startsWith("# Doc Bench full documentation")) {
   throw new Error("Doc Bench llms-full.txt is missing its H1.");
 }
+if (llms.includes("\\n") || llmsFull.includes("\\n")) {
+  throw new Error("Doc Bench LLM guides must use real newlines rather than literal escape sequences.");
+}
 
 const portable = await readFile("public/portable.html", "utf8");
 const resourceHtml = portable.replace(
