@@ -2,8 +2,6 @@ import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
 
 const SITE_URL = "https://codebench.trfny.com/";
-const SITE_HOST = new URL(SITE_URL).hostname;
-const WORKERS_HOST = "codebench.travny.workers.dev";
 const TITLE = "Code Bench — QR Code Generator, Barcode Maker & Scanner";
 const DESCRIPTION =
   "Free browser-based QR code generator, barcode maker and scanner. Create styled QR codes, Code 128, EAN, Data Matrix, Aztec, PDF417 and more without uploading your data.";
@@ -127,8 +125,7 @@ function textResponse(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.hostname === WORKERS_HOST || url.pathname === "/index.html") {
-      if (url.hostname === WORKERS_HOST) url.hostname = SITE_HOST;
+    if (url.pathname === "/index.html") {
       url.protocol = "https:";
       if (url.pathname === "/index.html") url.pathname = "/";
       return Response.redirect(url.toString(), 301);
