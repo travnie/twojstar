@@ -55,10 +55,17 @@ assert(robots.includes("Content-Signal: ai-train=yes, search=yes, ai-input=yes")
 assert(robots.includes("Disallow: /api/"), "API crawler rule is missing");
 assert(sitemap.includes(`<loc>${origin}/</loc>`), "sitemap application URL is missing");
 assert(llms.includes("# Streambench"), "llms.txt title is missing");
-assert(llms.includes("https://streambench.travny.workers.dev/index.md"), "llms.txt durable Markdown application URL is missing");
-assert(llmsFull.includes("Source: https://streambench.travny.workers.dev/"), "llms-full.txt durable origin is missing");
-assert(indexMarkdown.includes("https://streambench.travny.workers.dev/"), "Markdown app guide durable origin is missing");
-assert(llms.includes("https://streambench.travny.workers.dev/llms-full.txt"), "llms.txt durable full guide URL is missing");
+const durable = "https://streambench.travny.workers.dev";
+for (const [label, route] of [
+  ["Application", "/index.md"],
+  ["Full LLM guide", "/llms-full.txt"],
+  ["Health", "/health"],
+  ["Provider manifest", "/api/providers"],
+]) {
+  assert(llms.includes(`- [${label}](${durable}${route})`), `llms.txt machine link is stale: ${label}`);
+}
+assert(llmsFull.includes(`Source: ${durable}/`), "llms-full.txt durable origin is missing");
+assert(indexMarkdown.includes(`- [Application](${durable}/)`), "Markdown guide durable application link is missing");
 assert(llmsFull.startsWith("# Streambench full documentation"), "llms-full.txt title is missing");
 assert(indexMarkdown.startsWith("# Streambench"), "index.md title is missing");
 assert(llms.split("\n").some(line => line === "- [TRAVNY hub](https://travny.pages.dev/): family landing page."), "TRAVNY hub is missing from llms.txt");
