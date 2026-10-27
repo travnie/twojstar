@@ -24,4 +24,4 @@ Runtime secrets stay in Cloudflare and are never committed:
 - `BRIDGE_TOKEN`
 - `SPACEMOLT_CLERK_API_KEY`
 
-`SPACEMOLT_PLAYER_ID`, Workers AI budget settings, the KV namespace, service binding, compatibility settings and cron are maintained in `wrangler.jsonc`. The Workers AI model is intentionally pinned in code so neuron-rate accounting cannot drift from the selected model.
+`SPACEMOLT_PLAYER_ID`, Workers AI budget settings, daily run limits (`DAILY_MAX_STEPS` ≤ 24, `DAILY_LOOP_BUDGET_SECONDS` ≤ 660; Free plan: 50 external subrequests and 15 min wall per cron run), the KV namespace, service binding, compatibility settings and cron are maintained in `wrangler.jsonc`. The Workers AI model is intentionally pinned in code so neuron-rate accounting cannot drift from the selected model.
