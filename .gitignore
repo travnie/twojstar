@@ -72,3 +72,13 @@ replay_pid*
 
 # SpaceMolt CLI session token (written to cwd by the official client)
 .spacemolt-session.json
+
+# Local tooling / agent state
+CLAUDE.local.md
+.wrangler/
+worker-configuration.d.ts
+*.tsbuildinfo
+.kotlin/
+.venv/
+local.properties
+.dev.vars
