@@ -29,6 +29,10 @@ This lives in the `travnie/twojstar` workshop under `benches/codebench/`.
 
 The camera scanner needs HTTPS or localhost.
 
+The Worker is also directly accessible at `https://codebench.travny.workers.dev/`,
+without redirecting to `trfny.com`. The custom domain remains canonical for SEO
+until the separate brand-landing and canonical migration is ready.
+
 ## Local
 
 ```sh

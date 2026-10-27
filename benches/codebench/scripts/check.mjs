@@ -41,6 +41,9 @@ const webmcp = readFileSync(join(root, "public", "webmcp.js"), "utf8");
 if (!source.includes('const SITE_URL = "https://codebench.trfny.com/";')) {
   throw new Error("Codebench canonical origin is not the custom domain");
 }
+if (!source.includes('if (url.pathname === "/index.html")') || source.includes("WORKERS_HOST")) {
+  throw new Error("Codebench workers.dev must serve directly without redirecting to trfny.com");
+}
 if (!source.includes('rel="alternate" type="text/markdown" href="/index.md"')) throw new Error("Markdown alternate is missing");
 if (!source.includes('rel="alternate" type="text/plain" href="/llms.txt"')) throw new Error("llms.txt alternate discovery link is missing");
 if (!source.includes('rel="describedby" href="/llms.txt"')) throw new Error("llms.txt describedby link is missing");
