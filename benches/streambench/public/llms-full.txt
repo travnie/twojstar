@@ -1,6 +1,6 @@
 # Streambench full documentation
 
-Source: https://streambench.trfny.com/
+Source: https://streambench.travny.workers.dev/
 
 Description: Complete LLM-oriented description of Streambench and its public discovery surfaces.
 
@@ -27,9 +27,9 @@ On browser hosts implementing WebMCP, Streambench exposes `read_stream_state`, `
 
 ## Public resources
 
-- [Markdown application page](https://streambench.trfny.com/index.md)
-- [Application](https://streambench.trfny.com/)
-- [Provider manifest](https://streambench.trfny.com/api/providers)
-- [Health](https://streambench.trfny.com/health)
+- [Markdown application page](https://streambench.travny.workers.dev/index.md)
+- [Application](https://streambench.travny.workers.dev/)
+- [Provider manifest](https://streambench.travny.workers.dev/api/providers)
+- [Health](https://streambench.travny.workers.dev/health)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/streambench)
 - [TRAVNY hub](https://travny.pages.dev/)
