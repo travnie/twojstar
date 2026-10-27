@@ -192,6 +192,16 @@ test("weather page collapses long warning and change lists and keeps feed contro
   assert.ok(footer > controls);
 });
 
+test("workers.dev serves the dashboard without depending on trfny.com", async () => {
+  const env = { WEATHER_KV: { get: async () => null } } as unknown as Env;
+  const response = await worker.fetch(new Request("https://weather.travny.workers.dev/"), env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("location"), null);
+  const body = await response.text();
+  assert.match(body, /Pogoda/);
+  assert.match(body, /rel="canonical" href="https:\/\/weather\.trfny\.com\//);
+});
+
 test("weather discovery routes do not require storage", async () => {
   const expected = {
     "/robots.txt": "https://weather.trfny.com/sitemap.xml",
