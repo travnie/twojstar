@@ -11,6 +11,7 @@ Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY
 - Validate and format structured documents while keeping scripts and loose configs raw unless a safe parser exists.
 - Render Markdown safely and inspect JSON-family/YAML/XML in structured tree previews.
 - Merge multiple TXT/Markdown files in picker order into a new editable `merged.txt` or `merged.md` document; mixed inputs become Markdown.
+- Smart-merge JSON/JSONC objects and arrays with conflict reporting and lossless scalar lexemes; concatenate JSONL/NDJSON records. JSON5 smart merge is not supported.
 - Save directly back to a selected local file in supported browsers, with download as the portable fallback.
 
 ## PDF tools
@@ -42,8 +43,7 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 ## Related TRAVNY tools
 
 - [TRAVNY hub](https://travny.pages.dev/): family landing page.
-- [Streambench](https://streambench.trfny.com/): IPTV, radio, HLS, M3U and XMLTV workshop.
-- [Codebench](https://codebench.trfny.com/): local QR and barcode studio.
-- [Weather](https://weather.trfny.com/): local weather ensemble.
+- [Streambench](https://streambench.travny.workers.dev/): IPTV, radio, HLS, M3U and XMLTV workshop.
+- [Codebench](https://codebench.travny.workers.dev/): local QR and barcode studio.
+- [Weather](https://weather.travny.workers.dev/): local weather ensemble.
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.
-\n- Smart JSON merge: JSON/JSONC deep object merge, array concatenation, conflict reporting with later-file precedence, and lossless scalar lexemes; JSONL/NDJSON record concatenation. JSON5 smart merge is not enabled.\n
