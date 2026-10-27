@@ -341,15 +341,24 @@ async function handleMcpMessage(msg, env) {
   return {reply:{jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}}};
 }
 
-const DAILY_MAX_STEPS = 6;
+// Defaults; DAILY_MAX_STEPS / DAILY_LOOP_BUDGET_SECONDS vars override. Free plan caps an
+// invocation at 50 external subrequests (one game call per step) and cron wall time at 15 min.
+const DAILY_DEFAULT_MAX_STEPS = 16;
 // Small enough that the whole peeked batch fits the planner's per-observation budget.
 const DAILY_NOTIFICATION_PEEK = 5;
 // Each history entry is cut to this many characters in the planner prompt.
 const DAILY_HISTORY_ENTRY_MAX = 2500;
 // Leave room for the final ensureDocked and summary write; one travel/jump can block for minutes.
-const DAILY_LOOP_BUDGET_MS = 4 * 60 * 1000;
-// Movement can long-poll for minutes, so only start it well inside the budget.
-const DAILY_MOVE_CUTOFF_MS = 2 * 60 * 1000;
+const DAILY_DEFAULT_LOOP_BUDGET_SECONDS = 9 * 60;
+// Movement long-polls for minutes: no new travel/jump after this fraction of the loop budget.
+const DAILY_MOVE_CUTOFF_FRACTION = 2 / 3;
+const DAILY_HISTORY_ENTRIES = 16;
+const DAILY_HISTORY_PROMPT_MAX = 24000;
+// Free plan: 50 external fetches per invocation. Worst cases: cold login 4 (405 retry, session,
+// login_token), initial obs 7, mid-run relogin 5, ensureDocked 13 (3 candidates), clear 1.
+const DAILY_SUBREQUEST_LIMIT = 50;
+const DAILY_SUBREQUESTS_START = 4 + 7;
+const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
 const WORKERS_AI_DEFAULT_MODEL = "@cf/zai-org/glm-4.7-flash";
@@ -536,6 +545,8 @@ async function runPlannerModel(env, run, messages, rotateBy) {
   }
 
   if (env.KANAREK_PLANNER) {
+    // Service binding call counts toward the subrequest limit.
+    run.subrequests = (run.subrequests || 0) + 1;
     try {
       const routed = await env.KANAREK_PLANNER.plan({
         max_tokens:700,
@@ -640,10 +651,10 @@ function tryParseDecision(raw) {
 }
 
 async function planDailyStep(env, run, mechanics) {
-  const recentText = run.history.slice(-10)
+  const recentText = run.history.slice(-DAILY_HISTORY_ENTRIES)
     .map((entry, idx) => `${idx + 1}. ${compactJson(entry, DAILY_HISTORY_ENTRY_MAX)}`)
     .join("\n")
-    .slice(-14000);
+    .slice(-DAILY_HISTORY_PROMPT_MAX);
   const userPrompt = `Authoritative SpaceMolt mechanics reference:\n${mechanics}\n\nCurrent run observations/results:\n${recentText}`;
 
   const plannerMeta = await callPlanner(env, run, userPrompt);
@@ -671,7 +682,7 @@ async function planDailyStep(env, run, mechanics) {
 function outOfTime(run, action) {
   const elapsed = Date.now() - run.loopStart;
   const moving = action === "travel" || action === "jump";
-  return elapsed > DAILY_LOOP_BUDGET_MS || (moving && elapsed > DAILY_MOVE_CUTOFF_MS);
+  return elapsed > run.loopBudgetMs || (moving && elapsed > run.loopBudgetMs * DAILY_MOVE_CUTOFF_FRACTION);
 }
 
 async function executeDailyDecision(env, run, decision, provider) {
@@ -687,6 +698,12 @@ async function executeDailyDecision(env, run, decision, provider) {
   run.blockedCount = 0;
   run.plannerInvalidCount = 0;
 
+  const cost = action === "captains_log_add" ? 2 : 1;
+  if (run.subrequests + cost > DAILY_SUBREQUEST_LIMIT - DAILY_SUBREQUESTS_RESERVE) {
+    run.history.push({kind:"subrequest_budget_exhausted", used:run.subrequests, skipped:action});
+    return "stop";
+  }
+  run.subrequests += cost;
   if (outOfTime(run, action)) {
     run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart, skipped:action});
     return "stop";
@@ -699,7 +716,7 @@ async function executeDailyDecision(env, run, decision, provider) {
   const callArgs = action === "get_notifications" ? {...args, clear:false} : args;
   // Movement can long-poll; stop waiting once the loop budget is spent so docking and the summary still run.
   const moving = action === "travel" || action === "jump";
-  const remaining = Math.max(DAILY_LOOP_BUDGET_MS - (Date.now() - run.loopStart), 1000);
+  const remaining = Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
   const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
   return "continue";
@@ -745,12 +762,16 @@ async function runDailyGremlin(env) {
     notificationsSeen:0,
     plannerSawNotifications:false,
     workersAiBudgetDay:"",
-    workersAiNeuronsUsed:null
+    workersAiNeuronsUsed:null,
+    maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),
+    // Cap leaves >= 6 min of the 15-min cron wall for the return trip, docking and summary.
+    loopBudgetMs:positiveInt(env.DAILY_LOOP_BUDGET_SECONDS, DAILY_DEFAULT_LOOP_BUDGET_SECONDS, 9 * 60) * 1000,
+    subrequests:DAILY_SUBREQUESTS_START
   };
   const mechanics = await gatherDailyObservations(env, run);
 
-  for (let step = 0; step < DAILY_MAX_STEPS; step++) {
-    if (Date.now() - run.loopStart > DAILY_LOOP_BUDGET_MS) {
+  for (let step = 0; step < run.maxSteps; step++) {
+    if (Date.now() - run.loopStart > run.loopBudgetMs) {
       run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart});
       break;
     }
