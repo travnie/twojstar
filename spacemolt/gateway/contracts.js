@@ -233,3 +233,24 @@ export function buyEstimateRejection(estimate, env) {
   if (total > maxCredits) return {error:"buy_over_safe_limit", status:409, total_cost:total, max_credits:maxCredits};
   return null;
 }
+
+// Planner reply -> one decision. Strips <think> and code fences; a JSON array (model batching
+// several actions) yields its first object, since the loop runs one action per step.
+export function parsePlannerDecision(text) {
+  const cleaned = String(text || "")
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/```(?:json)?/gi, "")
+    .trim();
+  let value;
+  try {
+    value = JSON.parse(cleaned);
+  } catch {
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first < 0 || last <= first) throw new Error("planner_no_json");
+    value = JSON.parse(cleaned.slice(first, last + 1));
+  }
+  if (Array.isArray(value)) value = value.find((item) => item && typeof item === "object" && !Array.isArray(item));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("planner_no_object");
+  return value;
+}
