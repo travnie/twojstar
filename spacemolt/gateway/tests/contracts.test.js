@@ -40,3 +40,10 @@ test("planner object reply survives think block and prose", () => {
   assert.throws(() => parsePlannerDecision("no json here"), /planner_no_json/);
   assert.throws(() => parsePlannerDecision("[1, 2]"), /planner_no_object/);
 });
+
+test("planner prose-wrapped array and fence inside string", () => {
+  assert.deepEqual(parsePlannerDecision('Plan: [{"kind":"finish","reason":"a"},{"kind":"finish","reason":"b"}] ok'), {kind:"finish", reason:"a"});
+  const content = "see ```code``` here";
+  const raw = "```json\n" + JSON.stringify({kind:"act", tool:"spacemolt_social", action:"chat", args:{content}}) + "\n```";
+  assert.equal(parsePlannerDecision(raw).args.content, content);
+});
