@@ -61,12 +61,15 @@ if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("ll
 const headHtml = index.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1];
 const metaTags = [...(headHtml?.matchAll(/<!--[\s\S]*?-->|<meta\b[^>]*>/gi) ?? [])]
   .map(([token]) => token).filter((token) => /^<meta\b/i.test(token));
-const hasBingMeta = metaTags.some((tag) => {
-  const attrs = Object.fromEntries([...tag.matchAll(/\b(name|content)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
+function isBingVerificationTag(tag) {
+  const attrs = Object.fromEntries([...tag.matchAll(/\s+(name|content)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
     .map(([, key, double, single, bare]) => [key.toLowerCase(), double ?? single ?? bare]));
   return attrs.name?.toLowerCase() === "msvalidate.01" && attrs.content === "23A368B2C5F4DF3471A67EA6CB057149";
-});
-if (!hasBingMeta) throw new Error("Active Bing verification meta tag is missing from HTML head");
+}
+if (!metaTags.some(isBingVerificationTag)) throw new Error("Active Bing verification meta tag is missing from HTML head");
+if (isBingVerificationTag('<meta data-name="msvalidate.01" content="23A368B2C5F4DF3471A67EA6CB057149">')) {
+  throw new Error("Bing verification check must reject prefixed data-name attributes");
+}
 if (!index.includes('<script src="webmcp-lifecycle.js"></script>')) throw new Error("WebMCP lifecycle script is missing");
 if (!index.includes('<script src="webmcp.js"></script>')) throw new Error("WebMCP page script is missing");
 if (!webmcpLifecycle.includes("createRegistrationLifecycle")) throw new Error("Shared WebMCP lifecycle helper is missing");
