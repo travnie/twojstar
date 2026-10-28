@@ -190,24 +190,39 @@ export const DAILY_ALLOWED = {
   spacemolt_battle: ["status","retreat","stance","target","reload"]
 };
 
-export function dailyAllowed(tool, action, args) {
-  if (DAILY_HARD_DENY.has(action)) return false;
+// Why a planner decision is outside the daily allowlist; null when allowed. Specific so the
+// planner can correct the call instead of repeating it.
+export function dailyBlockReason(tool, action, args) {
+  if (DAILY_HARD_DENY.has(action)) return `${action} is never allowed`;
   // Own-property check: planner output may name inherited keys such as "constructor".
   const allowed = Object.hasOwn(DAILY_ALLOWED, tool) ? DAILY_ALLOWED[tool] : null;
-  if (!Array.isArray(allowed) || !allowed.includes(action)) return false;
+  if (!Array.isArray(allowed) || !allowed.includes(action)) {
+    const home = Object.keys(DAILY_ALLOWED).find((name) => DAILY_ALLOWED[name].includes(action));
+    if (home) return `action ${action} belongs to tool ${home}, not ${tool}`;
+    return `action ${action} is not in the daily allowlist`;
+  }
   if (tool === "spacemolt_social" && action === "chat") {
     const ch = String(args?.target || "");
-    if (["private","faction","local","system"].indexOf(ch) < 0) return false;
-    if (typeof args?.content !== "string" || !args.content || [...args.content].length > 500) return false;
-    if (ch === "private" && (typeof args.target_id !== "string" || !args.target_id)) return false;
+    if (["private","faction","local","system"].indexOf(ch) < 0) return "chat target must be private, faction, local or system";
+    if (typeof args?.content !== "string" || !args.content) return "chat needs non-empty string content";
+    if ([...args.content].length > 500) return "chat content exceeds 500 characters";
+    if (ch === "private" && (typeof args.target_id !== "string" || !args.target_id)) {
+      return "private chat needs target_id (one recipient player name or ID per message)";
+    }
   }
-  if (tool === "spacemolt_battle" && action !== "status" && !isDefensiveBattleAction(action, args)) return false;
-  if ((action === "travel" || action === "jump") && (!args || !args.id)) return false;
+  if (tool === "spacemolt_battle" && action !== "status" && !isDefensiveBattleAction(action, args)) {
+    return "only defensive battle actions are allowed";
+  }
+  if ((action === "travel" || action === "jump") && (!args || !args.id)) return `${action} needs args.id`;
   if ((action === "refuel" || action === "repair") && args?.quantity != null) {
     const qty = Number(args.quantity);
-    if (!isFinite(qty) || qty < 0 || qty > 200) return false;
+    if (!isFinite(qty) || qty < 0 || qty > 200) return `${action} quantity must be 0-200`;
   }
-  return true;
+  return null;
+}
+
+export function dailyAllowed(tool, action, args) {
+  return dailyBlockReason(tool, action, args) === null;
 }
 
 export function positiveInt(raw, fallback, max) {
