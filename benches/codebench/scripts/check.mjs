@@ -55,7 +55,7 @@ if (!llms.includes("- [Application](https://codebench.travny.workers.dev/index.m
 if (!llms.includes("- [Full LLM guide](https://codebench.travny.workers.dev/llms-full.txt)")) throw new Error("llms.txt durable full guide link is missing");
 if (!indexMarkdown.includes("- [Application](https://codebench.travny.workers.dev/)")) throw new Error("index.md durable application link is missing");
 if (!llmsFull.includes("Source: https://codebench.travny.workers.dev/")) throw new Error("llms-full.txt durable origin is missing");
-if (!llms.includes("https://codebench.trfny.com/") || !indexMarkdown.includes("https://codebench.trfny.com/")) throw new Error("Code Bench promotional hostname must remain documented");
+if (!llms.includes("is promoted at") || !indexMarkdown.includes("is promoted at")) throw new Error("Code Bench promotional role must remain documented");
 if (!indexMarkdown.startsWith("# Code Bench")) throw new Error("index.md is missing its H1");
 if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("llms-full.txt is missing its H1");
 const headHtml = index.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1];
