@@ -51,8 +51,11 @@ if (!source.includes('rel="alternate"; type="text/markdown"') || !source.include
 if (!source.includes('Content-Signal: ai-train=yes, search=yes, ai-input=yes')) throw new Error("robots Content-Signal policy is missing");
 if (wrangler.assets?.not_found_handling !== "404-page") throw new Error("404 asset handling is missing");
 if (!notFound.includes('name="robots" content="noindex,follow"')) throw new Error("404 page can be indexed");
-if (!llms.includes("https://codebench.trfny.com/index.md")) throw new Error("llms.txt Markdown application URL is missing");
-if (!llms.includes("https://codebench.trfny.com/llms-full.txt")) throw new Error("llms.txt full guide URL is missing");
+if (!llms.includes("- [Application](https://codebench.travny.workers.dev/index.md)")) throw new Error("llms.txt durable Markdown application link is missing");
+if (!llms.includes("- [Full LLM guide](https://codebench.travny.workers.dev/llms-full.txt)")) throw new Error("llms.txt durable full guide link is missing");
+if (!indexMarkdown.includes("- [Application](https://codebench.travny.workers.dev/)")) throw new Error("index.md durable application link is missing");
+if (!llmsFull.includes("Source: https://codebench.travny.workers.dev/")) throw new Error("llms-full.txt durable origin is missing");
+if (!llms.includes("https://codebench.trfny.com/") || !indexMarkdown.includes("https://codebench.trfny.com/")) throw new Error("Code Bench promotional hostname must remain documented");
 if (!indexMarkdown.startsWith("# Code Bench")) throw new Error("index.md is missing its H1");
 if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("llms-full.txt is missing its H1");
 const headHtml = index.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1];

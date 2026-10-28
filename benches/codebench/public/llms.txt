@@ -2,7 +2,7 @@
 
 > Local-first browser studio for generating, styling, scanning and exporting QR codes and barcodes.
 
-Code Bench runs at https://codebench.trfny.com/. User content is processed in the browser and is not uploaded to a Code Bench backend.
+Code Bench is promoted at https://codebench.trfny.com/ and operates directly at https://codebench.travny.workers.dev/. User content is processed in the browser and is not uploaded to a Code Bench backend.
 
 ## Main capabilities
 
@@ -17,13 +17,13 @@ On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `s
 
 ## Public pages
 
-- [Application](https://codebench.trfny.com/index.md): Markdown version of the Code Bench application page.
-- [Full LLM guide](https://codebench.trfny.com/llms-full.txt): complete Code Bench documentation in one file.
+- [Application](https://codebench.travny.workers.dev/index.md): Markdown version of the Code Bench application page.
+- [Full LLM guide](https://codebench.travny.workers.dev/llms-full.txt): complete Code Bench documentation in one file.
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/codebench): application source.
 
 ## Related TRAVNY tools
 
 - [TRAVNY hub](https://travny.pages.dev/): family landing page.
-- [Streambench](https://streambench.trfny.com/): IPTV, radio, HLS and playlist workshop.
+- [Streambench](https://streambench.travny.workers.dev/): IPTV, radio, HLS and playlist workshop.
 - [Doc Bench](https://docbench.travny.workers.dev/): local-first document and PDF studio.
-- [Weather](https://weather.trfny.com/): local weather ensemble.
+- [Weather](https://weather.travny.workers.dev/): local weather ensemble.
