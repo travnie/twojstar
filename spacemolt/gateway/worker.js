@@ -694,7 +694,8 @@ async function executeDailyDecision(env, run, decision, provider) {
   const blockReason = dailyBlockReason(tool, action, args);
   if (blockReason) {
     run.blockedCount += 1;
-    run.history.push({kind:"blocked", provider, tool, action, decision, reason:blockReason});
+    // Reason first and decision compacted: the history entry is cut at DAILY_HISTORY_ENTRY_MAX.
+    run.history.push({kind:"blocked", reason:blockReason, provider, tool, action, decision:compactJson(decision, 600)});
     run.providerRotation = (run.providerRotation + 1) % DAILY_PROVIDER_ORDER.length;
     return run.blockedCount >= DAILY_MAX_BLOCKED ? "stop" : "continue";
   }
