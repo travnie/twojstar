@@ -15,6 +15,7 @@ import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
 const SITE_ORIGIN = "https://weather.trfny.com";
+const DURABLE_ORIGIN = "https://weather.travny.workers.dev";
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
