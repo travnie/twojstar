@@ -53,11 +53,11 @@ The dashboard combines several weather sources instead of presenting a single-pr
 
 ## Machine-readable resources
 
-- [Current state JSON](${SITE_ORIGIN}/state.json)
-- [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom)
-- [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom)
-- [Concise LLM guide](${SITE_ORIGIN}/llms.txt)
-- [Full LLM guide](${SITE_ORIGIN}/llms-full.txt)
+- [Current state JSON](${DURABLE_ORIGIN}/state.json)
+- [Weather changes Atom feed](${DURABLE_ORIGIN}/feed.atom)
+- [IMGW warnings Atom feed](${DURABLE_ORIGIN}/warnings.atom)
+- [Concise LLM guide](${DURABLE_ORIGIN}/llms.txt)
+- [Full LLM guide](${DURABLE_ORIGIN}/llms-full.txt)
 - [TRAVNY hub](https://travny.pages.dev/)
 `;
 
@@ -67,18 +67,19 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 
 ## Resources
 
-- [Dashboard](${SITE_ORIGIN}/index.md): Markdown description of the local weather dashboard.
-- [Current state JSON](${SITE_ORIGIN}/state.json): machine-readable current ensemble.
-- [Weather changes feed](${SITE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
-- [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
-- [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
+- [Dashboard](${DURABLE_ORIGIN}/index.md): Markdown description of the local weather dashboard.
+- [Current state JSON](${DURABLE_ORIGIN}/state.json): machine-readable current ensemble.
+- [Weather changes feed](${DURABLE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
+- [IMGW warnings feed](${DURABLE_ORIGIN}/warnings.atom): warning-only Atom feed.
+- [Full LLM guide](${DURABLE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
 - WebMCP: read_weather_state exposes the current published state on supporting browser hosts.
 - [TRAVNY hub](https://travny.pages.dev/): related tools and services.
 `;
 
 const LLMS_FULL = `# Pogoda Chrzanów · Kościelec full documentation
 
-Source: ${SITE_ORIGIN}/
+Source: ${DURABLE_ORIGIN}/
+Promotional URL: ${SITE_ORIGIN}/
 
 Description: Complete LLM-oriented guide to the TRAVNY multi-source weather service for Kościelec in Chrzanów, Poland.
 
@@ -88,10 +89,10 @@ The service combines Open-Meteo, OpenWeather, Visual Crossing, Vaisala Xweather,
 
 ## Public data
 
-- [Current state JSON](${SITE_ORIGIN}/state.json): current machine-readable ensemble.
-- [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
-- [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom): active warning changes.
-- [Markdown dashboard page](${SITE_ORIGIN}/index.md): concise page description.
+- [Current state JSON](${DURABLE_ORIGIN}/state.json): current machine-readable ensemble.
+- [Weather changes Atom feed](${DURABLE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
+- [IMGW warnings Atom feed](${DURABLE_ORIGIN}/warnings.atom): active warning changes.
+- [Markdown dashboard page](${DURABLE_ORIGIN}/index.md): concise page description.
 - WebMCP tool: read_weather_state reads the same public state through the visible page on supporting browser hosts.
 
 ## Freshness

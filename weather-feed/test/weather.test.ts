@@ -207,19 +207,19 @@ test("weather discovery routes do not require storage", async () => {
     "/robots.txt": "https://weather.trfny.com/sitemap.xml",
     "/webmcp.js": "read_weather_state",
     "/sitemap.xml": "https://weather.trfny.com/feed.atom",
-    "/index.md": "https://weather.trfny.com/state.json",
-    "/llms.txt": "https://weather.trfny.com/index.md",
-    "/llms-full.txt": "https://weather.trfny.com/state.json",
+    "/index.md": "https://weather.travny.workers.dev/state.json",
+    "/llms.txt": "https://weather.travny.workers.dev/index.md",
+    "/llms-full.txt": "https://weather.travny.workers.dev/state.json",
   };
 
-  for (const [path, canonicalUrl] of Object.entries(expected)) {
+  for (const [path, expectedUrl] of Object.entries(expected)) {
     const response = await worker.fetch(
       new Request(`https://weather.trfny.com${path}`),
       {} as Env,
     );
     assert.equal(response.status, 200);
     const body = await response.text();
-    assert.ok(body.includes(canonicalUrl));
+    assert.ok(body.includes(expectedUrl));
     if (path === "/robots.txt") {
       assert.match(body, /Content-Signal: ai-train=yes, search=yes, ai-input=yes/);
       assert.match(body, /User-agent: OAI-SearchBot/);
