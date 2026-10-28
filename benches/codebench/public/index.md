@@ -2,7 +2,7 @@
 
 > Local-first browser studio for generating, styling, scanning and exporting QR codes and barcodes.
 
-Code Bench is available at https://codebench.trfny.com/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
+Code Bench is promoted at https://codebench.trfny.com/ and operates directly at https://codebench.travny.workers.dev/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
 
 ## What it does
 
