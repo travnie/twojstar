@@ -89,7 +89,7 @@ const wrangler = JSON.parse(wranglerSource);
 const workerRoutes = wrangler.assets?.run_worker_first;
 assert(wrangler.assets?.not_found_handling === "404-page", "404 asset handling is missing");
 assert(Array.isArray(workerRoutes), "Worker asset routing is not selective");
-assert(workerRoutes.includes("/"), "homepage does not run through Worker for canonical redirect");
+assert(workerRoutes.includes("/"), "homepage does not run through Worker for discovery headers");
 assert(workerRoutes.includes("/index.html"), "index alias does not run through Worker");
 assert(workerRoutes.includes("/api/*"), "API routes do not run through Worker");
 assert(workerRoutes.includes("/health"), "health route does not run through Worker");

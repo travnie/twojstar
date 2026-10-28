@@ -2,6 +2,13 @@
 
 Browser-based workshop for testing IPTV, radio and other media streams.
 
+The application also runs directly at `https://streambench.travny.workers.dev/`.
+The custom domain remains canonical; `/index.html` redirects to `/` on the same
+host, preserving the query. Local development works without the custom domain.
+Saved libraries and preferences are browser- and origin-specific. The custom
+domain and Workers host keep separate local state; switching hosts does not
+transfer or synchronize favorites, edits, history, preferences or remembered relays.
+
 ## Current scope
 
 - direct HTTP/HTTPS stream playback,
