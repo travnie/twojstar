@@ -1,10 +1,11 @@
-# [![Streambench](https://streambench.trfny.com/favicon-96x96.png)](https://streambench.trfny.com)
+# [![Streambench](https://streambench.travny.workers.dev/favicon-96x96.png)](https://streambench.travny.workers.dev)
 
 Browser-based workshop for testing IPTV, radio and other media streams.
 
-The application also runs directly at `https://streambench.travny.workers.dev/`.
-The custom domain remains canonical; `/index.html` redirects to `/` on the same
-host, preserving the query. Local development works without the custom domain.
+The canonical application is `https://streambench.travny.workers.dev/`.
+The custom domain remains an accessible alias for existing local libraries.
+Both hosts serve the same durable canonical, structured data and sitemap URLs.
+`/index.html` redirects to `/` on the same host, preserving the query.
 Saved libraries and preferences are browser- and origin-specific. The custom
 domain and Workers host keep separate local state; switching hosts does not
 transfer or synchronize favorites, edits, history, preferences or remembered relays.
