@@ -371,6 +371,9 @@ const WORKERS_AI_OUTPUT_NEURONS_PER_MILLION = 36_400;
 const WORKERS_AI_HIDDEN_OUTPUT_TOKEN_FACTOR = 2;
 const WORKERS_AI_RESERVATION_SAFETY_FACTOR = 1.25;
 const WORKERS_AI_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
+// 3046 request timeout / 3040 out of capacity: retry once without thinking, smaller output.
+const WORKERS_AI_RETRYABLE = /\b(3040|3046)\b|timeout|capacity/i;
+const WORKERS_AI_RETRY_SETTINGS = {maxTokens:2048, thinking:false};
 
 function dget(obj, path) {
   let cur = obj;
@@ -503,9 +506,9 @@ async function recordWorkersAiNeurons(env, run, neurons, kind) {
   });
 }
 
-async function runWorkersAiPlanner(env, run, messages) {
+async function runWorkersAiPlanner(env, run, messages, overrides = {}) {
   if (!env.AI) throw new Error("workers_ai_not_configured");
-  const settings = workersAiSettings(env);
+  const settings = {...workersAiSettings(env), ...overrides};
   const used = await loadWorkersAiNeurons(env, run);
   const reservation = workersAiReservationNeurons(messages, settings.maxTokens);
   if (used + reservation > settings.dailyNeurons) throw new Error("workers_ai_daily_budget_exhausted");
@@ -519,7 +522,7 @@ async function runWorkersAiPlanner(env, run, messages) {
     messages,
     max_tokens:settings.maxTokens,
     chat_template_kwargs:{
-      enable_thinking:true
+      enable_thinking:settings.thinking !== false
     },
     temperature:0.2
   });
@@ -544,6 +547,16 @@ async function runPlannerModel(env, run, messages, rotateBy) {
     return await runWorkersAiPlanner(env, run, messages);
   } catch (err) {
     run.history.push({kind:"workers_ai_unavailable", error:errorText(err, 240)});
+    // Timeout/capacity: long thinking runs past the inference limit. One lighter retry.
+    if (WORKERS_AI_RETRYABLE.test(errorText(err, 240))) {
+      try {
+        const retried = await runWorkersAiPlanner(env, run, messages, WORKERS_AI_RETRY_SETTINGS);
+        run.history.push({kind:"workers_ai_retry", ok:true});
+        return retried;
+      } catch (retryErr) {
+        run.history.push({kind:"workers_ai_retry", ok:false, error:errorText(retryErr, 240)});
+      }
+    }
   }
 
   if (env.KANAREK_PLANNER) {
@@ -559,8 +572,10 @@ async function runPlannerModel(env, run, messages, rotateBy) {
       if (routed?.ok && routed.payload) {
         return {output:routed.payload, provider:routed.provider || "kanarek-free", source:"kanarek-free"};
       }
-    } catch {
-      // Planner failure falls through to the safe finish below.
+      run.history.push({kind:"kanarek_unavailable", error:errorText(routed?.error || "no_payload", 240)});
+    } catch (err) {
+      // Falls through to the safe finish below.
+      run.history.push({kind:"kanarek_unavailable", error:errorText(err, 240)});
     }
   }
   return {
