@@ -1,7 +1,7 @@
 import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
 
-const SITE_URL = "https://codebench.trfny.com/";
+const SITE_URL = "https://codebench.travny.workers.dev/";
 const TITLE = "Code Bench — QR Code Generator, Barcode Maker & Scanner";
 const DESCRIPTION =
   "Free browser-based QR code generator, barcode maker and scanner. Create styled QR codes, Code 128, EAN, Data Matrix, Aztec, PDF417 and more without uploading your data.";

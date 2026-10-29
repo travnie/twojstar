@@ -38,8 +38,8 @@ const portable = readFileSync(join(root, "public", "portable.html"), "utf8");
 const webmcpLifecycle = readFileSync(join(root, "public", "webmcp-lifecycle.js"), "utf8");
 const webmcp = readFileSync(join(root, "public", "webmcp.js"), "utf8");
 
-if (!source.includes('const SITE_URL = "https://codebench.trfny.com/";')) {
-  throw new Error("Codebench canonical origin is not the custom domain");
+if (!source.includes('const SITE_URL = "https://codebench.travny.workers.dev/";')) {
+  throw new Error("Codebench canonical origin is not the durable Worker");
 }
 if (!source.includes('if (url.pathname === "/index.html")') || source.includes("WORKERS_HOST")) {
   throw new Error("Codebench workers.dev must serve directly without redirecting to trfny.com");

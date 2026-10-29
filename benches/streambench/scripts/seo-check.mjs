@@ -39,7 +39,7 @@ const [
   text("webmcp.js"),
 ]);
 
-const origin = "https://streambench.trfny.com";
+const origin = "https://streambench.travny.workers.dev";
 assert(index.includes(`<link rel="canonical" href="${origin}/">`), "canonical URL is missing");
 assert(index.includes(`<meta property="og:url" content="${origin}/">`), "Open Graph URL is missing");
 assert(index.includes('<meta name="twitter:card" content="summary_large_image">'), "Twitter card is missing");
@@ -82,8 +82,7 @@ assert(manifest.id === "/", "manifest id is missing");
 assert(manifest.lang === "pl", "manifest language is missing");
 assert(manifest.categories?.includes("utilities"), "manifest category is missing");
 assert(socialImage.includes('viewBox="0 0 1200 630"'), "social preview dimensions are invalid");
-assert(socialImage.includes("streambench.trfny.com"), "social preview canonical domain is missing");
-assert(!socialImage.includes("streambench.travny.workers.dev"), "social preview still advertises the workers.dev domain");
+assert(/>streambench\.travny\.workers\.dev<\/text>/u.test(socialImage), "social preview canonical domain label is missing");
 
 const wrangler = JSON.parse(wranglerSource);
 const workerRoutes = wrangler.assets?.run_worker_first;

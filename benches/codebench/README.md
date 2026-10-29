@@ -1,6 +1,6 @@
-# [Code Bench — QR & Barcode Studio](https://codebench.trfny.com)
+# [Code Bench — QR & Barcode Studio](https://codebench.travny.workers.dev)
 
-[![codebench](public/apple-touch-icon.png)](https://codebench.trfny.com)
+[![codebench](public/apple-touch-icon.png)](https://codebench.travny.workers.dev)
 
 Client-side QR and barcode studio. The UI remains a single HTML document,
 while a small Cloudflare Worker wraps static assets with security headers,
@@ -29,9 +29,10 @@ This lives in the `travnie/twojstar` workshop under `benches/codebench/`.
 
 The camera scanner needs HTTPS or localhost.
 
-The Worker is also directly accessible at `https://codebench.travny.workers.dev/`,
-without redirecting to `trfny.com`. The custom domain remains canonical for SEO
-until the separate brand-landing and canonical migration is ready.
+The canonical application is `https://codebench.travny.workers.dev/`.
+The custom domain remains an accessible alias. Both serve the same application
+with durable canonical, structured data and sitemap URLs; existing browser
+sessions keep their origin.
 
 ## Local
 

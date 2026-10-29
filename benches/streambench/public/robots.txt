@@ -22,4 +22,4 @@ Allow: /
 Disallow: /api/
 Disallow: /health
 
-Sitemap: https://streambench.trfny.com/sitemap.xml
+Sitemap: https://streambench.travny.workers.dev/sitemap.xml
