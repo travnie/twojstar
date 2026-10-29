@@ -374,6 +374,8 @@ const WORKERS_AI_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
 // 3046 request timeout / 3040 out of capacity: retry once without thinking, smaller output.
 const WORKERS_AI_RETRYABLE = /\b(3040|3046)\b|timeout|capacity/i;
 const WORKERS_AI_RETRY_SETTINGS = {maxTokens:2048, thinking:false};
+// Below this much loop time left, skip inference instead of starting a call.
+const WORKERS_AI_MIN_CALL_MS = 15_000;
 
 function dget(obj, path) {
   let cur = obj;
@@ -509,6 +511,9 @@ async function recordWorkersAiNeurons(env, run, neurons, kind) {
 async function runWorkersAiPlanner(env, run, messages, overrides = {}) {
   if (!env.AI) throw new Error("workers_ai_not_configured");
   const settings = {...workersAiSettings(env), ...overrides};
+  // Every inference ends by the loop deadline so docking + summary keep their reserve.
+  const remainingMs = run.loopStart + run.loopBudgetMs - Date.now();
+  if (remainingMs < WORKERS_AI_MIN_CALL_MS) throw new Error("planner_deadline_reached");
   const used = await loadWorkersAiNeurons(env, run);
   const reservation = workersAiReservationNeurons(messages, settings.maxTokens);
   if (used + reservation > settings.dailyNeurons) throw new Error("workers_ai_daily_budget_exhausted");
@@ -519,18 +524,24 @@ async function runWorkersAiPlanner(env, run, messages, overrides = {}) {
   run.workersAiNeuronsUsed = used + reservation;
 
   let output;
+  let deadlineTimer;
   try {
-    output = await env.AI.run(settings.model, {
+    const deadline = new Promise((_, reject) => {
+      deadlineTimer = setTimeout(() => reject(new Error("planner_deadline_reached")), remainingMs);
+    });
+    output = await Promise.race([deadline, env.AI.run(settings.model, {
       messages,
       max_tokens:settings.maxTokens,
       chat_template_kwargs:{
         enable_thinking:settings.thinking !== false
       },
       temperature:0.2
-    });
+    })]);
   } catch (err) {
     // Mark inference failures: only these may be retried (ledger/KV errors may not).
     throw Object.assign(new Error(errorText(err, 240)), {inferenceFailed:true});
+  } finally {
+    clearTimeout(deadlineTimer);
   }
 
   const actual = workersAiActualNeurons(output);
