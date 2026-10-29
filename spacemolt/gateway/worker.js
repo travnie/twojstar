@@ -371,6 +371,11 @@ const WORKERS_AI_OUTPUT_NEURONS_PER_MILLION = 36_400;
 const WORKERS_AI_HIDDEN_OUTPUT_TOKEN_FACTOR = 2;
 const WORKERS_AI_RESERVATION_SAFETY_FACTOR = 1.25;
 const WORKERS_AI_BUDGET_TTL_SECONDS = 2 * 24 * 60 * 60;
+// 3046 request timeout / 3040 out of capacity: retry once without thinking, smaller output.
+const WORKERS_AI_RETRYABLE = /\b(3040|3046)\b|timeout|capacity/i;
+const WORKERS_AI_RETRY_SETTINGS = {maxTokens:2048, thinking:false};
+// Below this much loop time left, skip inference instead of starting a call.
+const WORKERS_AI_MIN_CALL_MS = 15_000;
 
 function dget(obj, path) {
   let cur = obj;
@@ -503,9 +508,12 @@ async function recordWorkersAiNeurons(env, run, neurons, kind) {
   });
 }
 
-async function runWorkersAiPlanner(env, run, messages) {
+async function runWorkersAiPlanner(env, run, messages, overrides = {}) {
   if (!env.AI) throw new Error("workers_ai_not_configured");
-  const settings = workersAiSettings(env);
+  const settings = {...workersAiSettings(env), ...overrides};
+  // Every inference ends by the loop deadline so docking + summary keep their reserve.
+  const remainingMs = run.loopStart + run.loopBudgetMs - Date.now();
+  if (remainingMs < WORKERS_AI_MIN_CALL_MS) throw new Error("planner_deadline_reached");
   const used = await loadWorkersAiNeurons(env, run);
   const reservation = workersAiReservationNeurons(messages, settings.maxTokens);
   if (used + reservation > settings.dailyNeurons) throw new Error("workers_ai_daily_budget_exhausted");
@@ -515,14 +523,26 @@ async function runWorkersAiPlanner(env, run, messages) {
   await recordWorkersAiNeurons(env, run, reservation, "reservation");
   run.workersAiNeuronsUsed = used + reservation;
 
-  const output = await env.AI.run(settings.model, {
-    messages,
-    max_tokens:settings.maxTokens,
-    chat_template_kwargs:{
-      enable_thinking:true
-    },
-    temperature:0.2
-  });
+  let output;
+  let deadlineTimer;
+  try {
+    const deadline = new Promise((_, reject) => {
+      deadlineTimer = setTimeout(() => reject(new Error("planner_deadline_reached")), remainingMs);
+    });
+    output = await Promise.race([deadline, env.AI.run(settings.model, {
+      messages,
+      max_tokens:settings.maxTokens,
+      chat_template_kwargs:{
+        enable_thinking:settings.thinking !== false
+      },
+      temperature:0.2
+    })]);
+  } catch (err) {
+    // Mark inference failures: only these may be retried (ledger/KV errors may not).
+    throw Object.assign(new Error(errorText(err, 240)), {inferenceFailed:true});
+  } finally {
+    clearTimeout(deadlineTimer);
+  }
 
   const actual = workersAiActualNeurons(output);
   if (actual != null && actual < reservation) {
@@ -544,6 +564,19 @@ async function runPlannerModel(env, run, messages, rotateBy) {
     return await runWorkersAiPlanner(env, run, messages);
   } catch (err) {
     run.history.push({kind:"workers_ai_unavailable", error:errorText(err, 240)});
+    // Timeout/capacity: long thinking runs past the inference limit. One lighter retry.
+    // Retry only a failed inference, and only while docking still fits after a slow retry.
+    const elapsed = Date.now() - run.loopStart;
+    if (err?.inferenceFailed && WORKERS_AI_RETRYABLE.test(errorText(err, 240)) &&
+        elapsed < run.loopBudgetMs * DAILY_MOVE_CUTOFF_FRACTION) {
+      try {
+        const retried = await runWorkersAiPlanner(env, run, messages, WORKERS_AI_RETRY_SETTINGS);
+        run.history.push({kind:"workers_ai_retry", ok:true});
+        return retried;
+      } catch (retryErr) {
+        run.history.push({kind:"workers_ai_retry", ok:false, error:errorText(retryErr, 240)});
+      }
+    }
   }
 
   if (env.KANAREK_PLANNER) {
@@ -559,8 +592,10 @@ async function runPlannerModel(env, run, messages, rotateBy) {
       if (routed?.ok && routed.payload) {
         return {output:routed.payload, provider:routed.provider || "kanarek-free", source:"kanarek-free"};
       }
-    } catch {
-      // Planner failure falls through to the safe finish below.
+      run.history.push({kind:"kanarek_unavailable", error:errorText(routed?.error || "no_payload", 240)});
+    } catch (err) {
+      // Falls through to the safe finish below.
+      run.history.push({kind:"kanarek_unavailable", error:errorText(err, 240)});
     }
   }
   return {
