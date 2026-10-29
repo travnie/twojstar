@@ -518,14 +518,20 @@ async function runWorkersAiPlanner(env, run, messages, overrides = {}) {
   await recordWorkersAiNeurons(env, run, reservation, "reservation");
   run.workersAiNeuronsUsed = used + reservation;
 
-  const output = await env.AI.run(settings.model, {
-    messages,
-    max_tokens:settings.maxTokens,
-    chat_template_kwargs:{
-      enable_thinking:settings.thinking !== false
-    },
-    temperature:0.2
-  });
+  let output;
+  try {
+    output = await env.AI.run(settings.model, {
+      messages,
+      max_tokens:settings.maxTokens,
+      chat_template_kwargs:{
+        enable_thinking:settings.thinking !== false
+      },
+      temperature:0.2
+    });
+  } catch (err) {
+    // Mark inference failures: only these may be retried (ledger/KV errors may not).
+    throw Object.assign(new Error(errorText(err, 240)), {inferenceFailed:true});
+  }
 
   const actual = workersAiActualNeurons(output);
   if (actual != null && actual < reservation) {
@@ -548,7 +554,10 @@ async function runPlannerModel(env, run, messages, rotateBy) {
   } catch (err) {
     run.history.push({kind:"workers_ai_unavailable", error:errorText(err, 240)});
     // Timeout/capacity: long thinking runs past the inference limit. One lighter retry.
-    if (WORKERS_AI_RETRYABLE.test(errorText(err, 240))) {
+    // Retry only a failed inference, and only while docking still fits after a slow retry.
+    const elapsed = Date.now() - run.loopStart;
+    if (err?.inferenceFailed && WORKERS_AI_RETRYABLE.test(errorText(err, 240)) &&
+        elapsed < run.loopBudgetMs * DAILY_MOVE_CUTOFF_FRACTION) {
       try {
         const retried = await runWorkersAiPlanner(env, run, messages, WORKERS_AI_RETRY_SETTINGS);
         run.history.push({kind:"workers_ai_retry", ok:true});
