@@ -14,8 +14,7 @@ import type {
 import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
-const SITE_ORIGIN = "https://weather.trfny.com";
-const DURABLE_ORIGIN = "https://weather.travny.workers.dev";
+const SITE_ORIGIN = "https://weather.travny.workers.dev";
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
@@ -53,11 +52,11 @@ The dashboard combines several weather sources instead of presenting a single-pr
 
 ## Machine-readable resources
 
-- [Current state JSON](${DURABLE_ORIGIN}/state.json)
-- [Weather changes Atom feed](${DURABLE_ORIGIN}/feed.atom)
-- [IMGW warnings Atom feed](${DURABLE_ORIGIN}/warnings.atom)
-- [Concise LLM guide](${DURABLE_ORIGIN}/llms.txt)
-- [Full LLM guide](${DURABLE_ORIGIN}/llms-full.txt)
+- [Current state JSON](${SITE_ORIGIN}/state.json)
+- [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom)
+- [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom)
+- [Concise LLM guide](${SITE_ORIGIN}/llms.txt)
+- [Full LLM guide](${SITE_ORIGIN}/llms-full.txt)
 - [TRAVNY hub](https://travny.pages.dev/)
 `;
 
@@ -67,19 +66,18 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 
 ## Resources
 
-- [Dashboard](${DURABLE_ORIGIN}/index.md): Markdown description of the local weather dashboard.
-- [Current state JSON](${DURABLE_ORIGIN}/state.json): machine-readable current ensemble.
-- [Weather changes feed](${DURABLE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
-- [IMGW warnings feed](${DURABLE_ORIGIN}/warnings.atom): warning-only Atom feed.
-- [Full LLM guide](${DURABLE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
+- [Dashboard](${SITE_ORIGIN}/index.md): Markdown description of the local weather dashboard.
+- [Current state JSON](${SITE_ORIGIN}/state.json): machine-readable current ensemble.
+- [Weather changes feed](${SITE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
+- [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
+- [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
 - WebMCP: read_weather_state exposes the current published state on supporting browser hosts.
 - [TRAVNY hub](https://travny.pages.dev/): related tools and services.
 `;
 
 const LLMS_FULL = `# Pogoda Chrzanów · Kościelec full documentation
 
-Source: ${DURABLE_ORIGIN}/
-Promotional URL: ${SITE_ORIGIN}/
+Source: ${SITE_ORIGIN}/
 
 Description: Complete LLM-oriented guide to the TRAVNY multi-source weather service for Kościelec in Chrzanów, Poland.
 
@@ -89,10 +87,10 @@ The service combines Open-Meteo, OpenWeather, Visual Crossing, Vaisala Xweather,
 
 ## Public data
 
-- [Current state JSON](${DURABLE_ORIGIN}/state.json): current machine-readable ensemble.
-- [Weather changes Atom feed](${DURABLE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
-- [IMGW warnings Atom feed](${DURABLE_ORIGIN}/warnings.atom): active warning changes.
-- [Markdown dashboard page](${DURABLE_ORIGIN}/index.md): concise page description.
+- [Current state JSON](${SITE_ORIGIN}/state.json): current machine-readable ensemble.
+- [Weather changes Atom feed](${SITE_ORIGIN}/feed.atom): meaningful condition and forecast changes.
+- [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom): active warning changes.
+- [Markdown dashboard page](${SITE_ORIGIN}/index.md): concise page description.
 - WebMCP tool: read_weather_state reads the same public state through the visible page on supporting browser hosts.
 
 ## Freshness
@@ -334,7 +332,7 @@ function asNull(source: string) {
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
-    const { pathname, origin } = url;
+    const { pathname } = url;
     if (pathname === "/index.html") {
       url.protocol = "https:";
       url.pathname = "/";
@@ -349,12 +347,12 @@ export default {
 
     switch (pathname) {
       case "/feed.atom":
-        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, origin, "/feed.atom", FEED_ID));
+        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID));
       case "/warnings.atom":
         return atom(renderAtom(
           entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted"),
           `Ostrzeżenia IMGW — ${CONFIG.place}`,
-          origin,
+          SITE_ORIGIN,
           "/warnings.atom",
           `${FEED_ID}:warnings`,
         ));
