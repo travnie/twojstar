@@ -199,14 +199,14 @@ test("workers.dev serves the dashboard without depending on trfny.com", async ()
   assert.equal(response.headers.get("location"), null);
   const body = await response.text();
   assert.match(body, /<div class="card" id="nowCard" aria-live="polite">/);
-  assert.match(body, /rel="canonical" href="https:\/\/weather\.trfny\.com\//);
+  assert.match(body, /rel="canonical" href="https:\/\/weather\.travny\.workers\.dev\//);
 });
 
 test("weather discovery routes do not require storage", async () => {
   const expected = {
-    "/robots.txt": "https://weather.trfny.com/sitemap.xml",
+    "/robots.txt": "https://weather.travny.workers.dev/sitemap.xml",
     "/webmcp.js": "read_weather_state",
-    "/sitemap.xml": "https://weather.trfny.com/feed.atom",
+    "/sitemap.xml": "https://weather.travny.workers.dev/feed.atom",
     "/index.md": "https://weather.travny.workers.dev/state.json",
     "/llms.txt": "https://weather.travny.workers.dev/index.md",
     "/llms-full.txt": "https://weather.travny.workers.dev/state.json",
@@ -230,6 +230,30 @@ test("weather discovery routes do not require storage", async () => {
       assert.match(body, /document\.modelContext/);
       assert.match(body, /registerTool\(tool, \{ signal: lifecycle\.signal \}\)/);
       assert.match(body, /additionalProperties: false/);
+    }
+  }
+});
+
+test("both dashboard aliases use durable canonicals and keep Atom identities", async () => {
+  const origin = "https://weather.travny.workers.dev";
+  const entry: FeedEntry = {
+    id: `${FEED_ID}:warn:1:new`, kind: "warning_new", title: "Weather warning",
+    summary: "An existing warning", published: "2026-10-01T12:00:00.000Z",
+  };
+  const env = { WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null } } as unknown as Env;
+  for (const host of [origin, "https://weather.trfny.com"]) {
+    const dashboard = await worker.fetch(new Request(`${host}/`), env);
+    assert.equal(dashboard.status, 200);
+    assert.equal(dashboard.headers.get("location"), null);
+    assert.ok((await dashboard.text()).includes(`<link rel="canonical" href="${origin}/">`));
+    for (const path of ["/feed.atom", "/warnings.atom"]) {
+      const response = await worker.fetch(new Request(host + path), env);
+      assert.equal(response.status, 200);
+      const xml = await response.text();
+      assert.ok(xml.includes(`<id>${FEED_ID}${path === "/warnings.atom" ? ":warnings" : ""}</id>`));
+      assert.ok(xml.includes(`<id>${entry.id}</id>`));
+      assert.ok(xml.includes(`<link rel="self" href="${origin}${path}"/>`));
+      assert.ok(xml.includes(`<link rel="alternate" href="${origin}/"/>`));
     }
   }
 });

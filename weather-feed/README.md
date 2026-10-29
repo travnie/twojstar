@@ -1,4 +1,8 @@
-# [weather-feed](https://weather.trfny.com)
+# [weather-feed](https://weather.travny.workers.dev)
+
+Canonical dashboard, schema, sitemap and Atom links use `weather.travny.workers.dev`.
+The custom domain remains an accessible alias. Existing Atom feed and entry IDs
+stay unchanged; the origin migration does not rewrite stored state.
 
 [![Weather](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml/badge.svg)](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml)
 
