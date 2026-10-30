@@ -451,7 +451,9 @@ function workersAiSettings(env) {
   return {
     model:WORKERS_AI_DEFAULT_MODEL,
     dailyNeurons:positiveInt(env.WORKERS_AI_DAILY_NEURONS, WORKERS_AI_DEFAULT_DAILY_NEURONS, 10_000),
-    maxTokens:positiveInt(env.WORKERS_AI_MAX_OUTPUT_TOKENS, WORKERS_AI_DEFAULT_MAX_OUTPUT_TOKENS, 131_072)
+    maxTokens:positiveInt(env.WORKERS_AI_MAX_OUTPUT_TOKENS, WORKERS_AI_DEFAULT_MAX_OUTPUT_TOKENS, 131_072),
+    // Thinking + long output hit 3046 timeouts (~4 min) on 3 of 3 calls, 29-30.10; opt-in only.
+    thinking:String(env.WORKERS_AI_THINKING || "").trim() === "true"
   };
 }
 
