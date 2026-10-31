@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -57,4 +57,19 @@ test("block reason names the right tool and missing chat fields", () => {
   assert.equal(dailyBlockReason("spacemolt_social", "chat", {target:"private", content:"hi", target_id:"Bartek"}), null);
   assert.match(dailyBlockReason("spacemolt", "attack", {}), /never allowed/);
   assert.match(dailyBlockReason("spacemolt", "fly_to_moon", {}), /not in the daily allowlist/);
+});
+
+test("daily reads are told apart from state changes", () => {
+  for (const [tool, action] of [["spacemolt","get_guide"],["spacemolt","get_missions"],["spacemolt_social","captains_log_list"],["spacemolt","find_route"]]) {
+    assert.equal(isDailyRead(tool, action), true, action);
+  }
+  for (const [tool, action] of [["spacemolt","travel"],["spacemolt","mine"],["spacemolt","dock"],["spacemolt_social","chat"],["spacemolt","complete_mission"]]) {
+    assert.equal(isDailyRead(tool, action), false, action);
+  }
+});
+
+test("read keys ignore argument order", () => {
+  assert.equal(dailyReadKey("spacemolt", "get_notifications", {limit:5, clear:false}),
+    dailyReadKey("spacemolt", "get_notifications", {clear:false, limit:5}));
+  assert.notEqual(dailyReadKey("spacemolt", "get_guide", {topic:"mining"}), dailyReadKey("spacemolt", "get_guide", {}));
 });

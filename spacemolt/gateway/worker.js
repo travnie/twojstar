@@ -9,6 +9,8 @@ import {
   commandRejection,
   DAILY_HARD_DENY,
   dailyBlockReason,
+  isDailyRead,
+  dailyReadKey,
   positiveInt,
   buyEstimateRejection,
   buyFillOverCap,
@@ -613,6 +615,7 @@ const DAILY_SYSTEM_PROMPT =
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
   "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+  "Do not repeat a read whose result is already in the history unless a later action (travel, dock, mine, chat...) may have changed it; refresh after such actions. Finish when nothing useful is left. " +
   "Return exactly one JSON object (never an array, one action per reply) and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
   "or {\"kind\":\"finish\",\"reason\":\"short reason\"}. " +
@@ -621,6 +624,12 @@ const DAILY_SYSTEM_PROMPT =
 
 function errorText(error, max) {
   return String(error?.message || error).slice(0, max);
+}
+
+// A repeat is blocked only while the earlier result is still inside the planner's history window.
+function readStillVisible(run, key) {
+  const idx = run.readsSinceChange.get(key);
+  return idx !== undefined && idx >= run.history.length - DAILY_HISTORY_ENTRIES;
 }
 
 async function gatherDailyObservations(env, run) {
@@ -637,8 +646,16 @@ async function gatherDailyObservations(env, run) {
     safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
   ])];
   run.notificationsSeen = fitNotificationsToPrompt(initial[2]);
+  const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}];
   initial.forEach((value, idx) => {
-    if (idx !== 3 && idx !== 4) history.push({kind:"observation", value});
+    const key = dailyReadKey(value.tool, value.action, startupArgs[idx]);
+    // Commands and guides ride in the mechanics block of every prompt.
+    if (idx === 3 || idx === 4) {
+      if (value.ok) run.readsSinceChange.set(key, Infinity);
+      return;
+    }
+    history.push({kind:"observation", value});
+    if (value.ok) run.readsSinceChange.set(key, history.length - 1);
   });
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
 }
@@ -728,7 +745,14 @@ async function executeDailyDecision(env, run, decision, provider) {
   const tool = String(decision.tool);
   const action = String(decision.action);
   const args = decision.args && typeof decision.args === "object" ? decision.args : {};
-  const blockReason = dailyBlockReason(tool, action, args);
+  const read = isDailyRead(tool, action);
+  // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
+  const callArgs = action === "get_notifications" ? {...args, clear:false} : args;
+  const readKey = read ? dailyReadKey(tool, action, callArgs) : "";
+  const blockReason = dailyBlockReason(tool, action, args) ||
+    (read && readStillVisible(run, readKey)
+      ? "same read already done since the last state change; its result is in the history above. Act on it, choose a different action, or finish"
+      : null);
   if (blockReason) {
     run.blockedCount += 1;
     // Reason first and decision compacted: the history entry is cut at DAILY_HISTORY_ENTRY_MAX.
@@ -753,13 +777,21 @@ async function executeDailyDecision(env, run, decision, provider) {
     run.history.push({kind:"blocked", tool, action, reason:"captains_log_full: appending would evict the oldest entry"});
     return "continue";
   }
-  // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
-  const callArgs = action === "get_notifications" ? {...args, clear:false} : args;
   // Movement can long-poll; stop waiting once the loop budget is spent so docking and the summary still run.
   const moving = action === "travel" || action === "jump";
   const remaining = Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
   const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
+  // Any non-read may change game state (even a failed one, e.g. a timed-out travel), so
+  // earlier reads become stale. Failed reads stay retryable.
+  if (read) {
+    if (result.ok) run.readsSinceChange.set(readKey, run.history.length - 1);
+  } else {
+    // Keep Infinity entries: commands/guides in the mechanics block do not go stale.
+    for (const [key, idx] of run.readsSinceChange) {
+      if (idx !== Infinity) run.readsSinceChange.delete(key);
+    }
+  }
   return "continue";
 }
 
@@ -804,6 +836,8 @@ async function runDailyGremlin(env) {
     plannerSawNotifications:false,
     workersAiBudgetDay:"",
     workersAiNeuronsUsed:null,
+    // read key -> history index of its result (Infinity: always in the prompt).
+    readsSinceChange:new Map(),
     maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),
     // Cap leaves >= 6 min of the 15-min cron wall for the return trip, docking and summary.
     loopBudgetMs:positiveInt(env.DAILY_LOOP_BUDGET_SECONDS, DAILY_DEFAULT_LOOP_BUDGET_SECONDS, 9 * 60) * 1000,
