@@ -229,6 +229,18 @@ const DAILY_READ_ACTIONS = new Set([
   "search_systems","find_route","inspect","status"
 ]);
 
+// Identity of a read call: key order in args must not matter.
+export function dailyReadKey(tool, action, args) {
+  const canon = (value) => {
+    if (Array.isArray(value)) return value.map(canon);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canon(value[key])]));
+    }
+    return value;
+  };
+  return JSON.stringify([tool, action, canon(args || {})]);
+}
+
 export function isDailyRead(tool, action) {
   return action.startsWith("get_") || DAILY_READ_ACTIONS.has(action);
 }

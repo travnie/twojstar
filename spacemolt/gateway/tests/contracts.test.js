@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, isDailyRead, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -66,4 +66,10 @@ test("daily reads are told apart from state changes", () => {
   for (const [tool, action] of [["spacemolt","travel"],["spacemolt","mine"],["spacemolt","dock"],["spacemolt_social","chat"],["spacemolt","complete_mission"]]) {
     assert.equal(isDailyRead(tool, action), false, action);
   }
+});
+
+test("read keys ignore argument order", () => {
+  assert.equal(dailyReadKey("spacemolt", "get_notifications", {limit:5, clear:false}),
+    dailyReadKey("spacemolt", "get_notifications", {clear:false, limit:5}));
+  assert.notEqual(dailyReadKey("spacemolt", "get_guide", {topic:"mining"}), dailyReadKey("spacemolt", "get_guide", {}));
 });
