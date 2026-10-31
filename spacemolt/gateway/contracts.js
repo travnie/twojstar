@@ -221,6 +221,18 @@ export function dailyBlockReason(tool, action, args) {
   return null;
 }
 
+// Read-only daily actions: repeating one with the same args before any state change only
+// re-fetches what the planner already has.
+const DAILY_READ_ACTIONS = new Set([
+  "captains_log_list","captains_log_get","read_note","get_notes","list","get","list_ships","browse_ships",
+  "view_ship_buy_orders","commission_status","completed_missions","view_completed_mission",
+  "search_systems","find_route","inspect","status"
+]);
+
+export function isDailyRead(tool, action) {
+  return action.startsWith("get_") || DAILY_READ_ACTIONS.has(action);
+}
+
 export function dailyAllowed(tool, action, args) {
   return dailyBlockReason(tool, action, args) === null;
 }
