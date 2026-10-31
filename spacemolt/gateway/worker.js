@@ -787,7 +787,10 @@ async function executeDailyDecision(env, run, decision, provider) {
   if (read) {
     if (result.ok) run.readsSinceChange.set(readKey, run.history.length - 1);
   } else {
-    run.readsSinceChange.clear();
+    // Keep Infinity entries: commands/guides in the mechanics block do not go stale.
+    for (const [key, idx] of run.readsSinceChange) {
+      if (idx !== Infinity) run.readsSinceChange.delete(key);
+    }
   }
   return "continue";
 }
