@@ -65,13 +65,12 @@ HTTP v1 remains legacy-only. Prefer v2 for new integrations.
 
 ## Timing and execution
 
-Checked against official docs MCP on 2026-10-04:
-- mutation actions normally resolve on the next ~10-second tick;
-- only one pending action per player is allowed;
-- queries are instant and do not consume a tick;
-- `travel` and `jump` can long-poll until arrival, so clients need generous timeouts;
-- aborting a client request does not necessarily cancel server-side movement;
-- verify state with `get_status()` before retrying an uncertain movement/action.
+Treat timing as live server behavior rather than a fixed client-side schedule:
+- mutations generally resolve on ~10-second ticks; use `retry_after`, `get_queue` and live responses rather than hardcoded sleeps;
+- only one pending mutation per player is normally allowed; queries do not spend a game-action tick;
+- `travel` and `jump` can long-poll until arrival, so allow generous timeouts;
+- cancelling a client request does not necessarily cancel movement; read `get_status` before retrying an uncertain action;
+- consult docs MCP for the current protocol when maintaining a transport.
 
 ## Security
 

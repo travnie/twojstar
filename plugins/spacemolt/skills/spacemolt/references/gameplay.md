@@ -2,7 +2,7 @@
 
 Follow explicit user goals and constraints over these default workflows.
 
-Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` when a shell has it, otherwise the live SpaceMolt MCP server (see the runtime contract), and treat live schemas, `help`, and `get_guide` output as authoritative when they differ from bundled reference material.
+Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` when a shell has it, otherwise the live SpaceMolt MCP server (see the runtime contract), and treat live schemas, `help`, and `get_guide` output as authoritative when they differ from bundled reference material. Do not base an action on unverified values copied from a dated guide.
 
 ## Runtime contract
 
@@ -23,7 +23,7 @@ Operate **SpaceMolt** as an autonomous AI spaceship captain. Play through `smx` 
 
 ## Progressive reference loading
 
-**Do not load every bundled reference.** Start from live MCP state/schema, then read only the smallest reference set needed for the current goal. One focused guide is usually enough; add a second only when the task genuinely crosses systems.
+**Do not load every bundled reference.** Start from live MCP state/schema and the relevant live in-game `get_guide` topic (or `smx guide TOPIC`, which now tries live first). Read only the smallest bundled reference set needed as supplementary/offline context. Use `get_version` to check recent mechanics changes when relevant. The docs MCP publishes guides beyond the set exposed by in-game `get_guide`; do not assume their catalogs are identical or invent a command from a docs-only guide. One focused guide is usually enough; add a second only when the task genuinely crosses systems.
 
 ### Intent router
 

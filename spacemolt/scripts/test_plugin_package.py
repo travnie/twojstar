@@ -17,7 +17,7 @@ class SpaceMoltPackageTests(unittest.TestCase):
                      "skills/spacemolt/references/gameplay.md",
                      "skills/spacemolt/references/guides/explorer.md"):
             self.assertTrue(PACK["allowed_plugin_member"](Path(file)), file)
-        for file in (".env", "credentials.json", "secrets/password.txt", "assets/auth.json",
+        for file in (".mcp.json", ".env", "credentials.json", "secrets/password.txt", "assets/auth.json",
                      "skills/spacemolt/credentials.json", "skills/spacemolt/agents/session.json",
                      "skills/spacemolt/references/guides/private.env",
                      "skills/spacemolt/references/guides/credentials.md",
@@ -40,6 +40,9 @@ class SpaceMoltPackageTests(unittest.TestCase):
                     set(PACK["GUIDE_NAMES"]),
                 )
                 overlay = json.loads((dest / ".codex-plugin/plugin.json").read_text())
+                legacy = json.loads((dest / ".mcp.json").read_text())
+                self.assertEqual(legacy["mcpServers"]["game"]["url"], "https://game.spacemolt.com/mcp/v2?preset=full")
+                self.assertEqual(legacy["mcpServers"]["docs"]["url"], "https://game.spacemolt.com/mcp/docs")
                 if apps:
                     actual = json.loads((dest / ".app.json").read_text())["apps"]
                     self.assertEqual(actual, {

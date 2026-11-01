@@ -52,7 +52,7 @@ class Backend:
         self.binary = resolve_backend(binary)
         self.profile = canonical_profile(profile) if profile else None
 
-    def run(self, args: list[str], *, json_output: bool = False) -> BackendResult:
+    def run(self, args: list[str], *, json_output: bool = False, timeout: float | None = None) -> BackendResult:
         command = [self.binary, *args]
         if json_output and "--json" not in args:
             command.append("--json")
@@ -63,7 +63,9 @@ class Backend:
             ensure_private_state_dir(session.parent)
             env["SPACEMOLT_SESSION"] = str(session)
         try:
-            proc = subprocess.run(command, capture_output=True, text=True, env=env, check=False)
+            proc = subprocess.run(command, capture_output=True, text=True, env=env, check=False, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return BackendResult(124, "", "smx: official SpaceMolt CLI timed out.\n")
         except FileNotFoundError:
             return BackendResult(
                 127,
@@ -71,6 +73,8 @@ class Backend:
                 f"smx: SpaceMolt v2 CLI not found: {self.binary!r}. Install SpaceMolt/client-v2 "
                 "or set SMX_BACKEND to its executable path.\n",
             )
+        except OSError as exc:
+            return BackendResult(127, "", f"smx: could not start SpaceMolt v2 CLI: {exc}\n")
         return BackendResult(proc.returncode, proc.stdout, proc.stderr)
 
     def json(self, args: list[str]) -> tuple[BackendResult, Any | None]:
@@ -407,13 +411,19 @@ def cmd_sell_all(backend: Backend, argv: list[str]) -> int:
 def cmd_guide(backend: Backend, argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="smx guide", add_help=True)
     parser.add_argument("topic", nargs="?")
-    parser.add_argument("--list", action="store_true")
-    parser.add_argument("--search", metavar="TEXT")
-    parser.add_argument("--live", action="store_true")
+    parser.add_argument("--list", action="store_true", help="list bundled field cards")
+    parser.add_argument("--search", metavar="TEXT", help="search bundled field cards")
+    parser.add_argument("--live", action="store_true", help="require the current in-game guide")
+    parser.add_argument("--offline", action="store_true", help="use bundled field cards only")
     parser.add_argument("--json", action="store_true")
     ns = parser.parse_args(argv)
 
-    if ns.list or (not ns.topic and not ns.search):
+    if ns.live and ns.offline:
+        parser.error("--live and --offline are mutually exclusive")
+    if ns.search and ns.live:
+        parser.error("--search searches local cards; omit --live")
+
+    if (ns.list and not ns.live) or (not ns.topic and not ns.search and not ns.live):
         guides = list_guides()
         if ns.json:
             print(json.dumps(guides, indent=2, ensure_ascii=False))
@@ -421,6 +431,7 @@ def cmd_guide(backend: Backend, argv: list[str]) -> int:
             for row in guides:
                 live = f" · live: {row['live']}" if row["live"] else ""
                 print(f"{row['topic']:<12} {row['summary']}{live}")
+            print("For all current server guides: smx guide --live")
         return 0
 
     if ns.search:
@@ -434,30 +445,61 @@ def cmd_guide(backend: Backend, argv: list[str]) -> int:
                 print(f"{hit['topic']}:{hit['line']}: {hit['text']}")
         return 0
 
-    topic = str(ns.topic).casefold()
-    if topic not in GUIDES:
-        matches = difflib.get_close_matches(topic, sorted(GUIDES), n=3, cutoff=0.55)
-        suffix = f" Did you mean: {', '.join(matches)}?" if matches else ""
-        print(f'smx: unknown guide "{topic}".{suffix}', file=sys.stderr)
-        return 2
+    topic = str(ns.topic).casefold() if ns.topic else ""
 
-    if ns.live:
-        live_guide = GUIDES[topic]["live"]
-        if not live_guide:
-            print(f'smx: "{topic}" has no direct server guide; use the local card or live help.', file=sys.stderr)
+    def show_local(fallback_reason: str | None = None) -> int:
+        if ns.json:
+            payload = json.loads(guide_json(topic))
+            payload["source"] = "bundled"
+            payload["fallback"] = fallback_reason is not None
+            if fallback_reason is not None:
+                payload["fallback_reason"] = fallback_reason[:240]
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(load_guide(topic))
+        return 0
+
+    if ns.offline:
+        if topic not in GUIDES:
+            print(f'smx: no bundled card for "{topic}". Use smx guide {topic} to query the server.', file=sys.stderr)
             return 2
-        result = backend.run(["get_guide", f"id={live_guide}"], json_output=ns.json)
-        if result.stdout:
-            sys.stdout.write(result.stdout)
+        return show_local()
+
+    # Let the official CLI resolve guides, including newly added upstream topics.
+    # These mappings are ergonomic aliases, not a frozen catalog.
+    live_guide = GUIDES[topic]["live"] if topic in GUIDES else topic
+    # Unmapped local topics can still exist in the live game.
+    # Omitting id lists live guides; supported by official client-v2.
+    args = ["get_guide"] + ([f"id={live_guide or topic}"] if topic else [])
+    result = backend.run(args, json_output=ns.json, timeout=20.0)
+    if result.returncode == 0 and result.stdout.strip():
+        sys.stdout.write(result.stdout)
         if result.stderr:
             sys.stderr.write(result.stderr)
-        return result.returncode
+        return 0
 
-    if ns.json:
-        print(guide_json(topic))
-    else:
-        print(load_guide(topic))
-    return 0
+    if topic in GUIDES and not ns.live:
+        reason = (result.stderr or result.stdout).strip() or "empty live guide response"
+        print(
+            f'smx: live guide unavailable for "{topic}" ({reason[:120]}); '
+            "using bundled field card (may be stale).",
+            file=sys.stderr,
+        )
+        return show_local(reason)
+
+    if result.stdout:
+        sys.stdout.write(result.stdout)
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+    if not topic:
+        print("smx: could not fetch the live guide index.", file=sys.stderr)
+    elif topic not in GUIDES:
+        matches = difflib.get_close_matches(topic, sorted(GUIDES), n=3, cutoff=0.55)
+        suffix = f" Local cards: {', '.join(matches)}." if matches else ""
+        print(f'smx: no live guide for "{topic}".{suffix}', file=sys.stderr)
+    elif result.returncode == 0 and not result.stdout.strip():
+        print(f'smx: live guide "{topic}" returned no content.', file=sys.stderr)
+    return result.returncode or 1
 
 
 
@@ -992,7 +1034,7 @@ Usage:
   smx nearby [--json]           visible-threat summary from get_nearby
   smx missions [--json]         active + available missions
   smx sell-all [options]        sell current cargo through v2
-  smx guide [topic]             load a small local tactical card on demand
+  smx guide [topic]             fetch live game guide (offline card fallback)
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
   smx paths                      show backend, profile and state locations
   smx profiles                   list isolated gameplay profiles

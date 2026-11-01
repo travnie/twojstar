@@ -59,8 +59,11 @@ smx missions --json
 smx sell-all --dry-run
 smx sell-all --keep fuel_cell,mission_widget
 
-smx guide combat
-smx guide combat --live
+smx guide combat            # current in-game guide, local fallback
+smx guide combat --live     # current server only; fail if unavailable
+smx guide combat --offline  # bundled field card only
+smx guide --live            # list current in-game guides
+smx guide taxes             # forward upstream topics without local copies
 
 smx profiles
 smx -p gremlin status
@@ -89,7 +92,7 @@ smx shipping/active
 1. **Live v2 wins.** Official v2 CLI/OpenAPI and live game state outrank local cards.
 2. **No second auth/API stack.** `smx` composes official commands instead of reimplementing mechanics, retries or response models.
 3. **No fuzzy auto-execution.** Unknown commands may get suggestions, never automatic correction.
-4. **Knowledge stays lazy.** Bundled cards load only when requested; `--live` asks the current server guide.
+4. **Live knowledge first.** `smx guide TOPIC` queries the official server before using a bundled card. `--live` requires the server; `--offline` forces a local snapshot. The upstream guide index remains dynamic.
 5. **MCP roles stay separate.** Docs MCP is for development; the full v2 preset is for gameplay.
 6. **Credentials stay outside worktrees.** Default sessions live in private smx state.
 7. **Parallel players use separate session files.** They never race on the official client's shared `activeAccount`.
@@ -159,12 +162,14 @@ smx guide combat
 smx guide --search tackle
 smx guide combat --json
 smx guide combat --live
+smx guide combat --offline
+smx guide --live
 
 smx mcp gameplay   # https://game.spacemolt.com/mcp/v2?preset=full
 smx mcp docs       # https://game.spacemolt.com/mcp/docs
 ```
 
-Cards are short tactical reminders, not a frozen game manual. When building/changing wrappers, query the docs MCP for exact contracts. See [DEVELOPMENT.md](DEVELOPMENT.md).
+Cards are short offline tactical reminders, not a frozen game manual. Normal topic lookups prefer the game's current `get_guide` content and warn before an offline fallback. The live guide index and newly introduced topics do not require a new `smx` release. The documentation MCP has a separate, broader guide catalog; consult it for development and exact contracts, not as a substitute for game command schemas. See [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Local state and credentials
 
