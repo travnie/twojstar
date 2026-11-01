@@ -179,7 +179,7 @@ export const DAILY_ALLOWED = {
     "get_base","get_ship","get_cargo","get_skills","get_achievements","get_active_missions",
     "get_missions","completed_missions","view_completed_mission","get_notifications","get_map",
     "search_systems","find_route","get_commands","get_guide","inspect","scan",
-    "travel","jump","dock","undock","refuel","repair","mine","complete_mission"
+    "travel","jump","dock","undock","refuel","repair","mine","accept_mission","complete_mission"
   ],
   spacemolt_social: [
     "get_chat_history","chat","captains_log_add","captains_log_list","captains_log_get",
@@ -214,6 +214,7 @@ export function dailyBlockReason(tool, action, args) {
     return "only defensive battle actions are allowed";
   }
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return `${action} needs args.id`;
+  if (action === "accept_mission" && (typeof args?.id !== "string" || !args.id)) return "accept_mission needs args.id (a mission_id from get_missions)";
   if ((action === "refuel" || action === "repair") && args?.quantity != null) {
     const qty = Number(args.quantity);
     if (!isFinite(qty) || qty < 0 || qty > 200) return `${action} quantity must be 0-200`;
@@ -306,4 +307,14 @@ export function parsePlannerDecision(text) {
 
 function tryJson(text) {
   try { return JSON.parse(text); } catch { return undefined; }
+}
+
+// Active mission count from a get_status result (live 0.65x: missions.active); also accepts
+// get_active_missions-like shapes. null when unknown, so the caller fails closed.
+export function activeMissionCount(status) {
+  const root = sc(status);
+  for (const candidate of [root?.missions?.active, root?.active_missions, root?.active]) {
+    if (Array.isArray(candidate)) return candidate.length;
+  }
+  return null;
 }

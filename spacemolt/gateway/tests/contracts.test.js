@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -72,4 +72,16 @@ test("read keys ignore argument order", () => {
   assert.equal(dailyReadKey("spacemolt", "get_notifications", {limit:5, clear:false}),
     dailyReadKey("spacemolt", "get_notifications", {clear:false, limit:5}));
   assert.notEqual(dailyReadKey("spacemolt", "get_guide", {topic:"mining"}), dailyReadKey("spacemolt", "get_guide", {}));
+});
+
+test("accept_mission is allowed only with a mission id", () => {
+  assert.equal(dailyBlockReason("spacemolt", "accept_mission", {id:"m1"}), null);
+  assert.match(dailyBlockReason("spacemolt", "accept_mission", {}), /mission_id/);
+  assert.match(dailyBlockReason("spacemolt", "abandon_mission", {id:"m1"}), /never allowed/);
+});
+
+test("active mission count reads get_status missions", () => {
+  assert.equal(activeMissionCount({structuredContent:{missions:{active:[]}}}), 0);
+  assert.equal(activeMissionCount({structuredContent:{missions:{active:[{id:"m"}]}}}), 1);
+  assert.equal(activeMissionCount({structuredContent:{}}), null);
 });
