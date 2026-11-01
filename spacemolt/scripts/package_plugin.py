@@ -166,6 +166,9 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
             raise ValueError(f"symlink: {rel}")
         if path.is_dir():
             continue
+        # Regenerate legacy adapters from canonical portable sources.
+        if rel.as_posix() in {".mcp.json", ".codex-plugin/plugin.json"}:
+            continue
         if not path.is_file() or any(part in {"__pycache__", ".git", "node_modules"} for part in rel.parts):
             raise ValueError(f"unexpected package member: {rel}")
         if not allowed_plugin_member(rel):

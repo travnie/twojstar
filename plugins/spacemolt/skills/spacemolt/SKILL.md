@@ -20,7 +20,7 @@ All reference paths, including links mentioned inside reference documents, are *
 
 - Gameplay: `smx` with a usable shell first, then official `game` MCP at `https://game.spacemolt.com/mcp/v2?preset=full`; direct v2 HTTP/WebSocket only as the last supported resort. Check available tools instead of assuming a shell exists.
 - Development: official read-only `docs` MCP at `https://game.spacemolt.com/mcp/docs`. Use its live command, type, transport, and auth contracts.
-- Current live state, tool schemas and official help/docs outrank bundled snapshots. Do not guess unsupported tool arguments, connection options or game rules.
+- Current live state, tool schemas and official help/docs outrank bundled snapshots. Before relying on a gameplay mechanic, use a current server guide/help and check `get_version` when release changes matter; bundled cards/manuals are supplementary context or offline fallback, never authoritative over live data. Do not guess unsupported tool arguments, connection options or game rules.
 - Player credentials and sessions never belong in package files, logs, docs tools or unrelated services. Follow supported auth flows and verify the active player before any mutation.
 - Gameplay mutations and development file writes are different authority boundaries. Respect explicit approval, host restrictions, repository instructions and the checks described by the selected reference.
 
