@@ -309,8 +309,12 @@ function tryJson(text) {
   try { return JSON.parse(text); } catch { return undefined; }
 }
 
-// Active mission count from a get_status result; null when the shape is unknown.
+// Active mission count from a get_status result (live 0.65x: missions.active); also accepts
+// get_active_missions-like shapes. null when unknown, so the caller fails closed.
 export function activeMissionCount(status) {
-  const active = sc(status)?.missions?.active;
-  return Array.isArray(active) ? active.length : null;
+  const root = sc(status);
+  for (const candidate of [root?.missions?.active, root?.active_missions, root?.active]) {
+    if (Array.isArray(candidate)) return candidate.length;
+  }
+  return null;
 }
