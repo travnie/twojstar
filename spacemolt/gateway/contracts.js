@@ -178,7 +178,7 @@ export const DAILY_ALLOWED = {
     "get_status","get_state","get_player","get_location","get_queue","get_system","get_poi",
     "get_base","get_ship","get_cargo","get_skills","get_achievements","get_active_missions",
     "get_missions","completed_missions","view_completed_mission","get_notifications","get_map",
-    "search_systems","find_route","get_commands","get_guide","inspect","scan",
+    "search_systems","find_route","get_commands","get_guide","get_nearby","inspect","scan",
     "travel","jump","dock","undock","refuel","repair","mine","accept_mission","complete_mission"
   ],
   spacemolt_social: [
