@@ -11,6 +11,7 @@ import {
   dailyBlockReason,
   isDailyRead,
   dailyReadKey,
+  activeMissionCount,
   positiveInt,
   buyEstimateRejection,
   buyFillOverCap,
@@ -614,7 +615,8 @@ const DAILY_SYSTEM_PROMPT =
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, complete_mission. There is NO list_missions action. " +
+  "Missions: work one at a time. With no active mission you may accept exactly one from get_missions that allowed actions can finish (delivery, mining, exploration); never combat, bounty, cull or escort, and avoid Fixer cargo-advance contracts. Then progress it across runs and complete_mission when done. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission. There is NO list_missions action. " +
   "Do not repeat a read whose result is already in the history unless a later action (travel, dock, mine, chat...) may have changed it; refresh after such actions. Finish when nothing useful is left. " +
   "Return exactly one JSON object (never an array, one action per reply) and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
@@ -624,6 +626,17 @@ const DAILY_SYSTEM_PROMPT =
 
 function errorText(error, max) {
   return String(error?.message || error).slice(0, max);
+}
+
+async function acceptMissionBlock(env, run) {
+  if (run.missionAccepted) return "one mission per run: already accepted one; work on it";
+  // Live check costs one more external call.
+  run.subrequests += 1;
+  const status = await safeObs(env, "spacemolt", "get_status", {});
+  const count = status.ok ? activeMissionCount(status.data) : null;
+  if (count === null) return "could not verify active missions; not accepting";
+  if (count > 0) return "one mission at a time: finish the active mission (complete_mission) before accepting another";
+  return null;
 }
 
 // A repeat is blocked only while the earlier result is still inside the planner's history window.
@@ -773,6 +786,15 @@ async function executeDailyDecision(env, run, decision, provider) {
     run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart, skipped:action});
     return "stop";
   }
+  // One mission at a time: accept only with no active mission, at most once per run.
+  if (action === "accept_mission") {
+    const missionBlock = await acceptMissionBlock(env, run);
+    if (missionBlock) {
+      run.history.push({kind:"blocked", reason:missionBlock, tool, action});
+      run.blockedCount += 1;
+      return run.blockedCount >= DAILY_MAX_BLOCKED ? "stop" : "continue";
+    }
+  }
   if (action === "captains_log_add" && !await captainsLogHasRoom(env)) {
     run.history.push({kind:"blocked", tool, action, reason:"captains_log_full: appending would evict the oldest entry"});
     return "continue";
@@ -782,6 +804,7 @@ async function executeDailyDecision(env, run, decision, provider) {
   const remaining = Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
   const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
+  if (action === "accept_mission" && result.ok) run.missionAccepted = true;
   // Any non-read may change game state (even a failed one, e.g. a timed-out travel), so
   // earlier reads become stale. Failed reads stay retryable.
   if (read) {
@@ -838,6 +861,7 @@ async function runDailyGremlin(env) {
     workersAiNeuronsUsed:null,
     // read key -> history index of its result (Infinity: always in the prompt).
     readsSinceChange:new Map(),
+    missionAccepted:false,
     maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),
     // Cap leaves >= 6 min of the 15-min cron wall for the return trip, docking and summary.
     loopBudgetMs:positiveInt(env.DAILY_LOOP_BUDGET_SECONDS, DAILY_DEFAULT_LOOP_BUDGET_SECONDS, 9 * 60) * 1000,
