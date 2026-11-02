@@ -9,6 +9,7 @@ The official `spacemolt` binary remains authoritative for API models, auth and s
 - friendly aliases and kebab-case compatibility,
 - `sell-all`, `nearby` and combined mission views,
 - read-only `route` preflight with live jump/fuel/fleet data, reserve checks and wormhole markers,
+- `survive` combat/ship triage and opt-in guarded same-system `autodock`,
 - typo suggestions without automatic execution,
 - passthrough to every official v2 command,
 - lazy tactical cards through `smx guide`,
@@ -59,6 +60,9 @@ smx nearby
 smx missions --json
 smx route tau_ceti --reserve 20 --check
 smx route station_poi_id --json
+smx survive --json --check
+smx autodock --json
+smx autodock --target station_poi_id --execute
 smx sell-all --dry-run
 smx sell-all --keep fuel_cell,mission_widget
 
@@ -123,6 +127,50 @@ Machine-readable JSON includes the untouched official `find_route` data and
 a separate conservative `assessment`; no cached routes or custom pathfinding.
 A route may change as game state changes. Rerun before executing official
 `jump` or `travel` commands.
+
+## Pilot survival and autodock
+
+`smx survive` is a **read-only** survival report from official `get_status`,
+`get_system`, and (when your pilot participates in a visible battle)
+`spacemolt_battle/status`. Reports current hull/shield/fuel, incapacitation,
+pending actions, nearby pirates/leviathans and combat escape blockers.
+It suggests existing official `smx spacemolt_battle/stance id=flee` or
+`smx spacemolt_battle/stance id=brace` calls; **never
+executes stances, attacks, repairs or distress broadcasts**. Low-condition
+thresholds are labeled as heuristics, not game rules.
+
+```bash
+smx survive
+smx survive --check --json
+```
+
+`smx autodock` previews a plan by default. It uses the current game state and
+charted stations from `get_system`: at a station it plans `dock`; elsewhere
+it plans `travel` **within the current system** and then `dock`. If multiple
+stations are charted away from the current POI, specify `--target` POI/base ID.
+No cross-system
+jumps and no hidden POI guesses.
+
+```bash
+smx autodock                         # preview only; zero mutations
+smx autodock --target station_id     # explicit destination preview
+smx autodock --execute              # opt into bounded travel/dock actions
+smx autodock --target station_id --execute --max-wait 120
+smx autodock --json                  # structured plan/result
+```
+
+Before movement it refuses unknown/pending queues, transit, incapacitated
+crew and verified player participation in a battle. Before docking it verifies
+the actual station, public access and absence of an active local battle, then
+rechecks position and queue. It does not retry ambiguous action outcomes.
+Accepted travel is polled for up to `--max-wait` seconds; if transit or an
+existing action queue remains pending, the command exits nonzero and the user
+can rerun it after the action settles. Final
+docking is verified via fresh state. SpaceMolt may still reject actions due to
+fuel, reputation, station attacks or a concurrent state change.
+
+**These commands do not run in the background**. Automated survival decisions
+beyond read-only triage are left to the pilot/agent and official API.
 
 ## Gameplay profiles and fleet
 
