@@ -427,6 +427,14 @@ class MainController : Initializable {
 
         GlobalScope.launch(Dispatchers.IO) {
             if (!Command.check()) {
+                if (XiaomiADBFastbootTools.linux &&
+                    System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64")) {
+                    IllegalStateException(
+                        "Linux ARM64 needs adb and fastboot installed from your distribution; " +
+                            "Google's official Platform Tools for Linux target x86-64."
+                    ).alert()
+                    return@launch
+                }
                 val archive = File(XiaomiADBFastbootTools.dir, "platform-tools.zip")
                 val platformToolsDir = File(XiaomiADBFastbootTools.dir, "platform-tools")
                 val (downloadAlert, downloadLabel) = withContext(Dispatchers.Main) {
