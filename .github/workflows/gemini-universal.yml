@@ -126,7 +126,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write        # repair commit on the PR branch
-      issues: write          # status comment
       pull-requests: write   # review + inline comments
     concurrency:
       group: gemini-review-${{ inputs.pr || github.event.pull_request.number }}
@@ -279,6 +278,19 @@ jobs:
           [ -s "$rep" ] || echo "(no broken config files)" > "$rep"
           cat "$out" "$rep"
 
+      # Compare review IDs rather than timestamps; older asynchronous reviews
+      # can otherwise be mistaken for a review produced by this run.
+      - name: Snapshot existing reviews
+        if: env.NUMBER != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .id' |
+            sort -u > "$RUNNER_TEMP/gemini-reviews-before.txt"
+
       - id: gemini
         name: Run Gemini CLI review
         uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489 # v0.1.22
@@ -380,20 +392,23 @@ jobs:
           SUMMARY: ${{ steps.gemini.outputs.summary }}
           OUTCOME: ${{ steps.gemini.outcome }}
           REPAIR: ${{ steps.repair.outputs.note }}
-          STARTED: ${{ steps.lint.outputs.started }}
         run: |
           set -euo pipefail
+          [ -z "$REPAIR" ] || printf '%s\n' "$REPAIR"
           if [ "$OUTCOME" != success ]; then
             echo "::error::Gemini review ended $OUTCOME. See this Actions run."
-            exit 1
+            # The Gemini action already failed this job.
+            exit 0
           fi
-          n=$(gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
-            --jq ".[] | select(.user.login == \"github-actions[bot]\" and .submitted_at >= \"$STARTED\") | .id" | wc -l)
+          gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .id' |
+            sort -u > "$RUNNER_TEMP/gemini-reviews-after.txt"
+          n=$(comm -13 "$RUNNER_TEMP/gemini-reviews-before.txt" \
+            "$RUNNER_TEMP/gemini-reviews-after.txt" | wc -l)
           if [ "$n" -eq 0 ]; then
             echo "::error::Gemini completed without submitting a review. ${SUMMARY:-See step logs.}"
             exit 1
           fi
-          [ -z "$REPAIR" ] || printf '%s\n' "$REPAIR"
 
   # ════════════════════════════════════════════════════════════════════════
   # mention — replies where you tagged it. Read-only.
