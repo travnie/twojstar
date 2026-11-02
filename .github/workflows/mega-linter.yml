@@ -21,6 +21,11 @@ on: # yamllint disable-line rule:truthy
       - "**/*.yml"
       - "**/*.yaml"
       - ".github/linters/**"
+      - ".github/instructions/**"
+      - "**/.cursor/rules/**"
+      - "**/.cursorrules"
+      - "**/.windsurfrules"
+      - "**/.clinerules"
       - ".github/workflows/mega-linter.yml"
   pull_request:
     paths: *lint-paths
@@ -45,6 +50,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Instruction Rot
+        uses: trvny/.github/.github/actions/instruction-rot@9d3b98f7ceafd52aae0c707c1c667a1a8dedac0a
+        with:
+          base-sha: ${{ github.event.pull_request.base.sha || github.event.before }}
+          head-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: MegaLinter
         id: megalinter
