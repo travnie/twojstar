@@ -179,8 +179,23 @@ jobs:
             previous_tag=""
           fi
 
+          xiaomi_bundle_native_only() {
+            local package="$1" contents
+            contents="$(unzip -Z1 "assets/$package" 2>/dev/null)" || return 1
+            [ "$(printf '%s\n' "$contents" | wc -l)" -eq 5 ] &&
+              printf '%s\n' "$contents" | grep -Fxq "XiaomiADBFastbootTools-windows-x64.zip" &&
+              printf '%s\n' "$contents" | grep -Fxq "XiaomiADBFastbootTools-linux-x64.tar.gz" &&
+              printf '%s\n' "$contents" | grep -Fxq "XiaomiADBFastbootTools-linux-arm64.tar.gz" &&
+              printf '%s\n' "$contents" | grep -Fxq "XiaomiADBFastbootTools-macos-x64.tar.gz" &&
+              printf '%s\n' "$contents" | grep -Fxq "XiaomiADBFastbootTools-macos-arm64.tar.gz"
+          }
+
           preserve_or_fail() {
             local product="$1" package="$2"
+            if [ "$product" = Xiaomi-ADB-Tools ] && ! xiaomi_bundle_native_only "$package"; then
+              echo "Refusing to republish a legacy Xiaomi bundle containing JARs." >&2
+              exit 1
+            fi
             if [ -s "assets/$package" ] && copy_previous_source "$product"; then
               echo "$product: preserving $package with its exact previous provenance."
               return 0
@@ -211,7 +226,8 @@ jobs:
               return
             fi
 
-            if [ "$previous_format" = compact-v2 ] && [ -s "assets/$package" ]; then
+            if [ "$previous_format" = compact-v2 ] && [ -s "assets/$package" ] &&
+               { [ "$product" != Xiaomi-ADB-Tools ] || xiaomi_bundle_native_only "$package"; }; then
               if [ "$published_run" -gt "$run_id" ] || \
                  { [ "$published_run" -eq "$run_id" ] && [ "$published_attempt" -ge "$attempt" ]; }; then
                 copy_previous_source "$product" || {
@@ -277,50 +293,34 @@ jobs:
           }
 
           bundle_xiaomi() {
-            local run_id="$1" copied=0
-            rm -rf work/xiaomi
+            local run_id="$1" platform artifact ext filename count=0
+            rm -rf work/xiaomi work/xiaomi-native
             mkdir -p work/xiaomi
-            gh run download "$run_id" --repo "$GH_REPO" --name XiaomiADBFastbootTools --dir work/xiaomi
-            test -s work/xiaomi/XiaomiADBFastbootTools-ASSETS.txt
-            while IFS= read -r file; do
-              [ -n "$file" ] || continue
-              case "$file" in
-                XiaomiADBFastbootTools-*.jar) ;;
-                *) echo "Unexpected Xiaomi artifact in manifest: $file" >&2; exit 1 ;;
-              esac
-              test -s "work/xiaomi/$file"
-              copied=$((copied + 1))
-            done < work/xiaomi/XiaomiADBFastbootTools-ASSETS.txt
-            [ "$copied" -eq 5 ]
-            local platform artifact ext filename native_count=0 status
             for platform in windows-x64 linux-x64 linux-arm64 macos-x64 macos-arm64; do
               artifact="XiaomiADBFastbootTools-$platform"
-              if artifact_available "$run_id" "$artifact"; then
-                mkdir -p "work/xiaomi-native/$platform"
-                gh run download "$run_id" --repo "$GH_REPO" --name "$artifact" --dir "work/xiaomi-native/$platform"
-                ext=.tar.gz
-                [ "$platform" != windows-x64 ] || ext=.zip
-                filename="XiaomiADBFastbootTools-$platform$ext"
-                test -s "work/xiaomi-native/$platform/$filename"
-                cp "work/xiaomi-native/$platform/$filename" work/xiaomi/
-                native_count=$((native_count + 1))
-              else
-                status=$?
-                [ "$status" -ne 2 ] || exit 1
+              if ! artifact_available "$run_id" "$artifact"; then
+                echo "Missing required standalone Xiaomi artifact: $artifact" >&2
+                return 1
               fi
+              mkdir -p "work/xiaomi-native/$platform"
+              gh run download "$run_id" --repo "$GH_REPO" --name "$artifact" --dir "work/xiaomi-native/$platform"
+              ext=.tar.gz
+              [ "$platform" != windows-x64 ] || ext=.zip
+              filename="XiaomiADBFastbootTools-$platform$ext"
+              test -s "work/xiaomi-native/$platform/$filename"
+              cp "work/xiaomi-native/$platform/$filename" work/xiaomi/
+              count=$((count + 1))
             done
-            if [ "$native_count" -ne 0 ] && [ "$native_count" -ne 5 ]; then
-              echo "Incomplete Xiaomi native app set ($native_count/5)" >&2
-              exit 1
-            fi
+            [ "$count" -eq 5 ]
             rm -f assets/xiaomi-adb-tools.zip
             (
               cd work/xiaomi
-              shopt -s nullglob
               zip -0 -j ../../assets/xiaomi-adb-tools.zip \
-                XiaomiADBFastbootTools-ASSETS.txt XiaomiADBFastbootTools-*.jar \
                 XiaomiADBFastbootTools-*.zip XiaomiADBFastbootTools-*.tar.gz
             )
+            # Distribution contains only the five standalone archives, never JARs.
+            [ "$(unzip -Z1 assets/xiaomi-adb-tools.zip | wc -l)" -eq 5 ]
+            ! unzip -Z1 assets/xiaomi-adb-tools.zip | grep -E '\.jar$|ASSETS\.txt$'
           }
 
           bundle_paintdotnet() {
@@ -371,7 +371,7 @@ jobs:
 
           resolve_product Benches benches-release.yml benches-portable-release benches-portable.zip bundle_benches
           resolve_product Feedboard feedboard-ci.yml feedboard-msix-x64 feedboard.zip bundle_feedboard
-          resolve_product Xiaomi-ADB-Tools xiaomi-adb-tools-ci.yml XiaomiADBFastbootTools xiaomi-adb-tools.zip bundle_xiaomi
+          resolve_product Xiaomi-ADB-Tools xiaomi-adb-tools-ci.yml XiaomiADBFastbootTools-windows-x64 xiaomi-adb-tools.zip bundle_xiaomi
           resolve_product Paint.NET-ICO paintdotnet-ci.yml paintdotnet-ico-release paintdotnet-ico.zip bundle_paintdotnet
           resolve_product Paint.NET-AI paintdotnet-ci.yml paintdotnet-ai-release paintdotnet-ai.zip bundle_paintdotnet_ai
           resolve_product Audacity-Auto-Declip-Windows audacity-vst3-ci.yml audacity-auto-declip-Windows-@attempt@ audacity-auto-declip-windows.zip bundle_audacity_windows
@@ -424,7 +424,7 @@ jobs:
             echo "### Downloads"
             echo "- \`benches-portable.zip\` - Codebench, Docbench and Streambench portable builds"
             echo "- \`feedboard.zip\` - Feedboard sideload package, certificate, verified installer and dependencies"
-            echo "- \`xiaomi-adb-tools.zip\` - all five Xiaomi ADB Tools platform JARs"
+            echo "- \`xiaomi-adb-tools.zip\` - five standalone Xiaomi ADB Tools archives, each with bundled Java 25; extract the inner archive for your OS"
             echo "- \`paintdotnet-ico.zip\` - Paint.NET ICO plugin package"
             echo "- \`paintdotnet-ai.zip\` - Paint.NET AI Restore plugin package"
             echo "- \`audacity-auto-declip-windows.zip\` - Travny Auto Declip VST3 for Windows x64"

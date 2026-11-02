@@ -30,22 +30,20 @@ does the app download `platform-tools` into its own data directory.
 
 ## Building and downloads
 
-CI produces two formats for Windows x64, Linux x64/arm64 and macOS x64/arm64:
+CI distributes **only standalone native archives** for Windows x64, Linux x64/arm64
+and macOS x64/arm64. Each includes the launcher, JavaFX dependencies and a **Java 25
+runtime**. No separately installed Java required.
 
-- **Native app archive** (`.zip` on Windows, `.tar.gz` elsewhere): includes the launcher,
-  JavaFX dependencies and a **JDK 25 runtime**. No separately installed Java required.
-  Extract the entire archive and launch `XiaomiADBFastbootTools.exe` on Windows,
-  `XiaomiADBFastbootTools` on Linux or `XiaomiADBFastbootTools.app` on macOS.
-- **Platform-specific JAR**: smaller, but requires Java 21 or newer on the host. Run
-  `java -jar build/libs/XiaomiADBFastbootTools-<platform>.jar` with the matching OS/CPU variant.
+The unified rolling release provides `xiaomi-adb-tools.zip` containing the five
+platform-specific archives. Extract it, then extract the archive matching your system
+(`.zip` on Windows or `.tar.gz` elsewhere). Launch `XiaomiADBFastbootTools.exe`
+on Windows, `XiaomiADBFastbootTools` on Linux, or `XiaomiADBFastbootTools.app`
+on macOS. Do not separate the launcher from its bundled `runtime` directory.
 
-To create the JARs locally, use a JDK 21 or newer. The Gradle wrapper is included:
+JARs are created as intermediate build inputs for `jpackage`; they are **not published**
+as separate downloads. The source build remains reproducible.
 
-```sh
-./gradlew platformJars
-```
-
-To make a no-install native archive, use JDK 25 and Python 3.13 on the target OS:
+To make a standalone native archive locally, use JDK 25 and Python 3.13 on the target OS:
 
 ```powershell
 .\gradlew.bat jarWindowsX64
@@ -93,9 +91,9 @@ provide a compatible official ARM64 Linux Platform Tools download.
 
 **The application doesn't work. Is there anything I should have installed?**
 
-The native app archives include JDK 25, so no Java installation is needed. For a plain
-JAR, install a Java 21+ runtime (for example Temurin). On Linux, JavaFX still needs
-system GTK libraries; on Windows, the device may need a USB ADB driver.
+Standalone app archives include a Java 25 runtime, so no Java installation is needed.
+On Linux, JavaFX still needs system GTK libraries; on Windows, the device may need
+a USB ADB driver. Only building from source requires a JDK.
 
 **The app on Windows doesn't detect my device even though it's connected and USB debugging is enabled. What could be the issue?**
 
