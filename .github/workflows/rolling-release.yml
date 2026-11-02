@@ -292,11 +292,34 @@ jobs:
               copied=$((copied + 1))
             done < work/xiaomi/XiaomiADBFastbootTools-ASSETS.txt
             [ "$copied" -eq 5 ]
+            local platform artifact ext filename native_count=0 status
+            for platform in windows-x64 linux-x64 linux-arm64 macos-x64 macos-arm64; do
+              artifact="XiaomiADBFastbootTools-$platform"
+              if artifact_available "$run_id" "$artifact"; then
+                mkdir -p "work/xiaomi-native/$platform"
+                gh run download "$run_id" --repo "$GH_REPO" --name "$artifact" --dir "work/xiaomi-native/$platform"
+                ext=.tar.gz
+                [ "$platform" != windows-x64 ] || ext=.zip
+                filename="XiaomiADBFastbootTools-$platform$ext"
+                test -s "work/xiaomi-native/$platform/$filename"
+                cp "work/xiaomi-native/$platform/$filename" work/xiaomi/
+                native_count=$((native_count + 1))
+              else
+                status=$?
+                [ "$status" -ne 2 ] || exit 1
+              fi
+            done
+            if [ "$native_count" -ne 0 ] && [ "$native_count" -ne 5 ]; then
+              echo "Incomplete Xiaomi native app set ($native_count/5)" >&2
+              exit 1
+            fi
             rm -f assets/xiaomi-adb-tools.zip
             (
               cd work/xiaomi
-              zip -9 -j ../../assets/xiaomi-adb-tools.zip \
-                XiaomiADBFastbootTools-ASSETS.txt XiaomiADBFastbootTools-*.jar
+              shopt -s nullglob
+              zip -0 -j ../../assets/xiaomi-adb-tools.zip \
+                XiaomiADBFastbootTools-ASSETS.txt XiaomiADBFastbootTools-*.jar \
+                XiaomiADBFastbootTools-*.zip XiaomiADBFastbootTools-*.tar.gz
             )
           }
 

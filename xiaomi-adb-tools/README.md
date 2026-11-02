@@ -36,7 +36,8 @@ CI produces two formats for Windows x64, Linux x64/arm64 and macOS x64/arm64:
   JavaFX dependencies and a **JDK 25 runtime**. No separately installed Java required.
   Extract the entire archive and launch `XiaomiADBFastbootTools.exe` on Windows,
   `XiaomiADBFastbootTools` on Linux or `XiaomiADBFastbootTools.app` on macOS.
-- **Portable JAR**: smaller, but requires Java 21 or newer on the host.
+- **Platform-specific JAR**: smaller, but requires Java 21 or newer on the host. Run
+  `java -jar build/libs/XiaomiADBFastbootTools-<platform>.jar` with the matching OS/CPU variant.
 
 To create the JARs locally, use a JDK 21 or newer. The Gradle wrapper is included:
 
@@ -46,14 +47,16 @@ To create the JARs locally, use a JDK 21 or newer. The Gradle wrapper is include
 
 To make a no-install native archive, use JDK 25 and Python 3.13 on the target OS:
 
-```sh
-./gradlew jarWindowsX64
+```powershell
+.\gradlew.bat jarWindowsX64
 python scripts/package_native.py --platform windows-x64
 ```
 
 Replace `windows-x64` and `jarWindowsX64` with the matching platform and task.
 Native app images must be built on the corresponding operating system and CPU architecture.
-The CI matrix builds all five. macOS images are unsigned/not notarized.
+The CI matrix builds all five. macOS images are unsigned/not notarized. Linux arm64
+requires `adb` and `fastboot` from the system package manager, since Google does not
+provide a compatible official ARM64 Linux Platform Tools download.
 
 **Warning: use the program at your own risk.**
 
