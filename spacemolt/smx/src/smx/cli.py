@@ -25,6 +25,7 @@ from .profiles import (add_profile, canonical_profile, default_profile,
                        list_profiles, migrate_legacy_session, remove_profile,
                        selected_session_path, set_default_profile)
 from .projection import parse_fields, project_fields, unwrap_payload
+from .route import cmd_route
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ALIASES = {
@@ -77,8 +78,8 @@ class Backend:
             return BackendResult(127, "", f"smx: could not start SpaceMolt v2 CLI: {exc}\n")
         return BackendResult(proc.returncode, proc.stdout, proc.stderr)
 
-    def json(self, args: list[str]) -> tuple[BackendResult, Any | None]:
-        result = self.run(args, json_output=True)
+    def json(self, args: list[str], *, timeout: float | None = None) -> tuple[BackendResult, Any | None]:
+        result = self.run(args, json_output=True, timeout=timeout)
         if not result.stdout.strip():
             return result, None
         try:
@@ -117,7 +118,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch", "doctor", "backend"})
+    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "route", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch", "doctor", "backend"})
     return commands
 
 
@@ -1033,6 +1034,7 @@ Usage:
   smx <command> [args...]               pass through to `spacemolt`
   smx nearby [--json]           visible-threat summary from get_nearby
   smx missions [--json]         active + available missions
+  smx route ID [--reserve N] [--check]   preview route + fuel safety
   smx sell-all [options]        sell current cargo through v2
   smx guide [topic]             fetch live game guide (offline card fallback)
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
@@ -1115,7 +1117,7 @@ def _main(argv: list[str] | None) -> int:
     backend = Backend(profile=profile)
     command = argv[0]
     rest = argv[1:]
-    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch", "doctor", "backend"}
+    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "route", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch", "doctor", "backend"}
     if fields and command in local_commands:
         print("smx: --fields is supported for official passthrough commands; use the local command's own --json option otherwise.", file=sys.stderr)
         return 2
@@ -1125,6 +1127,8 @@ def _main(argv: list[str] | None) -> int:
         return cmd_sell_all(backend, rest)
     if command == "missions":
         return cmd_missions(backend, rest)
+    if command == "route":
+        return cmd_route(backend, rest)
     if command == "guide":
         return cmd_guide(backend, rest)
     if command == "mcp":
