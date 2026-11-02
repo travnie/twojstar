@@ -39,6 +39,9 @@ def main():
     jpackage = shutil.which("jpackage")
     if not jpackage:
         raise SystemExit("jpackage missing: run with a full JDK 25")
+    version = subprocess.check_output([jpackage, "--version"], text=True).strip()
+    if version.split(".")[0] != "25":
+        raise SystemExit(f"Expected jpackage from JDK 25, got {version}")
     destination = project / "build" / "native"
     destination.mkdir(parents=True, exist_ok=True)
     subprocess.run(
