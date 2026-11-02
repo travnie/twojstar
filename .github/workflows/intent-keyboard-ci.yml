@@ -68,10 +68,14 @@ jobs:
                   core_android=true
                   ios=true
                   ;;
-                intent-keyboard/core/*|intent-keyboard/platforms/android/*|intent-keyboard/platforms/desktop/*)
+                intent-keyboard/core/*)
+                  core_android=true
+                  ios=true
+                  ;;
+                intent-keyboard/platforms/android/*|intent-keyboard/platforms/desktop/*)
                   core_android=true
                   ;;
-                intent-keyboard/core/*|intent-keyboard/platforms/ios/*)
+                intent-keyboard/platforms/ios/*)
                   ios=true
                   ;;
                 intent-keyboard/build.gradle.kts|intent-keyboard/settings.gradle.kts|intent-keyboard/gradle.properties|intent-keyboard/gradle/*|intent-keyboard/gradlew|intent-keyboard/gradlew.bat)
