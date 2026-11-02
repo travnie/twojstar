@@ -105,7 +105,7 @@ local.properties
 
 # Feedboard packaging and signing
 /feedboard/src/**/AppPackages/
-/feedboard/artifacts/
+/feedboard/**/artifacts/
 /feedboard/**/*.pfx
 
 # Weather feed output
