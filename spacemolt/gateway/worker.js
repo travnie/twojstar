@@ -186,8 +186,10 @@ async function gameCall(env, tool, action, payload = {}, signal = undefined) {
     sid = await loginByToken(env);
     resp = await callRaw(sid, tool, action, payload, signal);
   }
-  if (!resp.ok) throw new Error(`game_http_${resp.status}:${errorCode(resp.data) || resp.text}`);
-  if (resp.data?.error) throw new Error(`game_error:${errorCode(resp.data) || "unknown"}`);
+  // gameMessage: human-readable reason kept apart from the code that gameRejection parses.
+  const gameMessage = typeof resp.data?.error?.message === "string" ? resp.data.error.message : "";
+  if (!resp.ok) throw Object.assign(new Error(`game_http_${resp.status}:${errorCode(resp.data) || resp.text}`), {gameMessage});
+  if (resp.data?.error) throw Object.assign(new Error(`game_error:${errorCode(resp.data) || "unknown"}`), {gameMessage});
   // The session is stored once at login; KV allows one write per second per key.
   return resp.data;
 }
@@ -427,6 +429,12 @@ async function safeObs(env, tool, action, payload, signal = undefined) {
   } catch (err) {
     if (err?.name === "TimeoutError") return {ok:false, tool, action, error:"daily_budget_timeout"};
     console.error("SpaceMolt daily obs failed", tool, action, err);
+    // Game refusals carry the reason (e.g. a wrong arg name); planner needs it to correct the call.
+    const rejected = gameRejection(err);
+    if (rejected) {
+      const detail = String(err.gameMessage || "").replace(/[^\x20-\x7e]/g, " ").slice(0, 240);
+      return {ok:false, tool, action, error:`game_rejected:${rejected}`, ...(detail ? {detail} : {})};
+    }
     return {ok:false, tool, action, error:"game_call_failed"};
   }
 }
@@ -617,7 +625,7 @@ const DAILY_SYSTEM_PROMPT =
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
   "If the local board says no missions, do not keep re-reading it: use find_route/search_systems toward your home_base or a nearby empire station, travel/jump there within safe fuel, dock and read its board; or mine at a nearby belt if cargo allows. " +
   "Missions: work one at a time. With no active mission you may accept exactly one from get_missions that allowed actions can finish (delivery, mining, exploration); never combat, bounty, cull or escort, and avoid Fixer cargo-advance contracts. Then progress it across runs and complete_mission when done. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission. There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Routing: find_route(to_system=<system_id>, optional to_poi), jump(id=<adjacent system_id>), travel(id=<poi_id>). Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission. There is NO list_missions action. " +
   "Do not repeat a read whose result is already in the history unless a later action (travel, dock, mine, chat...) may have changed it; refresh after such actions. Finish when nothing useful is left. " +
   "Return exactly one JSON object (never an array, one action per reply) and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
