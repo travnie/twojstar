@@ -13,6 +13,14 @@ android {
         versionCode = 1
         versionName = "0.1.0-dev"
     }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        }
+    }
 }
 
 dependencies {
