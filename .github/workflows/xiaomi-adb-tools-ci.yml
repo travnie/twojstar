@@ -51,3 +51,47 @@ jobs:
             xiaomi-adb-tools/build/libs/XiaomiADBFastbootTools-ASSETS.txt
           if-no-files-found: error
           retention-days: 7
+
+  native-apps:
+    name: Native app image (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-latest, platform: windows-x64, jar_task: jarWindowsX64 }
+          - { runner: ubuntu-latest, platform: linux-x64, jar_task: jarLinuxX64 }
+          - { runner: ubuntu-24.04-arm, platform: linux-arm64, jar_task: jarLinuxArm64 }
+          - { runner: macos-15-intel, platform: macos-x64, jar_task: jarMacosX64 }
+          - { runner: macos-15, platform: macos-arm64, jar_task: jarMacosArm64 }
+    defaults:
+      run:
+        working-directory: xiaomi-adb-tools
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - run: ./gradlew ${{ matrix.jar_task }}
+
+      - name: Bundle native launcher and JDK 25
+        run: python scripts/package_native.py --platform ${{ matrix.platform }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: XiaomiADBFastbootTools-${{ matrix.platform }}
+          path: xiaomi-adb-tools/build/native-dist/*
+          if-no-files-found: error
+          retention-days: 7
