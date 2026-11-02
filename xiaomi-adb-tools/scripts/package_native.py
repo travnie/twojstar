@@ -42,13 +42,23 @@ def main():
     version = subprocess.check_output([jpackage, "--version"], text=True).strip()
     if version.split(".")[0] != "25":
         raise SystemExit(f"Expected jpackage from JDK 25, got {version}")
+    stage = project / "build" / "native-input"
+    if stage.exists():
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+    shutil.copy2(jar, stage / jar.name)
+
     destination = project / "build" / "native"
     destination.mkdir(parents=True, exist_ok=True)
+    name = "XiaomiADBFastbootTools"
+    image = destination / (f"{name}.app" if platform.system() == "Darwin" else name)
+    if image.exists():
+        shutil.rmtree(image)
     subprocess.run(
         [
             jpackage, "--type", "app-image",
             "--name", "XiaomiADBFastbootTools",
-            "--input", str(jar.parent),
+            "--input", str(stage),
             "--main-jar", jar.name,
             "--main-class", "Main",
             "--dest", str(destination),
@@ -57,8 +67,6 @@ def main():
         check=True,
     )
 
-    name = "XiaomiADBFastbootTools"
-    image = destination / (f"{name}.app" if platform.system() == "Darwin" else name)
     if not image.is_dir() or not any(p.is_dir() for p in image.rglob("runtime")):
         raise SystemExit(f"Packaged image is missing its bundled Java runtime: {image}")
 
@@ -66,14 +74,17 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     if platform.system() == "Windows":
         archive = output / f"{name}-{detected}.zip"
-        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+        temporary = archive.with_name(archive.name + ".tmp")
+        with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as bundle:
             for item in sorted(image.rglob("*")):
                 if item.is_file():
                     bundle.write(item, item.relative_to(destination))
     else:
         archive = output / f"{name}-{detected}.tar.gz"
-        with tarfile.open(archive, "w:gz") as bundle:
+        temporary = archive.with_name(archive.name + ".tmp")
+        with tarfile.open(temporary, "w:gz") as bundle:
             bundle.add(image, arcname=image.name)
+    temporary.replace(archive)
     print(f"Self-contained archive: {archive}")
 
 
