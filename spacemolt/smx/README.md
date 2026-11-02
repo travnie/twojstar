@@ -8,6 +8,7 @@ The official `spacemolt` binary remains authoritative for API models, auth and s
 
 - friendly aliases and kebab-case compatibility,
 - `sell-all`, `nearby` and combined mission views,
+- read-only `route` preflight with live jump/fuel/fleet data, reserve checks and wormhole markers,
 - typo suggestions without automatic execution,
 - passthrough to every official v2 command,
 - lazy tactical cards through `smx guide`,
@@ -56,6 +57,8 @@ Set `SMX_BACKEND` when the official binary is not discoverable as `spacemolt`.
 smx status
 smx nearby
 smx missions --json
+smx route tau_ceti --reserve 20 --check
+smx route station_poi_id --json
 smx sell-all --dry-run
 smx sell-all --keep fuel_cell,mission_widget
 
@@ -96,6 +99,30 @@ smx shipping/active
 5. **MCP roles stay separate.** Docs MCP is for development; the full v2 preset is for gameplay.
 6. **Credentials stay outside worktrees.** Default sessions live in private smx state.
 7. **Parallel players use separate session files.** They never race on the official client's shared `activeAccount`.
+
+## Route preflight
+
+`smx route DESTINATION` queries the official read-only `find_route id=DESTINATION`.
+DESTINATION is a system, POI, or base **ID**, not a display name. The game's
+live shortest path, fuel estimates, wormhole entrance markers, final POI and
+optional fleet-member fuel figures are shown without moving the ship.
+
+```bash
+smx route tau_ceti
+smx route tau_ceti --reserve 20 --check
+smx route station_poi_id --json
+```
+
+`--reserve N` requires at least N fuel remaining on arrival for the pilot and
+every returned fleet member. When the API omits `fleet_fuel`, the assessment
+explicitly marks its scope as pilot-only instead of implying a fleet check.
+`--check` exits 1 for insufficient fuel, no
+known route or incomplete data, making it safe as an agent preflight gate.
+Without `--check`, a low-fuel route is still displayed with a warning.
+Machine-readable JSON includes the untouched official `find_route` data and
+a separate conservative `assessment`; no cached routes or custom pathfinding.
+A route may change as game state changes. Rerun before executing official
+`jump` or `travel` commands.
 
 ## Gameplay profiles and fleet
 
