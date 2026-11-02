@@ -1,7 +1,0 @@
-src/**/bin/
-src/**/obj/
-src/**/AppPackages/
-artifacts/
-*.pfx
-*.user
-*.suo
