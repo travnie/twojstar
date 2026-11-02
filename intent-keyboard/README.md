@@ -77,6 +77,10 @@ Android host-composition behavior and local-model quality/performance require re
 
 CI covers the shared pipeline, stale-result rejection and platform-independent safety rules; it does not claim compatibility with every editor/WebView or translation quality on real devices.
 
+Release APKs enable R8 shrinking; the local `proguard-rules.pro` preserves the LiteRT-LM
+JNI API until upstream ships verified consumer rules. The release APK builds in CI, but
+IME startup and local-model generation still need device checks before distribution.
+
 ## Project layout
 
 ```text

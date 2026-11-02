@@ -137,7 +137,7 @@ jobs:
   ios:
     needs: changes
     if: needs.changes.outputs.ios == 'true'
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 25
     defaults:
       run:
