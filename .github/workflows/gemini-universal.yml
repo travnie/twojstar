@@ -370,10 +370,10 @@ jobs:
           fi
           { echo 'note<<EOF_NOTE'; printf '%s\n' "$msg"; echo 'EOF_NOTE'; } >> "$GITHUB_OUTPUT"
 
-      # Model posts the review itself. This comments only for: failure, no
-      # review submitted (fallback to model's text), repair result.
-      - name: Post status
-        if: always() && env.NUMBER != ''  # earlier failure → failure note
+      # Reviews are posted by Gemini. Surface failures in Actions instead of
+      # adding fallback PR status comments; replies to @mentions stay intact.
+      - name: Verify Gemini review
+        if: always() && env.NUMBER != ''
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -381,26 +381,19 @@ jobs:
           OUTCOME: ${{ steps.gemini.outcome }}
           REPAIR: ${{ steps.repair.outputs.note }}
           STARTED: ${{ steps.lint.outputs.started }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          parts=()
           if [ "$OUTCOME" != success ]; then
-            parts+=("Gemini review ended \`$OUTCOME\`. [Logs]($RUN_URL)")
-          else
-            n=$(gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
-              --jq ".[] | select(.user.login == \"github-actions[bot]\" and .submitted_at >= \"$STARTED\") | .id" | wc -l)
-            # CLI can exit 0 after FatalTurnLimitedError (run-gemini-cli #519).
-            if [ "$n" -eq 0 ]; then
-              parts+=("${SUMMARY:-Gemini finished without submitting a review. [Logs]($RUN_URL)}")
-            fi
+            echo "::error::Gemini review ended $OUTCOME. See this Actions run."
+            exit 1
           fi
-          [ -z "$REPAIR" ] || parts+=("$REPAIR")
-          ((${#parts[@]})) || exit 0
-          body="$RUNNER_TEMP/body.md"
-          printf '%s\n\n' "${parts[@]}" > "$body"
-          printf '<sub>Gemini · review · [run](%s)</sub>\n' "$RUN_URL" >> "$body"
-          gh issue comment "$NUMBER" --body-file "$body"
+          n=$(gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and .submitted_at >= \"$STARTED\") | .id" | wc -l)
+          if [ "$n" -eq 0 ]; then
+            echo "::error::Gemini completed without submitting a review. ${SUMMARY:-See step logs.}"
+            exit 1
+          fi
+          [ -z "$REPAIR" ] || printf '%s\n' "$REPAIR"
 
   # ════════════════════════════════════════════════════════════════════════
   # mention — replies where you tagged it. Read-only.
