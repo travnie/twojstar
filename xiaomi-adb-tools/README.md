@@ -53,8 +53,8 @@ python scripts/package_native.py --platform windows-x64
 Replace `windows-x64` and `jarWindowsX64` with the matching platform and task.
 Native app images must be built on the corresponding operating system and CPU architecture.
 The CI matrix builds all five. macOS images are unsigned/not notarized. Linux arm64
-requires `adb` and `fastboot` from the system package manager, since Google does not
-provide a compatible official ARM64 Linux Platform Tools download.
+requires `adb` and `fastboot` from the system package manager **before the first launch**,
+since Google's automatic download provides only x86-64 Linux binaries.
 
 **Warning: use the program at your own risk.**
 
