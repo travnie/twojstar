@@ -288,7 +288,7 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]") | .id' |
+            --jq '.[] | select(.user.login == "github-actions[bot]" and .submitted_at != null) | .id' |
             sort -u > "$RUNNER_TEMP/gemini-reviews-before.txt"
 
       - id: gemini
@@ -401,7 +401,7 @@ jobs:
             exit 0
           fi
           gh api "repos/$GH_REPO/pulls/$NUMBER/reviews" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]") | .id' |
+            --jq '.[] | select(.user.login == "github-actions[bot]" and .submitted_at != null) | .id' |
             sort -u > "$RUNNER_TEMP/gemini-reviews-after.txt"
           n=$(comm -13 "$RUNNER_TEMP/gemini-reviews-before.txt" \
             "$RUNNER_TEMP/gemini-reviews-after.txt" | wc -l)
