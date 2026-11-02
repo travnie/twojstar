@@ -82,3 +82,36 @@ worker-configuration.d.ts
 .venv/
 local.properties
 .dev.vars
+
+# Benches: bundled frontend assets, while keeping checked-in runtime JS
+/benches/codebench/public/vendor/
+/benches/codebench/public/fonts/
+/benches/codebench/public/portable.html
+/benches/codebench/public/*.js
+!/benches/codebench/public/i18n.js
+!/benches/codebench/public/i18n-runtime.js
+!/benches/codebench/public/webmcp-lifecycle.js
+
+/benches/docbench/public/vendor/
+/benches/docbench/public/fonts/
+/benches/docbench/public/portable.html
+
+/benches/streambench/public/vendor/
+/benches/streambench/public/portable.html
+/benches/streambench/public/*.js
+!/benches/streambench/public/i18n.js
+!/benches/streambench/public/i18n-runtime.js
+!/benches/streambench/public/webmcp-lifecycle.js
+
+# Feedboard packaging and signing
+/feedboard/src/**/AppPackages/
+/feedboard/artifacts/
+/feedboard/**/*.pfx
+
+# Weather feed output
+/weather-feed/**/dist/
+
+# Legacy Xiaomi tooling; retain the executable Gradle wrapper
+/xiaomi-adb-tools/**/*.ctxt
+/xiaomi-adb-tools/**/.mtj.tmp/
+!/xiaomi-adb-tools/gradle/wrapper/gradle-wrapper.jar
