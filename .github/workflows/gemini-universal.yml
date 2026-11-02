@@ -6,9 +6,13 @@
 #             run gemini-universal.yml -f pr=N -f focus="…"`
 #             → inline review comments + one-click suggestions, linters on
 #               changed files, auto-repair of broken JSON/YAML/workflows
-#   mention   @gemini in a comment / review / issue → one reply
+#   mention   @gemini in an issue or PR Conversation comment → one reply
 #   issue     `gemini` label on an issue → analysis + fix proposal
 #   auto      every PR, unprompted   ← ships DISABLED (see `review` if:)
+#
+# PR review events are deliberately not subscribed: GitHub runs all three
+# jobs (skipped) on *every* submitted bot review / inline reply, even without
+# @gemini. For an inline thread, use a PR Conversation @gemini comment instead.
 #
 # Nothing fires by itself. Idle cost zero.
 #
@@ -47,10 +51,6 @@ name: Gemini CLI
 on: # yamllint disable-line rule:truthy
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
-  pull_request_review:
-    types: [submitted]
   issues:
     types: [opened, labeled]
   # auto: add `opened, ready_for_review, reopened` here + see `review` if:.
@@ -419,11 +419,8 @@ jobs:
       github.event.sender.type != 'Bot' &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
         github.event.comment.author_association ||
-        github.event.review.author_association ||
         github.event.issue.author_association) && (
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gemini')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gemini')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gemini')) ||
       (github.event_name == 'issues' && github.event.action == 'opened' && (contains(github.event.issue.body, '@gemini') || contains(github.event.issue.title, '@gemini'))))
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -440,9 +437,7 @@ jobs:
       MAX_TURNS: '25'
       NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
       IS_PR: ${{ (github.event.pull_request || github.event.issue.pull_request) && 'true' || 'false' }}
-      REQUEST: ${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}
-      REVIEW_PATH: ${{ github.event.comment.path }}
-      REVIEW_HUNK: ${{ github.event.comment.diff_hunk }}
+      REQUEST: ${{ github.event.comment.body || github.event.issue.body }}
       TITLE: ${{ github.event_name == 'issues' && github.event.issue.title || '' }}
     steps:
       - *checkout
