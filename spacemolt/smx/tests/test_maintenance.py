@@ -378,7 +378,7 @@ class MaintenanceTests(unittest.TestCase):
                 with patch("smx.maintenance.backend_status", return_value=status), \
                      patch("smx.maintenance.list_profiles", return_value=[]):
                     checks = doctor_report()["checks"]
-            return next(c["detail"] for c in checks if c["name"] == "backend version")
+            return {check["name"]: check["detail"] for check in checks}["backend version"]
 
         self.assertIn("backend rollback", advice(True))
         self.assertNotIn("backend rollback", advice(False))
