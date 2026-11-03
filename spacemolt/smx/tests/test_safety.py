@@ -235,6 +235,20 @@ class AutodockTests(unittest.TestCase):
         self.assertEqual((rc, data["status"]), (1, "danger"))
         self.assertEqual(data["suggestions"], ["smx autodock"])
 
+    def test_low_fuel_skips_autodock_when_it_would_refuse(self):
+        for state in (status(fuel=30, transit=True), status(fuel=30, pending=True)):
+            backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+            _, out, _ = run(cmd_survive, backend, ["--json"])
+            self.assertEqual(json.loads(out)["suggestions"], [])
+
+    def test_low_fuel_skips_autodock_in_battle(self):
+        backend = Backend({("get_status",): [status(fuel=30)], ("get_system",): [chart(battle=True)],
+                           ("spacemolt_battle/status",): [{"structuredContent": {"is_participant": False}}]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["combat"], "active")
+        self.assertNotIn("smx autodock", data["suggestions"])
+
     def test_low_fuel_while_docked_is_only_advice(self):
         backend = Backend({("get_status",): [status(fuel=30, docked="base_1")], ("get_system",): [chart()]})
         rc, out, _ = run(cmd_survive, backend, ["--json", "--check"])

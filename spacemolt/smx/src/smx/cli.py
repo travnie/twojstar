@@ -769,6 +769,8 @@ def _project_backend_payload(backend: Backend, args: list[str], fields: list[str
     result, payload = backend.json(args)
     if result.returncode != 0:
         sys.stderr.write(result.stderr or result.stdout)
+        for hint in id_suggestions(backend.profile, args[1:]):
+            print(hint, file=sys.stderr)
         return result.returncode
     if payload is None:
         print("smx: backend returned no JSON payload to project.", file=sys.stderr)

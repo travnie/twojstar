@@ -104,6 +104,7 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
 
     report["status"] = "ok"
     report["combat"] = "unknown"
+    needs_dock = False
     for stat in ("hull", "max_hull", "shield", "max_shield", "fuel", "max_fuel"):
         value = ship.get(stat)
         report[stat] = value if isinstance(value, int) and not isinstance(value, bool) else None
@@ -129,7 +130,7 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
             report["suggestions"].append("smx refuel")
         else:
             report["status"] = "danger"
-            report["suggestions"].append("smx autodock")
+            needs_dock = True
     if ship.get("incapacitated") is True:
         report["status"] = "danger"
         report["messages"].append("crew incapacitated")
@@ -194,6 +195,9 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         else:
             report["combat"] = "not_participating"
 
+    # Same gates as cmd_autodock: never suggest what it would refuse.
+    if needs_dock and report["combat"] in ("none", "not_participating") and _safe_state(data) is None:
+        report["suggestions"].append("smx autodock")
     _emit(report, ns.json)
     return int(ns.check and report["status"] != "ok")
 
