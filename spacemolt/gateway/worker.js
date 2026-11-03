@@ -374,6 +374,8 @@ const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1 + 2;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
 const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
+// Matches the daily allowlist cap on captains_log_add content.
+const AUTOPILOT_LOG_MAX = 480;
 const DAILY_PLAN_KEY = "daily:gremlin-plan";
 const DAILY_PLAN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const DAILY_LAST_KEY = "daily:last";
@@ -723,7 +725,7 @@ function describeChange(action, args) {
 
 // Gremlin should always learn what his autopilot changed, even when the loop stopped early.
 async function writeAutopilotLog(env, run, dock) {
-  if (dock?.changed) run.changes.push(`auto-dock${dock.target ? ` ${String(dock.target).slice(0, 40)}` : ""}`);
+  if (dock?.changed && dock?.docked) run.changes.push(`auto-dock${dock.target ? ` ${String(dock.target).slice(0, 40)}` : ""}`);
   if (!run.changes.length) return {written:false, reason:"no state change"};
   if (run.loggedThisRun) return {written:false, reason:"planner already logged"};
   if (!await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full"};
@@ -731,8 +733,14 @@ async function writeAutopilotLog(env, run, dock) {
   const where = [status?.location?.poi_name, status?.location?.system_name].filter(Boolean).join(", ");
   const fuel = status?.ship ? ` Fuel ${status.ship.fuel}/${status.ship.max_fuel}.` : "";
   const day = new Date().toISOString().slice(0, 10);
-  const text = `${day}: ${run.changes.join("; ")}. ${dock?.docked ? `Docked${where ? ` at ${where}` : ""}` : "NOT docked"}.${fuel}`;
-  const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content:autopilotLogContent(text.slice(0, 440))});
+  // dock.error = ensureDocked threw: state unverified, not "not docked".
+  const state = dock?.docked ? `Docked${where ? ` at ${where}` : ""}` : dock?.error ? "Dock state unknown (check failed)" : "NOT docked";
+  // Budget the action list so date, dock state and fuel always survive.
+  const tail = `. ${state}.${fuel}`;
+  const room = Math.max(0, AUTOPILOT_LOG_MAX - AUTOPILOT_LOG_PREFIX.length - day.length - 2 - tail.length);
+  let actions = run.changes.join("; ");
+  if (actions.length > room) actions = `${actions.slice(0, Math.max(0, room - 3)).replace(/;[^;]*$/u, "")}...`;
+  const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content:autopilotLogContent(`${day}: ${actions}${tail}`)});
   return {written:result.ok, ...(result.ok ? {} : {error:result.error})};
 }
 
