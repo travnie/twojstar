@@ -89,32 +89,30 @@ class MaintenanceCliTests(unittest.TestCase):
 
     def test_backend_update_passes_exact_version(self):
         payload = {"updated": False, "current": "1.5.80", "path": "/state/bin/spacemolt"}
-        with patch("smx.cli.install_backend", return_value=payload) as install:
-            with redirect_stdout(io.StringIO()):
-                rc = cmd_backend(["update", "--version", "1.5.80"])
+        with patch("smx.cli.install_backend", return_value=payload) as install, redirect_stdout(io.StringIO()):
+            rc = cmd_backend(["update", "--version", "1.5.80"])
         self.assertEqual(rc, 0)
         install.assert_called_once_with("1.5.80")
 
     def test_backend_rollback_prints_swap(self):
         payload = {"previous": "1.5.93", "current": "1.5.80", "path": "/state/bin/spacemolt"}
         stdout = io.StringIO()
-        with patch("smx.cli.rollback_backend", return_value=payload):
-            with redirect_stdout(stdout):
-                rc = cmd_backend(["rollback"])
+        with patch("smx.cli.rollback_backend", return_value=payload), redirect_stdout(stdout):
+            rc = cmd_backend(["rollback"])
         self.assertEqual(rc, 0)
         self.assertIn("1.5.93 -> 1.5.80", stdout.getvalue())
 
     def test_backend_rollback_reports_failure_cleanly(self):
         stderr = io.StringIO()
-        with patch("smx.cli.rollback_backend", side_effect=RuntimeError("no previous backend")):
-            with redirect_stderr(stderr):
-                rc = cmd_backend(["rollback"])
+        with patch("smx.cli.rollback_backend", side_effect=RuntimeError("no previous backend")), redirect_stderr(stderr):
+            rc = cmd_backend(["rollback"])
         self.assertEqual(rc, 1)
         self.assertIn("no previous backend", stderr.getvalue())
 
 
 class FirstRunTests(unittest.TestCase):
-    def _run(self, *, tty, answer="y\n", installed=True, interactive=True):
+    @staticmethod
+    def _run(*, tty, answer="y\n", installed=True, interactive=True):
         missing = FileNotFoundError()
         done = subprocess.CompletedProcess([], 0, "ok\n", "")
         stdin = io.StringIO(answer)

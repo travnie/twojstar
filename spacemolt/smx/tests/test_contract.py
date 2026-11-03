@@ -14,8 +14,7 @@ def schema_for(fields):
     root = {"type": "object", "properties": {}}
     for field in fields:
         node = root
-        parts = field.split(".")
-        for index, part in enumerate(parts):
+        for part in field.split("."):
             is_array = part.endswith("[]")
             name = part.removesuffix("[]")
             child = node.setdefault("properties", {}).setdefault(name, {"type": "object"})
@@ -77,7 +76,8 @@ class ContractTests(unittest.TestCase):
     def test_empty_spec_is_drift_not_clean(self):
         self.assertEqual(find_drift({}), ["spec has no paths object"])
 
-    def _main(self, *args):
+    @staticmethod
+    def _main(*args):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             return main(list(args)), out.getvalue(), err.getvalue()

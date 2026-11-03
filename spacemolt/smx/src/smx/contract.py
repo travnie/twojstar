@@ -151,9 +151,10 @@ def find_drift(spec: dict[str, Any]) -> list[str]:
     return drift
 
 
-def fetch_spec(url: str = SPEC_URL) -> dict[str, Any]:
-    request = urllib.request.Request(url, headers={"User-Agent": f"spacemolt-smx/{__version__}"})
-    with urllib.request.urlopen(request, timeout=60) as response:
+def fetch_spec() -> dict[str, Any]:
+    request = urllib.request.Request(SPEC_URL, headers={"User-Agent": f"spacemolt-smx/{__version__}"})
+    # Fixed https constant above; no caller-supplied scheme.
+    with urllib.request.urlopen(request, timeout=60) as response:  # skipcq: BAN-B310
         payload = json.load(response)
     if not isinstance(payload, dict):
         raise ValueError("spec is not a JSON object")

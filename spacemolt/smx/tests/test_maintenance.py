@@ -218,7 +218,8 @@ class MaintenanceTests(unittest.TestCase):
                     opener=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("download should not run")),
                 )
 
-    def _release(self, version, data):
+    @staticmethod
+    def _release(version, data):
         digest = hashlib.sha256(data).hexdigest()
         return ReleaseInfo(
             version=version,
@@ -327,9 +328,8 @@ class MaintenanceTests(unittest.TestCase):
             self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["spacemolt", "spacemolt.prev"])
 
     def test_rollback_without_previous_fails_clearly(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaisesRegex(RuntimeError, "no previous backend"):
-                rollback_backend(destination=Path(tmp) / "spacemolt")
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(RuntimeError, "no previous backend"):
+            rollback_backend(destination=Path(tmp) / "spacemolt")
 
     def test_previous_path_stays_executable_on_windows(self):
         self.assertEqual(previous_backend_path(Path("spacemolt.exe")).name, "spacemolt.prev.exe")
