@@ -214,6 +214,11 @@ export function dailyBlockReason(tool, action, args) {
     return "only defensive battle actions are allowed";
   }
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return `${action} needs args.id`;
+  if (action === "captains_log_add" && (typeof args?.content !== "string" || !args.content.trim() || [...args.content].length > 480)) {
+    return "captains_log_add needs content: a short non-empty string (max 480 chars)";
+  }
+  if (action === "complete_mission" && (typeof args?.id !== "string" || !args.id)) return "complete_mission needs args.id (the active mission_id)";
+  if (action === "find_route" && (typeof args?.id !== "string" || !args.id)) return "find_route needs args.id (system, POI or base id; search_systems finds ids)";
   if (action === "accept_mission" && (typeof args?.id !== "string" || !args.id)) return "accept_mission needs args.id (a mission_id from get_missions)";
   if ((action === "refuel" || action === "repair") && args?.quantity != null) {
     const qty = Number(args.quantity);
