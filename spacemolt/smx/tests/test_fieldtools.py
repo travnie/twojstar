@@ -164,7 +164,8 @@ class InboxTests(unittest.TestCase):
         {"type": "chat", "data": {"content": "hello"}},
         {"type": "crafting", "data": {"message": "run 1 of 9"}},
         {"type": "crafting", "data": {"message": "job failed: no input"}},
-        {"type": "system", "data": {"message": "tick"}},
+        {"type": "market", "data": {"message": "tick"}},
+        {"type": "system", "data": {"message": "faction invite from Ace"}},
     ]}}
 
     def test_collapses_routine_and_keeps_signal(self):
@@ -174,7 +175,8 @@ class InboxTests(unittest.TestCase):
         self.assertIn("[chat] hello", out)
         self.assertIn("job failed", out)
         self.assertNotIn("run 1 of 9", out)
-        self.assertIn("collapsed: 1 crafting, 1 system", out)
+        self.assertIn("[system] faction invite", out)
+        self.assertIn("collapsed: 1 crafting, 1 market", out)
         self.assertIn("2 more queued", out)
 
     def test_all_prints_everything(self):
@@ -186,6 +188,14 @@ class InboxTests(unittest.TestCase):
         backend = Backend({("get_notifications", "clear=false", "limit=5"): self.PAYLOAD})
         capture(cmd_inbox, backend, ["--peek", "--limit", "5"])
         self.assertEqual(backend.calls, [["get_notifications", "clear=false", "limit=5"]])
+
+    def test_remote_text_cannot_drive_the_terminal(self):
+        payload = {"structuredContent": {"notifications": [
+            {"type": "chat", "data": {"content": "hi\x1b[2J\x1b]0;owned\x07there"}},
+        ]}}
+        _, out, _ = capture(cmd_inbox, Backend({("get_notifications",): payload}), [])
+        self.assertNotIn("\x1b", out)
+        self.assertNotIn("\x07", out)
 
     def test_throttled_is_reported(self):
         payload = {"structuredContent": {"throttled": True, "retry_after": 7}}

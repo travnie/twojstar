@@ -275,7 +275,7 @@ def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
         reasons.append("combat hull")
 
     tier = entity.get("tier")
-    if isinstance(tier, str) and tier:
+    if tier not in (None, ""):
         reasons.append(f"tier {tier}")
 
     if score >= 7:

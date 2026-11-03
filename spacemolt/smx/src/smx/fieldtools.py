@@ -25,7 +25,8 @@ MAX_MARKETS = 100
 KINDS = ("system", "poi", "base", "item", "player")
 REFRESH_COMMANDS = ("get_system", "get_cargo", "get_nearby", "spacemolt_market/view_market")
 
-ALWAYS_SHOWN_TYPES = {"chat", "combat", "trade"}
+ROUTINE_TYPES = {"crafting", "market", "observation"}
+CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 HIGH_SIGNAL = re.compile(r"(?:^|[^a-z])(complete|completed|failed|failure|error|cancel|cancelled|refund)(?:[^a-z]|$)", re.I)
 
 RISK_NOTES = {
@@ -38,6 +39,11 @@ RISK_NOTES = {
     "sell": ["auto_list=true may create a sell order and charge a listing fee for the unsold part."],
     "undock": ["Leaves station protection. Run `smx survive` and check fuel first."],
 }
+
+
+def clean(text: str) -> str:
+    """Server text can come from other players; keep it out of terminal control."""
+    return CONTROL_CHARS.sub("", text)
 
 
 def cache_path(profile: str | None = None) -> Path:
@@ -76,7 +82,7 @@ def _newest(rows: dict[str, Any], limit: int) -> dict[str, Any]:
 
 def _remember(cache: dict[str, Any], kind: str, entity_id: Any, name: Any, now: int) -> None:
     if isinstance(entity_id, str) and entity_id:
-        cache["ids"].setdefault(kind, {})[entity_id] = {"name": name if isinstance(name, str) else entity_id, "seen": now}
+        cache["ids"].setdefault(kind, {})[entity_id] = {"name": clean(name) if isinstance(name, str) else entity_id, "seen": now}
 
 
 def _rows(node: Any) -> list[dict[str, Any]]:
@@ -110,7 +116,9 @@ def learn(cache: dict[str, Any], command: str, payload: Any, now: int) -> None:
                 items[item_id] = {key: row.get(key) for key in ("best_buy", "best_sell")}
         base_id = data.get("base_id")
         if isinstance(base_id, str) and base_id and items:
-            cache["markets"][base_id] = {"name": data.get("base"), "seen": now, "items": items}
+            base = data.get("base")
+            cache["markets"][base_id] = {"name": clean(base) if isinstance(base, str) else None,
+                                         "seen": now, "items": items}
 
 
 def refresh(backend: Any, cache: dict[str, Any], now: int) -> int:
@@ -230,9 +238,9 @@ def _notification_text(row: dict[str, Any]) -> str:
     if isinstance(data, dict):
         for key in ("message", "content", "text", "summary"):
             if isinstance(data.get(key), str) and data[key]:
-                return data[key]
-        return json.dumps(data, ensure_ascii=False)[:160]
-    return str(data or row.get("msg_type") or "")
+                return clean(data[key])
+        return clean(json.dumps(data, ensure_ascii=False)[:160])
+    return clean(str(data or row.get("msg_type") or ""))
 
 
 def cmd_inbox(backend: Any, argv: list[str]) -> int:
@@ -264,7 +272,7 @@ def cmd_inbox(backend: Any, argv: list[str]) -> int:
     collapsed: dict[str, int] = {}
     for row in _rows(data.get("notifications")):
         kind = str(row.get("type") or "unknown")
-        if ns.all or kind in ALWAYS_SHOWN_TYPES or HIGH_SIGNAL.search(_notification_text(row)):
+        if ns.all or kind not in ROUTINE_TYPES or HIGH_SIGNAL.search(_notification_text(row)):
             shown.append(row)
         else:
             collapsed[kind] = collapsed.get(kind, 0) + 1
@@ -273,9 +281,9 @@ def cmd_inbox(backend: Any, argv: list[str]) -> int:
                          indent=2, ensure_ascii=False))
         return 0
     for row in shown:
-        print(f"[{row.get('type') or 'unknown'}] {_notification_text(row)}")
+        print(f"[{clean(str(row.get('type') or 'unknown'))}] {_notification_text(row)}")
     if collapsed:
-        print("collapsed: " + ", ".join(f"{count} {kind}" for kind, count in sorted(collapsed.items())))
+        print("collapsed: " + ", ".join(f"{count} {clean(kind)}" for kind, count in sorted(collapsed.items())))
     if not shown and not collapsed:
         print("No notifications.")
     if isinstance(data.get("remaining"), int) and data["remaining"] > 0:

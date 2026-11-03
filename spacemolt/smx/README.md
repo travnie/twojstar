@@ -185,11 +185,11 @@ beyond read-only triage are left to the pilot/agent and official API.
 
 ## IDs, inbox and dry runs
 
-`smx ids --refresh` queries the official system, cargo, nearby and market commands and stores what they returned per profile. After a failed command, close cached IDs are printed as hints and never executed.
+`smx ids --refresh` queries the official system, cargo, nearby and market commands and stores what they returned per profile. Failed passthrough commands may print close cached IDs as hints, which are never executed.
 
 `smx where-can-i ITEM` searches only markets recorded by a refresh while docked. It is a local memory, not a galaxy search, and shows the age of every row.
 
-`smx inbox` shows chat, combat, trade and events mentioning completion or failure, and counts the rest by type. Like the official command it clears the queue; add `--peek` to keep it, `--all` for every event.
+`smx inbox` counts routine crafting, market and observation events by type unless they mention completion or failure. Everything else is shown, with terminal control characters removed. Like the official command it clears the queue; add `--peek` to keep it, `--all` for every event.
 
 `smx --dry-run <command>` prints the official command and risk notes without sending it, wherever the flag appears before `--`. `buy` with an item and quantity also asks the read-only `estimate_purchase`.
 
