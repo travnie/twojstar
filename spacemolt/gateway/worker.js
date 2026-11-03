@@ -373,6 +373,8 @@ const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
 const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
+const DAILY_PLAN_KEY = "daily:gremlin-plan";
+const DAILY_PLAN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
 const WORKERS_AI_DEFAULT_MODEL = "@cf/zai-org/glm-4.7-flash";
@@ -666,23 +668,52 @@ async function activeMissionBlock(env, run) {
 }
 
 // captains_log_list returns one entry per call (index 0 = newest). Read newest first and
-// skip past this autopilot's own entries until one of Gremlin's turns up.
+// skip past this autopilot's own entries until one of Gremlin's turns up. The last plan
+// seen is kept in STATE, so a run of autopilot reports cannot hide it.
 async function readGremlinPlan(env) {
   const entries = [];
+  let found = null;
   for (let index = 0; index < DAILY_PLAN_LOG_READS; index++) {
     const page = await safeObs(env, "spacemolt_social", "captains_log_list", {index});
-    const data = page.ok ? sc(page.data) : null;
+    if (!page.ok) {
+      if (index === 0) return {status:"unavailable", text:"(captain's log could not be read)"};
+      break;
+    }
+    const data = sc(page.data);
     const entry = data?.entry;
     if (!entry || typeof entry.entry !== "string") break;
-    entries.push({index:entry.index, created_at:entry.created_at, entry:entry.entry});
-    if (!entry.entry.trim().startsWith(AUTOPILOT_LOG_PREFIX.trim()) || !data.has_next) break;
+    const item = {index:entry.index, created_at:entry.created_at, entry:entry.entry};
+    entries.push(item);
+    if (!isAutopilotEntry(entry.entry)) {
+      found = item;
+      break;
+    }
+    if (!data.has_next) break;
   }
-  return entries.length ? compactJson(entries, DAILY_PLAN_PROMPT_MAX) : "(captain's log empty or unavailable)";
+  if (found) {
+    try {
+      await env.STATE.put(DAILY_PLAN_KEY, JSON.stringify(found), {expirationTtl:DAILY_PLAN_TTL_SECONDS});
+    } catch (err) {
+      console.warn("SpaceMolt plan cache write failed", errorText(err, 240));
+    }
+    return {status:"ok", text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
+  }
+  if (!entries.length) return {status:"empty", text:"(captain's log is empty: no plan from Gremlin)"};
+  // Only autopilot reports within reach: fall back to the last plan seen.
+  const cached = await env.STATE.get(DAILY_PLAN_KEY).catch(() => null);
+  const note = cached
+    ? `Newest entries are your own reports; Gremlin's last known plan (cached, may be stale): ${cached}`
+    : "Newest entries are your own reports and Gremlin's plan is older than they reach; treat the plan as unknown, not empty: only safe, reversible actions.";
+  return {status:"older", text:compactJson({note, recent:entries}, DAILY_PLAN_PROMPT_MAX)};
+}
+
+function isAutopilotEntry(text) {
+  return String(text).trim().startsWith(AUTOPILOT_LOG_PREFIX.trim());
 }
 
 function autopilotLogContent(content) {
   const text = String(content || "").trim();
-  return text.startsWith(AUTOPILOT_LOG_PREFIX.trim()) ? text : AUTOPILOT_LOG_PREFIX + text;
+  return text.startsWith(AUTOPILOT_LOG_PREFIX) ? text : AUTOPILOT_LOG_PREFIX + text;
 }
 
 // A repeat is blocked only while the earlier result is still inside the planner's history window.
@@ -716,7 +747,9 @@ async function gatherDailyObservations(env, run) {
     history.push({kind:"observation", value});
     if (value.ok) run.readsSinceChange.set(key, history.length - 1);
   });
-  run.planText = await readGremlinPlan(env);
+  const plan = await readGremlinPlan(env);
+  run.planStatus = plan.status;
+  run.planText = plan.text;
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
 }
 
@@ -928,8 +961,10 @@ async function runDailyGremlin(env) {
     subrequests:DAILY_SUBREQUESTS_START
   };
   const mechanics = await gatherDailyObservations(env, run);
+  // Unreadable log = unknown plan: do not fly on own initiative, just dock and report.
+  if (run.planStatus === "unavailable") run.history.push({kind:"plan_unavailable", skipped:"planning loop"});
 
-  for (let step = 0; step < run.maxSteps; step++) {
+  for (let step = 0; run.planStatus !== "unavailable" && step < run.maxSteps; step++) {
     if (Date.now() - run.loopStart > run.loopBudgetMs) {
       run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart});
       break;
