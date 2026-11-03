@@ -27,7 +27,7 @@ REFRESH_COMMANDS = ("get_system", "get_cargo", "get_nearby", "spacemolt_market/v
 
 ROUTINE_TYPES = {"crafting", "market", "observation"}
 CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
-HIGH_SIGNAL = re.compile(r"(?:^|[^a-z])(complete|completed|failed|failure|error|cancel|cancelled|refund)(?:[^a-z]|$)", re.I)
+HIGH_SIGNAL = re.compile(r"(?:^|[^a-z])(complete|completed|completion|failed|failure|error|cancel|cancelled|refund)(?:[^a-z]|$)", re.I)
 
 RISK_NOTES = {
     "attack": ["Starts a fight. Check police_level and escape options first."],

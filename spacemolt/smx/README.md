@@ -191,7 +191,7 @@ beyond read-only triage are left to the pilot/agent and official API.
 
 `smx inbox` counts routine crafting, market and observation events by type unless they mention completion or failure. Everything else is shown, with terminal control characters removed. Like the official command it clears the queue; add `--peek` to keep it, `--all` for every event.
 
-`smx --dry-run <command>` prints the official command and risk notes without sending it, wherever the flag appears before `--`. `buy` with an item and quantity also asks the read-only `estimate_purchase`.
+`smx --dry-run <command>` prints the official command and risk notes without sending it, wherever the flag appears before `--`. Local commands refuse it, except `sell-all`, which has its own preview. `buy` with an item and quantity also asks the read-only `estimate_purchase`.
 
 ## Gameplay profiles and fleet
 

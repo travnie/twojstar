@@ -1167,7 +1167,10 @@ def _main(argv: list[str] | None) -> int:
         if rest[0] not in LOCAL_COMMANDS:
             normalized = normalize_command(rest[0])
             return cmd_dry_run(backend, ALIASES.get(normalized, normalized), rest[1:], watch_command_is_read_only)
-        argv = [*rest, "--dry-run"]  # local commands define their own preview
+        if rest[0] not in {"sell-all", "sellall"}:
+            print(f"smx: --dry-run is not available for local command `{rest[0]}`; nothing was run", file=sys.stderr)
+            return 2
+        argv = [*rest, "--dry-run"]
     command = argv[0]
     rest = argv[1:]
     if fields and command in LOCAL_COMMANDS:

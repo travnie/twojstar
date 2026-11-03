@@ -6,7 +6,7 @@
 
 - Check the POI resource state before wasting ticks.
 - Oversized mining arrays may be inefficient or unusable on depleted deposits.
-- Low `remaining` limits usable beam power (`supported_power`); it does not by itself mean a deposit is gone.
+- Low but positive `remaining` limits usable beam power (`supported_power`); the deposit is not gone until it reaches 0.
 - Mining trains the relevant skill automatically.
 
 ## Crafting

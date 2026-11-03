@@ -87,9 +87,13 @@ class IdsTests(unittest.TestCase):
         self.assertEqual(load_cache()["markets"], {})
 
     def test_refresh_fails_when_nothing_answers(self):
+        capture(cmd_ids, refreshed(), ["--refresh"])
+        before = load_cache()
+        self.assertTrue(before["ids"])
         code, _, err = capture(cmd_ids, Backend(), ["--refresh"])
         self.assertEqual(code, 1)
         self.assertIn("cache unchanged", err)
+        self.assertEqual(load_cache(), before)
 
     def test_profiles_do_not_share_a_cache(self):
         backend = refreshed()
@@ -252,6 +256,13 @@ class DryRunRoutingTests(unittest.TestCase):
         self.assert_not_sent(["--dry-run", "sell", "ore_iron", "5"])
         self.assert_not_sent(["sell", "ore_iron", "5", "--dry-run"])
         self.assert_not_sent(["-p", "gremlin", "self-destruct", "--dry-run"])
+
+    def test_local_command_without_preview_refuses(self):
+        for argv in (["--dry-run", "inbox"], ["autodock", "--execute", "--dry-run"]):
+            with patch("smx.cli.subprocess.run", side_effect=AssertionError("sent")):
+                code, _, err = capture(main, argv)
+            self.assertEqual(code, 2)
+            self.assertIn("nothing was run", err)
 
     def test_flag_after_separator_is_a_literal_argument(self):
         with patch("smx.cli.Backend.run", return_value=BackendResult(0, "ok\n", "")) as run:
