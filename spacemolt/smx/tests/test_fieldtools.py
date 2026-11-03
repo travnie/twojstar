@@ -86,6 +86,16 @@ class IdsTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(load_cache()["markets"], {})
 
+    def test_session_file_gets_its_own_cache(self):
+        capture(cmd_ids, refreshed(), ["--refresh"])
+        with patch.dict(os.environ, {"SPACEMOLT_SESSION": "/tmp/other.json"}):
+            self.assertEqual(load_cache()["ids"], {})
+
+    def test_malformed_kind_is_ignored(self):
+        save_cache({"ids": {"item": [], "poi": {"sol_belt": {"name": "Main Belt", "seen": 1}}}, "markets": {}})
+        self.assertEqual(list(load_cache()["ids"]), ["poi"])
+        self.assertEqual(capture(cmd_ids, Backend(), [])[0], 0)
+
     def test_refresh_fails_when_nothing_answers(self):
         capture(cmd_ids, refreshed(), ["--refresh"])
         before = load_cache()
@@ -220,7 +230,7 @@ class DryRunTests(unittest.TestCase):
     def test_mutation_is_never_sent(self):
         code, out, _ = capture(cmd_dry_run, Backend(), "self_destruct", [], self.read_only)
         self.assertEqual(code, 0)
-        self.assertIn("nothing sent", out)
+        self.assertIn("command not sent", out)
         self.assertIn("may change game state", out)
         self.assertIn("Destroys the active ship", out)
 
@@ -250,7 +260,7 @@ class DryRunRoutingTests(unittest.TestCase):
         with patch("smx.cli.subprocess.run", side_effect=AssertionError("sent")):
             code, out, _ = capture(main, argv)
         self.assertEqual(code, 0)
-        self.assertIn("nothing sent", out)
+        self.assertIn("command not sent", out)
 
     def test_flag_blocks_sending_before_or_after_command(self):
         self.assert_not_sent(["--dry-run", "sell", "ore_iron", "5"])

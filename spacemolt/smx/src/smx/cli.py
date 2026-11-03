@@ -1076,7 +1076,7 @@ Usage:
   smx ids [KIND] [--refresh]    IDs seen in official responses (per profile)
   smx where-can-i ITEM          markets where an item was last seen locally
   smx inbox [--peek] [--all]    notifications with routine events collapsed
-  smx --dry-run <command>       preview a command; nothing is sent
+  smx --dry-run <command>       preview a command; it is not sent
   smx guide [topic]             fetch live game guide (offline card fallback)
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
   smx paths                      show backend, profile and state locations

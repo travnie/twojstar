@@ -249,6 +249,20 @@ class AutodockTests(unittest.TestCase):
         self.assertEqual(data["combat"], "active")
         self.assertNotIn("smx autodock", data["suggestions"])
 
+    def test_low_fuel_skips_autodock_with_ambiguous_stations(self):
+        backend = Backend({("get_status",): [status(fuel=30, poi="belt")], ("get_system",): [chart(multi=True)]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["suggestions"], [])
+        self.assertIn("several stations charted", " ".join(data["messages"]))
+
+    def test_non_positive_max_fuel_is_unknown(self):
+        state = status(fuel=30)
+        state["structuredContent"]["ship"]["max_fuel"] = 0
+        backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        self.assertIn("fuel condition unknown", json.loads(out)["messages"])
+
     def test_low_fuel_while_docked_is_only_advice(self):
         backend = Backend({("get_status",): [status(fuel=30, docked="base_1")], ("get_system",): [chart()]})
         rc, out, _ = run(cmd_survive, backend, ["--json", "--check"])

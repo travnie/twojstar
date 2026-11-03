@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -47,6 +48,11 @@ def clean(text: str) -> str:
 
 
 def cache_path(profile: str | None = None) -> Path:
+    # Explicit session outranks profiles in Backend.run: one cache per session file.
+    session = os.environ.get("SPACEMOLT_SESSION")
+    if session:
+        digest = hashlib.sha256(os.path.abspath(session).encode()).hexdigest()[:16]
+        return state_dir() / f"ids-{digest}.json"
     name = profile or default_profile()
     return (profile_dir(name) if name else state_dir()) / CACHE_NAME
 
@@ -60,7 +66,10 @@ def load_cache(profile: str | None = None) -> dict[str, Any]:
         payload = {}
     ids = payload.get("ids")
     markets = payload.get("markets")
-    return {"ids": ids if isinstance(ids, dict) else {}, "markets": markets if isinstance(markets, dict) else {}}
+    return {
+        "ids": {kind: rows for kind, rows in ids.items() if isinstance(rows, dict)} if isinstance(ids, dict) else {},
+        "markets": markets if isinstance(markets, dict) else {},
+    }
 
 
 def save_cache(cache: dict[str, Any], profile: str | None = None) -> None:
@@ -329,7 +338,7 @@ def cmd_dry_run(backend: Any, command: str, args: list[str], read_only: Callable
     if as_json:
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
-    print("dry run, nothing sent: spacemolt " + " ".join(report["command"]))
+    print("dry run, command not sent: spacemolt " + " ".join(report["command"]))
     print("read-only query" if is_read_only else "may change game state")
     for note in report["notes"]:
         print(f"note: {note}")
