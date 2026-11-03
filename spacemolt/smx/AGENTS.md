@@ -9,4 +9,5 @@ Inherit `../AGENTS.md`. Keep this project thin.
 - Session credentials stay outside repositories and working directories. Respect explicit `SPACEMOLT_SESSION`; otherwise use smx private state.
 - Concurrent players/agents use separate smx gameplay profiles/session files. Do not coordinate them by mutating the official store's shared `activeAccount`.
 - Managed backend install/update accepts only official client releases with a published SHA-256 digest, verifies the artifact, smoke-tests `--version`, then replaces atomically. Never install from a moving branch or unverified binary.
-- CI must not log in, mutate a real account or require live SpaceMolt availability. Use unit/fake-backend tests.
+- CI must not log in, mutate a real account or require live SpaceMolt availability. Use unit/fake-backend tests. Sole exception: the scheduled `contract` job reads the public OpenAPI and treats an outage as a warning.
+- Non-interactive callers never trigger a backend download. Only an explicit `backend update` or a terminal prompt may install one.
