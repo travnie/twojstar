@@ -703,7 +703,7 @@ async function readGremlinPlan(env) {
   const cached = await env.STATE.get(DAILY_PLAN_KEY).catch(() => null);
   // A failed read with no cached plan = unknown plan: dock-only run.
   if (readFailed && !cached) return {status:"unavailable", text:"(captain's log could not be read)"};
-  if (!entries.length) return {status:"empty", text:"(captain's log is empty: no plan from Gremlin)"};
+  if (!entries.length && !readFailed) return {status:"empty", text:"(captain's log is empty: no plan from Gremlin)"};
   const note = cached
     ? `Newest entries are your own reports; Gremlin's last known plan (cached, may be stale): ${cached}`
     : "Newest entries are your own reports and Gremlin's plan is older than they reach; treat the plan as unknown, not empty: only safe, reversible actions.";
