@@ -137,11 +137,12 @@ class CliTests(unittest.TestCase):
 
     def test_threat_marks_pirate_combat_ship(self):
         score, marker, reasons = assess_threat(
-            {"kind": "pirate", "ship_class": "Raider Gunship", "weapons": [{}, {}], "in_combat": True}
+            {"kind": "pirate", "ship_class": "Raider Gunship", "tier": "elite", "in_combat": True}
         )
         self.assertGreaterEqual(score, 7)
         self.assertEqual(marker, "☠️")
         self.assertIn("pirate", reasons)
+        self.assertIn("tier elite", reasons)
 
     def test_civilian_defaults_low(self):
         score, marker, reasons = assess_threat({"kind": "player", "ship_class": "Cargo Hauler"})

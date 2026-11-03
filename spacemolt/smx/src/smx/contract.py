@@ -29,12 +29,30 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
             "player.id", "player.username", "player.credits",
         ),
     },
-    "spacemolt/get_cargo": {"response": ("cargo[].item_id", "cargo[].quantity")},
+    "spacemolt/get_cargo": {"response": ("cargo[].item_id", "cargo[].item_name", "cargo[].quantity")},
+    "spacemolt/get_notifications": {
+        "request": ("clear", "limit"),
+        "response": (
+            "notifications[].type", "notifications[].msg_type", "notifications[].data",
+            "remaining", "retry_after", "throttled",
+        ),
+    },
+    "spacemolt_market/view_market": {
+        "response": (
+            "base", "base_id", "items[].item_id", "items[].item_name", "items[].best_buy", "items[].best_sell",
+        ),
+    },
+    "spacemolt_market/estimate_purchase": {
+        "request": ("item_id", "quantity"),
+        "response": ("available", "total_cost", "unfilled"),
+    },
     "spacemolt/get_nearby": {
         "response": (
             "nearby[].username", "nearby[].player_id",
-            "pirates[].pirate_id", "pirates[].is_boss",
-            "empire_npcs[].name", "arena_npcs[].name", "creatures[].name", "prizes[].actor_id",
+            "nearby[].in_combat", "nearby[].offline", "nearby[].ship_class",
+            "pirates[].pirate_id", "pirates[].is_boss", "pirates[].tier",
+            "empire_npcs[].name", "arena_npcs[].name", "arena_npcs[].ship_class_name",
+            "creatures[].name", "prizes[].actor_id",
             "unknown_signature",
         ),
     },
@@ -53,7 +71,8 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "spacemolt/get_system": {
         "response": (
-            "system.pois[].id", "system.pois[].has_base", "system.pois[].base_id",
+            "system.id", "system.name", "system.pois[].id", "system.pois[].name",
+            "system.pois[].has_base", "system.pois[].base_id", "system.pois[].base_name",
             "active_battle.participants[].player_id",
         ),
     },
@@ -61,6 +80,14 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
         "response": ("poi.id", "base.id", "base.public_access", "base.wrecked", "active_battle"),
     },
     "spacemolt/sell": {"request": ("id", "quantity"), "response": ("details.quantity_sold",)},
+    "spacemolt/buy": {"request": ("id", "quantity")},
+    "spacemolt/refuel": {},
+    "spacemolt/jump": {},
+    "spacemolt/attack": {},
+    "spacemolt/jettison": {},
+    "spacemolt/self_destruct": {},
+    "spacemolt/undock": {},
+    "spacemolt_ship/scrap_ship": {},
     "spacemolt/travel": {"request": ("id",)},
     "spacemolt/dock": {},
     "spacemolt/distress_signal": {"request": ("distress_type",)},

@@ -220,6 +220,67 @@ class AutodockTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertEqual(json.loads(out)["combat"], "unknown")
 
+    def test_zero_fuel_while_docked_suggests_refuel(self):
+        backend = Backend({("get_status",): [status(fuel=0, docked="base_1")],
+                           ("get_system",): [chart()]})
+        rc, out, _ = run(cmd_survive, backend, ["--json", "--check"])
+        data = json.loads(out)
+        self.assertEqual((rc, data["status"]), (1, "danger"))
+        self.assertEqual(data["suggestions"], ["smx refuel"])
+
+    def test_low_fuel_in_space_is_danger(self):
+        backend = Backend({("get_status",): [status(fuel=30)], ("get_system",): [chart()]})
+        rc, out, _ = run(cmd_survive, backend, ["--json", "--check"])
+        data = json.loads(out)
+        self.assertEqual((rc, data["status"]), (1, "danger"))
+        self.assertEqual(data["suggestions"], ["smx autodock"])
+
+    def test_low_fuel_skips_autodock_when_it_would_refuse(self):
+        for state in (status(fuel=30, transit=True), status(fuel=30, pending=True)):
+            backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+            _, out, _ = run(cmd_survive, backend, ["--json"])
+            self.assertEqual(json.loads(out)["suggestions"], [])
+
+    def test_low_fuel_skips_autodock_in_battle(self):
+        backend = Backend({("get_status",): [status(fuel=30)], ("get_system",): [chart(battle=True)],
+                           ("spacemolt_battle/status",): [{"structuredContent": {"is_participant": False}}]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["combat"], "active")
+        self.assertNotIn("smx autodock", data["suggestions"])
+
+    def test_low_fuel_skips_autodock_with_ambiguous_stations(self):
+        backend = Backend({("get_status",): [status(fuel=30, poi="belt")], ("get_system",): [chart(multi=True)]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["suggestions"], [])
+        self.assertIn("several stations charted", " ".join(data["messages"]))
+
+    def test_non_positive_max_fuel_is_unknown(self):
+        state = status(fuel=30)
+        state["structuredContent"]["ship"]["max_fuel"] = 0
+        backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["status"], "unknown")
+        self.assertIn("fuel condition unknown", data["messages"])
+
+    def test_empty_tank_with_invalid_capacity_is_still_empty(self):
+        state = status(fuel=0)
+        state["structuredContent"]["ship"]["max_fuel"] = 0
+        backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["status"], "danger")
+        self.assertIn("fuel empty", data["messages"])
+
+    def test_low_fuel_while_docked_is_only_advice(self):
+        backend = Backend({("get_status",): [status(fuel=30, docked="base_1")], ("get_system",): [chart()]})
+        rc, out, _ = run(cmd_survive, backend, ["--json", "--check"])
+        data = json.loads(out)
+        self.assertEqual((rc, data["status"]), (0, "ok"))
+        self.assertEqual(data["suggestions"], ["smx refuel"])
+
     def test_known_danger_survives_unknown_fuel(self):
         payload = status(hull=20)
         payload["structuredContent"]["ship"]["fuel"] = None

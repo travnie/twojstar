@@ -13,6 +13,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Any, Iterable
 
+from .fieldtools import (cmd_dry_run, cmd_ids, cmd_inbox, cmd_where_can_i,
+                         id_suggestions)
 from .fleet import (error_status, fleet_check_ok, render_fleet,
                     status_from_payload)
 from .knowledge import (GUIDES, guide_json, list_guides, load_guide,
@@ -39,6 +41,10 @@ ALIASES = {
     "map": "get_map",
     "skills": "get_skills",
     "notifications": "get_notifications",
+}
+LOCAL_COMMANDS = {
+    "nearby", "near", "sell-all", "sellall", "missions", "route", "survive", "autodock", "guide", "mcp", "paths",
+    "profile", "profiles", "fleet", "watch", "doctor", "backend", "ids", "where-can-i", "inbox",
 }
 
 
@@ -143,7 +149,7 @@ def parse_help_commands(text: str) -> set[str]:
             if "/" not in token:
                 commands.add(normalize_command(token))
     commands.update(ALIASES)
-    commands.update({"nearby", "near", "sell-all", "sellall", "missions", "route", "survive", "autodock", "guide", "mcp", "paths", "profile", "profiles", "fleet", "watch", "doctor", "backend"})
+    commands.update(LOCAL_COMMANDS)
     return commands
 
 
@@ -247,22 +253,11 @@ def _entity_rows(payload: Any) -> list[tuple[str, dict[str, Any]]]:
     return rows
 
 
-def _weapon_count(entity: dict[str, Any]) -> int:
-    for key in ("weapon_count", "weapons_count", "guns"):
-        value = entity.get(key)
-        if isinstance(value, int):
-            return max(0, value)
-    weapons = entity.get("weapons")
-    if isinstance(weapons, list):
-        return len(weapons)
-    return 0
-
-
 def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
     score = 0
     reasons: list[str] = []
     kind = str(entity.get("kind") or entity.get("type") or "").lower()
-    text = " ".join(str(entity.get(k, "")) for k in ("name", "ship", "ship_class", "class", "role")).lower()
+    text = " ".join(str(entity.get(k, "")) for k in ("name", "ship_class", "ship_class_name", "role", "species")).lower()
 
     if entity.get("offline") is True:
         return 0, "⬜", ["offline"]
@@ -275,18 +270,13 @@ def assess_threat(entity: dict[str, Any]) -> tuple[int, str, list[str]]:
     if entity.get("in_combat") is True:
         score += 2
         reasons.append("in combat")
-    weapons = _weapon_count(entity)
-    if weapons:
-        score += min(3, weapons)
-        reasons.append(f"{weapons} weapon{'s' if weapons != 1 else ''}")
     if any(word in text for word in ("combat", "fighter", "gunship", "bomber", "warship", "raider")):
         score += 2
         reasons.append("combat hull")
 
-    danger = entity.get("danger") or entity.get("danger_level")
-    if isinstance(danger, (int, float)):
-        score += min(4, max(0, int(danger) // 2))
-        reasons.append(f"danger {danger}")
+    tier = entity.get("tier")
+    if tier not in (None, ""):
+        reasons.append(f"tier {tier}")
 
     if score >= 7:
         marker = "☠️"
@@ -335,7 +325,7 @@ def cmd_nearby(backend: Backend, argv: list[str]) -> int:
     for row in assessments:
         entity = row["entity"]
         kind = row["kind"]
-        ship = entity.get("ship_class") or entity.get("ship") or entity.get("class")
+        ship = entity.get("ship_class_name") or entity.get("ship_class")
         details = ", ".join(row["reasons"]) or "no visible threat signals"
         suffix = f" · {ship}" if ship else ""
         print(f"{row['marker']} {row['name']} [{kind}]{suffix} · {details}")
@@ -779,6 +769,8 @@ def _project_backend_payload(backend: Backend, args: list[str], fields: list[str
     result, payload = backend.json(args)
     if result.returncode != 0:
         sys.stderr.write(result.stderr or result.stdout)
+        for hint in id_suggestions(backend.profile, args[1:]):
+            print(hint, file=sys.stderr)
         return result.returncode
     if payload is None:
         print("smx: backend returned no JSON payload to project.", file=sys.stderr)
@@ -1081,6 +1073,10 @@ Usage:
   smx survive [--check] [--json]          read-only combat and survival triage
   smx autodock [--target ID] [--execute] guarded same-system docking
   smx sell-all [options]        sell current cargo through v2
+  smx ids [KIND] [--refresh]    IDs seen in official responses (per profile)
+  smx where-can-i ITEM          markets where an item was last seen locally
+  smx inbox [--peek] [--all]    notifications with routine events collapsed
+  smx --dry-run <command>       preview a command; it is not sent
   smx guide [topic]             fetch live game guide (offline card fallback)
   smx mcp [gameplay|docs]       print canonical MCP endpoints and roles
   smx paths                      show backend, profile and state locations
@@ -1125,6 +1121,8 @@ def _passthrough(backend: Backend, argv: list[str], fields: list[str] | None = N
     if result.returncode == 0:
         return 0
 
+    for hint in id_suggestions(backend.profile, argv[1:]):
+        print(hint, file=sys.stderr)
     combined = f"{result.stdout}\n{result.stderr}".lower()
     if "unknown command" in combined or "unknown help topic" in combined:
         help_result = backend.run(["help"])
@@ -1160,10 +1158,22 @@ def _main(argv: list[str] | None) -> int:
         return 0
 
     backend = Backend(profile=profile)
+    head = argv[: argv.index("--")] if "--" in argv else argv
+    if "--dry-run" in head:
+        rest = [arg for arg in head if arg != "--dry-run"] + argv[len(head):]
+        if not rest:
+            print("smx: --dry-run requires a command", file=sys.stderr)
+            return 2
+        if rest[0] not in LOCAL_COMMANDS:
+            normalized = normalize_command(rest[0])
+            return cmd_dry_run(backend, ALIASES.get(normalized, normalized), rest[1:], watch_command_is_read_only)
+        if rest[0] not in {"sell-all", "sellall"}:
+            print(f"smx: --dry-run is not available for local command `{rest[0]}`; nothing was run", file=sys.stderr)
+            return 2
+        argv = [*rest, "--dry-run"]
     command = argv[0]
     rest = argv[1:]
-    local_commands = {"nearby", "near", "sell-all", "sellall", "missions", "route", "survive", "autodock", "guide", "mcp", "paths", "profiles", "profile", "fleet", "watch", "doctor", "backend"}
-    if fields and command in local_commands:
+    if fields and command in LOCAL_COMMANDS:
         print("smx: --fields is supported for official passthrough commands; use the local command's own --json option otherwise.", file=sys.stderr)
         return 2
     if command in {"nearby", "near"}:
@@ -1172,6 +1182,12 @@ def _main(argv: list[str] | None) -> int:
         return cmd_sell_all(backend, rest)
     if command == "missions":
         return cmd_missions(backend, rest)
+    if command == "ids":
+        return cmd_ids(backend, rest)
+    if command == "where-can-i":
+        return cmd_where_can_i(backend, rest)
+    if command == "inbox":
+        return cmd_inbox(backend, rest)
     if command == "route":
         return cmd_route(backend, rest)
     if command == "survive":

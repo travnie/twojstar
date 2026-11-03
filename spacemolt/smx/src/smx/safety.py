@@ -70,6 +70,9 @@ def _emit(report: dict[str, Any], json_output: bool) -> None:
             print(f"  actions: {', '.join(report['actions'])}")
 
 
+LOW_FUEL = 0.3  # heuristic, not a game rule
+
+
 def _mark_unknown(report: dict[str, Any]) -> None:
     if report["status"] != "danger":
         report["status"] = "unknown"
@@ -93,13 +96,15 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
     location = data.get("location")
     queue = data.get("queue")
     player = data.get("player")
-    if not all(isinstance(x, dict) for x in (ship, location, queue, player)):
+    if not (isinstance(ship, dict) and isinstance(location, dict)
+            and isinstance(queue, dict) and isinstance(player, dict)):
         report["messages"].append("incomplete canonical state")
         _emit(report, ns.json)
         return 1
 
     report["status"] = "ok"
     report["combat"] = "unknown"
+    needs_dock = False
     for stat in ("hull", "max_hull", "shield", "max_shield", "fuel", "max_fuel"):
         value = ship.get(stat)
         report[stat] = value if isinstance(value, int) and not isinstance(value, bool) else None
@@ -111,13 +116,22 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         elif a / b <= threshold:
             report["status"] = "danger"
             report["messages"].append(f"low {current}: {a}/{b} (heuristic)")
-    if report["fuel"] is None or report["max_fuel"] is None:
+    if (report["fuel"] is None or report["max_fuel"] is None
+            or (report["max_fuel"] <= 0 and report["fuel"] != 0)):
         _mark_unknown(report)
         report["messages"].append("fuel condition unknown")
     elif report["fuel"] == 0:
         report["status"] = "danger"
         report["messages"].append("fuel empty")
-        report["suggestions"].append("smx distress_signal distress_type=fuel")
+        report["suggestions"].append("smx refuel" if location.get("docked_at")
+                                     else "smx distress_signal distress_type=fuel")
+    elif report["fuel"] / report["max_fuel"] <= LOW_FUEL:
+        report["messages"].append(f"low fuel: {report['fuel']}/{report['max_fuel']} (heuristic)")
+        if location.get("docked_at"):
+            report["suggestions"].append("smx refuel")
+        else:
+            report["status"] = "danger"
+            needs_dock = True
     if ship.get("incapacitated") is True:
         report["status"] = "danger"
         report["messages"].append("crew incapacitated")
@@ -155,7 +169,7 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         elif isinstance(active, dict) and not isinstance(members, list):
             _mark_unknown(report)
             report["messages"].append("battle participants unknown")
-        elif isinstance(player_id, str) and any(
+        elif isinstance(player_id, str) and isinstance(members, list) and any(
                 isinstance(row, dict) and row.get("player_id") == player_id for row in members):
             report["combat"] = "active"
             report["status"] = "danger"
@@ -182,6 +196,14 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         else:
             report["combat"] = "not_participating"
 
+    # Same gates as cmd_autodock: never suggest what it would refuse.
+    if (needs_dock and system is not None and report["combat"] in ("none", "not_participating")
+            and _safe_state(data) is None):
+        stations = _stations(system)
+        if len(_pick_stations(stations, location)) == 1:
+            report["suggestions"].append("smx autodock")
+        elif stations:
+            report["messages"].append("several stations charted; choose with smx autodock --target POI_ID")
     _emit(report, ns.json)
     return int(ns.check and report["status"] != "ok")
 
@@ -199,6 +221,14 @@ def _stations(data: dict[str, Any]) -> list[dict[str, str]]:
             found.append({"poi": entry["id"], "base": entry["base_id"],
                           "name": str(entry.get("base_name") or entry.get("name") or entry["id"])})
     return found
+
+
+def _pick_stations(stations: list[dict[str, str]], location: dict[str, Any],
+                   target: str | None = None) -> list[dict[str, str]]:
+    if target:
+        return [s for s in stations if target in (s["poi"], s["base"])]
+    local = [s for s in stations if s["poi"] == location.get("poi_id")]
+    return local if local else stations
 
 
 def _valid_dock_poi(poi: dict[str, Any], target: str, expected_base: str) -> str | None:
@@ -274,11 +304,7 @@ def cmd_autodock(backend: Any, argv: list[str]) -> int:
     stations = _stations(chart)
     if not stations:
         return finish("blocked", "no charted station in this system", 1)
-    if ns.target:
-        matches = [s for s in stations if ns.target in (s["poi"], s["base"])]
-    else:
-        local = [s for s in stations if s["poi"] == location["poi_id"]]
-        matches = local if local else stations
+    matches = _pick_stations(stations, location, ns.target)
     if len(matches) != 1:
         report["messages"].append("Choose --target POI_ID when there are multiple stations")
         report["stations"] = stations
