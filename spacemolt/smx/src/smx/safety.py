@@ -116,7 +116,8 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         elif a / b <= threshold:
             report["status"] = "danger"
             report["messages"].append(f"low {current}: {a}/{b} (heuristic)")
-    if report["fuel"] is None or report["max_fuel"] is None or report["max_fuel"] <= 0:
+    if (report["fuel"] is None or report["max_fuel"] is None
+            or (report["max_fuel"] <= 0 and report["fuel"] != 0)):
         _mark_unknown(report)
         report["messages"].append("fuel condition unknown")
     elif report["fuel"] == 0:

@@ -261,7 +261,18 @@ class AutodockTests(unittest.TestCase):
         state["structuredContent"]["ship"]["max_fuel"] = 0
         backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
         _, out, _ = run(cmd_survive, backend, ["--json"])
-        self.assertIn("fuel condition unknown", json.loads(out)["messages"])
+        data = json.loads(out)
+        self.assertEqual(data["status"], "unknown")
+        self.assertIn("fuel condition unknown", data["messages"])
+
+    def test_empty_tank_with_invalid_capacity_is_still_empty(self):
+        state = status(fuel=0)
+        state["structuredContent"]["ship"]["max_fuel"] = 0
+        backend = Backend({("get_status",): [state], ("get_system",): [chart()]})
+        _, out, _ = run(cmd_survive, backend, ["--json"])
+        data = json.loads(out)
+        self.assertEqual(data["status"], "danger")
+        self.assertIn("fuel empty", data["messages"])
 
     def test_low_fuel_while_docked_is_only_advice(self):
         backend = Backend({("get_status",): [status(fuel=30, docked="base_1")], ("get_system",): [chart()]})
