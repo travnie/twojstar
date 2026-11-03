@@ -96,7 +96,8 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
     location = data.get("location")
     queue = data.get("queue")
     player = data.get("player")
-    if not all(isinstance(x, dict) for x in (ship, location, queue, player)):
+    if not (isinstance(ship, dict) and isinstance(location, dict)
+            and isinstance(queue, dict) and isinstance(player, dict)):
         report["messages"].append("incomplete canonical state")
         _emit(report, ns.json)
         return 1
