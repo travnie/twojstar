@@ -364,7 +364,8 @@ def doctor_report(*, online: bool = False) -> dict[str, Any]:
     if backend.get("newer_than_tested"):
         advice = (
             "`smx backend rollback` undoes the last update"
-            if previous_backend_path(Path(backend["managed"])).is_file()
+            if backend["resolved"] == backend["managed"]
+            and previous_backend_path(Path(backend["managed"])).is_file()
             else "`smx backend update --version X` installs another release"
         )
         checks.append(

@@ -369,12 +369,13 @@ class MaintenanceTests(unittest.TestCase):
             self.assertEqual(Path(calls[1]).read_bytes(), b"new")
 
     def test_doctor_offers_rollback_only_when_copy_exists(self):
-        def advice(kept):
+        def advice(kept, override=None):
             with tempfile.TemporaryDirectory() as tmp:
                 managed = Path(tmp) / "spacemolt"
                 if kept:
                     previous_backend_path(managed).write_bytes(b"old")
-                status = {"managed": str(managed), "current": "999.0.0", "newer_than_tested": True}
+                status = {"managed": str(managed), "resolved": override or str(managed),
+                          "current": "999.0.0", "newer_than_tested": True}
                 with patch("smx.maintenance.backend_status", return_value=status), \
                      patch("smx.maintenance.list_profiles", return_value=[]):
                     checks = doctor_report()["checks"]
@@ -382,6 +383,7 @@ class MaintenanceTests(unittest.TestCase):
 
         self.assertIn("backend rollback", advice(True))
         self.assertNotIn("backend rollback", advice(False))
+        self.assertNotIn("backend rollback", advice(True, override="/opt/spacemolt"))
 
     def test_rollback_without_previous_fails_clearly(self):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(RuntimeError, "no previous backend"):
