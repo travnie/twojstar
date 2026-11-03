@@ -642,6 +642,49 @@ def cmd_doctor(argv: list[str]) -> int:
     return 0 if report.get("healthy") else 1
 
 
+def _backend_status(ns: argparse.Namespace) -> int:
+    payload = backend_status(online=ns.action == "check")
+    if ns.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"active    {payload['resolved']}")
+        print(f"managed   {payload['managed']}")
+        print(f"version   {payload.get('current') or '?'}")
+        print(f"tested    {payload.get('tested') or '?'}")
+        if payload.get("newer_than_tested"):
+            print("warning   active backend is newer than the tested release", file=sys.stderr)
+        if payload.get("error"):
+            print(f"error     {payload['error']}")
+        if ns.action == "check":
+            print(f"latest    {payload.get('latest') or '?'}")
+            print(f"update    {'yes' if payload.get('update_available') else 'no'}")
+    return 0 if not payload.get("error") else 1
+
+
+def _backend_update(ns: argparse.Namespace) -> int:
+    payload = install_backend(ns.version)
+    if ns.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    elif payload.get("updated"):
+        print(f"updated official backend: {payload.get('previous') or 'missing'} -> {payload['current']}")
+        print(f"path: {payload['path']}")
+        print(f"verified: {payload.get('digest') or 'sha256'}")
+    else:
+        print(f"official backend already at: {payload['current']}")
+        print(f"path: {payload['path']}")
+    return 0
+
+
+def _backend_rollback(ns: argparse.Namespace) -> int:
+    payload = rollback_backend()
+    if ns.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(f"rolled back official backend: {payload.get('previous') or 'unreadable'} -> {payload['current']}")
+        print(f"path: {payload['path']}")
+    return 0
+
+
 def cmd_backend(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="smx backend", add_help=True)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -660,59 +703,16 @@ def cmd_backend(argv: list[str]) -> int:
     rollback.add_argument("--json", action="store_true")
 
     ns = parser.parse_args(argv)
-
+    handlers = {"status": _backend_status, "check": _backend_status,
+                "update": _backend_update, "rollback": _backend_rollback}
     try:
-        if ns.action in {"status", "check"}:
-            payload = backend_status(online=ns.action == "check")
-            if ns.json:
-                print(json.dumps(payload, indent=2, ensure_ascii=False))
-            else:
-                print(f"active    {payload['resolved']}")
-                print(f"managed   {payload['managed']}")
-                print(f"version   {payload.get('current') or '?'}")
-                print(f"tested    {payload.get('tested') or '?'}")
-                if payload.get("newer_than_tested"):
-                    print("warning   active backend is newer than the tested release", file=sys.stderr)
-                if payload.get("error"):
-                    print(f"error     {payload['error']}")
-                if ns.action == "check":
-                    print(f"latest    {payload.get('latest') or '?'}")
-                    print(f"update    {'yes' if payload.get('update_available') else 'no'}")
-            return 0 if not payload.get("error") else 1
-
-        if ns.action == "update":
-            payload = install_backend(ns.version)
-            if ns.json:
-                print(json.dumps(payload, indent=2, ensure_ascii=False))
-            else:
-                if payload.get("updated"):
-                    previous = payload.get("previous") or "missing"
-                    print(f"updated official backend: {previous} -> {payload['current']}")
-                    print(f"path: {payload['path']}")
-                    print(f"verified: {payload.get('digest') or 'sha256'}")
-                else:
-                    print(f"official backend already at: {payload['current']}")
-                    print(f"path: {payload['path']}")
-            if os.environ.get("SMX_BACKEND") and not ns.json:
-                print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
-            return 0
-
-        if ns.action == "rollback":
-            payload = rollback_backend()
-            if ns.json:
-                print(json.dumps(payload, indent=2, ensure_ascii=False))
-            else:
-                print(f"rolled back official backend: {payload.get('previous') or 'unreadable'} -> {payload['current']}")
-                print(f"path: {payload['path']}")
-            if os.environ.get("SMX_BACKEND") and not ns.json:
-                print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
-            return 0
+        code = handlers[ns.action](ns)
     except Exception as exc:
         print(f"smx: backend {ns.action} failed: {exc}", file=sys.stderr)
         return 1
-
-    return 2
-
+    if ns.action in {"update", "rollback"} and os.environ.get("SMX_BACKEND") and not ns.json:
+        print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
+    return code
 
 
 def cmd_mcp(argv: list[str]) -> int:

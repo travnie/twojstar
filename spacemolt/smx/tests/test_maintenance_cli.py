@@ -17,9 +17,8 @@ class MaintenanceCliTests(unittest.TestCase):
             "backend": {"current": "1.5.65"},
         }
         stdout = io.StringIO()
-        with patch("smx.cli.doctor_report", return_value=report):
-            with redirect_stdout(stdout):
-                rc = cmd_doctor([])
+        with patch("smx.cli.doctor_report", return_value=report), redirect_stdout(stdout):
+            rc = cmd_doctor([])
 
         self.assertEqual(rc, 0)
         self.assertIn("backend", stdout.getvalue())
@@ -35,9 +34,8 @@ class MaintenanceCliTests(unittest.TestCase):
             },
         }
         stdout = io.StringIO()
-        with patch("smx.cli.doctor_report", return_value=report) as doctor:
-            with redirect_stdout(stdout):
-                rc = cmd_doctor(["--online"])
+        with patch("smx.cli.doctor_report", return_value=report) as doctor, redirect_stdout(stdout):
+            rc = cmd_doctor(["--online"])
 
         self.assertEqual(rc, 0)
         doctor.assert_called_once_with(online=True)
@@ -53,9 +51,8 @@ class MaintenanceCliTests(unittest.TestCase):
             "error": None,
         }
         stdout = io.StringIO()
-        with patch("smx.cli.backend_status", return_value=payload) as status:
-            with redirect_stdout(stdout):
-                rc = cmd_backend(["check"])
+        with patch("smx.cli.backend_status", return_value=payload) as status, redirect_stdout(stdout):
+            rc = cmd_backend(["check"])
 
         self.assertEqual(rc, 0)
         status.assert_called_once_with(online=True)
@@ -70,9 +67,8 @@ class MaintenanceCliTests(unittest.TestCase):
             "digest": "sha256:abc",
         }
         stdout = io.StringIO()
-        with patch("smx.cli.install_backend", return_value=payload):
-            with redirect_stdout(stdout):
-                rc = cmd_backend(["update"])
+        with patch("smx.cli.install_backend", return_value=payload), redirect_stdout(stdout):
+            rc = cmd_backend(["update"])
 
         self.assertEqual(rc, 0)
         self.assertIn("1.5.64 -> 1.5.65", stdout.getvalue())
@@ -80,9 +76,8 @@ class MaintenanceCliTests(unittest.TestCase):
 
     def test_backend_update_reports_failure_cleanly(self):
         stderr = io.StringIO()
-        with patch("smx.cli.install_backend", side_effect=RuntimeError("bad digest")):
-            with redirect_stderr(stderr):
-                rc = cmd_backend(["update"])
+        with patch("smx.cli.install_backend", side_effect=RuntimeError("bad digest")), redirect_stderr(stderr):
+            rc = cmd_backend(["update"])
 
         self.assertEqual(rc, 1)
         self.assertIn("bad digest", stderr.getvalue())
