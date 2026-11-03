@@ -167,7 +167,7 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
         elif isinstance(active, dict) and not isinstance(members, list):
             _mark_unknown(report)
             report["messages"].append("battle participants unknown")
-        elif isinstance(player_id, str) and any(
+        elif isinstance(player_id, str) and isinstance(members, list) and any(
                 isinstance(row, dict) and row.get("player_id") == player_id for row in members):
             report["combat"] = "active"
             report["status"] = "danger"

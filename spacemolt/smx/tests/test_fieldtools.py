@@ -9,7 +9,7 @@ from unittest.mock import patch
 from smx import cli
 from smx.cli import BackendResult, main, watch_command_is_read_only
 from smx.fieldtools import (MAX_MARKETS, cmd_dry_run, cmd_ids, cmd_inbox, cmd_where_can_i, id_suggestions,
-                            learn, load_cache, save_cache)
+                            learn, load_cache, refresh, save_cache)
 
 SYSTEM = {"structuredContent": {"system": {"id": "sol", "name": "Sol", "pois": [
     {"id": "sol_belt", "name": "Main Belt"},
@@ -36,7 +36,8 @@ class Backend:
             return BackendResult(1, "", "not docked\n"), None
         return BackendResult(0, "", ""), reply
 
-    def run(self, args, *, json_output=False, timeout=None):
+    @staticmethod
+    def run(args, *, json_output=False, timeout=None):
         raise AssertionError(f"must not send {args}")
 
 
@@ -47,26 +48,28 @@ def capture(function, *args):
     return code, out.getvalue(), err.getvalue()
 
 
-class StateTestCase(unittest.TestCase):
+def isolate_state(case):
+    directory = tempfile.TemporaryDirectory()
+    case.addCleanup(directory.cleanup)
+    env = {k: v for k, v in os.environ.items() if k not in {"SMX_PROFILE", "SMX_BACKEND", "SPACEMOLT_SESSION"}}
+    patcher = patch.dict(os.environ, {**env, "SMX_STATE_DIR": directory.name}, clear=True)
+    patcher.start()
+    case.addCleanup(patcher.stop)
+
+
+def refreshed():
+    return Backend({
+        ("get_system",): SYSTEM, ("get_cargo",): CARGO, ("get_nearby",): NEARBY,
+        ("spacemolt_market/view_market",): MARKET,
+    })
+
+
+class IdsTests(unittest.TestCase):
     def setUp(self):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        env = {k: v for k, v in os.environ.items() if k not in {"SMX_PROFILE", "SMX_BACKEND", "SPACEMOLT_SESSION"}}
-        patcher = patch.dict(os.environ, {**env, "SMX_STATE_DIR": directory.name}, clear=True)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        isolate_state(self)
 
-    @staticmethod
-    def refreshed():
-        return Backend({
-            ("get_system",): SYSTEM, ("get_cargo",): CARGO, ("get_nearby",): NEARBY,
-            ("spacemolt_market/view_market",): MARKET,
-        })
-
-
-class IdsTests(StateTestCase):
     def test_refresh_records_official_ids_and_survives_reload(self):
-        code, out, _ = capture(cmd_ids, self.refreshed(), ["--refresh", "--json"])
+        code, out, _ = capture(cmd_ids, refreshed(), ["--refresh", "--json"])
         rows = {(row["kind"], row["id"]): row["name"] for row in json.loads(out)}
         self.assertEqual(code, 0)
         self.assertEqual(rows[("poi", "sol_belt")], "Main Belt")
@@ -89,7 +92,7 @@ class IdsTests(StateTestCase):
         self.assertIn("cache unchanged", err)
 
     def test_profiles_do_not_share_a_cache(self):
-        backend = self.refreshed()
+        backend = refreshed()
         backend.profile = "gremlin"
         capture(cmd_ids, backend, ["--refresh"])
         self.assertTrue(load_cache("gremlin")["ids"])
@@ -104,20 +107,19 @@ class IdsTests(StateTestCase):
     def test_old_markets_are_dropped(self):
         cache = load_cache()
         cache["markets"] = {f"b{i}": {"seen": i, "items": {}} for i in range(MAX_MARKETS + 5)}
-        backend = self.refreshed()
-        from smx.fieldtools import refresh
+        backend = refreshed()
         refresh(backend, cache, 10_000)
         self.assertEqual(len(cache["markets"]), MAX_MARKETS)
         self.assertIn("sol_base", cache["markets"])
 
     def test_suggestions_are_hints_for_unknown_values_only(self):
-        capture(cmd_ids, self.refreshed(), ["--refresh"])
+        capture(cmd_ids, refreshed(), ["--refresh"])
         self.assertIn("sol_belt", id_suggestions(None, ["id=sol_blet"])[0])
         self.assertIn("sol_belt", id_suggestions(None, ["Main Belt"])[0])
         self.assertEqual(id_suggestions(None, ["id=sol_belt", "quantity=5", "--json"]), [])
 
     def test_failed_passthrough_prints_hint_and_runs_nothing_else(self):
-        capture(cmd_ids, self.refreshed(), ["--refresh"])
+        capture(cmd_ids, refreshed(), ["--refresh"])
         calls = []
 
         class Failing:
@@ -134,9 +136,12 @@ class IdsTests(StateTestCase):
         self.assertIn("not executed", err)
 
 
-class WhereCanITests(StateTestCase):
+class WhereCanITests(unittest.TestCase):
+    def setUp(self):
+        isolate_state(self)
+
     def test_finds_by_id_or_name_with_age(self):
-        capture(cmd_ids, self.refreshed(), ["--refresh"])
+        capture(cmd_ids, refreshed(), ["--refresh"])
         for query in (["ore_iron"], ["iron", "ore"]):
             code, out, _ = capture(cmd_where_can_i, Backend(), query)
             self.assertEqual(code, 0)
@@ -223,7 +228,10 @@ class DryRunTests(unittest.TestCase):
         self.assertNotIn("estimate:", out)
 
 
-class DryRunRoutingTests(StateTestCase):
+class DryRunRoutingTests(unittest.TestCase):
+    def setUp(self):
+        isolate_state(self)
+
     def assert_not_sent(self, argv):
         with patch("smx.cli.subprocess.run", side_effect=AssertionError("sent")):
             code, out, _ = capture(main, argv)
