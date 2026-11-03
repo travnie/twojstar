@@ -369,7 +369,8 @@ const DAILY_SUBREQUEST_LIMIT = 50;
 // Cold login 4, 7 startup reads, up to DAILY_PLAN_LOG_READS captain's log reads.
 const DAILY_PLAN_LOG_READS = 3;
 const DAILY_SUBREQUESTS_START = 4 + 7 + DAILY_PLAN_LOG_READS;
-const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
+// relogin 5, ensureDocked 13, notification clear 1, auto log (room check + add) 2.
+const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1 + 2;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
 const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
@@ -714,6 +715,27 @@ function isAutopilotEntry(text) {
   return String(text).trim().startsWith(AUTOPILOT_LOG_PREFIX.trim());
 }
 
+function describeChange(action, args) {
+  if (action === "chat") return `chat ${String(args?.target || "")}${args?.target_id ? ` to ${String(args.target_id).slice(0, 40)}` : ""}`;
+  const id = typeof args?.id === "string" ? ` ${args.id.slice(0, 40)}` : "";
+  return `${action}${id}`;
+}
+
+// Gremlin should always learn what his autopilot changed, even when the loop stopped early.
+async function writeAutopilotLog(env, run, dock) {
+  if (dock?.changed) run.changes.push(`auto-dock${dock.target ? ` ${String(dock.target).slice(0, 40)}` : ""}`);
+  if (!run.changes.length) return {written:false, reason:"no state change"};
+  if (run.loggedThisRun) return {written:false, reason:"planner already logged"};
+  if (!await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full"};
+  const status = sc(dock?.status || dock?.dock || null);
+  const where = [status?.location?.poi_name, status?.location?.system_name].filter(Boolean).join(", ");
+  const fuel = status?.ship ? ` Fuel ${status.ship.fuel}/${status.ship.max_fuel}.` : "";
+  const day = new Date().toISOString().slice(0, 10);
+  const text = `${day}: ${run.changes.join("; ")}. ${dock?.docked ? `Docked${where ? ` at ${where}` : ""}` : "NOT docked"}.${fuel}`;
+  const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content:autopilotLogContent(text.slice(0, 440))});
+  return {written:result.ok, ...(result.ok ? {} : {error:result.error})};
+}
+
 function autopilotLogContent(content) {
   const text = String(content || "").trim();
   return text.startsWith(AUTOPILOT_LOG_PREFIX) ? text : AUTOPILOT_LOG_PREFIX + text;
@@ -898,6 +920,8 @@ async function executeDailyDecision(env, run, decision, provider) {
   const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
   if (action === "accept_mission" && result.ok) run.missionAccepted = true;
+  if (action === "captains_log_add" && result.ok) run.loggedThisRun = true;
+  if (!read && result.ok && action !== "captains_log_add") run.changes.push(describeChange(action, callArgs));
   if (action === "get_missions" && result.ok) run.missionBoardText += compactJson(result.data, 200_000);
   // Any non-read may change game state (even a failed one, e.g. a timed-out travel), so
   // earlier reads become stale. Failed reads stay retryable.
@@ -920,7 +944,7 @@ async function clearSeenNotifications(env, run) {
   run.history.push({kind:"notifications_cleared", count:run.notificationsSeen, ok:cleared.ok});
 }
 
-async function finishDailyRun(env, startedAt, history) {
+async function finishDailyRun(env, startedAt, history, run = null) {
   let dock = null;
   try {
     dock = await ensureDocked(env);
@@ -928,6 +952,7 @@ async function finishDailyRun(env, startedAt, history) {
     dock = {docked:false, error:errorText(err, 700)};
   }
   const docked = Boolean(dock?.docked);
+  if (run) history.push({kind:"autopilot_log", ...await writeAutopilotLog(env, run, dock)});
   const summary = {
     ok:docked,
     startedAt,
@@ -956,6 +981,9 @@ async function runDailyGremlin(env) {
     // read key -> history index of its result (Infinity: always in the prompt).
     readsSinceChange:new Map(),
     missionAccepted:false,
+    // Successful state-changing actions, for the closing [autopilot] log entry.
+    changes:[],
+    loggedThisRun:false,
     // Serialized get_missions results; accept_mission ids must appear here.
     missionBoardText:"",
     maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),
@@ -979,7 +1007,7 @@ async function runDailyGremlin(env) {
   }
 
   await clearSeenNotifications(env, run);
-  return finishDailyRun(env, startedAt, run.history);
+  return finishDailyRun(env, startedAt, run.history, run);
 }
 
 // Record a failed run too, so a crash before the summary write still leaves a trace.
