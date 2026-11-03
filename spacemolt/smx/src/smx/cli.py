@@ -64,7 +64,8 @@ class Backend:
         self.interactive = False  # one offer per process
         print("smx: official SpaceMolt v2 CLI not found. Install verified latest release? [Y/n] ",
               end="", file=sys.stderr, flush=True)
-        if sys.stdin.readline().strip().casefold() not in {"", "y", "yes"}:
+        answer = sys.stdin.readline()
+        if not answer or answer.strip().casefold() not in {"", "y", "yes"}:  # empty string is EOF, not Enter
             return False
         try:
             payload = install_backend()

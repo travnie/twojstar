@@ -131,9 +131,7 @@ def response_fields(spec: dict[str, Any], operation: dict[str, Any]) -> set[str]
 
 def find_drift(spec: dict[str, Any]) -> list[str]:
     drift: list[str] = []
-    paths = spec.get("paths")
-    if not isinstance(paths, dict):
-        return ["spec has no paths object"]
+    paths = spec["paths"]
     for command, needs in CONTRACT.items():
         item = paths.get(f"{API_PREFIX}{command}")
         operation = item.get("post") if isinstance(item, dict) else None
@@ -155,10 +153,18 @@ def fetch_spec() -> dict[str, Any]:
     request = urllib.request.Request(SPEC_URL, headers={"User-Agent": f"spacemolt-smx/{__version__}"})
     # Fixed https constant above; no caller-supplied scheme.
     with urllib.request.urlopen(request, timeout=60) as response:  # skipcq: BAN-B310
-        payload = json.load(response)
-    if not isinstance(payload, dict):
-        raise ValueError("spec is not a JSON object")
-    return payload
+        return json.load(response)
+
+
+def load_spec(path: str | None = None) -> dict[str, Any]:
+    if path:
+        with open(path, encoding="utf-8") as handle:
+            spec = json.load(handle)
+    else:
+        spec = fetch_spec()
+    if not isinstance(spec, dict) or not isinstance(spec.get("paths"), dict):
+        raise ValueError("spec has no paths object")
+    return spec
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -166,11 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--spec", help="local OpenAPI file instead of the live spec")
     ns = parser.parse_args(argv)
     try:
-        if ns.spec:
-            with open(ns.spec, encoding="utf-8") as handle:
-                spec = json.load(handle)
-        else:
-            spec = fetch_spec()
+        spec = load_spec(ns.spec)
     except (OSError, ValueError) as exc:
         print(f"spec unavailable: {exc}", file=sys.stderr)
         return 2

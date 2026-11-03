@@ -73,9 +73,6 @@ class ContractTests(unittest.TestCase):
         spec["components"]["schemas"]["spacemolt_dock"] = {"$ref": "#/components/schemas/loop"}
         self.assertEqual(find_drift(spec), [])
 
-    def test_empty_spec_is_drift_not_clean(self):
-        self.assertEqual(find_drift({}), ["spec has no paths object"])
-
     @staticmethod
     def _main(*args):
         out, err = io.StringIO(), io.StringIO()
@@ -95,6 +92,15 @@ class ContractTests(unittest.TestCase):
             rc, _, err = self._main()
         self.assertEqual(rc, 2)
         self.assertIn("down", err)
+
+    def test_malformed_spec_is_unavailable_not_drift(self):
+        for body in ({"openapi": "3.1.0"}, []):
+            with patch("smx.contract.fetch_spec", return_value=body):
+                self.assertEqual(self._main()[0], 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "spec.json"
+            path.write_text("[]")
+            self.assertEqual(self._main("--spec", str(path))[0], 2)
 
 
 if __name__ == "__main__":

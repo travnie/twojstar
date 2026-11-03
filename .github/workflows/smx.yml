@@ -85,6 +85,7 @@ jobs:
   contract:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    concurrency: smx-contract # a parallel run could open a second issue
     permissions:
       contents: read
       issues: write
@@ -105,11 +106,12 @@ jobs:
           rc=0
           python -m smx.contract > report.md || rc=$?
           cat report.md
+          [ -s report.md ] || rc=2 # a crash prints no report; keep the issue body
           issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
             --jq 'map(select(.title == env.TITLE))[0].number // empty')
           case "$rc" in
             0) [ -z "$issue" ] || gh issue close "$issue" --comment "Contract clean again." ;;
             1) if [ -n "$issue" ]; then gh issue edit "$issue" --body-file report.md
                else gh issue create --title "$TITLE" --body-file report.md; fi ;;
-            *) echo "::warning::SpaceMolt OpenAPI unavailable; contract not checked" ;;
+            *) echo "::warning::SpaceMolt OpenAPI unavailable or checker failed; contract not checked" ;;
           esac

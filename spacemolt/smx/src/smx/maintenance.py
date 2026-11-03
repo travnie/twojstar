@@ -208,17 +208,6 @@ def previous_backend_path(destination: Path) -> Path:
     return destination.with_name(f"{destination.stem}.prev{destination.suffix}")
 
 
-def _keep_previous(destination: Path) -> None:
-    previous = previous_backend_path(destination)
-    temporary = previous.with_name(f".{previous.name}.{os.getpid()}.tmp")
-    try:
-        shutil.copy2(destination, temporary)
-        os.replace(temporary, previous)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
-
-
 def install_backend(
     version: str | None = None,
     *,
@@ -250,6 +239,8 @@ def install_backend(
         }
 
     temporary = download_release_asset(release, destination, opener=opener)
+    previous = previous_backend_path(destination)
+    staged = previous.with_name(f".{previous.name}.{os.getpid()}.tmp")
     try:
         downloaded = version_reader(temporary)
         if compare_versions(downloaded, release.version) != 0:
@@ -257,11 +248,14 @@ def install_backend(
                 f"downloaded backend version {downloaded} does not match release {release.version}"
             )
         if current is not None:  # unreadable binary is not worth keeping
-            _keep_previous(destination)
+            shutil.copy2(destination, staged)
         os.replace(temporary, destination)
     except Exception:
         temporary.unlink(missing_ok=True)
+        staged.unlink(missing_ok=True)  # old rollback copy stays valid
         raise
+    if current is not None:
+        os.replace(staged, previous)
 
     return {
         "updated": True,
@@ -298,11 +292,11 @@ def rollback_backend(
         if current is not None:
             shutil.copy2(destination, swap)
         os.replace(previous, destination)
-        if current is not None:
-            os.replace(swap, previous)
     except Exception:
         swap.unlink(missing_ok=True)
         raise
+    if current is not None:
+        os.replace(swap, previous)  # on failure swap is the only copy, so it stays
     return {"previous": current, "current": target, "path": str(destination)}
 
 
@@ -368,13 +362,17 @@ def doctor_report(*, online: bool = False) -> dict[str, Any]:
     ]
 
     if backend.get("newer_than_tested"):
+        advice = (
+            "`smx backend rollback` undoes the last update"
+            if previous_backend_path(Path(backend["managed"])).is_file()
+            else "`smx backend update --version X` installs another release"
+        )
         checks.append(
             {
                 "name": "backend version",
                 "ok": True,
                 "warning": True,
-                "detail": f"v{backend.get('current')} is newer than tested v{TESTED_BACKEND}; "
-                "`smx backend rollback` undoes the last update",
+                "detail": f"v{backend.get('current')} is newer than tested v{TESTED_BACKEND}; {advice}",
             }
         )
     if os.environ.get("SPACEMOLT_SESSION"):

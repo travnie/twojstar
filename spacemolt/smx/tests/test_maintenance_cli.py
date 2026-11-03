@@ -7,6 +7,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 from smx.cli import Backend, cmd_backend, cmd_doctor
+from smx.paths import managed_backend_path
 
 
 class MaintenanceCliTests(unittest.TestCase):
@@ -119,10 +120,20 @@ class FirstRunTests(unittest.TestCase):
              patch.dict(os.environ, {**env, "SMX_STATE_DIR": tmp}, clear=True), \
              patch("sys.stdin", stdin), patch("sys.stderr", stderr), \
              patch("smx.cli.subprocess.run", side_effect=[missing, done]) as run, \
-             patch("smx.cli.install_backend", return_value={"current": "1.5.93"}) as install:
-            if not installed:
-                install.side_effect = RuntimeError("offline")
+             patch("smx.cli.install_backend") as install:
+            managed = managed_backend_path()
+
+            def fake_install():
+                if not installed:
+                    raise RuntimeError("offline")
+                managed.parent.mkdir(parents=True, exist_ok=True)
+                managed.touch()
+                return {"current": "1.5.93"}
+
+            install.side_effect = fake_install
             result = Backend(interactive=interactive).run(["get_status"])
+            retried = run.call_args_list[-1].args[0][0]
+            result.retried_managed = retried == str(managed)
         return result, install, run, stderr.getvalue()
 
     def test_terminal_user_can_install_and_command_retries(self):
@@ -130,6 +141,12 @@ class FirstRunTests(unittest.TestCase):
         self.assertEqual((result.returncode, result.stdout), (0, "ok\n"))
         install.assert_called_once_with()
         self.assertEqual(run.call_count, 2)
+        self.assertTrue(result.retried_managed)
+
+    def test_eof_at_prompt_is_not_consent(self):
+        result, install, _, _ = self._run(tty=True, answer="")
+        self.assertEqual(result.returncode, 127)
+        install.assert_not_called()
 
     def test_declining_keeps_clear_error(self):
         result, install, _, _ = self._run(tty=True, answer="n\n")

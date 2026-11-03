@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ from smx.maintenance import (
     ReleaseAsset,
     ReleaseInfo,
     compare_versions,
+    doctor_report,
     download_release_asset,
     fetch_release,
     install_backend,
@@ -326,6 +328,60 @@ class MaintenanceTests(unittest.TestCase):
             rollback_backend(destination=destination, version_reader=reader)
             self.assertEqual(destination.read_bytes(), b"new")
             self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["spacemolt", "spacemolt.prev"])
+
+    def test_failed_replace_keeps_old_rollback_copy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"current")
+            previous_backend_path(destination).write_bytes(b"older")
+            with patch("smx.maintenance.os.replace", side_effect=OSError("busy")), \
+                 self.assertRaises(OSError):
+                install_backend(
+                    destination=destination,
+                    release=self._release("1.5.93", b"fresh"),
+                    opener=lambda *a, **k: Response(b"fresh"),
+                    version_reader=lambda path: "1.5.93" if Path(path).read_bytes() == b"fresh" else "1.5.80",
+                )
+            self.assertEqual(previous_backend_path(destination).read_bytes(), b"older")
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["spacemolt", "spacemolt.prev"])
+
+    def test_interrupted_rollback_keeps_only_copy_of_current(self):
+        real_replace = os.replace
+        calls = []
+
+        def replace(source, target):
+            calls.append(source)
+            if len(calls) == 2:
+                raise OSError("busy")
+            real_replace(source, target)
+
+        versions = {b"new": "1.5.93", b"old": "1.5.80"}
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"new")
+            previous_backend_path(destination).write_bytes(b"old")
+            with patch("smx.maintenance.os.replace", side_effect=replace), self.assertRaises(OSError):
+                rollback_backend(
+                    destination=destination,
+                    version_reader=lambda path: versions[Path(path).read_bytes()],
+                )
+            self.assertEqual(destination.read_bytes(), b"old")
+            self.assertEqual(Path(calls[1]).read_bytes(), b"new")
+
+    def test_doctor_offers_rollback_only_when_copy_exists(self):
+        def advice(kept):
+            with tempfile.TemporaryDirectory() as tmp:
+                managed = Path(tmp) / "spacemolt"
+                if kept:
+                    previous_backend_path(managed).write_bytes(b"old")
+                status = {"managed": str(managed), "current": "999.0.0", "newer_than_tested": True}
+                with patch("smx.maintenance.backend_status", return_value=status), \
+                     patch("smx.maintenance.list_profiles", return_value=[]):
+                    checks = doctor_report()["checks"]
+            return next(c["detail"] for c in checks if c["name"] == "backend version")
+
+        self.assertIn("backend rollback", advice(True))
+        self.assertNotIn("backend rollback", advice(False))
 
     def test_rollback_without_previous_fails_clearly(self):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(RuntimeError, "no previous backend"):
