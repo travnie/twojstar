@@ -1,0 +1,15 @@
+name: Set up smx Python
+description: Install the Python version smx is tested on, then smx itself.
+outputs:
+  python-path:
+    description: Interpreter for tools that need an explicit path
+    value: ${{ steps.python.outputs.python-path }}
+runs:
+  using: composite
+  steps:
+    - id: python
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      with:
+        python-version: "3.15"
+    - shell: bash
+      run: python -m pip install ./spacemolt/smx
