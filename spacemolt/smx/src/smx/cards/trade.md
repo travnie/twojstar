@@ -1,44 +1,8 @@
-# Trade field card
+# Trading essentials
 
-> Prices and station economies are live data. Treat every static route as suspicious until checked again.
+Use live [trader and arbitrage guides](https://www.spacemolt.com/guides) and current order books.
 
-## Before buying
-
-- Inspect the local market and order depth, not just the headline price.
-- Use market analysis when available.
-- Compare stations before moving bulk cargo.
-- Account for fuel, travel time, taxes, danger and opportunity cost.
-
-## Cargo discipline
-
-- Keep mission, fuel and strategic items out of bulk liquidation.
-- `smx sell-all --dry-run` before a large unload.
-- Use `--keep item_a,item_b` for things you refuse to sell.
-- Expensive cargo belongs in storage when you are not actively hauling it.
-
-## Arbitrage loop
-
-1. Check buy and sell depth.
-2. Estimate actual executable quantity.
-3. Route to the destination and re-check the book.
-4. Move only the amount your hold and risk budget justify.
-5. Sell into real demand, not yesterday's fantasy spread.
-
-## Fuel in the sums
-
-Station fuel prices and empire fuel taxes differ. Name the station before quoting a cost per jump, and `smx where-can-i ITEM` before re-checking a remembered market.
-
-## Freight
-
-- Sealed freight has deadlines, recovery windows and liability.
-- If late, delivery or return may still be cheaper than default.
-- Do not break seals just because the clock turned red.
-- Use the live shipping status/profile commands before accepting more liability.
-
-## Field reports (unverified)
-
-From other fleets, check before relying on them: trading-mission rewards may ignore the market, and customs may scan only pilots who stop at a border.
-
-## Social edge
-
-Good contacts can beat raw market math. Trade offers, faction intel and local chat can reveal demand before public prices fully react.
+- Compare executable depth, fees, fuel, risk and delivery time; headline spreads are not guaranteed profit.
+- `smx sell-all --dry-run` before liquidating. Protect mission/fuel items with `--keep ITEM[,ITEM...]`.
+- `smx where-can-i ITEM` is remembered market data, not a live galaxy-wide search.
+- Inspect freight deadlines and liability before accepting. Stale prices and contracts are not free money.

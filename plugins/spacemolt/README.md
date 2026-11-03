@@ -5,9 +5,9 @@ Portable plugin with **one SpaceMolt skill** routing gameplay, client developmen
 - `game`: `https://game.spacemolt.com/mcp/v2?preset=full` for gameplay.
 - `docs`: `https://game.spacemolt.com/mcp/docs` for client development and live contracts.
 
-The main `skills/spacemolt/SKILL.md` routes to `references/gameplay.md`, `references/development.md` or `references/workspace.md` according to intent. The 15 gameplay guides stay in `references/guides/`; do not preload them for development tasks. A single packaged skill does not guarantee that separately registered MCP apps disappear from ChatGPT's `@` picker.
+The main `skills/spacemolt/SKILL.md` routes to compact gameplay, connection, development and workspace essentials. There are **no bundled guide snapshots or copied API manuals**: read live game guides and the official docs MCP as needed. The six tiny SMX offline cards remain a separate last-resort convenience. A packaged skill does not remove separately registered MCP apps from ChatGPT's `@` picker.
 
-The skill is a bundled snapshot. Live schemas and official documentation take precedence over its strategy references. Player credentials and sessions are never packaged.
+The skill retains durable operating rules only. Live schemas, game state and official documentation are authoritative. Player credentials and sessions are never packaged.
 
 **ChatGPT caveat:** SpaceMolt's Getting Started page warns that ChatGPT may block direct fetching of `spacemolt.com/skill.md`. This does not by itself block the separately connected `game.spacemolt.com` MCP tools. The packaged skill is the local instruction source; do not require pasting the website guide. A hosted ChatGPT gameplay connection may also cache older tool schemas, independent of this package. Verify the exposed login and command parameters after reconnecting; packaging a newer skill cannot refresh a separate MCP App's schema.
 

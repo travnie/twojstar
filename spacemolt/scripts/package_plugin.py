@@ -117,26 +117,16 @@ def validate(root: Path) -> tuple[dict, dict]:
         raise ValueError("expected exactly one SpaceMolt skill")
     root_skill = (root / "skills" / "spacemolt")
     main_skill = (root_skill / "SKILL.md").read_text(encoding="utf-8")
-    for reference in ("gameplay.md", "development.md", "workspace.md", "connection.md", "spacemolt-manual.md"):
+    for reference in ("gameplay.md", "development.md", "workspace.md", "connection.md"):
         if not (root_skill / "references" / reference).is_file():
             raise ValueError(f"missing routed reference: {reference}")
-    for reference in ("gameplay.md", "development.md", "workspace.md"):
+    for reference in ("gameplay.md", "development.md", "workspace.md", "connection.md"):
         if f"references/{reference}" not in main_skill:
             raise ValueError(f"missing route: {reference}")
-    actual_guides = {p.name for p in (root_skill / "references" / "guides").glob("*.md")}
-    if actual_guides != set(GUIDE_NAMES):
-        raise ValueError(f"missing/unexpected bundled gameplay guides: {sorted(set(GUIDE_NAMES) ^ actual_guides)}")
-    gameplay = (root_skill / "references" / "gameplay.md").read_text(encoding="utf-8")
-    development = (root_skill / "references" / "development.md").read_text(encoding="utf-8")
-    if "`references/guides/miner.md`" not in gameplay or "`references/connection.md`" not in gameplay:
-        raise ValueError("gameplay reference paths must be skill-root-relative")
-    if "`references/workspace.md`" not in development:
-        raise ValueError("development workspace path must be skill-root-relative")
     return manifest, servers
 
 
-GUIDE_NAMES = ["arbitrage.md","base-builder.md","boarding.md","crafting.md","drones.md","explorer.md","factions.md","fuel.md","miner.md","mission-runner.md","packages.md","passenger-lines.md","pirate-hunter.md","taxes.md","trader.md"]
-REFERENCE_NAMES = ["connection.md","development.md","gameplay.md","spacemolt-manual.md","workspace.md"]
+REFERENCE_NAMES = ["connection.md","development.md","gameplay.md","workspace.md"]
 
 
 def allowed_plugin_member(path: Path) -> bool:
@@ -151,10 +141,7 @@ def allowed_plugin_member(path: Path) -> bool:
     tail = parts[2:]
     if tail in (("SKILL.md",), ("THIRD_PARTY_NOTICES.md",), ("agents", "openai.yaml"), ("assets", "icon.svg")):
         return True
-    return (
-        (len(tail) == 2 and tail[0] == "references" and tail[1] in REFERENCE_NAMES)
-        or (len(tail) == 3 and tail[:2] == ("references", "guides") and tail[2] in GUIDE_NAMES)
-    )
+    return len(tail) == 2 and tail[0] == "references" and tail[1] in REFERENCE_NAMES
 
 
 def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> None:
