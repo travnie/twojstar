@@ -84,6 +84,8 @@ smx doctor
 smx doctor --online
 smx backend check
 smx backend update
+smx backend update --version 1.5.93
+smx backend rollback
 
 smx mcp
 smx mcp gameplay
@@ -225,9 +227,23 @@ smx backend status
 smx doctor --online
 smx backend check
 smx backend update
+smx backend update --version 1.5.93
+smx backend rollback
 ```
 
 Managed updates only use official `SpaceMolt/client-v2` releases. Before replacing the backend, smx selects the matching asset, requires its published SHA-256 digest, verifies the download, executes `--version`, then replaces the binary atomically. An explicit `SMX_BACKEND` override is never silently replaced.
+
+Each update keeps the replaced binary next to the managed one. `rollback` swaps the two, so running it twice undoes it. `update --version X` installs that exact official release, including downgrades; plain `update` only moves forward.
+
+`status`, `check` and `doctor` show the newest backend this smx release was tested with. A newer backend still runs and only raises a warning.
+
+In a terminal, the first command without a backend offers to install it. Non-interactive callers get an error instead and never trigger a download.
+
+If smx itself breaks, the official client still works with the same session. Take both paths from `smx paths`:
+
+```bash
+SPACEMOLT_SESSION=<session> <backend> get_status
+```
 
 ## Tactical cards and MCP
 
@@ -277,4 +293,4 @@ The UX borrows ideas from [`vcarl/sm-cli`](https://github.com/vcarl/sm-cli), [`C
 
 ## Published package
 
-A public PyPI release is prepared through [the SMX packaging workflow](PUBLISHING.md). After the first successful publish, `uv tool install spacemolt-smx` installs the `smx` command. Until then, use the existing `install.sh` / `install.ps1` scripts above.
+`uv tool install spacemolt-smx` installs the `smx` command; `smx backend update` then adds the official client. See [PUBLISHING.md](PUBLISHING.md). The plain name `smx` belongs to an unrelated PyPI project.

@@ -12,10 +12,12 @@ from smx.maintenance import (
     ReleaseInfo,
     compare_versions,
     download_release_asset,
-    install_latest_backend,
-    fetch_latest_release,
+    fetch_release,
+    install_backend,
     parse_backend_version,
     platform_asset_name,
+    previous_backend_path,
+    rollback_backend,
 )
 
 
@@ -69,7 +71,7 @@ class MaintenanceTests(unittest.TestCase):
         def opener(*args, **kwargs):
             return Response(json.dumps(payload).encode())
 
-        release = fetch_latest_release(
+        release = fetch_release(
             asset_name="spacemolt-client-v2-windows-x64.exe",
             opener=opener,
         )
@@ -145,7 +147,7 @@ class MaintenanceTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             destination = Path(tmp) / "spacemolt.exe"
-            result = install_latest_backend(
+            result = install_backend(
                 destination=destination,
                 release=release,
                 opener=opener,
@@ -173,7 +175,7 @@ class MaintenanceTests(unittest.TestCase):
             def opener(*args, **kwargs):
                 raise AssertionError("download should not run")
 
-            result = install_latest_backend(
+            result = install_backend(
                 destination=destination,
                 release=release,
                 opener=opener,
@@ -210,11 +212,136 @@ class MaintenanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             destination = Path(tmp) / "spacemolt"
             with self.assertRaises(RuntimeError):
-                install_latest_backend(
+                install_backend(
                     destination=destination,
                     release=release,
                     opener=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("download should not run")),
                 )
+
+    def _release(self, version, data):
+        digest = hashlib.sha256(data).hexdigest()
+        return ReleaseInfo(
+            version=version,
+            tag=f"v{version}",
+            asset=ReleaseAsset(
+                name="spacemolt-client-v2-linux-x64",
+                url="https://github.com/SpaceMolt/client-v2/releases/download/x/spacemolt-client-v2-linux-x64",
+                digest=f"sha256:{digest}",
+                size=len(data),
+            ),
+        )
+
+    def test_fetch_exact_version_uses_tag_endpoint(self):
+        urls = []
+        payload = {
+            "tag_name": "v1.5.80",
+            "assets": [{
+                "name": "spacemolt-client-v2-linux-x64",
+                "browser_download_url": "https://github.com/SpaceMolt/client-v2/releases/download/v1.5.80/spacemolt-client-v2-linux-x64",
+            }],
+        }
+
+        def opener(request, **kwargs):
+            urls.append(request.full_url)
+            return Response(json.dumps(payload).encode())
+
+        release = fetch_release("v1.5.80", asset_name="spacemolt-client-v2-linux-x64", opener=opener)
+        self.assertEqual(release.version, "1.5.80")
+        self.assertTrue(urls[0].endswith("/releases/tags/v1.5.80"))
+
+    def test_fetch_rejects_non_numeric_version_before_network(self):
+        def opener(*args, **kwargs):
+            raise AssertionError("network must not run")
+
+        with self.assertRaises(ValueError):
+            fetch_release("1.5.80/../../x", opener=opener)
+
+    def test_exact_version_downgrades_and_keeps_previous(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"new")
+            versions = {destination.read_bytes(): "1.5.93", b"old": "1.5.80"}
+            result = install_backend(
+                "1.5.80",
+                destination=destination,
+                release=self._release("1.5.80", b"old"),
+                opener=lambda *a, **k: Response(b"old"),
+                version_reader=lambda path: versions[Path(path).read_bytes()],
+            )
+            self.assertTrue(result["updated"])
+            self.assertEqual(destination.read_bytes(), b"old")
+            self.assertEqual(previous_backend_path(destination).read_bytes(), b"new")
+
+    def test_latest_never_downgrades(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"new")
+
+            def opener(*args, **kwargs):
+                raise AssertionError("download should not run")
+
+            result = install_backend(
+                destination=destination,
+                release=self._release("1.5.80", b"old"),
+                opener=opener,
+                version_reader=lambda path: "1.5.93",
+            )
+            self.assertFalse(result["updated"])
+
+    def test_unreadable_backend_does_not_replace_kept_previous(self):
+        def reader(path):
+            if Path(path).read_bytes() == b"broken":
+                raise RuntimeError("broken")
+            return "1.5.93"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"broken")
+            previous_backend_path(destination).write_bytes(b"good")
+            install_backend(
+                destination=destination,
+                release=self._release("1.5.93", b"fresh"),
+                opener=lambda *a, **k: Response(b"fresh"),
+                version_reader=reader,
+            )
+            self.assertEqual(destination.read_bytes(), b"fresh")
+            self.assertEqual(previous_backend_path(destination).read_bytes(), b"good")
+
+    def test_rollback_swaps_and_is_reversible(self):
+        versions = {b"new": "1.5.93", b"old": "1.5.80"}
+
+        def reader(path):
+            return versions[Path(path).read_bytes()]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "spacemolt"
+            destination.write_bytes(b"new")
+            previous_backend_path(destination).write_bytes(b"old")
+
+            result = rollback_backend(destination=destination, version_reader=reader)
+            self.assertEqual((result["previous"], result["current"]), ("1.5.93", "1.5.80"))
+            self.assertEqual(destination.read_bytes(), b"old")
+
+            rollback_backend(destination=destination, version_reader=reader)
+            self.assertEqual(destination.read_bytes(), b"new")
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["spacemolt", "spacemolt.prev"])
+
+    def test_rollback_without_previous_fails_clearly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(RuntimeError, "no previous backend"):
+                rollback_backend(destination=Path(tmp) / "spacemolt")
+
+    def test_previous_path_stays_executable_on_windows(self):
+        self.assertEqual(previous_backend_path(Path("spacemolt.exe")).name, "spacemolt.prev.exe")
+
+    def test_status_flags_backend_newer_than_tested(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = Path(tmp) / "spacemolt"
+            backend.write_bytes(b"x")
+            with patch("smx.maintenance.resolve_backend", return_value=str(backend)), \
+                 patch("smx.maintenance.backend_version", return_value="999.0.0"):
+                status = backend_status(online=False)
+            self.assertTrue(status["newer_than_tested"])
 
 
 if __name__ == "__main__":

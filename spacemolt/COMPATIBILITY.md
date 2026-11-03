@@ -2,7 +2,8 @@
 
 Checked 2026-10-04 against the official server v0.612.0, API v2.0.0 and
 `SpaceMolt/client-v2` v1.5.67. This is a dated audit, not a promise that future
-game mechanics or host schemas stay unchanged.
+game mechanics or host schemas stay unchanged. Ongoing smx field drift is tracked
+by the `contract` job in `.github/workflows/smx.yml`.
 
 ## Sources and scope
 

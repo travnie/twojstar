@@ -12,7 +12,9 @@ Run the [Publish SMX to PyPI](../../.github/workflows/publish-smx-pypi.yml) work
 2. Configure the GitHub environment `pypi` with appropriate approval protection, or review the release workflow trigger carefully. It does not store an API token.
 3. Merge the reviewed workflow; run it on `main` with **publish = true** only after checking the version and distribution files. Each new release requires a version bump (PyPI versions are immutable).
 
-After the first successful publish, users can run:
+For every release, also set `TESTED_BACKEND` in `src/smx/maintenance.py` to the official client version it was checked against, and keep `pyproject.toml` and `src/smx/__init__.py` versions equal.
+
+Users can run:
 
 ```sh
 uv tool install spacemolt-smx

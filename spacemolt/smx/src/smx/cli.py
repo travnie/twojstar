@@ -17,7 +17,7 @@ from .fleet import (error_status, fleet_check_ok, render_fleet,
                     status_from_payload)
 from .knowledge import (GUIDES, guide_json, list_guides, load_guide,
                         search_guides)
-from .maintenance import backend_status, doctor_report, install_latest_backend
+from .maintenance import backend_status, doctor_report, install_backend, rollback_backend
 from .mcp_profiles import PROFILES, profiles_json
 from .paths import (ensure_private_state_dir, managed_backend_path,
                     resolve_backend, state_dir)
@@ -50,9 +50,30 @@ class BackendResult:
 
 
 class Backend:
-    def __init__(self, binary: str | None = None, profile: str | None = None) -> None:
+    def __init__(self, binary: str | None = None, profile: str | None = None, *, interactive: bool = True) -> None:
+        self.requested = binary
         self.binary = resolve_backend(binary)
         self.profile = canonical_profile(profile) if profile else None
+        self.interactive = interactive
+
+    def _offer_install(self) -> bool:
+        """Terminal users only: an agent must never get a surprise binary download."""
+        if (not self.interactive or self.requested or os.environ.get("SMX_BACKEND")
+                or not (sys.stdin.isatty() and sys.stderr.isatty())):
+            return False
+        self.interactive = False  # one offer per process
+        print("smx: official SpaceMolt v2 CLI not found. Install verified latest release? [Y/n] ",
+              end="", file=sys.stderr, flush=True)
+        if sys.stdin.readline().strip().casefold() not in {"", "y", "yes"}:
+            return False
+        try:
+            payload = install_backend()
+        except Exception as exc:
+            print(f"smx: backend install failed: {exc}", file=sys.stderr)
+            return False
+        print(f"smx: installed official backend v{payload['current']}", file=sys.stderr)
+        self.binary = resolve_backend(self.requested)
+        return True
 
     def run(self, args: list[str], *, json_output: bool = False, timeout: float | None = None) -> BackendResult:
         command = [self.binary, *args]
@@ -69,10 +90,12 @@ class Backend:
         except subprocess.TimeoutExpired:
             return BackendResult(124, "", "smx: official SpaceMolt CLI timed out.\n")
         except FileNotFoundError:
+            if self._offer_install():
+                return self.run(args, json_output=json_output, timeout=timeout)
             return BackendResult(
                 127,
                 "",
-                f"smx: SpaceMolt v2 CLI not found: {self.binary!r}. Install SpaceMolt/client-v2 "
+                f"smx: SpaceMolt v2 CLI not found: {self.binary!r}. Run `smx backend update` "
                 "or set SMX_BACKEND to its executable path.\n",
             )
         except OSError as exc:
@@ -507,7 +530,7 @@ def cmd_guide(backend: Backend, argv: list[str]) -> int:
 
 
 def _fleet_profile_status(profile: str):
-    backend = Backend(profile=profile)
+    backend = Backend(profile=profile, interactive=False)  # parallel workers must not prompt
     result, payload = backend.json(["get_status"])
     if result.returncode != 0:
         return error_status(profile, result.stderr or result.stdout or f"backend exited {result.returncode}")
@@ -629,8 +652,12 @@ def cmd_backend(argv: list[str]) -> int:
     check = sub.add_parser("check", help="compare backend with the latest official release")
     check.add_argument("--json", action="store_true")
 
-    update = sub.add_parser("update", help="download and verify the latest official managed backend")
+    update = sub.add_parser("update", help="download and verify an official managed backend")
+    update.add_argument("--version", help="exact official release, also for downgrades (default: latest)")
     update.add_argument("--json", action="store_true")
+
+    rollback = sub.add_parser("rollback", help="swap back to the backend kept by the last update")
+    rollback.add_argument("--json", action="store_true")
 
     ns = parser.parse_args(argv)
 
@@ -643,6 +670,9 @@ def cmd_backend(argv: list[str]) -> int:
                 print(f"active    {payload['resolved']}")
                 print(f"managed   {payload['managed']}")
                 print(f"version   {payload.get('current') or '?'}")
+                print(f"tested    {payload.get('tested') or '?'}")
+                if payload.get("newer_than_tested"):
+                    print("warning   active backend is newer than the tested release", file=sys.stderr)
                 if payload.get("error"):
                     print(f"error     {payload['error']}")
                 if ns.action == "check":
@@ -651,7 +681,7 @@ def cmd_backend(argv: list[str]) -> int:
             return 0 if not payload.get("error") else 1
 
         if ns.action == "update":
-            payload = install_latest_backend()
+            payload = install_backend(ns.version)
             if ns.json:
                 print(json.dumps(payload, indent=2, ensure_ascii=False))
             else:
@@ -661,10 +691,21 @@ def cmd_backend(argv: list[str]) -> int:
                     print(f"path: {payload['path']}")
                     print(f"verified: {payload.get('digest') or 'sha256'}")
                 else:
-                    print(f"official backend already current: {payload['current']}")
+                    print(f"official backend already at: {payload['current']}")
                     print(f"path: {payload['path']}")
-                if os.environ.get("SMX_BACKEND"):
-                    print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
+            if os.environ.get("SMX_BACKEND") and not ns.json:
+                print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
+            return 0
+
+        if ns.action == "rollback":
+            payload = rollback_backend()
+            if ns.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(f"rolled back official backend: {payload.get('previous') or 'unreadable'} -> {payload['current']}")
+                print(f"path: {payload['path']}")
+            if os.environ.get("SMX_BACKEND") and not ns.json:
+                print("warning: SMX_BACKEND is set, so the managed backend may not be the active backend.", file=sys.stderr)
             return 0
     except Exception as exc:
         print(f"smx: backend {ns.action} failed: {exc}", file=sys.stderr)
@@ -1046,7 +1087,7 @@ Usage:
   smx fleet [check]               show/check every gameplay profile
   smx watch [options] <command>     refresh a read-only command safely
   smx doctor [--online]              diagnose local smx/backend/profile state
-  smx backend <status|check|update>   inspect or update official managed CLI
+  smx backend <status|check|update|rollback>   manage official CLI (update --version X pins)
   smx profile <action>           add/use/login/migrate/remove profiles
 
 Conveniences:

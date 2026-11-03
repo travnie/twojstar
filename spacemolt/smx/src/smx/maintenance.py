@@ -8,17 +8,21 @@ import re
 import shutil
 import stat
 import subprocess
+import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from . import __version__
 from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
 from .profiles import default_profile, list_profiles
 
-RELEASE_API = "https://api.github.com/repos/SpaceMolt/client-v2/releases/latest"
+RELEASES_API = "https://api.github.com/repos/SpaceMolt/client-v2/releases"
 VERSION_RE = re.compile(r"SpaceMolt CLI v?([0-9]+(?:\.[0-9]+)+)", re.IGNORECASE)
-USER_AGENT = "spacemolt-smx/0.1"
+USER_AGENT = f"spacemolt-smx/{__version__}"
+# Newest official client this smx release was checked against; bump on release.
+TESTED_BACKEND = "1.5.93"
 
 
 @dataclass(frozen=True)
@@ -93,22 +97,28 @@ def _open_json(url: str, opener: Callable[..., Any] = urllib.request.urlopen) ->
     return payload
 
 
-def fetch_latest_release(
+def fetch_release(
+    version: str | None = None,
     *,
     asset_name: str | None = None,
     opener: Callable[..., Any] = urllib.request.urlopen,
     system: str | None = None,
     machine: str | None = None,
 ) -> ReleaseInfo:
-    payload = _open_json(RELEASE_API, opener)
+    if version is None:
+        url = f"{RELEASES_API}/latest"
+    else:
+        version_tuple(version)  # numeric only: nothing else reaches the URL
+        url = f"{RELEASES_API}/tags/v{urllib.parse.quote(normalize_version(version))}"
+    payload = _open_json(url, opener)
     tag = payload.get("tag_name")
     if not isinstance(tag, str) or not tag:
-        raise ValueError("latest release has no tag_name")
+        raise ValueError("release has no tag_name")
     wanted = asset_name or platform_asset_name(system, machine)
 
     assets = payload.get("assets")
     if not isinstance(assets, list):
-        raise ValueError("latest release has no assets")
+        raise ValueError("release has no assets")
     for row in assets:
         if not isinstance(row, dict) or row.get("name") != wanted:
             continue
@@ -194,7 +204,23 @@ def download_release_asset(
         raise
 
 
-def install_latest_backend(
+def previous_backend_path(destination: Path) -> Path:
+    return destination.with_name(f"{destination.stem}.prev{destination.suffix}")
+
+
+def _keep_previous(destination: Path) -> None:
+    previous = previous_backend_path(destination)
+    temporary = previous.with_name(f".{previous.name}.{os.getpid()}.tmp")
+    try:
+        shutil.copy2(destination, temporary)
+        os.replace(temporary, previous)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def install_backend(
+    version: str | None = None,
     *,
     destination: Path | None = None,
     release: ReleaseInfo | None = None,
@@ -202,7 +228,7 @@ def install_latest_backend(
     version_reader: Callable[[str | Path], str] = backend_version,
 ) -> dict[str, Any]:
     destination = destination or managed_backend_path()
-    release = release or fetch_latest_release(opener=opener)
+    release = release or fetch_release(version, opener=opener)
     if not release.asset.digest or not release.asset.digest.casefold().startswith("sha256:"):
         raise RuntimeError(f"release asset {release.asset.name} has no SHA-256 digest; refusing update")
 
@@ -213,7 +239,8 @@ def install_latest_backend(
         except (OSError, RuntimeError, subprocess.SubprocessError):
             current = None
 
-    if current is not None and compare_versions(current, release.version) >= 0:
+    order = None if current is None else compare_versions(current, release.version)
+    if order == 0 or (version is None and order is not None and order > 0):
         return {
             "updated": False,
             "current": current,
@@ -229,6 +256,8 @@ def install_latest_backend(
             raise RuntimeError(
                 f"downloaded backend version {downloaded} does not match release {release.version}"
             )
+        if current is not None:  # unreadable binary is not worth keeping
+            _keep_previous(destination)
         os.replace(temporary, destination)
     except Exception:
         temporary.unlink(missing_ok=True)
@@ -243,6 +272,38 @@ def install_latest_backend(
         "asset": release.asset.name,
         "digest": release.asset.digest,
     }
+
+
+def rollback_backend(
+    *,
+    destination: Path | None = None,
+    version_reader: Callable[[str | Path], str] = backend_version,
+) -> dict[str, Any]:
+    """Swap managed and kept binaries, so a second rollback undoes the first."""
+    destination = destination or managed_backend_path()
+    previous = previous_backend_path(destination)
+    if not previous.is_file():
+        raise RuntimeError("no previous backend kept; use `smx backend update --version X`")
+    target = version_reader(previous)
+
+    current: str | None = None
+    if destination.is_file():
+        try:
+            current = version_reader(destination)
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            current = None
+
+    swap = previous.with_name(f".{previous.name}.{os.getpid()}.swap")
+    try:
+        if current is not None:
+            shutil.copy2(destination, swap)
+        os.replace(previous, destination)
+        if current is not None:
+            os.replace(swap, previous)
+    except Exception:
+        swap.unlink(missing_ok=True)
+        raise
+    return {"previous": current, "current": target, "path": str(destination)}
 
 
 def backend_status(*, online: bool = True) -> dict[str, Any]:
@@ -265,10 +326,12 @@ def backend_status(*, online: bool = True) -> dict[str, Any]:
         "managed": str(managed),
         "managed_exists": managed.is_file(),
         "current": current,
+        "tested": TESTED_BACKEND,
+        "newer_than_tested": current is not None and compare_versions(current, TESTED_BACKEND) > 0,
         "error": error,
     }
     if online:
-        latest = fetch_latest_release()
+        latest = fetch_release()
         payload["latest"] = latest.version
         payload["asset"] = latest.asset.name
         payload["update_available"] = current is None or compare_versions(current, latest.version) < 0
@@ -304,6 +367,16 @@ def doctor_report(*, online: bool = False) -> dict[str, Any]:
         },
     ]
 
+    if backend.get("newer_than_tested"):
+        checks.append(
+            {
+                "name": "backend version",
+                "ok": True,
+                "warning": True,
+                "detail": f"v{backend.get('current')} is newer than tested v{TESTED_BACKEND}; "
+                "`smx backend rollback` undoes the last update",
+            }
+        )
     if os.environ.get("SPACEMOLT_SESSION"):
         checks.append(
             {

@@ -22,6 +22,8 @@ Before implementing or changing a wrapper:
 
 Do not freeze the whole command catalog into this repository. Store only the small piece of stable behavior that `smx` itself adds.
 
+Add every official field or parameter a wrapper reads to `CONTRACT` in `src/smx/contract.py`. The scheduled `contract` job in `.github/workflows/smx.yml` compares it with the live OpenAPI and keeps one rolling drift issue. Run it locally with `python -m smx.contract`.
+
 ## Setup examples
 
 Claude Code can connect directly over HTTP:

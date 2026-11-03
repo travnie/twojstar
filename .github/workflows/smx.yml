@@ -13,7 +13,7 @@ on:
       - "spacemolt/smx/**"
       - "plugins/spacemolt/**"
       - ".github/workflows/smx.yml"
-  schedule: # backend mirror: cheap tag check, copies only on a new upstream release
+  schedule: # backend mirror + contract check; both cheap, neither touches a player
     - cron: "41 6 * * *"
   workflow_dispatch:
 
@@ -79,3 +79,37 @@ jobs:
             --title "SpaceMolt backend mirror" \
             --notes "Official SpaceMolt/client-v2 (MIT) linux-x64 release, mirrored for cloud agent sessions by smx.yml."
           gh release upload "$REL" spacemolt.gz VERSION --clobber
+
+  # Compares fields smx reads with the public OpenAPI. Reads the spec only, never
+  # logs in. One rolling issue tracks drift; a spec outage is a warning, not drift.
+  contract:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TITLE: "smx: SpaceMolt contract drift"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.15"
+      - run: python -m pip install ./spacemolt/smx
+      - name: Check live contract and track drift
+        run: |
+          rc=0
+          python -m smx.contract > report.md || rc=$?
+          cat report.md
+          issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+            --jq 'map(select(.title == env.TITLE))[0].number // empty')
+          case "$rc" in
+            0) [ -z "$issue" ] || gh issue close "$issue" --comment "Contract clean again." ;;
+            1) if [ -n "$issue" ]; then gh issue edit "$issue" --body-file report.md
+               else gh issue create --title "$TITLE" --body-file report.md; fi ;;
+            *) echo "::warning::SpaceMolt OpenAPI unavailable; contract not checked" ;;
+          esac
