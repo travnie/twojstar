@@ -91,3 +91,9 @@ test("captain's log entries must be short and non-empty", () => {
   assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"  "}), /non-empty/);
   assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"x".repeat(481)}), /max 480/);
 });
+
+test("route and mission completion need ids", () => {
+  assert.match(dailyBlockReason("spacemolt", "find_route", {destination:"thuban"}), /args\.id/);
+  assert.equal(dailyBlockReason("spacemolt", "find_route", {id:"thuban"}), null);
+  assert.match(dailyBlockReason("spacemolt", "complete_mission", {}), /mission_id/);
+});

@@ -366,7 +366,9 @@ const DAILY_HISTORY_PROMPT_MAX = 24000;
 // Free plan: 50 external fetches per invocation. Worst cases: cold login 4 (405 retry, session,
 // login_token), initial obs 7, mid-run relogin 5, ensureDocked 13 (3 candidates), clear 1.
 const DAILY_SUBREQUEST_LIMIT = 50;
-const DAILY_SUBREQUESTS_START = 4 + 8;
+// Cold login 4, 7 startup reads, up to DAILY_PLAN_LOG_READS captain's log reads.
+const DAILY_PLAN_LOG_READS = 3;
+const DAILY_SUBREQUESTS_START = 4 + 7 + DAILY_PLAN_LOG_READS;
 const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
@@ -633,7 +635,7 @@ const DAILY_SYSTEM_PROMPT =
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
   "If the local board says no missions, do not keep re-reading it: use find_route/search_systems toward your home_base or a nearby empire station, travel/jump there within safe fuel, dock and read its board; or mine at a nearby belt if cargo allows. " +
   "Missions: work one at a time. With no active mission you may accept exactly one from get_missions that allowed actions can finish (delivery, mining, exploration); never combat, bounty, cull or escort, and avoid Fixer cargo-advance contracts. Then progress it across runs and complete_mission when done. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Routing: find_route(to_system=<system_id>, optional to_poi), jump(id=<adjacent system_id>), travel(id=<poi_id>). Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission. There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Routing: find_route(id=<system, poi or base id>; use search_systems to find ids), jump(id=<adjacent system_id>), travel(id=<poi_id or base_id>). Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission (args.id = mission_id). There is NO list_missions action. " +
   "Do not repeat a read whose result is already in the history unless a later action (travel, dock, mine, chat...) may have changed it; refresh after such actions. Finish when nothing useful is left. " +
   "Return exactly one JSON object (never an array, one action per reply) and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
@@ -663,6 +665,21 @@ async function activeMissionBlock(env, run) {
   return null;
 }
 
+// captains_log_list returns one entry per call (index 0 = newest). Read newest first and
+// skip past this autopilot's own entries until one of Gremlin's turns up.
+async function readGremlinPlan(env) {
+  const entries = [];
+  for (let index = 0; index < DAILY_PLAN_LOG_READS; index++) {
+    const page = await safeObs(env, "spacemolt_social", "captains_log_list", {index});
+    const data = page.ok ? sc(page.data) : null;
+    const entry = data?.entry;
+    if (!entry || typeof entry.entry !== "string") break;
+    entries.push({index:entry.index, created_at:entry.created_at, entry:entry.entry});
+    if (!entry.entry.trim().startsWith(AUTOPILOT_LOG_PREFIX.trim()) || !data.has_next) break;
+  }
+  return entries.length ? compactJson(entries, DAILY_PLAN_PROMPT_MAX) : "(captain's log empty or unavailable)";
+}
+
 function autopilotLogContent(content) {
   const text = String(content || "").trim();
   return text.startsWith(AUTOPILOT_LOG_PREFIX.trim()) ? text : AUTOPILOT_LOG_PREFIX + text;
@@ -685,22 +702,21 @@ async function gatherDailyObservations(env, run) {
     safeObs(env,"spacemolt","get_commands",{}),
     safeObs(env,"spacemolt","get_guide",{}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
-    safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"}),
-    safeObs(env,"spacemolt_social","captains_log_list",{})
+    safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
   ])];
   run.notificationsSeen = fitNotificationsToPrompt(initial[2]);
-  const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}, {}];
+  const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}];
   initial.forEach((value, idx) => {
     const key = dailyReadKey(value.tool, value.action, startupArgs[idx]);
-    // Commands, guides and the captain's log ride in fixed blocks of every prompt.
-    if (idx === 3 || idx === 4 || idx === 7) {
+    // Commands and guides ride in the mechanics block of every prompt.
+    if (idx === 3 || idx === 4) {
       if (value.ok) run.readsSinceChange.set(key, Infinity);
       return;
     }
     history.push({kind:"observation", value});
     if (value.ok) run.readsSinceChange.set(key, history.length - 1);
   });
-  run.planText = initial[7].ok ? compactJson(sc(initial[7].data), DAILY_PLAN_PROMPT_MAX) : "(captain's log unavailable)";
+  run.planText = await readGremlinPlan(env);
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
 }
 
