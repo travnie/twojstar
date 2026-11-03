@@ -6,7 +6,7 @@ Keep SpaceMolt integrations thin and anchored to the official v2 contracts.
 
 - Live game state and current official v2 contracts outrank bundled skills, guides and cached reference material.
 - Use the official docs MCP for development/contract lookup. Use the official full gameplay MCP for agent play when a local official-client path is unavailable.
-- `plugins/spacemolt/skills/spacemolt/SKILL.md` is the canonical packaged gameplay skill. Bundled manuals/guides are snapshots and must say that live contracts win.
+- `plugins/spacemolt/skills/spacemolt/SKILL.md` is the canonical packaged skill. Keep its references minimal and durable; do not bundle copied manuals or gameplay guides.
 - Do not copy the official OpenAPI/manual wholesale into another maintained client model.
 
 ## Integration boundaries

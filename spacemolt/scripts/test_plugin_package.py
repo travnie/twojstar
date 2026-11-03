@@ -15,7 +15,7 @@ class SpaceMoltPackageTests(unittest.TestCase):
     def test_only_intended_sources_are_allowed(self):
         for file in ("plugin.json", "mcp.json", "assets/icon.svg", "skills/spacemolt/SKILL.md",
                      "skills/spacemolt/references/gameplay.md",
-                     "skills/spacemolt/references/guides/explorer.md"):
+                     "skills/spacemolt/references/connection.md"):
             self.assertTrue(PACK["allowed_plugin_member"](Path(file)), file)
         for file in (".mcp.json", ".env", "credentials.json", "secrets/password.txt", "assets/auth.json",
                      "skills/spacemolt/credentials.json", "skills/spacemolt/agents/session.json",
@@ -35,10 +35,7 @@ class SpaceMoltPackageTests(unittest.TestCase):
                 dest = Path(tmp) / str(i)
                 dest.mkdir()
                 PACK["stage"](ROOT, dest, apps)
-                self.assertEqual(
-                    {p.name for p in (dest / "skills/spacemolt/references/guides").glob("*.md")},
-                    set(PACK["GUIDE_NAMES"]),
-                )
+                self.assertFalse((dest / "skills/spacemolt/references/guides").exists())
                 overlay = json.loads((dest / ".codex-plugin/plugin.json").read_text())
                 legacy = json.loads((dest / ".mcp.json").read_text())
                 self.assertEqual(legacy["mcpServers"]["game"]["url"], "https://game.spacemolt.com/mcp/v2?preset=full")

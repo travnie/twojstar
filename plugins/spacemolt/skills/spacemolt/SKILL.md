@@ -1,33 +1,25 @@
 ---
 name: spacemolt
-description: Use for playing or troubleshooting SpaceMolt and for developing, reviewing, or debugging SpaceMolt clients, SMX, bots, harnesses, and integrations. Route gameplay, official API development, and workspace edits through task-specific references.
+description: Play SpaceMolt or build and debug SMX/clients using live official v2 interfaces. Minimal durable rules, safe operation, and links to authoritative documentation.
 ---
 
-# SpaceMolt
+# SpaceMolt: essentials, not a copied manual
 
-Follow the user's goal and constraints. Load **only the relevant reference**, not the entire bundle. This single skill routes two distinct workflows with separate MCP backends.
+Read only what the task needs. Paths below are relative to this skill root.
 
-All reference paths, including links mentioned inside reference documents, are **relative to this skill root** (`skills/spacemolt/`).
+- **Play:** [gameplay](references/gameplay.md). With a usable shell, prefer `smx`; otherwise use the official full [game MCP](https://game.spacemolt.com/mcp/v2?preset=full). Direct v2 API is the final fallback.
+- **Connect or authenticate:** [connection](references/connection.md). Inspect exposed authentication tools; never invent parameters or reveal credentials.
+- **Build/debug SMX or integrations:** [development](references/development.md). Use official read-only [docs MCP](https://game.spacemolt.com/mcp/docs) for current command contracts. No live-character mutations as development tests.
+- **Edit workspace files:** [workspace](references/workspace.md) plus repository instructions. Tool access belongs to the host, not this skill.
 
-## Choose a workflow
+## Authority and rules
 
-- **Play, manage a captain, register/login, mine, trade, explore, fight, or run missions:** read [gameplay.md](references/gameplay.md). Follow its intent router to load only the needed [guides](references/guides/) and [connection.md](references/connection.md).
-- **Build/review/debug SMX, a SpaceMolt client, CLI wrapper, bot, transport, API schema, or game integration:** read [development.md](references/development.md). Use the official read-only `docs` MCP for live contracts. Do not run gameplay actions just to validate code.
-- **Read/search/edit/test files for development:** additionally read [workspace.md](references/workspace.md) and use only host-provided file/shell capabilities. This is not a separate filesystem MCP.
-- **A task genuinely mixes gameplay and development:** load both references, keep test sessions separate from live player sessions, and do not mutate a real character as a development test.
+Live game state, current tool schemas and official docs win over any local note. Do not pre-load catalogs, strategy guides, hardcoded prices, formulas, or release snapshots.
 
-## Backends and authority
+- Official [agent guide](https://spacemolt.com/skill.md), [gameplay guides](https://www.spacemolt.com/guides), [OpenAPI v2](https://game.spacemolt.com/api/v2/openapi.json), [changelog](https://spacemolt.com/changelog).
+- Official [v2 CLI](https://github.com/SpaceMolt/client-v2); companion [SMX](https://github.com/travnie/twojstar/tree/main/spacemolt/smx).
+- Confirm the active **character**, ship, location, pending queue and risks before taking action. Protect other players' profiles and secrets.
+- **Finish docked at a safe accessible station whenever possible.** If unsafe, blocked or still in transit, preserve state and report the exact blocker rather than claiming completion.
+- Game mutations generally consume one 10-second tick; queries do not. Respect the live `retry_after` / queue. An uncertain timeout is **not** permission to repeat a mutation.
 
-- Gameplay: `smx` with a usable shell first, then official `game` MCP at `https://game.spacemolt.com/mcp/v2?preset=full`; direct v2 HTTP/WebSocket only as the last supported resort. Check available tools instead of assuming a shell exists.
-- Development: official read-only `docs` MCP at `https://game.spacemolt.com/mcp/docs`. Use its live command, type, transport, and auth contracts.
-- Current live state, tool schemas and official help/docs outrank bundled snapshots. Before relying on a gameplay mechanic, use a current server guide/help and check `get_version` when release changes matter; bundled cards/manuals are supplementary context or offline fallback, never authoritative over live data. Do not guess unsupported tool arguments, connection options or game rules.
-- Player credentials and sessions never belong in package files, logs, docs tools or unrelated services. Follow supported auth flows and verify the active player before any mutation.
-- Gameplay mutations and development file writes are different authority boundaries. Respect explicit approval, host restrictions, repository instructions and the checks described by the selected reference.
-
-## Reference map
-
-- `references/gameplay.md`: game/runtime/auth instructions, playstyles, operating loop, focused-guide router.
-- `references/development.md`: live API/CLI contracts, SMX development and offline validation.
-- `references/workspace.md`: host-native read/search/patch/test safety.
-- `references/connection.md`: supported SMX/MCP/HTTP/WS connectivity.
-- `references/guides/`: 15 focused game guides; `references/spacemolt-manual.md`: bundled v2 corrections. Load on demand.
+Do not store credentials, sessions, or game snapshots in this package.
