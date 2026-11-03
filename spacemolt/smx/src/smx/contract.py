@@ -22,7 +22,7 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
         "response": (
             "location.in_transit", "location.docked_at", "location.poi_id", "location.poi_name",
             "location.system_id", "location.system_name",
-            "location.nearby_pirate_count", "location.nearby_leviathans",
+            "location.nearby_pirate_count", "location.nearby_leviathans[].aggressive",
             "queue.has_pending",
             "ship.incapacitated", "ship.hull", "ship.max_hull", "ship.shield", "ship.max_shield",
             "ship.fuel", "ship.max_fuel", "ship.cargo_used", "ship.cargo_capacity",

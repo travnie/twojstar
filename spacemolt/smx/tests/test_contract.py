@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from smx.contract import CONTRACT, find_drift, main
+from smx.contract import CONTRACT, find_drift, main, response_fields
 
 
 def schema_for(fields):
@@ -67,11 +67,12 @@ class ContractTests(unittest.TestCase):
         self.assertIn("spacemolt/sell: response field `details.quantity_sold` removed", find_drift(spec))
 
     def test_recursive_schema_terminates(self):
-        spec = full_spec()
-        node = {"type": "object", "properties": {"self": {"$ref": "#/components/schemas/loop"}}}
-        spec["components"]["schemas"]["loop"] = node
-        spec["components"]["schemas"]["spacemolt_dock"] = {"$ref": "#/components/schemas/loop"}
-        self.assertEqual(find_drift(spec), [])
+        loop = {"$ref": "#/components/schemas/loop"}
+        spec = {"components": {"schemas": {
+            "loop": {"type": "object", "properties": {"structuredContent": loop}},
+        }}}
+        operation = {"responses": {"200": {"content": {"application/json": {"schema": loop}}}}}
+        self.assertEqual(response_fields(spec, operation), set())
 
     @staticmethod
     def _main(*args):
