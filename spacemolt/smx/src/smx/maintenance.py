@@ -106,11 +106,11 @@ def fetch_release(
     machine: str | None = None,
 ) -> ReleaseInfo:
     if version is None:
-        url = f"{RELEASES_API}/latest"
+        api_url = f"{RELEASES_API}/latest"
     else:
         version_tuple(version)  # numeric only: nothing else reaches the URL
-        url = f"{RELEASES_API}/tags/v{urllib.parse.quote(normalize_version(version))}"
-    payload = _open_json(url, opener)
+        api_url = f"{RELEASES_API}/tags/v{urllib.parse.quote(normalize_version(version))}"
+    payload = _open_json(api_url, opener)
     tag = payload.get("tag_name")
     if not isinstance(tag, str) or not tag:
         raise ValueError("release has no tag_name")
