@@ -366,8 +366,11 @@ const DAILY_HISTORY_PROMPT_MAX = 24000;
 // Free plan: 50 external fetches per invocation. Worst cases: cold login 4 (405 retry, session,
 // login_token), initial obs 7, mid-run relogin 5, ensureDocked 13 (3 candidates), clear 1.
 const DAILY_SUBREQUEST_LIMIT = 50;
-const DAILY_SUBREQUESTS_START = 4 + 7;
+const DAILY_SUBREQUESTS_START = 4 + 8;
 const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1;
+// Gremlin's own captain's log (newest first) = the plan this autopilot follows.
+const DAILY_PLAN_PROMPT_MAX = 3500;
+const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
 const DAILY_LAST_KEY = "daily:last";
 const DAILY_PROVIDER_ORDER = ["aihubmix","openrouter","ollama","groq","orcarouter","huggingface-publicai"];
 const WORKERS_AI_DEFAULT_MODEL = "@cf/zai-org/glm-4.7-flash";
@@ -621,7 +624,9 @@ async function runPlannerModel(env, run, messages, rotateBy) {
   };
 }
 const DAILY_SYSTEM_PROMPT =
-  "You are Gremlin-5, an autonomous SpaceMolt explorer-drone. Act cautiously and efficiently. " +
+  "You are the autopilot of Gremlin-5, a SpaceMolt explorer-drone that Gremlin (a GPT character) flies himself. Act cautiously and efficiently. " +
+  "Follow Gremlin's plan from his captain's log (non-[autopilot] entries, newest first): continue what he started and never undo or contradict it. Use your own initiative (missions, travel, mining) only when the plan is empty, done or impossible right now. " +
+  "If you changed anything this run, end with one short captains_log_add (2-3 sentences: what you did, where you are, what is next); the gateway tags it [autopilot]. " +
   "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
@@ -658,6 +663,11 @@ async function activeMissionBlock(env, run) {
   return null;
 }
 
+function autopilotLogContent(content) {
+  const text = String(content || "").trim();
+  return text.startsWith(AUTOPILOT_LOG_PREFIX.trim()) ? text : AUTOPILOT_LOG_PREFIX + text;
+}
+
 // A repeat is blocked only while the earlier result is still inside the planner's history window.
 function readStillVisible(run, key) {
   const idx = run.readsSinceChange.get(key);
@@ -675,20 +685,22 @@ async function gatherDailyObservations(env, run) {
     safeObs(env,"spacemolt","get_commands",{}),
     safeObs(env,"spacemolt","get_guide",{}),
     safeObs(env,"spacemolt_social","get_chat_history",{target:"private"}),
-    safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"})
+    safeObs(env,"spacemolt_social","get_chat_history",{target:"faction"}),
+    safeObs(env,"spacemolt_social","captains_log_list",{})
   ])];
   run.notificationsSeen = fitNotificationsToPrompt(initial[2]);
-  const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}];
+  const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}, {}];
   initial.forEach((value, idx) => {
     const key = dailyReadKey(value.tool, value.action, startupArgs[idx]);
-    // Commands and guides ride in the mechanics block of every prompt.
-    if (idx === 3 || idx === 4) {
+    // Commands, guides and the captain's log ride in fixed blocks of every prompt.
+    if (idx === 3 || idx === 4 || idx === 7) {
       if (value.ok) run.readsSinceChange.set(key, Infinity);
       return;
     }
     history.push({kind:"observation", value});
     if (value.ok) run.readsSinceChange.set(key, history.length - 1);
   });
+  run.planText = initial[7].ok ? compactJson(sc(initial[7].data), DAILY_PLAN_PROMPT_MAX) : "(captain's log unavailable)";
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
 }
 
@@ -743,7 +755,9 @@ async function planDailyStep(env, run, mechanics) {
     .map((entry, idx) => `${idx + 1}. ${compactJson(entry, DAILY_HISTORY_ENTRY_MAX)}`)
     .join("\n")
     .slice(-DAILY_HISTORY_PROMPT_MAX);
-  const userPrompt = `Authoritative SpaceMolt mechanics reference:\n${mechanics}\n\nCurrent run observations/results:\n${recentText}`;
+  const userPrompt = `Authoritative SpaceMolt mechanics reference:\n${mechanics}\n\n` +
+    `Gremlin's captain's log, newest first (his plan; entries starting "${AUTOPILOT_LOG_PREFIX.trim()}" are your own past reports):\n${run.planText}\n\n` +
+    `Current run observations/results:\n${recentText}`;
 
   const plannerMeta = await callPlanner(env, run, userPrompt);
   if (!plannerMeta) return {outcome:"stop"};
@@ -780,8 +794,10 @@ async function executeDailyDecision(env, run, decision, provider) {
   const read = isDailyRead(tool, action);
   // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
   // accept_mission sends only the checked id (no template_id override).
+  // Autopilot log entries are tagged so Gremlin (and later runs) can tell them from his plan.
   const callArgs = action === "get_notifications" ? {...args, clear:false}
-    : action === "accept_mission" ? {id:args.id} : args;
+    : action === "accept_mission" ? {id:args.id}
+    : action === "captains_log_add" ? {...args, content:autopilotLogContent(args.content)} : args;
   const readKey = read ? dailyReadKey(tool, action, callArgs) : "";
   const block = (reason) => {
     run.blockedCount += 1;

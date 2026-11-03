@@ -85,3 +85,9 @@ test("active mission count reads get_status missions", () => {
   assert.equal(activeMissionCount({structuredContent:{missions:{active:[{id:"m"}]}}}), 1);
   assert.equal(activeMissionCount({structuredContent:{}}), null);
 });
+
+test("captain's log entries must be short and non-empty", () => {
+  assert.equal(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"Docked at Arneb; next: Thuban board."}), null);
+  assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"  "}), /non-empty/);
+  assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"x".repeat(481)}), /max 480/);
+});
