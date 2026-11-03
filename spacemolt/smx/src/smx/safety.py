@@ -70,6 +70,9 @@ def _emit(report: dict[str, Any], json_output: bool) -> None:
             print(f"  actions: {', '.join(report['actions'])}")
 
 
+LOW_FUEL = 0.3  # heuristic, not a game rule
+
+
 def _mark_unknown(report: dict[str, Any]) -> None:
     if report["status"] != "danger":
         report["status"] = "unknown"
@@ -117,7 +120,15 @@ def cmd_survive(backend: Any, argv: list[str]) -> int:
     elif report["fuel"] == 0:
         report["status"] = "danger"
         report["messages"].append("fuel empty")
-        report["suggestions"].append("smx distress_signal distress_type=fuel")
+        report["suggestions"].append("smx refuel" if location.get("docked_at")
+                                     else "smx distress_signal distress_type=fuel")
+    elif report["max_fuel"] > 0 and report["fuel"] / report["max_fuel"] <= LOW_FUEL:
+        report["messages"].append(f"low fuel: {report['fuel']}/{report['max_fuel']} (heuristic)")
+        if location.get("docked_at"):
+            report["suggestions"].append("smx refuel")
+        else:
+            report["status"] = "danger"
+            report["suggestions"].append("smx autodock")
     if ship.get("incapacitated") is True:
         report["status"] = "danger"
         report["messages"].append("crew incapacitated")

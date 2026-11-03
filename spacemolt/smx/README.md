@@ -10,7 +10,9 @@ The official `spacemolt` binary remains authoritative for API models, auth and s
 - `sell-all`, `nearby` and combined mission views,
 - read-only `route` preflight with live jump/fuel/fleet data, reserve checks and wormhole markers,
 - `survive` combat/ship triage and opt-in guarded same-system `autodock`,
-- typo suggestions without automatic execution,
+- typo and cached-ID suggestions without automatic execution,
+- per-profile `ids` cache, local `where-can-i` market lookup and a collapsed `inbox`,
+- `--dry-run` previews with risk notes,
 - passthrough to every official v2 command,
 - lazy tactical cards through `smx guide`,
 - canonical docs/gameplay MCP profiles through `smx mcp`,
@@ -65,6 +67,13 @@ smx autodock --json
 smx autodock --target station_poi_id --execute
 smx sell-all --dry-run
 smx sell-all --keep fuel_cell,mission_widget
+
+smx ids --refresh
+smx ids poi --search belt
+smx where-can-i iron
+smx inbox
+smx inbox --peek --all
+smx --dry-run buy ore_iron 50
 
 smx guide combat            # current in-game guide, local fallback
 smx guide combat --live     # current server only; fail if unavailable
@@ -173,6 +182,16 @@ fuel, reputation, station attacks or a concurrent state change.
 
 **These commands do not run in the background**. Automated survival decisions
 beyond read-only triage are left to the pilot/agent and official API.
+
+## IDs, inbox and dry runs
+
+`smx ids --refresh` queries the official system, cargo, nearby and market commands and stores what they returned per profile. After a failed command, close cached IDs are printed as hints and never executed.
+
+`smx where-can-i ITEM` searches only markets recorded by a refresh while docked. It is a local memory, not a galaxy search, and shows the age of every row.
+
+`smx inbox` shows chat, combat, trade and events mentioning completion or failure, and counts the rest by type. Like the official command it clears the queue; add `--peek` to keep it, `--all` for every event.
+
+`smx --dry-run <command>` prints the official command and risk notes without sending it, wherever the flag appears before `--`. `buy` with an item and quantity also asks the read-only `estimate_purchase`.
 
 ## Gameplay profiles and fleet
 
