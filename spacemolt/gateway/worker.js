@@ -673,10 +673,11 @@ async function activeMissionBlock(env, run) {
 async function readGremlinPlan(env) {
   const entries = [];
   let found = null;
+  let readFailed = false;
   for (let index = 0; index < DAILY_PLAN_LOG_READS; index++) {
     const page = await safeObs(env, "spacemolt_social", "captains_log_list", {index});
     if (!page.ok) {
-      if (index === 0) return {status:"unavailable", text:"(captain's log could not be read)"};
+      readFailed = true;
       break;
     }
     const data = sc(page.data);
@@ -698,9 +699,11 @@ async function readGremlinPlan(env) {
     }
     return {status:"ok", text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
   }
-  if (!entries.length) return {status:"empty", text:"(captain's log is empty: no plan from Gremlin)"};
-  // Only autopilot reports within reach: fall back to the last plan seen.
+  // Only autopilot reports within reach (or a page failed): fall back to the last plan seen.
   const cached = await env.STATE.get(DAILY_PLAN_KEY).catch(() => null);
+  // A failed read with no cached plan = unknown plan: dock-only run.
+  if (readFailed && !cached) return {status:"unavailable", text:"(captain's log could not be read)"};
+  if (!entries.length) return {status:"empty", text:"(captain's log is empty: no plan from Gremlin)"};
   const note = cached
     ? `Newest entries are your own reports; Gremlin's last known plan (cached, may be stale): ${cached}`
     : "Newest entries are your own reports and Gremlin's plan is older than they reach; treat the plan as unknown, not empty: only safe, reversible actions.";
