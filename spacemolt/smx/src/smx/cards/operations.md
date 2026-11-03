@@ -24,6 +24,8 @@ Older notes can hold discoveries and history; the newest one should answer "what
 - Keep valuables in station storage when not needed.
 - Buy insurance before high-risk work and remember it is not permanent.
 - Re-arm and refuel before long travel or combat.
+- Docked at zero fuel is still stuck. `smx survive` flags it and a low tank.
+- Player stations can refuse docking. Check `public_access` in `get_poi` first.
 - Check notifications after consequential actions and before committing to another risky one.
 
 ## Multiplayer edge
