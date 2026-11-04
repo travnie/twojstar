@@ -325,22 +325,39 @@ export function activeMissionCount(status) {
 }
 
 // Station-bound route from a find_route result: only these jumps may run, so a trip never
-// ends in a system the autopilot did not choose a dock in. null when not a usable route.
-export function stationRoute(result, maxJumps) {
+// ends in a system the autopilot did not choose a dock in. Fails closed (null) on any
+// missing/odd field. knownBases: base/station ids seen in this run's game data.
+export function stationRoute(result, requestedId, knownBases, maxJumps) {
   const root = sc(result);
-  if (!root?.found || !root.target_poi || !Array.isArray(root.route)) return null;
-  const total = Number(root.total_jumps ?? root.route.length - 1);
-  if (!Number.isInteger(total) || total < 0 || total > maxJumps) return null;
-  if (Number(root.estimated_fuel) > Number(root.fuel_available)) return null;
-  // Wormhole hops jump to the entrance POI, not the system id.
-  const steps = root.route.slice(1).map((step) => step?.via_wormhole && step.entrance_poi ? step.entrance_poi : step?.system_id)
-    .filter((id) => typeof id === "string" && id);
-  if (steps.length !== total) return null;
-  return {steps, targetPoi:String(root.target_poi), targetSystem:String(root.target_system || "")};
+  if (!root?.found || typeof root.target_poi !== "string" || !root.target_poi || !Array.isArray(root.route)) return null;
+  if (!knownBases.has(String(requestedId))) return null;
+  const total = root.total_jumps;
+  if (!Number.isInteger(total) || total < 0 || total > maxJumps || root.route.length !== total + 1) return null;
+  const need = root.estimated_fuel, have = root.fuel_available, perJump = root.fuel_per_jump;
+  if (![need, have, perJump].every(Number.isFinite)) return null;
+  // Keep one jump of fuel spare on arrival.
+  if (need + perJump > have) return null;
+  const steps = [];
+  for (const step of root.route.slice(1)) {
+    const id = step?.via_wormhole ? step.entrance_poi : step?.system_id;
+    if (typeof id !== "string" || !id) return null;
+    steps.push(id);
+  }
+  return {steps, targetPoi:root.target_poi, targetSystem:String(root.target_system || "")};
 }
 
-// Gremlin's newest own entry is recent: he is flying, the autopilot only holds.
+// Station/base ids mentioned anywhere in a game result.
+export function baseIdsIn(value) {
+  const ids = new Set();
+  const text = JSON.stringify(value ?? null);
+  for (const m of text.matchAll(/"(?:base_id|home_base|issuing_base_id|docked_at)":"([^"]+)"/gu)) ids.add(m[1]);
+  return ids;
+}
+
+// Age of Gremlin's newest entry vs maxAgeMs: true = recent, false = stale, null = unknown.
 export function planIsRecent(createdAt, nowMs, maxAgeMs) {
-  const ms = Date.parse(String(createdAt || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/u.test(String(createdAt || "")) ? "" : "Z"));
-  return Number.isFinite(ms) && nowMs - ms <= maxAgeMs;
+  const raw = String(createdAt || "");
+  if (!/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(:\d\d)?/u.test(raw)) return null;
+  const ms = Date.parse(raw.replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/u.test(raw) ? "" : "Z"));
+  return Number.isFinite(ms) ? nowMs - ms <= maxAgeMs : null;
 }

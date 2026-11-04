@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, planIsRecent, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, baseIdsIn, planIsRecent, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -98,18 +98,33 @@ test("route and mission completion need ids", () => {
   assert.match(dailyBlockReason("spacemolt", "complete_mission", {}), /mission_id/);
 });
 
-test("station route accepts short fuel-safe trips to a station only", () => {
-  const ok = {structuredContent:{found:true, target_poi:"haven_station", target_system:"haven", total_jumps:2, estimated_fuel:10, fuel_available:94,
-    route:[{system_id:"electra", jumps:0}, {system_id:"tau_ceti", jumps:1}, {system_id:"haven", jumps:2}]}};
-  assert.deepEqual(stationRoute(ok, 3), {steps:["tau_ceti", "haven"], targetPoi:"haven_station", targetSystem:"haven"});
-  assert.equal(stationRoute({structuredContent:{...ok.structuredContent, target_poi:undefined}}, 3), null);
-  assert.equal(stationRoute({structuredContent:{...ok.structuredContent, total_jumps:5}}, 3), null);
-  assert.equal(stationRoute({structuredContent:{...ok.structuredContent, estimated_fuel:200}}, 3), null);
+test("station route accepts short fuel-safe trips to a known station only", () => {
+  const known = new Set(["haven_station"]);
+  const base = {found:true, target_poi:"haven_poi", target_system:"haven", total_jumps:2, estimated_fuel:10, fuel_per_jump:5, fuel_available:94,
+    route:[{system_id:"electra", jumps:0}, {system_id:"tau_ceti", jumps:1}, {system_id:"haven", jumps:2}]};
+  const r = (patch, id = "haven_station") => stationRoute({structuredContent:{...base, ...patch}}, id, known, 3);
+  assert.deepEqual(r({}), {steps:["tau_ceti", "haven"], targetPoi:"haven_poi", targetSystem:"haven"});
+  assert.equal(r({}, "main_belt_echo"), null);
+  assert.equal(r({target_poi:undefined}), null);
+  assert.equal(r({total_jumps:5}), null);
+  assert.equal(r({estimated_fuel:90}), null);
+  assert.equal(r({fuel_available:undefined}), null);
+  assert.equal(r({estimated_fuel:null}), null);
+  assert.equal(r({route:[{system_id:"electra"}, {via_wormhole:true, system_id:"tau_ceti"}, {system_id:"haven"}]}), null);
+  assert.equal(r({route:[{system_id:"electra"}, {}, {system_id:"haven"}]}), null);
 });
 
-test("plan recency parses game timestamps as UTC", () => {
+test("base ids are collected from game data", () => {
+  assert.deepEqual([...baseIdsIn({player:{home_base:"grand_exchange_station"}, location:{docked_at:null}, missions:[{issuing_base_id:"ccc"}]})].sort(),
+    ["ccc", "grand_exchange_station"]);
+});
+
+test("plan recency parses game timestamps as UTC and fails unknown", () => {
   const now = Date.parse("2026-11-04T21:00:00Z");
-  assert.equal(planIsRecent("2026-11-04 19:32:01", now, 48 * 3600e3), true);
-  assert.equal(planIsRecent("2026-11-01 19:32:01", now, 48 * 3600e3), false);
-  assert.equal(planIsRecent("garbage", now, 48 * 3600e3), false);
+  const day2 = 48 * 3600e3;
+  assert.equal(planIsRecent("2026-11-02 21:30:00", now, day2), true);
+  // 30 min past the cutoff in UTC; local-time parsing east of UTC would call it recent.
+  assert.equal(planIsRecent("2026-11-02 20:30:00", now, day2), false);
+  assert.equal(planIsRecent("garbage", now, day2), null);
+  assert.equal(planIsRecent("", now, day2), null);
 });
