@@ -112,6 +112,14 @@ jobs:
           python -m smx.contract > report.md || rc=$?
           cat report.md
           [ -s report.md ] || rc=2 # a crash prints no report; keep the issue body
+          has_issues="$(gh api "repos/$GH_REPO" --jq .has_issues)" # lookup failure fails the step under -e
+          if [ "$has_issues" != true ]; then
+            # Issues disabled: no tracker; report goes to the job summary, drift still fails the job.
+            cat report.md >> "$GITHUB_STEP_SUMMARY"
+            [ "$rc" = 2 ] && echo "::warning::SpaceMolt OpenAPI unavailable or checker failed; contract not checked"
+            [ "$rc" = 1 ] && exit 1
+            exit 0
+          fi
           issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
             --jq 'map(select(.title == env.TITLE))[0].number // empty')
           case "$rc" in
@@ -165,9 +173,9 @@ jobs:
     environment: pypi
     permissions:
       id-token: write
-    # Coalesce duplicate automated requests for one version; manual runs stay separate.
+    # One publish at a time: a later run re-checks PyPI after the earlier one finished.
     concurrency:
-      group: pypi-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.version || github.run_id }}
+      group: pypi-smx
       cancel-in-progress: false
     steps:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -177,4 +185,26 @@ jobs:
         with:
           name: smx-python-distributions
           path: dist
-      - run: uv publish --check-url https://pypi.org/simple/ dist/*
+      # Rebuilds are not byte-identical, so re-uploading a file PyPI already has fails the hash check.
+      # Upload only files missing from this version; 404 = new version, any other lookup result fails.
+      - name: Publish files missing from PyPI
+        run: |
+          set -euo pipefail
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          version="$(basename "$wheel" | cut -d- -f2)"
+          code="$(curl -sS --connect-timeout 10 --max-time 60 --retry 3 --retry-all-errors \
+            -o pypi.json -w '%{http_code}' "https://pypi.org/pypi/spacemolt-smx/$version/json")"
+          case "$code" in
+            200) published="$(uv run --no-project python -c 'import json; print("\n".join(u["filename"] for u in json.load(open("pypi.json"))["urls"]))')" ;;
+            404) published="" ;;
+            *) echo "::error::PyPI lookup for $version returned HTTP $code"; exit 1 ;;
+          esac
+          missing=()
+          for f in dist/*; do
+            grep -qxF "$(basename "$f")" <<< "$published" || missing+=("$f")
+          done
+          if [ "${#missing[@]}" -eq 0 ]; then
+            echo "::notice::spacemolt-smx $version already fully on PyPI; bump the version to publish"
+            exit 0
+          fi
+          uv publish --check-url https://pypi.org/simple/ "${missing[@]}"
