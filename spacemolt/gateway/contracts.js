@@ -323,3 +323,24 @@ export function activeMissionCount(status) {
   }
   return null;
 }
+
+// Station-bound route from a find_route result: only these jumps may run, so a trip never
+// ends in a system the autopilot did not choose a dock in. null when not a usable route.
+export function stationRoute(result, maxJumps) {
+  const root = sc(result);
+  if (!root?.found || !root.target_poi || !Array.isArray(root.route)) return null;
+  const total = Number(root.total_jumps ?? root.route.length - 1);
+  if (!Number.isInteger(total) || total < 0 || total > maxJumps) return null;
+  if (Number(root.estimated_fuel) > Number(root.fuel_available)) return null;
+  // Wormhole hops jump to the entrance POI, not the system id.
+  const steps = root.route.slice(1).map((step) => step?.via_wormhole && step.entrance_poi ? step.entrance_poi : step?.system_id)
+    .filter((id) => typeof id === "string" && id);
+  if (steps.length !== total) return null;
+  return {steps, targetPoi:String(root.target_poi), targetSystem:String(root.target_system || "")};
+}
+
+// Gremlin's newest own entry is recent: he is flying, the autopilot only holds.
+export function planIsRecent(createdAt, nowMs, maxAgeMs) {
+  const ms = Date.parse(String(createdAt || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/u.test(String(createdAt || "")) ? "" : "Z"));
+  return Number.isFinite(ms) && nowMs - ms <= maxAgeMs;
+}
