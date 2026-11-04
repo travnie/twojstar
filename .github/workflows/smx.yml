@@ -112,6 +112,13 @@ jobs:
           python -m smx.contract > report.md || rc=$?
           cat report.md
           [ -s report.md ] || rc=2 # a crash prints no report; keep the issue body
+          if [ "$(gh api "repos/$GH_REPO" --jq .has_issues)" != true ]; then
+            # Issues disabled: no tracker; report goes to the job summary, drift still fails the job.
+            cat report.md >> "$GITHUB_STEP_SUMMARY"
+            [ "$rc" = 2 ] && echo "::warning::SpaceMolt OpenAPI unavailable or checker failed; contract not checked"
+            [ "$rc" = 1 ] && exit 1
+            exit 0
+          fi
           issue=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
             --jq 'map(select(.title == env.TITLE))[0].number // empty')
           case "$rc" in
@@ -177,4 +184,16 @@ jobs:
         with:
           name: smx-python-distributions
           path: dist
-      - run: uv publish --check-url https://pypi.org/simple/ dist/*
+      # Rebuilds are not byte-identical, so re-publishing an existing version fails the hash check.
+      - name: Skip if version already on PyPI
+        id: pypi
+        run: |
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          version="$(basename "$wheel" | cut -d- -f2)"
+          code="$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/spacemolt-smx/$version/json")"
+          if [ "$code" = 200 ]; then
+            echo "::notice::spacemolt-smx $version already on PyPI; bump the version to publish"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.pypi.outputs.exists != 'true'
+        run: uv publish --check-url https://pypi.org/simple/ dist/*
