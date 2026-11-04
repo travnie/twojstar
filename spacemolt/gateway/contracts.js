@@ -323,3 +323,41 @@ export function activeMissionCount(status) {
   }
   return null;
 }
+
+// Station-bound route from a find_route result: only these jumps may run, so a trip never
+// ends in a system the autopilot did not choose a dock in. Fails closed (null) on any
+// missing/odd field. knownBases: base/station ids seen in this run's game data.
+export function stationRoute(result, requestedId, knownBases, maxJumps) {
+  const root = sc(result);
+  if (!root?.found || typeof root.target_poi !== "string" || !root.target_poi || !Array.isArray(root.route)) return null;
+  if (!knownBases.has(String(requestedId))) return null;
+  const total = root.total_jumps;
+  if (!Number.isInteger(total) || total < 0 || total > maxJumps || root.route.length !== total + 1) return null;
+  const need = root.estimated_fuel, have = root.fuel_available, perJump = root.fuel_per_jump;
+  if (![need, have, perJump].every(Number.isFinite)) return null;
+  // Keep one jump of fuel spare on arrival.
+  if (need + perJump > have) return null;
+  const steps = [];
+  for (const step of root.route.slice(1)) {
+    const id = step?.via_wormhole ? step.entrance_poi : step?.system_id;
+    if (typeof id !== "string" || !id) return null;
+    steps.push(id);
+  }
+  return {steps, targetPoi:root.target_poi, targetSystem:String(root.target_system || "")};
+}
+
+// Station/base ids mentioned anywhere in a game result.
+export function baseIdsIn(value) {
+  const ids = new Set();
+  const text = JSON.stringify(value ?? null);
+  for (const m of text.matchAll(/"(?:base_id|home_base|issuing_base_id|docked_at)":"([^"]+)"/gu)) ids.add(m[1]);
+  return ids;
+}
+
+// Age of Gremlin's newest entry vs maxAgeMs: true = recent, false = stale, null = unknown.
+export function planIsRecent(createdAt, nowMs, maxAgeMs) {
+  const raw = String(createdAt || "");
+  if (!/^\d{4}-\d\d-\d\d[ T]\d\d:\d\d(:\d\d)?/u.test(raw)) return null;
+  const ms = Date.parse(raw.replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/u.test(raw) ? "" : "Z"));
+  return Number.isFinite(ms) ? nowMs - ms <= maxAgeMs : null;
+}

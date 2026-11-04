@@ -12,6 +12,9 @@ import {
   isDailyRead,
   dailyReadKey,
   activeMissionCount,
+  stationRoute,
+  baseIdsIn,
+  planIsRecent,
   positiveInt,
   buyEstimateRejection,
   buyFillOverCap,
@@ -199,7 +202,7 @@ async function gameCall(env, tool, action, payload = {}, signal = undefined) {
 // Each candidate may cost a long travel, so ensureDocked tries only the first few.
 const DOCK_CANDIDATE_MAX = 3;
 
-async function ensureDocked(env) {
+async function ensureDocked(env, {allowTravel = true} = {}) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
   if (isDocked(status)) return {docked:true, changed:false, status};
   // Try docking where we are first: station names are not always recognisable.
@@ -215,6 +218,7 @@ async function ensureDocked(env) {
     localDockError = gameRejection(err);
     if (!localDockError) throw err;
   }
+  if (!allowTravel) return {docked:false, changed:false, reason:"hold_mode_no_travel", localDockError, status};
   const here = currentLocation(status);
   const hereId = String(here.poi_id || here.id || "");
   const sys = await gameCall(env, "spacemolt", "get_system", {});
@@ -374,6 +378,11 @@ const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1 + 2;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
 const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
+// Gremlin's own entry newer than this = he is flying: hold mode (no leaving, no new missions).
+const DAILY_HOLD_PLAN_AGE_MS = 48 * 60 * 60 * 1000;
+// Autonomous trips: at most this many jumps, only along a find_route to a station.
+const DAILY_MAX_ROUTE_JUMPS = 3;
+const DAILY_HOLD_BLOCKED = new Set(["undock","jump","travel","accept_mission","mine"]);
 // Matches the daily allowlist cap on captains_log_add content.
 const AUTOPILOT_LOG_MAX = 480;
 const DAILY_PLAN_KEY = "daily:gremlin-plan";
@@ -633,6 +642,7 @@ async function runPlannerModel(env, run, messages, rotateBy) {
 const DAILY_SYSTEM_PROMPT =
   "You are the autopilot of Gremlin-5, a SpaceMolt explorer-drone that Gremlin (a GPT character) flies himself. Act cautiously and efficiently. " +
   "Follow Gremlin's plan from his captain's log (non-[autopilot] entries, newest first): continue what he started and never undo or contradict it. Use your own initiative (missions, travel, mining) only when the plan is empty, done or impossible right now. " +
+  "Mode (autopilot_mode in history) is a policy from captain's log recency, not proof Gremlin is online: hold = his entry is recent or unknown; stay put, no undock/jump/travel/mine/accept_mission; only reply, refuel/repair, complete his missions, log. autonomous = his log is empty or stale; you may act, but jumps only along a fresh find_route to a known station base id within 3 jumps, then travel there and dock. " +
   "If you changed anything this run, end with one short captains_log_add (2-3 sentences: what you did, where you are, what is next); the gateway tags it [autopilot]. " +
   "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
@@ -700,7 +710,7 @@ async function readGremlinPlan(env) {
     } catch (err) {
       console.warn("SpaceMolt plan cache write failed", errorText(err, 240));
     }
-    return {status:"ok", text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
+    return {status:"ok", createdAt:found.created_at, text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
   }
   // Only autopilot reports within reach (or a page failed): fall back to the last plan seen.
   const cached = await env.STATE.get(DAILY_PLAN_KEY).catch(() => null);
@@ -715,6 +725,15 @@ async function readGremlinPlan(env) {
 
 function isAutopilotEntry(text) {
   return String(text).trim().startsWith(AUTOPILOT_LOG_PREFIX.trim());
+}
+
+// Jumps only follow the current station-bound route, in order.
+function routeJumpBlock(run, id) {
+  if (!run.route) return `jump needs a fresh find_route to a known station base id (home_base, issuing_base_id, docked_at or base_id from observations) within ${DAILY_MAX_ROUTE_JUMPS} jumps with one jump of fuel spare`;
+  const next = run.route.steps[run.routeIndex];
+  if (!next) return `route done: travel to ${run.route.targetPoi} and dock`;
+  if (String(id) !== next) return `next jump on the planned route is ${next}`;
+  return null;
 }
 
 function describeChange(action, args) {
@@ -771,6 +790,7 @@ async function gatherDailyObservations(env, run) {
   run.notificationsSeen = fitNotificationsToPrompt(initial[2]);
   const startupArgs = [{}, {}, {clear:false, limit:DAILY_NOTIFICATION_PEEK}, {}, {}, {target:"private"}, {target:"faction"}];
   initial.forEach((value, idx) => {
+    if (value.ok) for (const id of baseIdsIn(value.data)) run.knownBases.add(id);
     const key = dailyReadKey(value.tool, value.action, startupArgs[idx]);
     // Commands and guides ride in the mechanics block of every prompt.
     if (idx === 3 || idx === 4) {
@@ -782,6 +802,14 @@ async function gatherDailyObservations(env, run) {
   });
   const plan = await readGremlinPlan(env);
   run.planStatus = plan.status;
+  // Hold policy (inferred from log recency, not proof Gremlin is online): autonomous only on an
+  // empty log, or when his newest entry was actually read and is parsably older than
+  // DAILY_HOLD_PLAN_AGE_MS. Hidden/older/unparsable plans hold.
+  const planCreatedAt = plan.createdAt;
+  if (plan.status === "empty") run.holdMode = false;
+  else if (plan.status === "ok") run.holdMode = planIsRecent(planCreatedAt, Date.now(), DAILY_HOLD_PLAN_AGE_MS) !== false;
+  else run.holdMode = true;
+  run.history.push({kind:"autopilot_mode", mode:run.holdMode ? "hold" : "autonomous", plan:plan.status, planCreatedAt:planCreatedAt || null});
   run.planText = plan.text;
   return compactJson({commands:initial[3], guides:initial[4]}, 9000);
 }
@@ -892,6 +920,10 @@ async function executeDailyDecision(env, run, decision, provider) {
     (read && readStillVisible(run, readKey)
       ? "same read already done since the last state change; its result is in the history above. Act on it, choose a different action, or finish"
       : null) ||
+    (run.holdMode && DAILY_HOLD_BLOCKED.has(action)
+      ? "hold mode: Gremlin is flying this ship (recent captain's log plan); do not leave, jump, travel or take missions. Reply to messages, refuel/repair, complete his missions if possible, or finish"
+      : null) ||
+    (action === "jump" ? routeJumpBlock(run, args.id) : null) ||
     (action === "accept_mission" ? missionChoiceBlock(run, args.id) : null);
   if (blockReason) return block(blockReason);
 
@@ -928,6 +960,19 @@ async function executeDailyDecision(env, run, decision, provider) {
   const result = await safeObs(env, tool, action, callArgs, moving ? AbortSignal.timeout(remaining) : undefined);
   run.history.push({kind:"action", tool, action, args:callArgs, why:String(decision.why || "").slice(0,250), result});
   if (action === "accept_mission" && result.ok) run.missionAccepted = true;
+  if (result.ok) for (const id of baseIdsIn(result.data)) run.knownBases.add(id);
+  if (action === "find_route" && result.ok) {
+    run.route = stationRoute(result.data, callArgs.id, run.knownBases, DAILY_MAX_ROUTE_JUMPS);
+    run.routeIndex = 0;
+  }
+  if (action === "jump") {
+    // A failed jump may still have moved the ship: re-plan from live state.
+    if (result.ok && run.route) run.routeIndex += 1;
+    else run.route = null;
+  } else if (!read && action !== "find_route") {
+    // Other writes (travel burns fuel) invalidate the fuel check: re-plan before jumping.
+    run.route = null;
+  }
   if (action === "captains_log_add" && result.ok) run.loggedThisRun = true;
   if (!read && result.ok && action !== "captains_log_add") run.changes.push(describeChange(action, callArgs));
   if (action === "get_missions" && result.ok) run.missionBoardText += compactJson(result.data, 200_000);
@@ -955,7 +1000,8 @@ async function clearSeenNotifications(env, run) {
 async function finishDailyRun(env, startedAt, history, run = null) {
   let dock = null;
   try {
-    dock = await ensureDocked(env);
+    // Hold mode keeps the ship where Gremlin left it: dock in place only.
+    dock = await ensureDocked(env, {allowTravel:!run?.holdMode});
   } catch (err) {
     dock = {docked:false, error:errorText(err, 700)};
   }
@@ -967,6 +1013,7 @@ async function finishDailyRun(env, startedAt, history, run = null) {
     finishedAt:new Date().toISOString(),
     docked,
     dock,
+    mode:run ? (run.holdMode ? "hold" : "autonomous") : null,
     finalStatus:dock.status || dock.dock || null,
     history:history.slice(-18)
   };
@@ -989,6 +1036,12 @@ async function runDailyGremlin(env) {
     // read key -> history index of its result (Infinity: always in the prompt).
     readsSinceChange:new Map(),
     missionAccepted:false,
+    holdMode:true,
+    // Station-bound route from the last successful find_route and progress along it.
+    route:null,
+    routeIndex:0,
+    // Station/base ids seen in this run's game data; find_route targets must be one.
+    knownBases:new Set(),
     // Successful state-changing actions, for the closing [autopilot] log entry.
     changes:[],
     loggedThisRun:false,
