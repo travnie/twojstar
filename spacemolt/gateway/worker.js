@@ -373,17 +373,21 @@ const DAILY_SUBREQUEST_LIMIT = 50;
 // Cold login 4, 7 startup reads, up to DAILY_PLAN_LOG_READS captain's log reads.
 const DAILY_PLAN_LOG_READS = 3;
 const DAILY_SUBREQUESTS_START = 4 + 7 + DAILY_PLAN_LOG_READS;
-// relogin 5, ensureDocked 13, notification clear 1, auto log (room check + add) 2.
-const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1 + 2;
+// relogin 5, ensureDocked 13, notification clear 1, autopilot log 6 (verify + delete for up to
+// AUTOPILOT_LOG_DELETES own entries, room check, add).
+const DAILY_SUBREQUESTS_RESERVE = 5 + 13 + 1 + 6;
 // Gremlin's own captain's log (newest first) = the plan this autopilot follows.
 const DAILY_PLAN_PROMPT_MAX = 3500;
 const AUTOPILOT_LOG_PREFIX = "[autopilot] ";
 // Gremlin's own entry newer than this = he is flying: hold mode (no leaving, no new missions).
-const DAILY_HOLD_PLAN_AGE_MS = 48 * 60 * 60 * 1000;
+const DAILY_HOLD_PLAN_AGE_MS = 24 * 60 * 60 * 1000;
+const DAILY_REPORT_KEY = "daily:autopilot-report";
+// Own entries removed per run; each run adds one, so older leftovers still drain.
+const AUTOPILOT_LOG_DELETES = 2;
 // Autonomous trips: at most this many jumps, only along a find_route to a station.
 const DAILY_MAX_ROUTE_JUMPS = 3;
 const DAILY_HOLD_BLOCKED = new Set(["undock","jump","travel","accept_mission","mine"]);
-// Matches the daily allowlist cap on captains_log_add content.
+// Autopilot log entry cap (game allows 30000 bytes; keep Gremlin's log readable).
 const AUTOPILOT_LOG_MAX = 480;
 const DAILY_PLAN_KEY = "daily:gremlin-plan";
 const DAILY_PLAN_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -642,15 +646,15 @@ async function runPlannerModel(env, run, messages, rotateBy) {
 const DAILY_SYSTEM_PROMPT =
   "You are the autopilot of Gremlin-5, a SpaceMolt explorer-drone that Gremlin (a GPT character) flies himself. Act cautiously and efficiently. " +
   "Follow Gremlin's plan from his captain's log (non-[autopilot] entries, newest first): continue what he started and never undo or contradict it. Use your own initiative (missions, travel, mining) only when the plan is empty, done or impossible right now. " +
-  "Mode (autopilot_mode in history) is a policy from captain's log recency, not proof Gremlin is online: hold = his entry is recent or unknown; stay put, no undock/jump/travel/mine/accept_mission; only reply, refuel/repair, complete his missions, log. autonomous = his log is empty or stale; you may act, but jumps only along a fresh find_route to a known station base id within 3 jumps, then travel there and dock. " +
-  "If you changed anything this run, end with one short captains_log_add (2-3 sentences: what you did, where you are, what is next); the gateway tags it [autopilot]. " +
+  "Mode (autopilot_mode in history) is a policy from captain's log recency, not proof Gremlin is online: hold = his entry is recent or unknown; stay put, no undock/jump/travel/mine/accept_mission; only reply to messages, refuel/repair, complete his missions; if he left the ship undocked the gateway docks it nearby. autonomous = his log is empty or stale; you may act, but jumps only along a fresh find_route to a known station base id within 3 jumps, then travel there and dock. " +
+  "End with {\"kind\":\"finish\",\"reason\":...}: put what is next for Gremlin in the reason (max 120 chars); the gateway writes the single [autopilot] log entry. Never touch drones. " +
   "Priorities: preserve ship and fuel; reply in English to relevant unread private/faction messages, especially allies Iron Claw Bartek and Claudiusz; " +
   "progress active missions with overlapping routes and improve credits/mining/exploration; keep Captain's Log useful; finish safely docked. " +
   "Never attack, hunt, self-destruct, jettison, abandon missions, scrap/refit/buy/sell/commission ships, spend faction treasury, or take irreversible faction/citizenship actions. " +
   "Before travel or jump inspect route/system/state, verify fuel and destination security, and keep enough fuel to reach a dock. Read get_commands and relevant get_guide entries instead of guessing unfamiliar mechanics. For mission actions, verify active mission objectives and turn-in requirements. Never infer an ID or mechanic that is not in observations or a guide. Do not repeat failed actions unchanged. " +
   "If the local board says no missions, do not keep re-reading it: use find_route/search_systems toward your home_base or a nearby empire station, travel/jump there within safe fuel, dock and read its board; or mine at a nearby belt if cargo allows. " +
   "Missions: work one at a time. With no active mission you may accept exactly one from get_missions that allowed actions can finish (delivery, mining, exploration); never combat, bounty, cull or escort, and avoid Fixer cargo-advance contracts. Then progress it across runs and complete_mission when done. " +
-  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat/captain log; ship read-only; drone list/get/recall; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Routing: find_route(id=<system, poi or base id>; use search_systems to find ids), jump(id=<adjacent system_id>), travel(id=<poi_id or base_id>). Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission (args.id = mission_id). There is NO list_missions action. " +
+  "Allowed operations: spacemolt reads plus travel,jump,dock,undock,refuel,repair,mine,accept_mission,complete_mission; social read/chat, captain log read; ship read-only; battle status; if already in a battle you did not start, defend with battle retreat, stance (flee, brace, evade or fire; never board), target or reload. Routing: find_route(id=<system, poi or base id>; use search_systems to find ids), jump(id=<adjacent system_id>), travel(id=<poi_id or base_id>). Exact mission action names are get_missions, get_active_missions, accept_mission (args.id = mission_id), complete_mission (args.id = mission_id). There is NO list_missions action. " +
   "Do not repeat a read whose result is already in the history unless a later action (travel, dock, mine, chat...) may have changed it; refresh after such actions. Finish when nothing useful is left. " +
   "Return exactly one JSON object (never an array, one action per reply) and no prose. Use either " +
   "{\"kind\":\"act\",\"tool\":\"spacemolt\",\"action\":\"get_status\",\"args\":{},\"why\":\"short reason\"} " +
@@ -685,6 +689,7 @@ async function activeMissionBlock(env, run) {
 // seen is kept in STATE, so a run of autopilot reports cannot hide it.
 async function readGremlinPlan(env) {
   const entries = [];
+  const ownEntries = [];
   let found = null;
   let readFailed = false;
   for (let index = 0; index < DAILY_PLAN_LOG_READS; index++) {
@@ -697,11 +702,10 @@ async function readGremlinPlan(env) {
     const entry = data?.entry;
     if (!entry || typeof entry.entry !== "string") break;
     const item = {index:entry.index, created_at:entry.created_at, entry:entry.entry};
-    entries.push(item);
-    if (!isAutopilotEntry(entry.entry)) {
-      found = item;
-      break;
-    }
+    if (isAutopilotEntry(entry.entry)) ownEntries.push(item);
+    else if (!found) found = item;
+    // Past Gremlin's entry only own reports matter (to replace them), not his older plans.
+    if (!found || isAutopilotEntry(entry.entry)) entries.push(item);
     if (!data.has_next) break;
   }
   if (found) {
@@ -710,7 +714,7 @@ async function readGremlinPlan(env) {
     } catch (err) {
       console.warn("SpaceMolt plan cache write failed", errorText(err, 240));
     }
-    return {status:"ok", createdAt:found.created_at, text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
+    return {status:"ok", createdAt:found.created_at, ownEntries, text:compactJson(entries, DAILY_PLAN_PROMPT_MAX)};
   }
   // Only autopilot reports within reach (or a page failed): fall back to the last plan seen.
   const cached = await env.STATE.get(DAILY_PLAN_KEY).catch(() => null);
@@ -720,7 +724,7 @@ async function readGremlinPlan(env) {
   const note = cached
     ? `Newest entries are your own reports; Gremlin's last known plan (cached, may be stale): ${cached}`
     : "Newest entries are your own reports and Gremlin's plan is older than they reach; treat the plan as unknown, not empty: only safe, reversible actions.";
-  return {status:"older", text:compactJson({note, recent:entries}, DAILY_PLAN_PROMPT_MAX)};
+  return {status:"older", ownEntries, text:compactJson({note, recent:entries}, DAILY_PLAN_PROMPT_MAX)};
 }
 
 function isAutopilotEntry(text) {
@@ -746,21 +750,44 @@ function describeChange(action, args) {
 async function writeAutopilotLog(env, run, dock) {
   if (dock?.changed && dock?.docked) run.changes.push(`auto-dock${dock.target ? ` ${String(dock.target).slice(0, 40)}` : ""}`);
   if (!run.changes.length) return {written:false, reason:"no state change"};
-  if (run.loggedThisRun) return {written:false, reason:"planner already logged"};
-  if (!await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full"};
   const status = sc(dock?.status || dock?.dock || null);
   const where = [status?.location?.poi_name, status?.location?.system_name].filter(Boolean).join(", ");
   const fuel = status?.ship ? ` Fuel ${status.ship.fuel}/${status.ship.max_fuel}.` : "";
   const day = new Date().toISOString().slice(0, 10);
   // dock.error = ensureDocked threw: state unverified, not "not docked".
   const state = dock?.docked ? `Docked${where ? ` at ${where}` : ""}` : dock?.error ? "Dock state unknown (check failed)" : "NOT docked";
-  // Budget the action list so date, dock state and fuel always survive.
-  const tail = `. ${state}.${fuel}`;
+  const next = run.finishReason ? ` Next: ${run.finishReason.replace(/\s+/gu, " ").slice(0, 120)}` : "";
+  // Budget the action list so date, dock state, fuel and next step always survive.
+  const tail = `. ${state}.${fuel}${next}`;
   const room = Math.max(0, AUTOPILOT_LOG_MAX - AUTOPILOT_LOG_PREFIX.length - day.length - 2 - tail.length);
   let actions = run.changes.join("; ");
   if (actions.length > room) actions = `${actions.slice(0, Math.max(0, room - 3)).replace(/;[^;]*$/u, "")}...`;
-  const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content:autopilotLogContent(`${day}: ${actions}${tail}`)});
-  return {written:result.ok, ...(result.ok ? {} : {error:result.error})};
+  const content = autopilotLogContent(`${day}: ${actions}${tail}`);
+  try {
+    await env.STATE.put(DAILY_REPORT_KEY, content, {expirationTtl:DAILY_PLAN_TTL_SECONDS});
+  } catch (err) {
+    console.warn("SpaceMolt report cache write failed", errorText(err, 240));
+  }
+  // One slot: replace this autopilot's earlier entries, never Gremlin's.
+  const deleted = await deleteOwnLogEntries(env, run.ownLogEntries);
+  if (!deleted && !await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full", kv:DAILY_REPORT_KEY};
+  const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content});
+  return {written:result.ok, deleted, ...(result.ok ? {} : {error:result.error})};
+}
+
+// Delete own [autopilot] entries seen at startup, oldest (highest index) first so lower
+// indexes stay valid. Each one is re-read and must match exactly before it is deleted.
+async function deleteOwnLogEntries(env, entries) {
+  let deleted = 0;
+  for (const own of [...entries].sort((a, b) => b.index - a.index).slice(0, AUTOPILOT_LOG_DELETES)) {
+    if (!Number.isInteger(own.index) || !isAutopilotEntry(own.entry)) continue;
+    const page = await safeObs(env, "spacemolt_social", "captains_log_list", {index:own.index});
+    const live = page.ok ? sc(page.data)?.entry : null;
+    if (!live || live.entry !== own.entry || live.created_at !== own.created_at) continue;
+    const gone = await safeObs(env, "spacemolt_social", "captains_log_delete", {index:own.index});
+    if (gone.ok) deleted += 1;
+  }
+  return deleted;
 }
 
 function autopilotLogContent(content) {
@@ -802,6 +829,7 @@ async function gatherDailyObservations(env, run) {
   });
   const plan = await readGremlinPlan(env);
   run.planStatus = plan.status;
+  run.ownLogEntries = plan.ownEntries || [];
   // Hold policy (inferred from log recency, not proof Gremlin is online): autonomous only on an
   // empty log, or when his newest entry was actually read and is parsably older than
   // DAILY_HOLD_PLAN_AGE_MS. Hidden/older/unparsable plans hold.
@@ -884,7 +912,8 @@ async function planDailyStep(env, run, mechanics) {
   }
   if (decision.kind === "finish") {
     run.plannerInvalidCount = 0;
-    run.history.push({kind:"finish", reason:String(decision.reason || "planner finished").slice(0,400)});
+    run.finishReason = String(decision.reason || "").slice(0, 400);
+    run.history.push({kind:"finish", reason:run.finishReason || "planner finished"});
     return {outcome:"stop"};
   }
   return {outcome:"act", decision, provider};
@@ -904,10 +933,8 @@ async function executeDailyDecision(env, run, decision, provider) {
   const read = isDailyRead(tool, action);
   // Planner reads are peeks; only the batch shown in the first prompt is cleared at the end.
   // accept_mission sends only the checked id (no template_id override).
-  // Autopilot log entries are tagged so Gremlin (and later runs) can tell them from his plan.
   const callArgs = action === "get_notifications" ? {...args, clear:false}
-    : action === "accept_mission" ? {id:args.id}
-    : action === "captains_log_add" ? {...args, content:autopilotLogContent(args.content)} : args;
+    : action === "accept_mission" ? {id:args.id} : args;
   const readKey = read ? dailyReadKey(tool, action, callArgs) : "";
   const block = (reason) => {
     run.blockedCount += 1;
@@ -928,7 +955,7 @@ async function executeDailyDecision(env, run, decision, provider) {
   if (blockReason) return block(blockReason);
 
   // accept_mission also pays for its live get_status check.
-  const cost = action === "captains_log_add" || action === "accept_mission" ? 2 : 1;
+  const cost = action === "accept_mission" ? 2 : 1;
   if (run.subrequests + cost > DAILY_SUBREQUEST_LIMIT - DAILY_SUBREQUESTS_RESERVE) {
     run.history.push({kind:"subrequest_budget_exhausted", used:run.subrequests, skipped:action});
     return "stop";
@@ -950,10 +977,6 @@ async function executeDailyDecision(env, run, decision, provider) {
   // Reset only once every guard passed, so repeated guard blocks still reach DAILY_MAX_BLOCKED.
   run.blockedCount = 0;
   run.plannerInvalidCount = 0;
-  if (action === "captains_log_add" && !await captainsLogHasRoom(env)) {
-    run.history.push({kind:"blocked", tool, action, reason:"captains_log_full: appending would evict the oldest entry"});
-    return "continue";
-  }
   // Movement can long-poll; stop waiting once the loop budget is spent so docking and the summary still run.
   const moving = action === "travel" || action === "jump";
   const remaining = Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
@@ -973,8 +996,7 @@ async function executeDailyDecision(env, run, decision, provider) {
     // Other writes (travel burns fuel) invalidate the fuel check: re-plan before jumping.
     run.route = null;
   }
-  if (action === "captains_log_add" && result.ok) run.loggedThisRun = true;
-  if (!read && result.ok && action !== "captains_log_add") run.changes.push(describeChange(action, callArgs));
+  if (!read && result.ok) run.changes.push(describeChange(action, callArgs));
   if (action === "get_missions" && result.ok) run.missionBoardText += compactJson(result.data, 200_000);
   // Any non-read may change game state (even a failed one, e.g. a timed-out travel), so
   // earlier reads become stale. Failed reads stay retryable.
@@ -1000,8 +1022,8 @@ async function clearSeenNotifications(env, run) {
 async function finishDailyRun(env, startedAt, history, run = null) {
   let dock = null;
   try {
-    // Hold mode keeps the ship where Gremlin left it: dock in place only.
-    dock = await ensureDocked(env, {allowTravel:!run?.holdMode});
+    // Even in hold mode, a ship Gremlin left undocked is taken to a station in its system (no jumps).
+    dock = await ensureDocked(env);
   } catch (err) {
     dock = {docked:false, error:errorText(err, 700)};
   }
@@ -1036,6 +1058,8 @@ async function runDailyGremlin(env) {
     // read key -> history index of its result (Infinity: always in the prompt).
     readsSinceChange:new Map(),
     missionAccepted:false,
+    // This autopilot's earlier log entries seen at startup (replaced by this run's report).
+    ownLogEntries:[],
     holdMode:true,
     // Station-bound route from the last successful find_route and progress along it.
     route:null,
@@ -1044,7 +1068,6 @@ async function runDailyGremlin(env) {
     knownBases:new Set(),
     // Successful state-changing actions, for the closing [autopilot] log entry.
     changes:[],
-    loggedThisRun:false,
     // Serialized get_missions results; accept_mission ids must appear here.
     missionBoardText:"",
     maxSteps:positiveInt(env.DAILY_MAX_STEPS, DAILY_DEFAULT_MAX_STEPS, 24),

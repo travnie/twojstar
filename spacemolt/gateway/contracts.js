@@ -182,11 +182,11 @@ export const DAILY_ALLOWED = {
     "travel","jump","dock","undock","refuel","repair","mine","accept_mission","complete_mission"
   ],
   spacemolt_social: [
-    "get_chat_history","chat","captains_log_add","captains_log_list","captains_log_get",
+    "get_chat_history","chat","captains_log_list","captains_log_get",
     "get_action_log","get_notes","read_note"
   ],
   spacemolt_ship: ["list_ships","browse_ships","view_ship_buy_orders","commission_status"],
-  spacemolt_drone: ["list","get","recall"],
+  // No spacemolt_drone: Gremlin's drones are his alone.
   spacemolt_battle: ["status","retreat","stance","target","reload"]
 };
 
@@ -194,6 +194,9 @@ export const DAILY_ALLOWED = {
 // planner can correct the call instead of repeating it.
 export function dailyBlockReason(tool, action, args) {
   if (DAILY_HARD_DENY.has(action)) return `${action} is never allowed`;
+  if (action === "captains_log_add" || action === "captains_log_delete") {
+    return "the gateway writes the single [autopilot] log entry; put the next step in the finish reason";
+  }
   // Own-property check: planner output may name inherited keys such as "constructor".
   const allowed = Object.hasOwn(DAILY_ALLOWED, tool) ? DAILY_ALLOWED[tool] : null;
   if (!Array.isArray(allowed) || !allowed.includes(action)) {
@@ -214,9 +217,6 @@ export function dailyBlockReason(tool, action, args) {
     return "only defensive battle actions are allowed";
   }
   if ((action === "travel" || action === "jump") && (!args || !args.id)) return `${action} needs args.id`;
-  if (action === "captains_log_add" && (typeof args?.content !== "string" || !args.content.trim() || [...args.content].length > 480)) {
-    return "captains_log_add needs content: a short non-empty string (max 480 chars)";
-  }
   if (action === "complete_mission" && (typeof args?.id !== "string" || !args.id)) return "complete_mission needs args.id (the active mission_id)";
   if (action === "find_route" && (typeof args?.id !== "string" || !args.id)) return "find_route needs args.id (system, POI or base id; search_systems finds ids)";
   if (action === "accept_mission" && (typeof args?.id !== "string" || !args.id)) return "accept_mission needs args.id (a mission_id from get_missions)";

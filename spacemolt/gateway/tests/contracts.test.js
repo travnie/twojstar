@@ -87,9 +87,9 @@ test("active mission count reads get_status missions", () => {
 });
 
 test("captain's log entries must be short and non-empty", () => {
-  assert.equal(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"Docked at Arneb; next: Thuban board."}), null);
-  assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"  "}), /non-empty/);
-  assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"x".repeat(481)}), /max 480/);
+  assert.match(dailyBlockReason("spacemolt_social", "captains_log_add", {content:"Docked."}), /gateway writes/);
+  assert.match(dailyBlockReason("spacemolt_social", "captains_log_delete", {index:0}), /gateway writes/);
+  assert.match(dailyBlockReason("spacemolt_drone", "recall", {}), /not in the daily allowlist/);
 });
 
 test("route and mission completion need ids", () => {
