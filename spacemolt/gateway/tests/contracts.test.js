@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, baseIdsIn, planIsRecent, autopilotDeleteOrder, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, baseIdsIn, planIsRecent, autopilotDeleteOrder, pickScoutTarget, scoutRouteOk, systemUnsafe, pickBelt, pickStation, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -141,4 +141,27 @@ test("autopilot log deletes only own entries, oldest first, capped", () => {
   assert.deepEqual(autopilotDeleteOrder(entries, "[autopilot] ", 5).map((e) => e.index), [3, 2, 0]);
   assert.deepEqual(autopilotDeleteOrder([{index:0, entry:"Gremlin plan"}], "[autopilot] ", 2), []);
   assert.deepEqual(autopilotDeleteOrder(null, "[autopilot] ", 2), []);
+});
+
+test("scout routine pickers", () => {
+  const sys = {structuredContent:{kind:"normal", system:{id:"haven", is_stronghold:false,
+    connections:[{system_id:"far", distance:9}, {system_id:"near", distance:2}, {system_id:"mid", distance:5}],
+    pois:[{id:"belt_busy", type:"asteroid_belt", ship_count:4}, {id:"belt_quiet", type:"asteroid_belt", ship_count:0},
+      {id:"ge", type:"station", has_base:true, base_id:"ge_base"}, {id:"sun", type:"sun"}]}}};
+  assert.equal(pickScoutTarget(sys, []), "near");
+  assert.equal(pickScoutTarget(sys, ["near"]), "mid");
+  assert.equal(pickScoutTarget(sys, ["mid", "near", "far"]), "mid");
+  assert.equal(pickScoutTarget({}, []), null);
+  assert.equal(pickBelt(sys), "belt_quiet");
+  assert.equal(pickStation(sys), "ge");
+  assert.equal(pickStation({system:{pois:[{id:"x", type:"planet"}]}}), null);
+  assert.equal(systemUnsafe(sys), false);
+  assert.equal(systemUnsafe({system:{is_stronghold:true}}), true);
+  assert.equal(systemUnsafe({active_battle:{battle_id:"b"}, system:{}}), true);
+  const route = {found:true, total_jumps:1, estimated_fuel:5, fuel_per_jump:5, fuel_available:15, target_system:"near"};
+  assert.equal(scoutRouteOk(route, "near"), true);
+  assert.equal(scoutRouteOk({...route, fuel_available:14}, "near"), false);
+  assert.equal(scoutRouteOk({...route, total_jumps:2}, "near"), false);
+  assert.equal(scoutRouteOk({...route, target_system:"far"}, "near"), false);
+  assert.equal(scoutRouteOk({...route, found:false}, "near"), false);
 });
