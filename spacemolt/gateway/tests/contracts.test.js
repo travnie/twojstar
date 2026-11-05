@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, baseIdsIn, planIsRecent, mcpTools, parsePlannerDecision} from "../contracts.js";
+import {dailyAllowed, dailyBlockReason, isDailyRead, dailyReadKey, activeMissionCount, stationRoute, baseIdsIn, planIsRecent, autopilotDeleteOrder, mcpTools, parsePlannerDecision} from "../contracts.js";
 
 test("daily chat respects official 500-character limit", () => {
   const allowed = (content) => dailyAllowed("spacemolt_social", "chat", {target:"local", content});
@@ -127,4 +127,18 @@ test("plan recency parses game timestamps as UTC and fails unknown", () => {
   assert.equal(planIsRecent("2026-11-02 20:30:00", now, day2), false);
   assert.equal(planIsRecent("garbage", now, day2), null);
   assert.equal(planIsRecent("", now, day2), null);
+});
+
+test("autopilot log deletes only own entries, oldest first, capped", () => {
+  const entries = [
+    {index:0, entry:"[autopilot] newest"},
+    {index:1, entry:"Gremlin: go to Haven"},
+    {index:2, entry:"[autopilot] older"},
+    {index:3, entry:"[autopilot] oldest"},
+    {index:"4", entry:"[autopilot] bad index"},
+  ];
+  assert.deepEqual(autopilotDeleteOrder(entries, "[autopilot] ", 2).map((e) => e.index), [3, 2]);
+  assert.deepEqual(autopilotDeleteOrder(entries, "[autopilot] ", 5).map((e) => e.index), [3, 2, 0]);
+  assert.deepEqual(autopilotDeleteOrder([{index:0, entry:"Gremlin plan"}], "[autopilot] ", 2), []);
+  assert.deepEqual(autopilotDeleteOrder(null, "[autopilot] ", 2), []);
 });

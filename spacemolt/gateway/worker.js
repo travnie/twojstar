@@ -15,6 +15,7 @@ import {
   stationRoute,
   baseIdsIn,
   planIsRecent,
+  autopilotDeleteOrder,
   positiveInt,
   buyEstimateRejection,
   buyFillOverCap,
@@ -702,10 +703,14 @@ async function readGremlinPlan(env) {
     const entry = data?.entry;
     if (!entry || typeof entry.entry !== "string") break;
     const item = {index:entry.index, created_at:entry.created_at, entry:entry.entry};
-    if (isAutopilotEntry(entry.entry)) ownEntries.push(item);
-    else if (!found) found = item;
-    // Past Gremlin's entry only own reports matter (to replace them), not his older plans.
-    if (!found || isAutopilotEntry(entry.entry)) entries.push(item);
+    // Prompt gets own reports plus Gremlin's newest entry; his older entries are skipped.
+    if (isAutopilotEntry(entry.entry)) {
+      ownEntries.push(item);
+      entries.push(item);
+    } else if (!found) {
+      found = item;
+      entries.push(item);
+    }
     if (!data.has_next) break;
   }
   if (found) {
@@ -768,8 +773,10 @@ async function writeAutopilotLog(env, run, dock) {
   } catch (err) {
     console.warn("SpaceMolt report cache write failed", errorText(err, 240));
   }
-  // One slot: replace this autopilot's earlier entries, never Gremlin's.
-  const deleted = await deleteOwnLogEntries(env, run.ownLogEntries);
+  // One slot: replace this autopilot's earlier entries, never Gremlin's. Delete is by index
+  // only, so a Gremlin entry added between re-read and delete would shift onto it: skip
+  // deletes in hold mode (he may be flying right now).
+  const deleted = run.holdMode ? 0 : await deleteOwnLogEntries(env, run.ownLogEntries);
   if (!deleted && !await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full", kv:DAILY_REPORT_KEY};
   const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content});
   return {written:result.ok, deleted, ...(result.ok ? {} : {error:result.error})};
@@ -779,8 +786,7 @@ async function writeAutopilotLog(env, run, dock) {
 // indexes stay valid. Each one is re-read and must match exactly before it is deleted.
 async function deleteOwnLogEntries(env, entries) {
   let deleted = 0;
-  for (const own of [...entries].sort((a, b) => b.index - a.index).slice(0, AUTOPILOT_LOG_DELETES)) {
-    if (!Number.isInteger(own.index) || !isAutopilotEntry(own.entry)) continue;
+  for (const own of autopilotDeleteOrder(entries, AUTOPILOT_LOG_PREFIX, AUTOPILOT_LOG_DELETES)) {
     const page = await safeObs(env, "spacemolt_social", "captains_log_list", {index:own.index});
     const live = page.ok ? sc(page.data)?.entry : null;
     if (!live || live.entry !== own.entry || live.created_at !== own.created_at) continue;

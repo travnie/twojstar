@@ -361,3 +361,13 @@ export function planIsRecent(createdAt, nowMs, maxAgeMs) {
   const ms = Date.parse(raw.replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/u.test(raw) ? "" : "Z"));
   return Number.isFinite(ms) ? nowMs - ms <= maxAgeMs : null;
 }
+
+// Own log entries to delete: valid index and [autopilot] prefix, oldest (highest index) first
+// so deleting one keeps the lower indexes valid; at most max per run.
+export function autopilotDeleteOrder(entries, prefix, max) {
+  const tag = String(prefix).trim();
+  return (Array.isArray(entries) ? entries : [])
+    .filter((e) => Number.isInteger(e?.index) && e.index >= 0 && String(e.entry ?? "").trim().startsWith(tag))
+    .sort((a, b) => b.index - a.index)
+    .slice(0, max);
+}
