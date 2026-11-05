@@ -729,7 +729,9 @@ async function readGremlinPlan(env) {
   const note = cached
     ? `Newest entries are your own reports; Gremlin's last known plan (cached, may be stale): ${cached}`
     : "Newest entries are your own reports and Gremlin's plan is older than they reach; treat the plan as unknown, not empty: only safe, reversible actions.";
-  return {status:"older", ownEntries, text:compactJson({note, recent:entries}, DAILY_PLAN_PROMPT_MAX)};
+  // His newest entry is older than every report read above it: the oldest one bounds its age.
+  const olderThan = readFailed ? null : entries.at(-1)?.created_at || null;
+  return {status:"older", olderThan, ownEntries, text:compactJson({note, recent:entries}, DAILY_PLAN_PROMPT_MAX)};
 }
 
 function isAutopilotEntry(text) {
@@ -777,6 +779,8 @@ async function writeAutopilotLog(env, run, dock) {
   // only, so a Gremlin entry added between re-read and delete would shift onto it: skip
   // deletes in hold mode (he may be flying right now).
   const deleted = run.holdMode ? 0 : await deleteOwnLogEntries(env, run.ownLogEntries);
+  // Never stack: an own report still in the log means this one stays in KV only.
+  if (run.ownLogEntries.length > deleted) return {written:false, reason:"own_report_kept", kv:DAILY_REPORT_KEY};
   if (!deleted && !await captainsLogHasRoom(env)) return {written:false, reason:"captains_log_full", kv:DAILY_REPORT_KEY};
   const result = await safeObs(env, "spacemolt_social", "captains_log_add", {content});
   return {written:result.ok, deleted, ...(result.ok ? {} : {error:result.error})};
@@ -842,6 +846,9 @@ async function gatherDailyObservations(env, run) {
   const planCreatedAt = plan.createdAt;
   if (plan.status === "empty") run.holdMode = false;
   else if (plan.status === "ok") run.holdMode = planIsRecent(planCreatedAt, Date.now(), DAILY_HOLD_PLAN_AGE_MS) !== false;
+  // Only own reports in reach: autonomous once the oldest of them (an upper bound on his
+  // entry's age) is stale too, so a stack of reports cannot pin hold mode forever.
+  else if (plan.status === "older" && plan.olderThan) run.holdMode = planIsRecent(plan.olderThan, Date.now(), DAILY_HOLD_PLAN_AGE_MS) !== false;
   else run.holdMode = true;
   run.history.push({kind:"autopilot_mode", mode:run.holdMode ? "hold" : "autonomous", plan:plan.status, planCreatedAt:planCreatedAt || null});
   run.planText = plan.text;
