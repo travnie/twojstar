@@ -1,13 +1,14 @@
 """Lightweight connection handling for MCP servers."""
 
 from abc import ABC, abstractmethod
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
+from mcp.shared._httpx_utils import create_mcp_http_client
 
 
 class MCPConnection(ABC):
@@ -59,7 +60,7 @@ class MCPConnection(ABC):
             {
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": tool.inputSchema,
+                "input_schema": tool.input_schema,
             }
             for tool in response.tools
         ]
@@ -73,7 +74,7 @@ class MCPConnection(ABC):
 class MCPConnectionStdio(MCPConnection):
     """MCP connection using standard input/output."""
 
-    def __init__(self, command: str, args: list[str] = None, env: dict[str, str] = None):
+    def __init__(self, command: str, args: list[str] | None = None, env: dict[str, str] | None = None):
         super().__init__()
         self.command = command
         self.args = args or []
@@ -88,7 +89,7 @@ class MCPConnectionStdio(MCPConnection):
 class MCPConnectionSSE(MCPConnection):
     """MCP connection using Server-Sent Events."""
 
-    def __init__(self, url: str, headers: dict[str, str] = None):
+    def __init__(self, url: str, headers: dict[str, str] | None = None):
         super().__init__()
         self.url = url
         self.headers = headers or {}
@@ -97,25 +98,33 @@ class MCPConnectionSSE(MCPConnection):
         return sse_client(url=self.url, headers=self.headers)
 
 
+@asynccontextmanager
+async def _http_streams(url: str, headers: dict[str, str]):
+    """mcp 2.x: headers go on the httpx client, not the transport."""
+    async with create_mcp_http_client(headers=headers) as client:
+        async with streamable_http_client(url, http_client=client) as streams:
+            yield streams
+
+
 class MCPConnectionHTTP(MCPConnection):
     """MCP connection using Streamable HTTP."""
 
-    def __init__(self, url: str, headers: dict[str, str] = None):
+    def __init__(self, url: str, headers: dict[str, str] | None = None):
         super().__init__()
         self.url = url
         self.headers = headers or {}
 
     def _create_context(self):
-        return streamablehttp_client(url=self.url, headers=self.headers)
+        return _http_streams(self.url, self.headers)
 
 
 def create_connection(
     transport: str,
-    command: str = None,
-    args: list[str] = None,
-    env: dict[str, str] = None,
-    url: str = None,
-    headers: dict[str, str] = None,
+    command: str | None = None,
+    args: list[str] | None = None,
+    env: dict[str, str] | None = None,
+    url: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> MCPConnection:
     """Factory function to create the appropriate MCP connection.
 

@@ -36,6 +36,7 @@ def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
         cmd,
         input=prompt,
         capture_output=True,
+        check=False,
         text=True,
         env=env,
         timeout=timeout,

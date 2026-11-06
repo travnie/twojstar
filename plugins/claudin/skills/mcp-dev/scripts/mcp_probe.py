@@ -70,7 +70,8 @@ class Probe:
             self.url, json.dumps(body).encode(), h, method="POST"
         )
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            # Scheme is restricted to http(s) in main() before any request.
+            with urllib.request.urlopen(req, timeout=30) as r:  # skipcq: BAN-B310
                 self.session = r.headers.get("mcp-session-id") or self.session
                 raw = r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:

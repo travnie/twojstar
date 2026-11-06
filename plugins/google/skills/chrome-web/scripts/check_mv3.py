@@ -61,7 +61,8 @@ def refs(m: dict):
     add(act.get("default_popup"))
     di = act.get("default_icon")
     if isinstance(di, dict):
-        [add(v) for v in di.values()]
+        for v in di.values():
+            add(v)
     else:
         add(di)
     bg = m.get("background") or {}

@@ -286,7 +286,7 @@ def generate_benchmark(
             )
 
     # Determine eval IDs from results
-    eval_ids = sorted(set(r["eval_id"] for config in results.values() for r in config))
+    eval_ids = sorted({r["eval_id"] for config in results.values() for r in config})
 
     benchmark = {
         "metadata": {

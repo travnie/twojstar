@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import webbrowser
+from typing import Any
 from pathlib import Path
 
 from scripts.generate_report import generate_html
@@ -78,7 +79,7 @@ def run_loop(
         train_set = eval_set
         test_set = []
 
-    history = []
+    history: list[dict[str, Any]] = []
     exit_reason = "unknown"
 
     for iteration in range(1, max_iterations + 1):
@@ -130,7 +131,10 @@ def run_loop(
                 "failed": test_total - test_passed,
                 "total": test_total,
             }
-            test_results = {"results": test_result_list, "summary": test_summary}
+            test_results: dict[str, Any] | None = {
+                "results": test_result_list,
+                "summary": test_summary,
+            }
         else:
             test_results = None
             test_summary = None
@@ -199,7 +203,7 @@ def run_loop(
                     )
 
             print_eval_stats("Train", train_results["results"], eval_elapsed)
-            if test_summary:
+            if test_results:
                 print_eval_stats("Test ", test_results["results"], 0)
 
         if train_summary["failed"] == 0:

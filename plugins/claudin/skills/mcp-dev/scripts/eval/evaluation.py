@@ -10,10 +10,10 @@ import re
 import sys
 import time
 import traceback
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+import defusedxml.ElementTree as ET
 from anthropic import Anthropic
 
 from connections import create_connection
@@ -102,7 +102,7 @@ async def agent_loop(
     connection: Any,
 ) -> tuple[str, dict[str, Any]]:
     """Run the agent loop with MCP tools."""
-    messages = [{"role": "user", "content": question}]
+    messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
 
     response = await asyncio.to_thread(
         client.messages.create,
@@ -115,7 +115,7 @@ async def agent_loop(
 
     messages.append({"role": "assistant", "content": response.content})
 
-    tool_metrics = {}
+    tool_metrics: dict[str, dict[str, Any]] = {}
 
     while response.stop_reason == "tool_use":
         tool_results = []
@@ -162,7 +162,7 @@ async def agent_loop(
 
     response_text = next(
         (block.text for block in response.content if hasattr(block, "text")),
-        None,
+        "",
     )
     return response_text, tool_metrics
 
@@ -290,7 +290,7 @@ async def run_evaluation(
 
 def parse_headers(header_list: list[str]) -> dict[str, str]:
     """Parse header strings in format 'Key: Value' into a dictionary."""
-    headers = {}
+    headers: dict[str, str] = {}
     if not header_list:
         return headers
 
@@ -305,7 +305,7 @@ def parse_headers(header_list: list[str]) -> dict[str, str]:
 
 def parse_env_vars(env_list: list[str]) -> dict[str, str]:
     """Parse environment variable strings in format 'KEY=VALUE' into a dictionary."""
-    env = {}
+    env: dict[str, str] = {}
     if not env_list:
         return env
 

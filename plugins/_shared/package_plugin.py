@@ -63,7 +63,7 @@ def read_skill_frontmatter(path: Path) -> dict:
     return data
 
 
-def validate(root: Path) -> tuple[dict, dict]:
+def validate(root: Path) -> tuple[dict, dict | None]:
     manifest = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
     if manifest.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
         raise ValueError("expected Agent Plugins 1.0 manifest")

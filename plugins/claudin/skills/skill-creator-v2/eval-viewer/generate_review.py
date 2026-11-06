@@ -18,6 +18,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -336,10 +337,14 @@ def generate_html(
 
 def _kill_port(port: int) -> None:
     """Kill any process listening on the given port."""
+    lsof = shutil.which("lsof")
+    if not lsof:
+        return
     try:
         result = subprocess.run(
-            ["lsof", "-ti", f":{port}"],
+            [lsof, "-ti", f":{port}"],
             capture_output=True,
+            check=False,
             text=True,
             timeout=5,
         )
@@ -382,7 +387,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
-        if self.path == "/" or self.path == "/index.html":
+        if self.path in {"/", "/index.html"}:
             # Regenerate HTML on each request (re-scans workspace for new outputs)
             runs = find_runs(self.workspace)
             benchmark = None
@@ -421,7 +426,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 self.feedback_path.write_text(json.dumps(data, indent=2) + "\n")
                 resp = b'{"ok":true}'
                 self.send_response(200)
-            except (json.JSONDecodeError, OSError, ValueError) as e:
+            except (OSError, ValueError) as e:
                 resp = json.dumps({"error": str(e)}).encode()
                 self.send_response(500)
             self.send_header("Content-Type", "application/json")
@@ -431,7 +436,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def log_message(self, format: str, *args: object) -> None:
+    def log_message(self, fmt: str, *args: object) -> None:
         # Suppress request logging to keep terminal clean
         pass
 
