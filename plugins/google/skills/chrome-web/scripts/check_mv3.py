@@ -130,6 +130,11 @@ def check(root: Path):
     for p in sorted(perms & HEAVY_PERMS):
         warnings.append(f"permission '{p}' needs a specific store justification")
     uses_action_api = False
+    sandbox_pages = {p.lstrip("/") for p in (m.get("sandbox") or {}).get("pages", [])}
+    # Default sandbox CSP allows inline scripts; a custom one must keep 'unsafe-inline'.
+    csp = m.get("content_security_policy") or {}
+    sandbox_csp = csp.get("sandbox") if isinstance(csp, dict) else None
+    sandbox_inline_ok = sandbox_csp is None or "'unsafe-inline'" in sandbox_csp
 
     for f in root.rglob("*"):
         if any(part in {"node_modules", ".git"} for part in f.parts) or not f.is_file():
@@ -150,14 +155,14 @@ def check(root: Path):
                 r"(importScripts|import\(|createElement\(['\"]script)", src
             ):
                 warnings.append(f"possible remote script load in {rel}")
-            if re.search(r"\beval\(|new Function\(", src) and rel not in {
-                p.lstrip("/") for p in (m.get("sandbox") or {}).get("pages", [])
-            }:
+            if re.search(r"\beval\(|new Function\(", src) and rel not in sandbox_pages:
                 warnings.append(
                     f"eval/new Function in {rel} (blocked by extension CSP outside sandbox pages)"
                 )
         elif f.suffix in {".html", ".htm"}:
             html = f.read_text(encoding="utf-8", errors="ignore")
+            if rel in sandbox_pages and sandbox_inline_ok:
+                continue  # sandbox pages may use inline script and handlers
             if re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html, re.I):
                 errors.append(f"inline <script> in {rel}")
             if re.search(r"\son[a-z]+\s*=\s*['\"]", html, re.I):

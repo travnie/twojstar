@@ -49,7 +49,10 @@ def run_single_query(
     full assistant message, which only arrives after tool execution.
     """
     unique_id = uuid.uuid4().hex[:8]
-    clean_name = f"{skill_name}-skill-{unique_id}"
+    # Parallel workers each add an identical command; any copy counts as this
+    # skill triggering, so match the shared prefix, not this run's unique name.
+    skill_prefix = f"{skill_name}-skill-"
+    clean_name = f"{skill_prefix}{unique_id}"
     project_commands_dir = Path(project_root) / ".claude" / "commands"
     command_file = project_commands_dir / f"{clean_name}.md"
 
@@ -149,12 +152,12 @@ def run_single_query(
                             delta = se.get("delta", {})
                             if delta.get("type") == "input_json_delta":
                                 accumulated_json += delta.get("partial_json", "")
-                                if clean_name in accumulated_json:
+                                if skill_prefix in accumulated_json:
                                     return True
 
                         elif se_type in ("content_block_stop", "message_stop"):
                             if pending_tool_name:
-                                return clean_name in accumulated_json
+                                return skill_prefix in accumulated_json
                             if se_type == "message_stop":
                                 return False
 
@@ -166,11 +169,11 @@ def run_single_query(
                                 continue
                             tool_name = content_item.get("name", "")
                             tool_input = content_item.get("input", {})
-                            if tool_name == "Skill" and clean_name in tool_input.get(
+                            if tool_name == "Skill" and skill_prefix in tool_input.get(
                                 "skill", ""
                             ):
                                 triggered = True
-                            elif tool_name == "Read" and clean_name in tool_input.get(
+                            elif tool_name == "Read" and skill_prefix in tool_input.get(
                                 "file_path", ""
                             ):
                                 triggered = True
