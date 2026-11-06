@@ -298,6 +298,20 @@ def generate_benchmark(
     # Determine eval IDs from results
     eval_ids = sorted({r["eval_id"] for config in results.values() for r in config})
 
+    # Runs actually loaded per (config, eval); a range when uneven.
+    per_cell: dict[tuple, int] = {}
+    for config, config_runs in results.items():
+        for r in config_runs:
+            key = (config, r["eval_id"])
+            per_cell[key] = per_cell.get(key, 0) + 1
+    counts = sorted(set(per_cell.values()))
+    if not counts:
+        runs_per_config: int | str = 0
+    elif len(counts) == 1:
+        runs_per_config = counts[0]
+    else:
+        runs_per_config = f"{counts[0]}-{counts[-1]}"
+
     benchmark = {
         "metadata": {
             "skill_name": skill_name or "<skill-name>",
@@ -306,7 +320,7 @@ def generate_benchmark(
             "analyzer_model": "<model-name>",
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evals_run": eval_ids,
-            "runs_per_configuration": 3,
+            "runs_per_configuration": runs_per_config,
         },
         "runs": runs,
         "run_summary": run_summary,

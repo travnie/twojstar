@@ -652,6 +652,21 @@
     let feedbackMap = {};  // run_id -> feedback text
     let currentIndex = 0;
     let visitedRuns = new Set();
+    let saveTimeout = null;
+    // Serialize feedback POSTs so a late autosave can't overwrite the final submit.
+    let saveChain = Promise.resolve();
+    function postFeedback(body) {
+      const p = saveChain.then(() => fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      })).then((resp) => {
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp;
+      });
+      saveChain = p.catch(() => {});
+      return p;
+    }
 
     // ---- Init ----
     async function init() {
@@ -670,7 +685,6 @@
 
       // Wire up feedback auto-save
       const textarea = document.getElementById("feedback");
-      let saveTimeout = null;
       textarea.addEventListener("input", () => {
         clearTimeout(saveTimeout);
         document.getElementById("feedback-status").textContent = "";
@@ -1003,12 +1017,7 @@
         }
       }
 
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reviews, status: "in_progress" }),
-      }).then((resp) => {
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
+      postFeedback(JSON.stringify({ reviews, status: "in_progress" })).then(() => {
         document.getElementById("feedback-status").textContent = "Saved";
       }).catch(() => {
         // Static mode or server unavailable — no-op on auto-save,
@@ -1036,14 +1045,11 @@
         reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
       }
       const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-      }).then((resp) => {
-        // A static file server answers 404/405 instead of rejecting; a failed
-        // write answers 500. Either way fall back to the download.
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
+      // Drop a pending debounced autosave; it would post "in_progress" after us.
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+      // Non-2xx (static file server 404/405, failed write 500) -> download.
+      postFeedback(payload).then(() => {
         document.getElementById("done-overlay").classList.add("visible");
       }).catch(() => {
         // Server not available or not saving — download as file
