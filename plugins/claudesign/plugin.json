@@ -1,0 +1,48 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "claudesign",
+  "version": "1.0.2",
+  "description": "Design toolkit in three skills: web-design (direction, DESIGN.md tokens, landing pages, anti-AI-slop build, rendered checks, site reviews), ux-design (heuristic critique, WCAG 2.2 audits, microcopy, interaction states, research and journey maps) and naming (metaphor-driven names with availability checks).",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/claudesign",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "MIT AND ISC",
+  "keywords": [
+    "design",
+    "web-design",
+    "landing-page",
+    "design-system",
+    "ux",
+    "accessibility",
+    "wcag",
+    "ux-writing",
+    "naming"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Claudesign",
+        "shortDescription": "Web design, UX, naming",
+        "longDescription": "web-design picks a direction, writes DESIGN.md and tokens, builds pages with honest copy and checks them rendered at phone, tablet and desktop; ux-design runs heuristic critiques, WCAG 2.2 audits, microcopy and research plans with severity-ordered output; naming finds product and project names through metaphor territories with real availability checks. Personal toolkit maintained by travnie.",
+        "developerName": "travnie",
+        "category": "Design",
+        "capabilities": [
+          "Interactive",
+          "Write"
+        ],
+        "defaultPrompt": [
+          "Design a landing page for this app and write the DESIGN.md first",
+          "Audit this page against WCAG 2.2 AA",
+          "Find a name for my RSS reader app"
+        ],
+        "brandColor": "#E8590C",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg",
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/claudesign"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "claude-code-docs": {
+      "logo": "./assets/icon.svg"
+    },
+    "claude-ai-docs": {
+      "logo": "./assets/icon.svg"
+    },
+    "claude-platform-docs": {
+      "logo": "./assets/icon.svg"
+    },
+    "mcp-docs": {
+      "logo": "./assets/icon.svg"
+    },
+    "openai-docs": {
+      "logo": "./assets/icon.svg"
+    },
+    "xai-docs": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "mcp-dev": {
+      "iconSmall": "./skills/mcp-dev/assets/icon.svg",
+      "iconLarge": "./skills/mcp-dev/assets/icon.svg"
+    },
+    "plugin-dev": {
+      "iconSmall": "./skills/plugin-dev/assets/icon.svg",
+      "iconLarge": "./skills/plugin-dev/assets/icon.svg"
+    },
+    "skill-creator-v2": {
+      "iconSmall": "./skills/skill-creator-v2/assets/icon.svg",
+      "iconLarge": "./skills/skill-creator-v2/assets/icon.svg"
+    }
+  }
+}

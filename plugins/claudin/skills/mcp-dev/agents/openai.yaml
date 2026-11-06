@@ -1,0 +1,21 @@
+interface:
+  display_name: "MCP Dev"
+  short_description: "Design, build, test and ship MCP servers and MCP Apps for Claude and ChatGPT"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#D97757"
+  default_prompt: "Use $mcp-dev to design a remote MCP server for this API."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "mcp-docs"
+      description: "Model Context Protocol spec and SDK docs"
+      transport: "streamable_http"
+      url: "https://modelcontextprotocol.io/mcp"

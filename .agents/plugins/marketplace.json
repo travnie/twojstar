@@ -53,10 +53,22 @@
       "category": "Developer Tools"
     },
     {
-      "name": "claude-dev-kit",
+      "name": "google",
       "source": {
         "source": "local",
-        "path": "./plugins/claude-dev-kit"
+        "path": "./plugins/google"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "claudin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/claudin"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -99,6 +111,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
+    },
+    {
+      "name": "claudesign",
+      "source": {
+        "source": "local",
+        "path": "./plugins/claudesign"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Design"
     }
   ]
 }

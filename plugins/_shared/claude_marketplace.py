@@ -17,7 +17,9 @@ SOURCE = ROOT / ".agents/plugins/marketplace.json"
 TARGET = ROOT / ".claude-plugin/marketplace.json"
 
 # Claude Code disallows names beginning with "claude-". Preserve the display name.
-CLAUDE_NAMES = {"claude-dev-kit": "devkit-claude"}
+CLAUDE_NAMES: dict[str, str] = {}
+# Append-only history of Claude plugin ids, so existing installs migrate instead of breaking.
+RENAMES = {"devkit-claude": "claudin"}
 
 
 def catalog() -> dict:
@@ -75,6 +77,10 @@ def catalog() -> dict:
                 # The same portable mcp.json is the only edited URL source.
                 item["mcpServers"] = servers
         result["plugins"].append(item)
+    for old, new in RENAMES.items():
+        if new is not None and new not in names:
+            raise ValueError(f"rename target missing: {old} -> {new}")
+    result["renames"] = RENAMES
     return result
 
 

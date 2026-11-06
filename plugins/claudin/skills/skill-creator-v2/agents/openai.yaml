@@ -1,0 +1,13 @@
+interface:
+  display_name: "Skill Creator"
+  short_description: "Create, edit, eval, and package agent skills"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#FFC93C"
+  default_prompt: "Use $skill-creator-v2 to create or improve a skill."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true

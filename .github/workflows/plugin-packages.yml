@@ -29,10 +29,12 @@ on:
         default: all
         options:
           - all
-          - claude-dev-kit
+          - claudesign
+          - claudin
           - cloudflare
           - desktop-commander
           - github-ops
+          - google
           - google-dev-kit
           - openai-dev-kit
           - spacemolt

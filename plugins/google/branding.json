@@ -1,0 +1,21 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {
+    "google-developer": {
+      "logo": "./assets/icon.svg"
+    }
+  },
+  "skills": {
+    "android-compose": {
+      "iconSmall": "./skills/android-compose/assets/icon.svg",
+      "iconLarge": "./skills/android-compose/assets/icon.svg"
+    },
+    "chrome-web": {
+      "iconSmall": "./skills/chrome-web/assets/icon.svg",
+      "iconLarge": "./skills/chrome-web/assets/icon.svg"
+    }
+  }
+}

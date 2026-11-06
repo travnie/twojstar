@@ -1,0 +1,13 @@
+interface:
+  display_name: "Naming"
+  short_description: "Metaphor-driven product, brand, and project naming with real availability checks"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#4F46E5"
+  default_prompt: "Use $naming to find a name for this."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true

@@ -1,0 +1,21 @@
+interface:
+  display_name: "Android Compose"
+  short_description: "Android/Kotlin/Compose — MVVM, Hilt, AGP 9, KMP, Nav 3, testing, performance, widgets, media"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#3DDC84"
+  default_prompt: "Use $android-compose to build or review this Android/Compose code."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "google-developer"
+      description: "Google Developer Knowledge — search and fetch current Android, Jetpack and Firebase docs"
+      transport: "streamable_http"
+      url: "https://developerknowledge.googleapis.com/mcp"

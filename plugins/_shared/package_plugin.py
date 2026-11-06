@@ -86,12 +86,14 @@ def validate(root: Path) -> tuple[dict, dict]:
             raise ValueError(f"missing interface asset: {key}")
         safe_asset(root, value)
 
-    mcp = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
-    if mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+    # mcp.json is optional: a skills-only plugin has none (Agent Plugins 1.0).
+    mcp_path = root / "mcp.json"
+    mcp = json.loads(mcp_path.read_text(encoding="utf-8")) if mcp_path.is_file() else None
+    if mcp is not None and mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
         raise ValueError("expected portable MCP schema")
-    servers = mcp.get("mcpServers")
-    if not isinstance(servers, dict) or not servers:
-        raise ValueError("plugin must declare at least one MCP server")
+    servers = mcp.get("mcpServers") if mcp is not None else {}
+    if mcp is not None and (not isinstance(servers, dict) or not servers):
+        raise ValueError("mcp.json must declare at least one MCP server")
     for name, server in servers.items():
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name):
             raise ValueError(f"invalid MCP server name: {name}")
@@ -154,7 +156,7 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
     if app_id is not None:
         if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
             raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
-        if len(mcp["mcpServers"]) != 1:
+        if mcp is None or len(mcp["mcpServers"]) != 1:
             raise ValueError("the --app-id shortcut requires exactly one declared MCP server")
         alias = next(iter(mcp["mcpServers"]))
         manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
@@ -165,11 +167,14 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
         )
     overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
     overlay.update(manifest["extensions"]["com.openai"])
-    overlay.update(skills="./skills/", mcpServers="./.mcp.json")
+    overlay.update(skills="./skills/")
+    if mcp is not None:
+        overlay["mcpServers"] = "./.mcp.json"
     (target / ".codex-plugin").mkdir(exist_ok=True)
     (target / ".codex-plugin/plugin.json").write_text(json.dumps(overlay, indent=2) + "\n", encoding="utf-8")
-    legacy = {"mcpServers": {name: {"url": server["url"]} for name, server in mcp["mcpServers"].items()}}
-    (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
+    if mcp is not None:
+        legacy = {"mcpServers": {name: {"url": server["url"]} for name, server in mcp["mcpServers"].items()}}
+        (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
 def package(source: Path, output: Path, app_id: str | None = None) -> dict:
@@ -197,7 +202,7 @@ def package(source: Path, output: Path, app_id: str | None = None) -> dict:
             # A parent directory would hide plugin.json and skills/ from it.
             with zipfile.ZipFile(temp) as built:
                 members = set(built.namelist())
-                required = {"plugin.json", "mcp.json", ".codex-plugin/plugin.json"}
+                required = {"plugin.json", ".codex-plugin/plugin.json"} | ({"mcp.json"} if (source / "mcp.json").is_file() else set())
                 if not required.issubset(members) or not any(
                     name.startswith("skills/") and name.endswith("/SKILL.md") and name.count("/") == 2 for name in members
                 ):
