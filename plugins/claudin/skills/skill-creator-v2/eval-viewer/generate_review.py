@@ -117,10 +117,13 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
     prompt = ""
     eval_id = None
 
-    # Try eval_metadata.json
+    # Try eval_metadata.json: run dir, config dir, then case dir (repeated runs
+    # live at case/config/run-N), never above the workspace root.
+    meta_dirs = [run_dir, *run_dir.parents][:3]
     for candidate in [
-        run_dir / "eval_metadata.json",
-        run_dir.parent / "eval_metadata.json",
+        d / "eval_metadata.json"
+        for d in meta_dirs
+        if d == root or root in d.parents
     ]:
         if candidate.exists():
             try:
@@ -164,7 +167,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
             if (
                 not f.is_file()
                 or f.name in METADATA_FILES
-                or any(part.startswith(".") or part == "__pycache__" for part in rel.parts)
+                or any(p.startswith(".") or p == "__pycache__" for p in rel.parts)
             ):
                 continue
             entry = embed_file(f)

@@ -183,10 +183,24 @@ def run_single_query(
                     break
         finally:
             # Clean up process on any exit path (return, exception, timeout)
+            timed_out = time.time() - start_time >= timeout
             if process.poll() is None:
-                process.kill()
-                process.wait()
+                if timed_out:
+                    process.kill()
+                    process.wait()
+                else:
+                    # EOF seen but not yet reaped: wait so returncode is real.
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                        timed_out = True
 
+        # Exited on its own, non-zero, no decisive event: a failed run (auth,
+        # bad model), not a "did not trigger". Callers exclude it from scores.
+        if not timed_out and process.returncode != 0:
+            raise RuntimeError(f"claude -p exited {process.returncode}")
         return triggered
     finally:
         if command_file.exists():
@@ -224,17 +238,25 @@ def run_eval(
 
         query_triggers: dict[str, list[bool]] = {}
         query_items: dict[str, dict] = {}
+        failed_runs = 0
         for future in as_completed(future_to_info):
             item, _ = future_to_info[future]
             query = item["query"]
             query_items[query] = item
-            if query not in query_triggers:
-                query_triggers[query] = []
+            query_triggers.setdefault(query, [])
             try:
                 query_triggers[query].append(future.result())
-            except Exception as e:
-                print(f"Warning: query failed: {e}", file=sys.stderr)
-                query_triggers[query].append(False)
+            except Exception as e:  # noqa: BLE001 - any run failure is excluded
+                # Failed runs are not non-triggers: keep them out of the score.
+                failed_runs += 1
+                print(f"Warning: run failed, excluded: {e}", file=sys.stderr)
+
+    unscored = [q for q, t in query_triggers.items() if not t]
+    if unscored:
+        raise RuntimeError(
+            f"{len(unscored)} queries have no successful run (check auth/model); "
+            f"first: {unscored[0][:60]!r}"
+        )
 
     for query, triggers in query_triggers.items():
         item = query_items[query]
@@ -266,6 +288,7 @@ def run_eval(
             "total": total,
             "passed": passed,
             "failed": total - passed,
+            "failed_runs": failed_runs,
         },
     }
 
