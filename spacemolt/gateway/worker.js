@@ -1025,7 +1025,6 @@ async function runScoutRoutine(env, run) {
     log({skipped:"route not one fuel-safe jump", target});
     return false;
   }
-  const perJump = Number(sc(route.data).fuel_per_jump);
   // From here on the way home is held in reserve.
   outbound = true;
   const undock = await call("spacemolt", "undock", {});
@@ -1046,14 +1045,17 @@ async function runScoutRoutine(env, run) {
     console.warn("SpaceMolt scout visited write failed", errorText(err, 240));
   }
   const station = pickStation(sys.data);
-  // Without a local station every in-system hop must leave fuel for the jump home.
-  const fuelNow = Number(sc(jump?.data)?.ship?.fuel);
-  const fuelOk = Boolean(station) || (Number.isFinite(fuelNow) && fuelNow >= 2 * perJump);
-  if (systemUnsafe(sys.data) || !fuelOk) {
-    log({skipped:"survey and mining", reason:fuelOk ? "unsafe system" : "fuel kept for the jump home"});
+  if (systemUnsafe(sys.data)) {
+    log({skipped:"survey and mining", reason:"unsafe system"});
   } else {
     // Survey needs a scanner; a refusal just means no ore map.
     await call("spacemolt", "survey_system", {});
+  }
+  // Mine only where a station is in reach: in-system travel fuel is distance-based and unknown
+  // up front, so a stationless system keeps every drop for the jump home.
+  if (!station) {
+    log({skipped:"mining", reason:"no station in system; fuel kept for the jump home"});
+  } else if (!systemUnsafe(sys.data)) {
     const belt = pickBelt(sys.data);
     const there = belt ? await call("spacemolt", "travel", {id:belt}, {moveMs:moveMs()}) : null;
     for (let i = 0; there?.ok && i < SCOUT_MINE_MAX; i++) {
