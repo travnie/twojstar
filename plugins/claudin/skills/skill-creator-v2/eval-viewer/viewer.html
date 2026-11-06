@@ -1007,7 +1007,8 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reviews, status: "in_progress" }),
-      }).then(() => {
+      }).then((resp) => {
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
         document.getElementById("feedback-status").textContent = "Saved";
       }).catch(() => {
         // Static mode or server unavailable — no-op on auto-save,
@@ -1039,10 +1040,13 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,
-      }).then(() => {
+      }).then((resp) => {
+        // A static file server answers 404/405 instead of rejecting; a failed
+        // write answers 500. Either way fall back to the download.
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
         document.getElementById("done-overlay").classList.add("visible");
       }).catch(() => {
-        // Server not available (static mode) — download as file
+        // Server not available or not saving — download as file
         const blob = new Blob([payload], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
