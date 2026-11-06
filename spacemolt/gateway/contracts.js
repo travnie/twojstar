@@ -371,3 +371,51 @@ export function autopilotDeleteOrder(entries, prefix, max) {
     .sort((a, b) => b.index - a.index)
     .slice(0, max);
 }
+
+// --- Scout routine (autonomous mode): one jump to a new adjacent system, survey, mine a
+// little, dock. Pure pickers below; the worker drives the calls.
+
+function systemOf(result) {
+  const root = sc(result);
+  return root?.system || root || {};
+}
+
+// Nearest adjacent system not yet scouted; when all are, the one scouted longest ago.
+export function pickScoutTarget(result, visited = []) {
+  const conns = (systemOf(result).connections || [])
+    .filter((c) => typeof c?.system_id === "string" && c.system_id)
+    .sort((a, b) => (Number(a.distance) || 0) - (Number(b.distance) || 0));
+  const fresh = conns.find((c) => !visited.includes(c.system_id));
+  if (fresh) return fresh.system_id;
+  for (const id of visited) if (conns.some((c) => c.system_id === id)) return id;
+  return null;
+}
+
+// One jump, with fuel for the way back plus one spare jump.
+export function scoutRouteOk(result, targetId) {
+  const r = sc(result) || {};
+  const per = Number(r.fuel_per_jump);
+  const need = Number(r.estimated_fuel);
+  const have = Number(r.fuel_available);
+  if (r.found !== true || Number(r.total_jumps) !== 1) return false;
+  if (r.target_system && r.target_system !== targetId) return false;
+  if (![per, need, have].every(Number.isFinite) || per <= 0) return false;
+  return have >= 2 * need + per;
+}
+
+// Battles and pirate strongholds are no place for an explorer.
+export function systemUnsafe(result) {
+  const root = sc(result) || {};
+  return Boolean(root.active_battle || systemOf(result).is_stronghold);
+}
+
+// Ore belt with the fewest ships seen.
+export function pickBelt(result) {
+  const belts = (systemOf(result).pois || []).filter((p) => p?.type === "asteroid_belt" && p.id);
+  belts.sort((a, b) => (Number(a.ship_count) || 0) - (Number(b.ship_count) || 0));
+  return belts[0]?.id || null;
+}
+
+export function pickStation(result) {
+  return (systemOf(result).pois || []).find((p) => p?.has_base && p.id)?.id || null;
+}

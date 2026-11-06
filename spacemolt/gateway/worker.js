@@ -15,6 +15,11 @@ import {
   stationRoute,
   baseIdsIn,
   planIsRecent,
+  pickScoutTarget,
+  scoutRouteOk,
+  systemUnsafe,
+  pickBelt,
+  pickStation,
   autopilotDeleteOrder,
   positiveInt,
   buyEstimateRejection,
@@ -203,7 +208,7 @@ async function gameCall(env, tool, action, payload = {}, signal = undefined) {
 // Each candidate may cost a long travel, so ensureDocked tries only the first few.
 const DOCK_CANDIDATE_MAX = 3;
 
-async function ensureDocked(env, {allowTravel = true} = {}) {
+async function ensureDocked(env, {allowTravel = true, maxCandidates = DOCK_CANDIDATE_MAX} = {}) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
   if (isDocked(status)) return {docked:true, changed:false, status};
   // Try docking where we are first: station names are not always recognisable.
@@ -223,7 +228,7 @@ async function ensureDocked(env, {allowTravel = true} = {}) {
   const here = currentLocation(status);
   const hereId = String(here.poi_id || here.id || "");
   const sys = await gameCall(env, "spacemolt", "get_system", {});
-  const targets = findDockTargets(sc(sys), hereId).slice(0, DOCK_CANDIDATE_MAX);
+  const targets = findDockTargets(sc(sys), hereId).slice(0, maxCandidates);
   if (!targets.length) return {docked:false, changed:false, reason:"no_dock_in_current_system", localDockError, status, system:sys};
   // A hostile or access-controlled dock refuses at game level; move on to the next candidate.
   const refused = [];
@@ -815,6 +820,7 @@ async function gatherDailyObservations(env, run) {
   const history = run.history;
   // Probe serially first so an expired session triggers at most one re-login.
   const statusObs = await safeObs(env,"spacemolt","get_status",{});
+  if (statusObs.ok) run.startStatus = statusObs.data;
   const initial = [statusObs, ...await Promise.all([
     safeObs(env,"spacemolt","get_active_missions",{}),
     // Peek a small batch; only that batch is cleared once the run has seen it.
@@ -939,6 +945,166 @@ function outOfTime(run, action) {
   return elapsed > run.loopBudgetMs || (moving && elapsed > run.loopBudgetMs * DAILY_MOVE_CUTOFF_FRACTION);
 }
 
+// Scout routine budget: relogin 5, notification clear 1, autopilot log 6, and the final
+// ensureDocked limited to one candidate (status, dock, status, system, travel, dock, status,
+// status = 8). The routine docks itself and keeps its own return trip in hand.
+const SCOUT_DOCK_CANDIDATES = 1;
+const SCOUT_RESERVE = 5 + 1 + 6 + 8;
+// Way back held in reserve: before arrival is confirmed, two location reads + jump home +
+// travel + dock; with a local station, travel + dock there, then the same home leg; else home leg.
+const SCOUT_RETURN_UNCONFIRMED = 2 + 3;
+const SCOUT_RETURN_STATION = 2 + 3;
+const SCOUT_RETURN_HOME = 3;
+// Hard stop for return moves inside the 15-min cron wall, leaving time to dock and report.
+const SCOUT_WALL_MS = 13 * 60 * 1000;
+const SCOUT_MINE_MAX = 5;
+// Belt detour only with at least this share of the tank left after the jump.
+const SCOUT_BELT_FUEL_SHARE = 0.5;
+const SCOUT_VISITED_KEY = "routine:visited";
+const SCOUT_VISITED_MAX = 40;
+// Return moves get a fixed wait, past the loop budget but inside the 15-min cron wall.
+const SCOUT_RETURN_MOVE_MS = 150_000;
+
+function forgetStaleReads(run) {
+  // Keep Infinity entries: commands/guides in the mechanics block do not go stale.
+  for (const [key, idx] of run.readsSinceChange) {
+    if (idx !== Infinity) run.readsSinceChange.delete(key);
+  }
+}
+
+// Deterministic autonomous run: refuel, one jump to the nearest unscouted neighbour, survey,
+// mine a few cycles at its quietest belt, then dock there or back home. No LLM involved.
+// Returns true once it acted, false when it could not start (the planner then takes over).
+async function runScoutRoutine(env, run) {
+  const log = (entry) => run.history.push({kind:"scout", ...entry});
+  const status = run.startStatus;
+  const here = currentLocation(status);
+  const ship = sc(status)?.ship || {};
+  if (!isDocked(status) || !here.system_id || !here.poi_id) {
+    log({skipped:"not docked at a known station"});
+    return false;
+  }
+  if (Number(ship.cargo_capacity) - Number(ship.cargo_used) < 10) {
+    log({skipped:"cargo nearly full"});
+    return false;
+  }
+  const home = {system:String(here.system_id), poi:String(here.poi_id)};
+  const maxFuel = Number(ship.max_fuel);
+  let reserve = 0;
+  const call = async (tool, action, args = {}, {gate = true, moveMs = 0} = {}) => {
+    if (gate && run.subrequests + 1 + reserve > DAILY_SUBREQUEST_LIMIT - SCOUT_RESERVE) {
+      log({stopped:"subrequest budget", skipped:action});
+      return null;
+    }
+    if (gate && outOfTime(run, action)) {
+      log({stopped:"time budget", skipped:action});
+      return null;
+    }
+    run.subrequests += 1;
+    const signal = moveMs ? AbortSignal.timeout(moveMs) : undefined;
+    const result = await safeObs(env, tool, action, args, signal);
+    log({action, args, ok:result.ok, ...(result.ok ? {} : {error:result.error, message:result.untrusted_game_message})});
+    if (!isDailyRead(tool, action)) {
+      // Even a failed write may have changed state: the planner fallback must re-read.
+      forgetStaleReads(run);
+      if (result.ok) run.changes.push(describeChange(action, args));
+    }
+    return result;
+  };
+  const moveMs = () => Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
+  // Return moves share one deadline instead of a fresh allowance each.
+  const returnMs = () => Math.max(Math.min(SCOUT_RETURN_MOVE_MS, SCOUT_WALL_MS - (Date.now() - run.loopStart)), 5000);
+
+  if (Number(ship.fuel) < Number(ship.max_fuel)) await call("spacemolt", "refuel", {});
+  const homeSys = await call("spacemolt", "get_system", {});
+  if (!homeSys?.ok) return false;
+  let visited = [];
+  try {
+    visited = JSON.parse(await env.STATE.get(SCOUT_VISITED_KEY) || "[]");
+    if (!Array.isArray(visited)) visited = [];
+  } catch {
+    visited = [];
+  }
+  const target = pickScoutTarget(homeSys.data, visited);
+  if (!target) {
+    log({skipped:"no adjacent system"});
+    return false;
+  }
+  const route = await call("spacemolt", "find_route", {id:target});
+  if (!route?.ok || !scoutRouteOk(route.data, target)) {
+    log({skipped:"route not one fuel-safe jump", target});
+    return false;
+  }
+  // From here on the way home is held in reserve.
+  reserve = SCOUT_RETURN_UNCONFIRMED;
+  const undock = await call("spacemolt", "undock", {});
+  if (!undock?.ok) return true;
+  const jump = await call("spacemolt", "jump", {id:target}, {moveMs:moveMs()});
+  // A failed or timed-out jump may still have moved the ship: confirm from live state.
+  const sys = await call("spacemolt", "get_system", {}, {gate:false});
+  let sysId = sys?.ok ? sc(sys.data)?.system?.id : null;
+  if (!sys?.ok) {
+    const live = await call("spacemolt", "get_status", {}, {gate:false});
+    sysId = live?.ok ? currentLocation(live.data).system_id : null;
+  }
+  if (sysId === target && !sys?.ok) {
+    // Arrived but the chart is unreadable: treat as stationless and go home.
+    log({skipped:"survey and mining", reason:"system chart unreadable"});
+    const back = await call("spacemolt", "jump", {id:home.system}, {gate:false, moveMs:returnMs()});
+    if (!back?.ok) return true;
+    const trip = await call("spacemolt", "travel", {id:home.poi}, {gate:false, moveMs:returnMs()});
+    if (trip?.ok) await call("spacemolt", "dock", {}, {gate:false});
+    return true;
+  }
+  if (sysId !== target) {
+    log({skipped:"survey and mining", reason:jump?.ok ? "arrival not confirmed" : "jump failed", system:sysId || null});
+    // Still at home (or unknown): the final dock check docks in-system.
+    return true;
+  }
+  try {
+    visited = [...visited.filter((id) => id !== target), target].slice(-SCOUT_VISITED_MAX);
+    await env.STATE.put(SCOUT_VISITED_KEY, JSON.stringify(visited));
+  } catch (err) {
+    console.warn("SpaceMolt scout visited write failed", errorText(err, 240));
+  }
+  const station = pickStation(sys.data);
+  reserve = station ? SCOUT_RETURN_STATION : SCOUT_RETURN_HOME;
+  const fuelAfterJump = Number(sc(jump?.data)?.ship?.fuel);
+  if (systemUnsafe(sys.data)) {
+    log({skipped:"survey and mining", reason:"unsafe system"});
+  } else {
+    // Survey needs a scanner; a refusal just means no ore map.
+    await call("spacemolt", "survey_system", {});
+  }
+  // Mine only where a station is in reach: in-system travel fuel is distance-based and unknown
+  // up front, so a stationless system keeps every drop for the jump home.
+  if (!station) {
+    log({skipped:"mining", reason:"no station in system; fuel kept for the jump home"});
+  } else if (!systemUnsafe(sys.data) && !(fuelAfterJump >= SCOUT_BELT_FUEL_SHARE * maxFuel)) {
+    // In-system travel cost is distance-based and unknown up front: detour only on half a tank.
+    log({skipped:"mining", reason:"fuel below half a tank (or unknown) after the jump", fuel:Number.isFinite(fuelAfterJump) ? fuelAfterJump : null});
+  } else if (!systemUnsafe(sys.data)) {
+    const belt = pickBelt(sys.data);
+    const there = belt ? await call("spacemolt", "travel", {id:belt}, {moveMs:moveMs()}) : null;
+    for (let i = 0; there?.ok && i < SCOUT_MINE_MAX; i++) {
+      const mined = await call("spacemolt", "mine", {});
+      if (!mined?.ok) break;
+    }
+  }
+  // Way back is ungated: its subrequests were held in reserve all along.
+  if (station) {
+    const trip = await call("spacemolt", "travel", {id:station}, {gate:false, moveMs:returnMs()});
+    const dock = trip?.ok ? await call("spacemolt", "dock", {}, {gate:false}) : null;
+    if (dock?.ok) return true;
+    log({fallback:"local station refused or unreachable, heading home"});
+  }
+  const back = await call("spacemolt", "jump", {id:home.system}, {gate:false, moveMs:returnMs()});
+  if (!back?.ok) return true;
+  const trip = await call("spacemolt", "travel", {id:home.poi}, {gate:false, moveMs:returnMs()});
+  if (trip?.ok) await call("spacemolt", "dock", {}, {gate:false});
+  return true;
+}
+
 async function executeDailyDecision(env, run, decision, provider) {
   const tool = String(decision.tool);
   const action = String(decision.action);
@@ -1016,10 +1182,7 @@ async function executeDailyDecision(env, run, decision, provider) {
   if (read) {
     if (result.ok) run.readsSinceChange.set(readKey, run.history.length - 1);
   } else {
-    // Keep Infinity entries: commands/guides in the mechanics block do not go stale.
-    for (const [key, idx] of run.readsSinceChange) {
-      if (idx !== Infinity) run.readsSinceChange.delete(key);
-    }
+    forgetStaleReads(run);
   }
   return "continue";
 }
@@ -1036,7 +1199,8 @@ async function finishDailyRun(env, startedAt, history, run = null) {
   let dock = null;
   try {
     // Even in hold mode, a ship Gremlin left undocked is taken to a station in its system (no jumps).
-    dock = await ensureDocked(env);
+    // After a scout trip the routine already tried docking; keep the fallback inside its reserve.
+    dock = await ensureDocked(env, run?.scouted ? {maxCandidates:SCOUT_DOCK_CANDIDATES} : {});
   } catch (err) {
     dock = {docked:false, error:errorText(err, 700)};
   }
@@ -1060,6 +1224,7 @@ async function runDailyGremlin(env) {
   const startedAt = new Date().toISOString();
   const run = {
     loopStart:Date.now(),
+    startStatus:null,
     history:[],
     providerRotation:Math.floor(Date.now() / 86400000) % DAILY_PROVIDER_ORDER.length,
     blockedCount:0,
@@ -1092,7 +1257,13 @@ async function runDailyGremlin(env) {
   // Unreadable log = unknown plan: do not fly on own initiative, just dock and report.
   if (run.planStatus === "unavailable") run.history.push({kind:"plan_unavailable", skipped:"planning loop"});
 
-  for (let step = 0; run.planStatus !== "unavailable" && step < run.maxSteps; step++) {
+  // Autonomous mode flies the fixed scout routine; the LLM planner only covers hold mode
+  // (replies, refuel, Gremlin's missions) or a routine that could not start.
+  const scouted = run.planStatus !== "unavailable" && !run.holdMode && await runScoutRoutine(env, run);
+  run.scouted = scouted;
+  const planSteps = scouted ? 0 : run.maxSteps;
+
+  for (let step = 0; run.planStatus !== "unavailable" && step < planSteps; step++) {
     if (Date.now() - run.loopStart > run.loopBudgetMs) {
       run.history.push({kind:"budget_exhausted", elapsed_ms:Date.now() - run.loopStart});
       break;
