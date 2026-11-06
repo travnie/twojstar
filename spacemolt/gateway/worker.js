@@ -208,7 +208,7 @@ async function gameCall(env, tool, action, payload = {}, signal = undefined) {
 // Each candidate may cost a long travel, so ensureDocked tries only the first few.
 const DOCK_CANDIDATE_MAX = 3;
 
-async function ensureDocked(env, {allowTravel = true} = {}) {
+async function ensureDocked(env, {allowTravel = true, maxCandidates = DOCK_CANDIDATE_MAX} = {}) {
   const status = await gameCall(env, "spacemolt", "get_status", {});
   if (isDocked(status)) return {docked:true, changed:false, status};
   // Try docking where we are first: station names are not always recognisable.
@@ -228,7 +228,7 @@ async function ensureDocked(env, {allowTravel = true} = {}) {
   const here = currentLocation(status);
   const hereId = String(here.poi_id || here.id || "");
   const sys = await gameCall(env, "spacemolt", "get_system", {});
-  const targets = findDockTargets(sc(sys), hereId).slice(0, DOCK_CANDIDATE_MAX);
+  const targets = findDockTargets(sc(sys), hereId).slice(0, maxCandidates);
   if (!targets.length) return {docked:false, changed:false, reason:"no_dock_in_current_system", localDockError, status, system:sys};
   // A hostile or access-controlled dock refuses at game level; move on to the next candidate.
   const refused = [];
@@ -945,12 +945,18 @@ function outOfTime(run, action) {
   return elapsed > run.loopBudgetMs || (moving && elapsed > run.loopBudgetMs * DAILY_MOVE_CUTOFF_FRACTION);
 }
 
-// Scout routine budget: relogin 5, notification clear 1, autopilot log 6, final dock check
-// with one retry 4. The routine docks itself and keeps its own return trip in hand.
-const SCOUT_RESERVE = 5 + 1 + 6 + 4;
-// Worst way back: dock attempt at a local station (travel + dock), then home
-// (jump + travel + dock), plus one read to confirm where the ship is.
-const SCOUT_RETURN = 2 + 3 + 1;
+// Scout routine budget: relogin 5, notification clear 1, autopilot log 6, and the final
+// ensureDocked limited to one candidate (status, dock, status, system, travel, dock, status,
+// status = 8). The routine docks itself and keeps its own return trip in hand.
+const SCOUT_DOCK_CANDIDATES = 1;
+const SCOUT_RESERVE = 5 + 1 + 6 + 8;
+// Way back held in reserve: before arrival is confirmed, two location reads + jump home +
+// travel + dock; with a local station, travel + dock there, then the same home leg; else home leg.
+const SCOUT_RETURN_UNCONFIRMED = 2 + 3;
+const SCOUT_RETURN_STATION = 2 + 3;
+const SCOUT_RETURN_HOME = 3;
+// Hard stop for return moves inside the 15-min cron wall, leaving time to dock and report.
+const SCOUT_WALL_MS = 13 * 60 * 1000;
 const SCOUT_MINE_MAX = 5;
 const SCOUT_VISITED_KEY = "routine:visited";
 const SCOUT_VISITED_MAX = 40;
@@ -981,9 +987,8 @@ async function runScoutRoutine(env, run) {
     return false;
   }
   const home = {system:String(here.system_id), poi:String(here.poi_id)};
-  let outbound = false;
+  let reserve = 0;
   const call = async (tool, action, args = {}, {gate = true, moveMs = 0} = {}) => {
-    const reserve = outbound ? SCOUT_RETURN : 0;
     if (gate && run.subrequests + 1 + reserve > DAILY_SUBREQUEST_LIMIT - SCOUT_RESERVE) {
       log({stopped:"subrequest budget", skipped:action});
       return null;
@@ -1004,6 +1009,8 @@ async function runScoutRoutine(env, run) {
     return result;
   };
   const moveMs = () => Math.max(run.loopBudgetMs - (Date.now() - run.loopStart), 1000);
+  // Return moves share one deadline instead of a fresh allowance each.
+  const returnMs = () => Math.max(Math.min(SCOUT_RETURN_MOVE_MS, SCOUT_WALL_MS - (Date.now() - run.loopStart)), 5000);
 
   if (Number(ship.fuel) < Number(ship.max_fuel)) await call("spacemolt", "refuel", {});
   const homeSys = await call("spacemolt", "get_system", {});
@@ -1026,13 +1033,26 @@ async function runScoutRoutine(env, run) {
     return false;
   }
   // From here on the way home is held in reserve.
-  outbound = true;
+  reserve = SCOUT_RETURN_UNCONFIRMED;
   const undock = await call("spacemolt", "undock", {});
   if (!undock?.ok) return true;
   const jump = await call("spacemolt", "jump", {id:target}, {moveMs:moveMs()});
   // A failed or timed-out jump may still have moved the ship: confirm from live state.
   const sys = await call("spacemolt", "get_system", {}, {gate:false});
-  const sysId = sys?.ok ? sc(sys.data)?.system?.id : null;
+  let sysId = sys?.ok ? sc(sys.data)?.system?.id : null;
+  if (!sys?.ok) {
+    const live = await call("spacemolt", "get_status", {}, {gate:false});
+    sysId = live?.ok ? currentLocation(live.data).system_id : null;
+  }
+  if (sysId === target && !sys?.ok) {
+    // Arrived but the chart is unreadable: treat as stationless and go home.
+    log({skipped:"survey and mining", reason:"system chart unreadable"});
+    const back = await call("spacemolt", "jump", {id:home.system}, {gate:false, moveMs:returnMs()});
+    if (!back?.ok) return true;
+    const trip = await call("spacemolt", "travel", {id:home.poi}, {gate:false, moveMs:returnMs()});
+    if (trip?.ok) await call("spacemolt", "dock", {}, {gate:false});
+    return true;
+  }
   if (sysId !== target) {
     log({skipped:"survey and mining", reason:jump?.ok ? "arrival not confirmed" : "jump failed", system:sysId || null});
     // Still at home (or unknown): the final dock check docks in-system.
@@ -1045,6 +1065,7 @@ async function runScoutRoutine(env, run) {
     console.warn("SpaceMolt scout visited write failed", errorText(err, 240));
   }
   const station = pickStation(sys.data);
+  reserve = station ? SCOUT_RETURN_STATION : SCOUT_RETURN_HOME;
   if (systemUnsafe(sys.data)) {
     log({skipped:"survey and mining", reason:"unsafe system"});
   } else {
@@ -1065,14 +1086,14 @@ async function runScoutRoutine(env, run) {
   }
   // Way back is ungated: its subrequests were held in reserve all along.
   if (station) {
-    const trip = await call("spacemolt", "travel", {id:station}, {gate:false, moveMs:SCOUT_RETURN_MOVE_MS});
+    const trip = await call("spacemolt", "travel", {id:station}, {gate:false, moveMs:returnMs()});
     const dock = trip?.ok ? await call("spacemolt", "dock", {}, {gate:false}) : null;
     if (dock?.ok) return true;
     log({fallback:"local station refused or unreachable, heading home"});
   }
-  const back = await call("spacemolt", "jump", {id:home.system}, {gate:false, moveMs:SCOUT_RETURN_MOVE_MS});
+  const back = await call("spacemolt", "jump", {id:home.system}, {gate:false, moveMs:returnMs()});
   if (!back?.ok) return true;
-  const trip = await call("spacemolt", "travel", {id:home.poi}, {gate:false, moveMs:SCOUT_RETURN_MOVE_MS});
+  const trip = await call("spacemolt", "travel", {id:home.poi}, {gate:false, moveMs:returnMs()});
   if (trip?.ok) await call("spacemolt", "dock", {}, {gate:false});
   return true;
 }
@@ -1171,7 +1192,8 @@ async function finishDailyRun(env, startedAt, history, run = null) {
   let dock = null;
   try {
     // Even in hold mode, a ship Gremlin left undocked is taken to a station in its system (no jumps).
-    dock = await ensureDocked(env);
+    // After a scout trip the routine already tried docking; keep the fallback inside its reserve.
+    dock = await ensureDocked(env, run?.scouted ? {maxCandidates:SCOUT_DOCK_CANDIDATES} : {});
   } catch (err) {
     dock = {docked:false, error:errorText(err, 700)};
   }
@@ -1231,6 +1253,7 @@ async function runDailyGremlin(env) {
   // Autonomous mode flies the fixed scout routine; the LLM planner only covers hold mode
   // (replies, refuel, Gremlin's missions) or a routine that could not start.
   const scouted = run.planStatus !== "unavailable" && !run.holdMode && await runScoutRoutine(env, run);
+  run.scouted = scouted;
   const planSteps = scouted ? 0 : run.maxSteps;
 
   for (let step = 0; run.planStatus !== "unavailable" && step < planSteps; step++) {
