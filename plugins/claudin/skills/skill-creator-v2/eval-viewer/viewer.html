@@ -1055,8 +1055,7 @@
     }
 
     function closeDoneDialog() {
-      // Reset status back to in_progress
-      saveCurrentFeedback();
+      // Keep the submitted "complete" payload; the next edit autosaves again.
       document.getElementById("done-overlay").classList.remove("visible");
     }
 
