@@ -958,6 +958,8 @@ const SCOUT_RETURN_HOME = 3;
 // Hard stop for return moves inside the 15-min cron wall, leaving time to dock and report.
 const SCOUT_WALL_MS = 13 * 60 * 1000;
 const SCOUT_MINE_MAX = 5;
+// Belt detour only with at least this share of the tank left after the jump.
+const SCOUT_BELT_FUEL_SHARE = 0.5;
 const SCOUT_VISITED_KEY = "routine:visited";
 const SCOUT_VISITED_MAX = 40;
 // Return moves get a fixed wait, past the loop budget but inside the 15-min cron wall.
@@ -987,6 +989,7 @@ async function runScoutRoutine(env, run) {
     return false;
   }
   const home = {system:String(here.system_id), poi:String(here.poi_id)};
+  const maxFuel = Number(ship.max_fuel);
   let reserve = 0;
   const call = async (tool, action, args = {}, {gate = true, moveMs = 0} = {}) => {
     if (gate && run.subrequests + 1 + reserve > DAILY_SUBREQUEST_LIMIT - SCOUT_RESERVE) {
@@ -1066,6 +1069,7 @@ async function runScoutRoutine(env, run) {
   }
   const station = pickStation(sys.data);
   reserve = station ? SCOUT_RETURN_STATION : SCOUT_RETURN_HOME;
+  const fuelAfterJump = Number(sc(jump?.data)?.ship?.fuel);
   if (systemUnsafe(sys.data)) {
     log({skipped:"survey and mining", reason:"unsafe system"});
   } else {
@@ -1076,6 +1080,9 @@ async function runScoutRoutine(env, run) {
   // up front, so a stationless system keeps every drop for the jump home.
   if (!station) {
     log({skipped:"mining", reason:"no station in system; fuel kept for the jump home"});
+  } else if (!systemUnsafe(sys.data) && !(fuelAfterJump >= SCOUT_BELT_FUEL_SHARE * maxFuel)) {
+    // In-system travel cost is distance-based and unknown up front: detour only on half a tank.
+    log({skipped:"mining", reason:"fuel below half a tank (or unknown) after the jump", fuel:Number.isFinite(fuelAfterJump) ? fuelAfterJump : null});
   } else if (!systemUnsafe(sys.data)) {
     const belt = pickBelt(sys.data);
     const there = belt ? await call("spacemolt", "travel", {id:belt}, {moveMs:moveMs()}) : null;
