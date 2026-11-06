@@ -38,7 +38,7 @@ for platform in "${PLATFORMS[@]}"; do
             taken "${NAME}.${tld}"
           fi
         else
-          code=$(curl -s -o /dev/null -w "%{http_code}" "https://${NAME}.${tld}" 2>/dev/null || echo "000")
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://${NAME}.${tld}" 2>/dev/null) || code="000"
           if [ "$code" = "000" ]; then
             warn "${NAME}.${tld} (no whois, no HTTP response — may be available)"
           else
@@ -56,7 +56,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     pypi)
-      code=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/project/${NAME}/" 2>/dev/null || echo "000")
+      code=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/project/${NAME}/" 2>/dev/null) || code="000"
       if [ "$code" = "404" ]; then
         ok "PyPI: ${NAME}"
       else
@@ -64,7 +64,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     github)
-      code=$(curl -s -o /dev/null -w "%{http_code}" "https://github.com/${NAME}" 2>/dev/null || echo "000")
+      code=$(curl -s -o /dev/null -w "%{http_code}" "https://github.com/${NAME}" 2>/dev/null) || code="000"
       if [ "$code" = "404" ]; then
         ok "GitHub org: ${NAME}"
       else
@@ -72,7 +72,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     crates)
-      code=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/${NAME}" 2>/dev/null || echo "000")
+      code=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/${NAME}" 2>/dev/null) || code="000"
       if [ "$code" = "404" ]; then
         ok "crates.io: ${NAME}"
       else
@@ -80,7 +80,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     rubygems)
-      code=$(curl -s -o /dev/null -w "%{http_code}" "https://rubygems.org/api/v1/gems/${NAME}.json" 2>/dev/null || echo "000")
+      code=$(curl -s -o /dev/null -w "%{http_code}" "https://rubygems.org/api/v1/gems/${NAME}.json" 2>/dev/null) || code="000"
       if [ "$code" = "404" ]; then
         ok "RubyGems: ${NAME}"
       else
@@ -88,7 +88,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     wp)
-      result=$(curl -s "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&slug=${NAME}" 2>/dev/null || echo "error")
+      result=$(curl -s "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information&slug=${NAME}" 2>/dev/null) || result="error"
       if echo "$result" | grep -qi "not found"; then
         ok "WP plugin: ${NAME}"
       else
@@ -96,7 +96,7 @@ for platform in "${PLATFORMS[@]}"; do
       fi
       ;;
     telegram)
-      body=$(curl -sL "https://t.me/${NAME}" 2>/dev/null || echo "")
+      body=$(curl -sL "https://t.me/${NAME}" 2>/dev/null) || body=""
       if echo "$body" | grep -q "tgme_page_title"; then
         taken "Telegram: @${NAME}"
       else
