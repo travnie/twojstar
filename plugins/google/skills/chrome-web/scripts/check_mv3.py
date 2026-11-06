@@ -10,7 +10,45 @@ import json
 import re
 import struct
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+
+# Script types the browser executes; anything else (JSON, templates) is inert data.
+_JS_TYPES = {
+    "",
+    "module",
+    "text/javascript",
+    "application/javascript",
+    "application/ecmascript",
+    "text/ecmascript",
+}
+
+
+class _InlineScan(HTMLParser):
+    """Find executable inline <script> bodies and on* handler attributes."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.inline_script = False
+        self.inline_handler = False
+        self._in_exec_script = False
+
+    def handle_starttag(self, tag, attrs):
+        names = {k.lower(): (v or "") for k, v in attrs}
+        if any(k.startswith("on") for k in names):
+            self.inline_handler = True
+        if tag == "script":
+            kind = names.get("type", "").split(";")[0].strip().lower()
+            self._in_exec_script = "src" not in names and kind in _JS_TYPES
+
+    def handle_endtag(self, tag):
+        if tag == "script":
+            self._in_exec_script = False
+
+    def handle_data(self, data):
+        if self._in_exec_script and data.strip():
+            self.inline_script = True
+
 
 MV2_KEYS = {
     "browser_action",
@@ -163,9 +201,12 @@ def check(root: Path):
             html = f.read_text(encoding="utf-8", errors="ignore")
             if rel in sandbox_pages and sandbox_inline_ok:
                 continue  # sandbox pages may use inline script and handlers
-            if re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html, re.I):
+            scan = _InlineScan()
+            scan.feed(html)
+            scan.close()
+            if scan.inline_script:
                 errors.append(f"inline <script> in {rel}")
-            if re.search(r"\son[a-z]+\s*=\s*['\"]", html, re.I):
+            if scan.inline_handler:
                 errors.append(f"inline event handler in {rel}")
         elif f.name in {".env"} or f.suffix in {".pem", ".key"}:
             warnings.append(f"sensitive file in package: {rel}")
