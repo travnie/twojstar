@@ -10,20 +10,22 @@ In the Claude Code terminal:
 ```sh
 claude plugin marketplace add travnie/twojstar
 claude plugin install cloudflare@twojstar
-claude plugin install devkit-claude@twojstar
+claude plugin install claudin@twojstar
 claude plugin install spacemolt@twojstar
 ```
 
-Or use `/plugin` and choose the `twojstar` marketplace to browse the eight available plugins:
+Or use `/plugin` and choose the `twojstar` marketplace to browse the ten available plugins:
 
 - `spacemolt` (game and docs MCPs, three skills)
 - `docbench` (skills only)
 - `openai-dev-kit`
 - `google-dev-kit` (ten declared remote MCP endpoints, many requiring separate credentials)
-- `devkit-claude` (shown as **Claude Dev Kit**, renamed because Claude Code reserves `claude-*` identifiers)
+- `google` (shown as **Android & Chrome**; Android/Compose and Chrome/web skills, Google Developer Knowledge MCP)
+- `claudin` (skill-creator-v2, plugin-dev, mcp-dev; six docs MCPs; replaces `devkit-claude`, migrated via the generated `renames` map)
 - `desktop-commander`
 - `cloudflare`
 - `github-ops`
+- `claudesign` (skills only: web-design, ux-design, naming)
 
 Plugin MCPs are declared under the plugin's marketplace entry and should appear as `plugin:<plugin-name>:<server>` in Claude Code's `/mcp` view. Authenticate there as needed. **Installing a plugin does not sign in to its third-party servers or replace an existing Claude.ai connector.**
 

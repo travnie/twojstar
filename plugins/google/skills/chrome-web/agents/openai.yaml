@@ -1,0 +1,21 @@
+interface:
+  display_name: "Chrome & Web"
+  short_description: "Chrome extensions (MV3, Web Store) and modern web platform APIs, checked against live Chrome and web.dev docs"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#1A73E8"
+  default_prompt: "Use $chrome-web to build or review this Chrome extension."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "google-developer"
+      description: "Google Developer Knowledge — current developer.chrome.com and web.dev docs"
+      transport: "streamable_http"
+      url: "https://developerknowledge.googleapis.com/mcp"

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Naming</title>
+  <rect width="512" height="512" rx="96" fill="#4F46E5"/>
+  <g transform="scale(4.740741)">
+    <path fill="#fff" d="M26,54 L44,34 L84,34 L84,74 L44,74 Z"/>
+    <circle cx="40" cy="54" r="6" fill="#4F46E5"/>
+  </g>
+</svg>

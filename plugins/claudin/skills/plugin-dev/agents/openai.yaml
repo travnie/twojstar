@@ -1,0 +1,26 @@
+interface:
+  display_name: "Plugin Dev"
+  short_description: "Build and port plugins across Claude chat, Cowork, Claude Code and Codex/ChatGPT with live docs"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#D97757"
+  default_prompt: "Use $plugin-dev to package these skills and MCP server as a plugin for Claude and Codex."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "openai-docs"
+      description: "OpenAI developer docs — Codex/ChatGPT plugins, Agent Plugins manifest"
+      transport: "streamable_http"
+      url: "https://developers.openai.com/mcp"
+    - type: "mcp"
+      value: "claude-code-docs"
+      description: "Claude Code docs — plugin manifest, skills, hooks, marketplaces"
+      transport: "streamable_http"
+      url: "https://code.claude.com/docs/mcp"

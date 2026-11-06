@@ -28,7 +28,6 @@ These are the **latest verified complete set** of portable packages built succes
 
 | Plugin | Download ZIP |
 | --- | --- |
-| [Claude Dev Kit](claude-dev-kit/) | [`claude-dev-kit-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39587425994/artifacts/12339872053) |
 | [Cloudflare](cloudflare/) | [`cloudflare-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39587425994/artifacts/12340641660) |
 | [Desktop Commander](desktop-commander/) | [`desktop-commander-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39587425994/artifacts/12340706669) |
 | [GitHub Ops](github-ops/) | [`github-ops-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39587425994/artifacts/12339677307) |
@@ -36,10 +35,12 @@ These are the **latest verified complete set** of portable packages built succes
 | [OpenAI Dev Kit](openai-dev-kit/) | [`openai-dev-kit-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39588120038/artifacts/12340057668) |
 | [SpaceMolt](spacemolt/) | [`spacemolt-plugin.zip`](https://github.com/travnie/twojstar/actions/runs/39587425994/artifacts/12341086238) |
 
+Added after that build — download the `<name>-plugin` artifact from the newest successful `main` run of [Plugin Packages](https://github.com/travnie/twojstar/actions/workflows/plugin-packages.yml?query=branch%3Amain): [Claudin](claudin/) (replaces Claude Dev Kit), [Android & Chrome](google/), [Claudesign](claudesign/).
+
 
 These ZIPs contain the canonical skills and remote MCP declarations. For ChatGPT Actions, an eligible existing MCP app registration must also be bound to the private plugin; an anonymous portable ZIP cannot automatically create a registered connection. App-backed private packages use the verified App ID options in each package's installer. Do not uninstall a functioning connection on the assumption that importing a ZIP replaces it.
 
-GitHub Actions keeps these artifacts for **30 days** (until approximately **20 November 2026**). The links above point to this specific verified build, not an automatically updated release. For newer packages or expired downloads, open the [Plugin Packages workflow](https://github.com/travnie/twojstar/actions/workflows/plugin-packages.yml?query=branch%3Amain) and select the newest successful `main` run containing the desired `<name>-plugin` artifact. Builds are selective, so not every run contains all seven packages.
+GitHub Actions keeps these artifacts for **30 days** (until approximately **20 November 2026**). The links above point to this specific verified build, not an automatically updated release. For newer packages or expired downloads, open the [Plugin Packages workflow](https://github.com/travnie/twojstar/actions/workflows/plugin-packages.yml?query=branch%3Amain) and select the newest successful `main` run containing the desired `<name>-plugin` artifact. Builds are selective, so not every run contains every package.
 
 [SpaceMolt](spacemolt/) now lives alongside the other agent plugins. Its SMX client, gateway, and supporting gameplay tools remain in [`spacemolt/`](../spacemolt/).
 

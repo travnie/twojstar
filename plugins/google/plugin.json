@@ -1,0 +1,48 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "google",
+  "version": "2.1.0",
+  "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/google",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "android",
+    "kotlin",
+    "jetpack-compose",
+    "gradle",
+    "chrome-extensions",
+    "manifest-v3",
+    "web-platform",
+    "baseline",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Android & Chrome",
+        "shortDescription": "Android, Chrome & web docs",
+        "longDescription": "Android/Kotlin/Compose and Chrome/web work in any repo. The Google Developer Knowledge MCP server searches current developer.android.com, developer.chrome.com, web.dev, Firebase and Google Cloud docs. android-compose reads the repo first and routes to focused references (architecture, Gradle/AGP 9, Nav 3, testing, performance, R8, security, widgets, Media3); chrome-web covers Manifest V3 runtime traps, Web Store publishing, Baseline-aware web APIs, a static MV3 checker and headless Chromium extension tests. Personal toolkit maintained by travnie; not an official Google plugin.",
+        "developerName": "travnie",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Interactive",
+          "Read"
+        ],
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/google",
+        "defaultPrompt": [
+          "Review this Compose screen for recomposition cost",
+          "Build a Chrome extension with a side panel that summarizes the page",
+          "Prepare this extension for Chrome Web Store review"
+        ],
+        "brandColor": "#4285F4",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      }
+    }
+  }
+}

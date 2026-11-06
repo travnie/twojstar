@@ -1,0 +1,29 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "claude-code-docs": {
+      "type": "streamable-http",
+      "url": "https://code.claude.com/docs/mcp"
+    },
+    "claude-ai-docs": {
+      "type": "streamable-http",
+      "url": "https://claude.com/docs/mcp"
+    },
+    "claude-platform-docs": {
+      "type": "streamable-http",
+      "url": "https://platform.claude.com/docs/mcp"
+    },
+    "mcp-docs": {
+      "type": "streamable-http",
+      "url": "https://modelcontextprotocol.io/mcp"
+    },
+    "openai-docs": {
+      "type": "streamable-http",
+      "url": "https://developers.openai.com/mcp"
+    },
+    "xai-docs": {
+      "type": "streamable-http",
+      "url": "https://docs.x.ai/api/mcp"
+    }
+  }
+}

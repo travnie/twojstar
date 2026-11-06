@@ -19,10 +19,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # Package source, existing package command, and optional tests.
 PLUGINS = {
-    "claude-dev-kit": ("plugins/claude-dev-kit", "shared"),
+    "claudesign": ("plugins/claudesign", "shared"),
+    "claudin": ("plugins/claudin", "shared"),
     "cloudflare": ("plugins/cloudflare", "shared"),
     "desktop-commander": ("plugins/desktop-commander", "shared"),
     "github-ops": ("plugins/github-ops", "shared"),
+    "google": ("plugins/google", "shared"),
     "google-dev-kit": ("plugins/google-dev-kit", "google"),
     "openai-dev-kit": ("plugins/openai-dev-kit", "openai"),
     "spacemolt": ("plugins/spacemolt", "spacemolt"),
@@ -30,15 +32,17 @@ PLUGINS = {
 
 # Hardcoded allowlist of packaging scripts by plugin.
 PACKAGE_SCRIPTS = {
-    "claude-dev-kit": "plugins/_shared/package_plugin.py",
+    "claudesign": "plugins/_shared/package_plugin.py",
+    "claudin": "plugins/_shared/package_plugin.py",
     "cloudflare": "plugins/_shared/package_plugin.py",
     "desktop-commander": "plugins/_shared/package_plugin.py",
     "github-ops": "plugins/_shared/package_plugin.py",
+    "google": "plugins/_shared/package_plugin.py",
     "google-dev-kit": "plugins/google-dev-kit/scripts/package_plugin.py",
     "openai-dev-kit": "plugins/openai-dev-kit/scripts/package_plugin.py",
     "spacemolt": "spacemolt/scripts/package_plugin.py",
 }
-SHARED_PACKAGES = {"claude-dev-kit", "cloudflare", "desktop-commander", "github-ops"}
+SHARED_PACKAGES = {"claudesign", "claudin", "cloudflare", "desktop-commander", "github-ops", "google"}
 COMMON_CHANGES = {
     ".github/workflows/plugin-packages.yml",
     ".agents/plugins/marketplace.json",
@@ -102,7 +106,9 @@ def unpack_importable(plugin: str, archive: Path, destination: Path) -> None:
         members = [entry for entry in zf.infolist() if not entry.is_dir()]
         raw_names = {entry.filename for entry in members}
         prefix = "" if "plugin.json" in raw_names else plugin + "/"
-        expected = {"plugin.json", ".codex-plugin/plugin.json", "mcp.json"}
+        expected = {"plugin.json", ".codex-plugin/plugin.json"}
+        if "mcp.json" in {entry.filename[len(prefix):] for entry in members}:
+            expected.add("mcp.json")
         extracted: set[str] = set()
         for entry in members:
             name = entry.filename

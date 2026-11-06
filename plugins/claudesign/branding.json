@@ -1,0 +1,21 @@
+{
+  "plugin": {
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "mcpServers": {},
+  "skills": {
+    "naming": {
+      "iconSmall": "./skills/naming/assets/icon.svg",
+      "iconLarge": "./skills/naming/assets/icon.svg"
+    },
+    "ux-design": {
+      "iconSmall": "./skills/ux-design/assets/icon.svg",
+      "iconLarge": "./skills/ux-design/assets/icon.svg"
+    },
+    "web-design": {
+      "iconSmall": "./skills/web-design/assets/icon.svg",
+      "iconLarge": "./skills/web-design/assets/icon.svg"
+    }
+  }
+}

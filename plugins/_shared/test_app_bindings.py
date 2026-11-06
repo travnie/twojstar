@@ -9,7 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PACK = runpy.run_path(str(ROOT / "plugins/_shared/package_plugin.py"))
-SOURCES = ("claude-dev-kit", "cloudflare", "desktop-commander", "github-ops")
+SOURCES = ("cloudflare", "desktop-commander", "github-ops", "google")
+SKILLS_ONLY = ("claudesign",)
 
 
 class AppBindingTests(unittest.TestCase):
@@ -37,13 +38,25 @@ class AppBindingTests(unittest.TestCase):
                     self.assertEqual(overlay["mcpServers"], "./.mcp.json")
 
     def test_invalid_ids_fail_closed(self):
-        source = ROOT / "plugins/claude-dev-kit"
+        source = ROOT / "plugins/cloudflare"
         for ident in ("", "bogus", "plugin_asdk_app_unsafe", "plugin_asdk_app_" + "A" * 32):
             with self.subTest(ident=ident), tempfile.TemporaryDirectory() as tmp:
                 dest = Path(tmp) / "staged"
                 dest.mkdir()
                 with self.assertRaises(ValueError):
                     PACK["stage"](source, dest, ident)
+
+    def test_skills_only_plugin_has_no_mcp_overlay(self):
+        for name in SKILLS_ONLY:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                dest = Path(tmp) / "staged"
+                dest.mkdir()
+                PACK["stage"](ROOT / "plugins" / name, dest, None)
+                overlay = json.loads((dest / ".codex-plugin/plugin.json").read_text())
+                self.assertNotIn("mcpServers", overlay)
+                self.assertFalse((dest / ".mcp.json").exists())
+                with self.assertRaises(ValueError):
+                    PACK["stage"](ROOT / "plugins" / name, Path(tmp) / "again", "asdk_app_" + "a" * 32)
 
 
 if __name__ == "__main__":

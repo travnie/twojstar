@@ -1,0 +1,13 @@
+interface:
+  display_name: "Web Design"
+  short_description: "Design direction, DESIGN.md tokens, landing pages and site reviews that don't look AI-generated"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#E8590C"
+  default_prompt: "Use $web-design to design and build this landing page."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true

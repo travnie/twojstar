@@ -1,0 +1,13 @@
+interface:
+  display_name: "UX Design"
+  short_description: "Heuristic critique, WCAG 2.2 audits, microcopy, interaction states and user research plans"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#7048E8"
+  default_prompt: "Use $ux-design to critique this flow and list fixes by severity."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
