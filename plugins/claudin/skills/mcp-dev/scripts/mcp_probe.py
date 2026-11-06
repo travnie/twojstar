@@ -16,6 +16,7 @@ import re
 import sys
 import urllib.request
 import urllib.error
+import urllib.parse
 
 CLIENT = {"name": "mcp-probe", "version": "1.0"}
 OLD = "2025-06-18"
@@ -148,6 +149,8 @@ def main():
     if not a or a[0].startswith("-"):
         sys.exit(__doc__)
     url, headers, call = a[0], {}, None
+    if urllib.parse.urlsplit(url).scheme not in {"https", "http"}:
+        sys.exit("URL must be http(s)")
     i = 1
     while i < len(a):
         if a[i] == "--header":
