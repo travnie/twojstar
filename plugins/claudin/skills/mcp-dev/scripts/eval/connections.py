@@ -101,9 +101,11 @@ class MCPConnectionSSE(MCPConnection):
 @asynccontextmanager
 async def _http_streams(url: str, headers: dict[str, str]):
     """mcp 2.x: headers go on the httpx client, not the transport."""
-    async with create_mcp_http_client(headers=headers) as client:
-        async with streamable_http_client(url, http_client=client) as streams:
-            yield streams
+    async with (
+        create_mcp_http_client(headers=headers) as client,
+        streamable_http_client(url, http_client=client) as streams,
+    ):
+        yield streams
 
 
 class MCPConnectionHTTP(MCPConnection):
