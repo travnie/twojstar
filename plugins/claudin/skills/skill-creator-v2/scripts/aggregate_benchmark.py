@@ -192,7 +192,15 @@ def aggregate_results(results: dict) -> dict:
     Returns run_summary with stats for each configuration and delta.
     """
     run_summary = {}
-    configs = list(results.keys())
+    # Primary first, baseline second, regardless of directory order.
+    baseline_names = ("without_skill", "old_skill", "baseline")
+
+    def config_rank(name: str) -> int:
+        if name.startswith("with_skill") or name == "new_skill":
+            return 0
+        return 2 if name in baseline_names else 1
+
+    configs = sorted(results.keys(), key=config_rank)
 
     for config in configs:
         runs = results.get(config, [])
