@@ -31,9 +31,9 @@ document fidelity rules and browser-only file handling. "Bench" may also mean
 
 **Target UX, not yet shipped:** Files becomes the primary explorer and task
 workspace, with Documents/PDF retained as specialist workspaces. The current
-Files tab already provides a bounded header inspector, one-file preview and
-read-only ZIP entry listing; it does **not** yet select batches, browse local
-directories, extract archive entries, pack selections, or open preview dialogs.
+Files tab already accepts up to 100 files, offers a bounded header inspector,
+one-file preview and read-only ZIP listing. It still lacks **multi-selection
+for batch actions**, directory browsing, extraction, packing and preview dialogs.
 
 - **Desktop:** source/tree and breadcrumbs on the left; searchable sortable
   file table or thumbnail grid in the center; contextual inspector on the right.
@@ -48,7 +48,8 @@ directories, extract archive entries, pack selections, or open preview dialogs.
   for audio, or video/document viewer; Escape, backdrop, focus restoration,
   next/previous navigation and keyboard accessibility are mandatory. A docked
   mini-player may persist while browsing without keeping abandoned Blob URLs.
-  Unsupported formats get an explanation and metadata, not a blank panel.
+  Cancel superseded previews and use an active-item generation token to reject
+  late async results. Unsupported formats show metadata, not a blank panel.
 - **Actions:** create ZIP from selected files; inspect/compare/hash, extract
   selected archive entries, and export a report. Queue operations with
   progress, cancel, validation and honest partial failure states. Do not expose
@@ -60,9 +61,14 @@ directories, extract archive entries, pack selections, or open preview dialogs.
   visible rows. Do not preload every file, preview, image decoder or WAV stream.
 
 **Browser permissions:** prefer standard file pickers/drag-and-drop. Offer
-`showDirectoryPicker()` only on supported browsers with user activation;
-`webkitdirectory` can serve as an import fallback. Firefox and Safari do not
-currently support the full File System Access picker family. Android pickers and
+`showDirectoryPicker()` only in a supported **secure context** (HTTPS or
+localhost) with user activation; offline `file://` builds need a fallback.
+`webkitdirectory` can import folders without persistent handles. For dropped
+folders, traverse `DataTransferItem` directory entries using supported APIs
+and preserve relative paths; the current shared `bindFileDrop` exposes only
+a flat `File[]` and must not be treated as a directory-tree parser.
+Firefox and Safari do not support the full File System Access picker family.
+Android pickers and
 directory handling need explicit tests; a read-only imported folder is **not**
 a filesystem mount. Never imply that the web page can browse or rewrite the
 device's entire disk. See [browser support](https://web-platform-dx.github.io/web-features-explorer/features/file-system-access/).
@@ -71,17 +77,27 @@ device's entire disk. See [browser support](https://web-platform-dx.github.io/we
 
 Keep one canonical **virtual file model**, independent of UI frameworks:
 
-- Entry ID, display name, logical path, parent, source kind, immutable Blob
-  reference or bounded read/stream adapter, sniffed format, MIME/provenance,
-  size/timestamps and capabilities. Native files, dropped folders and archive
-  entries map to this model without copying complete file contents.
+- **Opaque entry ID** unique across all simultaneously mounted sources, plus
+  explicit mount/source identity and lifetime. Never derive identity from a
+  logical path alone: two archives can both contain `notes.txt`. Store display
+  name, relative path, parent, source kind, immutable Blob snapshot or bounded
+  read/stream adapter, MIME/signature provenance, size/timestamps and
+  capabilities without eagerly copying complete file contents.
 - Entry operations: `readRange`, `stream`, `inspect`, `preview`, `listChildren`,
-  `extract`, `pack` and `export` only when supported by the selected adapter.
-  Encode supported/unsupported reasons explicitly; do not make a read-only ZIP
-  index look like a full archive editor.
+  `extract` and `export`, each gated by adapter capabilities. Preview adapters
+  return an explicit bounded Blob URL or supported streaming media source with
+  MIME, cancellation and disposal. Native media elements cannot consume a raw
+  arbitrary stream; use a tested MediaSource route or bounded temporary file,
+  otherwise report unsupported rather than buffer an entire archive entry.
+  Do not make a read-only ZIP index look like a full archive editor.
 - Keep **selection state separate from active preview**, stable across list
-  reordering and filtering. Batch actions consume a snapshot of selected IDs,
-  validate permissions/duplicates/total size and preserve paths safely.
+  reordering and filtering. A batch `createArchive` action consumes a validated
+  selected-ID snapshot, resolves entries, preserves safe relative paths and
+  handles name collisions deterministically. Never implement per-entry `pack`.
+- For writable directory handles, pin `File` snapshots per job or revalidate
+  source version/content before publishing an archive or report; abort if a
+  source changes after validation. Do not pretend size/timestamp checks alone
+  guarantee immutable contents.
 - File work occurs in lazy task-specific modules and Web Workers. Worker
   requests include cancellation and byte/entry/time budgets. Revoke object
   URLs; clean temporary OPFS data; never read whole GB-scale archives merely
@@ -286,8 +302,9 @@ First comparison set:
    animated and very large files, output fidelity).
 4. Media: native playback/metadata vs Mediabunny vs MediaInfo.js /
    music-metadata; Ogg Opus, WebM Opus, FLAC, AAC, artwork.
-5. UI prototype: current approach vs Jaspr (bundle weight, startup, mobile
-   responsiveness, keyboard accessibility, JS/WASM interoperability).
+5. UI prototype: **Svelte 5 vs Jaspr vs current DOM**, using identical
+   fixtures and interactions (bundle weight, startup, mobile responsiveness,
+   keyboard accessibility, JS/WASM interoperability and portable CSP).
 
 **Protocol:** pin exact versions/commit SHAs; capture hardware, browser and
 settings; repeat cold/warm runs; track bytes downloaded, startup, wall time,
