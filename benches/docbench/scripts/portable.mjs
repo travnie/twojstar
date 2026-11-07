@@ -104,15 +104,19 @@ const dataUrl = (mime, value) => {
   return `data:${mime};base64,${bytes.toString("base64")}`;
 };
 
-const filesWorkspacePortable = filesWorkspace
-  .replace(
-    'from "./file-signatures.mjs";',
-    `from ${JSON.stringify(dataUrl("text/javascript", fileSignatures))};`,
-  )
-  .replace(
-    'from "./zip-index.mjs";',
-    `from ${JSON.stringify(dataUrl("text/javascript", zipIndex))};`,
-  );
+// One inline classic script for portable Files. No data: module imports under CSP.
+const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:function|const) )/gmu, "");
+const filesController = filesWorkspace
+  .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
+  .replace('import { readZipIndex } from "./zip-index.mjs";', "");
+const filesWorkspacePortable = [
+  "(() => {",
+  '"use strict";',
+  withoutExports(fileSignatures),
+  withoutExports(zipIndex),
+  filesController,
+  "})();",
+].join("\n");
 
 let portableFonts = fonts;
 for (const filename of [
@@ -283,7 +287,7 @@ const portable = html
   .replace('<script type="module" src="/pdf-app.mjs"></script>', portablePdfScripts)
   .replace(
     '<script type="module" src="/files-workspace.mjs"></script>',
-    `<script type="module">${safeScript(filesWorkspacePortable)}</script>`,
+    `<script>${safeScript(filesWorkspacePortable)}</script>`,
   )
   .replace('<link rel="manifest" href="/site.webmanifest">', "")
   .replace('<link rel="canonical" href="https://docbench.travny.workers.dev/">', "")
