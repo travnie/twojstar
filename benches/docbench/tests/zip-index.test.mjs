@@ -47,12 +47,32 @@ test("ZIP64 marker produces explicit unsupported result", async () => {
 
 test("ZIP tail reads stay bounded", async () => {
   const bytes = zipSync({ "a.txt": strToU8("a") });
+  const lengths = [];
   const large = {
     size: 2 ** 33,
     slice(start, end) {
-      assert.ok(end - start <= ZIP_INDEX_LIMITS.maxTailBytes);
+      lengths.push(end - start);
       return new Blob([bytes]);
     },
   };
   await assert.rejects(readZipIndex(large), /ZIP index unavailable/u);
+  assert.ok(lengths[0] <= ZIP_INDEX_LIMITS.maxTailBytes);
+  assert.ok(lengths[1] <= ZIP_INDEX_LIMITS.maxDirectoryBytes);
+});
+
+test("ZIP decodes legacy CP437 filenames", async () => {
+  const bytes = zipSync({ "cafe.txt": strToU8("hello") });
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let central = -1;
+  for (let index = 0; index + 46 <= bytes.length; index += 1) {
+    if (view.getUint32(index, true) === 0x02014b50) {
+      central = index;
+      break;
+    }
+  }
+  assert.ok(central >= 0);
+  view.setUint16(central + 8, view.getUint16(central + 8, true) & ~0x800, true);
+  bytes[central + 46 + 3] = 0x82;
+  const result = await readZipIndex(new Blob([bytes]));
+  assert.equal(result.entries[0].name, "café.txt");
 });

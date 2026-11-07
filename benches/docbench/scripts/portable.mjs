@@ -107,11 +107,11 @@ const dataUrl = (mime, value) => {
 const filesWorkspacePortable = filesWorkspace
   .replace(
     'from "./file-signatures.mjs";',
-    "from " + JSON.stringify(dataUrl("text/javascript", fileSignatures)) + ";",
+    `from ${JSON.stringify(dataUrl("text/javascript", fileSignatures))};`,
   )
   .replace(
     'from "./zip-index.mjs";',
-    "from " + JSON.stringify(dataUrl("text/javascript", zipIndex)) + ";",
+    `from ${JSON.stringify(dataUrl("text/javascript", zipIndex))};`,
   );
 
 let portableFonts = fonts;
