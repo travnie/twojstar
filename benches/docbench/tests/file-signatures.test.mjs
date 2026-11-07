@@ -5,9 +5,9 @@ import { inspectHeader, inspectLocalFile, signatureFormat, FILE_SIGNATURE_READ_L
 const bytes = (...parts) => Uint8Array.from(parts.flat());
 const fromText = (value) => new TextEncoder().encode(value);
 const withAt = (length, offset, value) => {
-  const b = new Uint8Array(length);
-  b.set(value, offset);
-  return b;
+  const buffer = new Uint8Array(length);
+  buffer.set(value, offset);
+  return buffer;
 };
 
 for (const [label, head, format] of [
@@ -31,9 +31,9 @@ for (const [label, head, format] of [
   ["HEIC", fromText("\0\0\0\u0018ftypmif1\0\0\0\0heic"), "heic"],
   ["QOI", fromText("qoif"), "qoi"],
   ["TIFF", bytes(0x49, 0x49, 0x2a, 0), "tiff"],
-  ["Ogg Opus", fromText("OggS" + "\0".repeat(30) + "OpusHead"), "opus"],
-  ["Ogg Vorbis", fromText("OggS" + "\0".repeat(30) + "vorbis"), "vorbis"],
-  ["plain Ogg", fromText("OggS" + "\0".repeat(30)), "ogg"],
+  ["Ogg Opus", fromText(`OggS${"\0".repeat(30)}OpusHead`), "opus"],
+  ["Ogg Vorbis", fromText(`OggS${"\0".repeat(30)}vorbis`), "vorbis"],
+  ["plain Ogg", fromText(`OggS${"\0".repeat(30)}`), "ogg"],
   ["FLAC", fromText("fLaC"), "flac"],
   ["MP3 ID3", fromText("ID3\u0004\0"), "mp3"],
   ["MP3 frame", bytes(0xff, 0xfb, 0x90, 0x00), "mp3"],
@@ -45,7 +45,7 @@ for (const [label, head, format] of [
   ["PDF", fromText("%PDF-1.7"), "pdf"],
   ["SVG", fromText('<?xml version="1.0"?><svg width="2">'), "svg"],
 ]) {
-  test("signature: " + label, () => assert.equal(signatureFormat(head), format));
+  test(`signature: ${label}`, () => assert.equal(signatureFormat(head), format));
 }
 
 test("actual bytes win over a deceptive extension", () => {
@@ -90,7 +90,7 @@ test("file inspection reads only a capped prefix", async () => {
     slice(start, end) {
       assert.equal(start, 0);
       requestedEnd = end;
-      return new Blob([fromText("OggS" + "\0".repeat(30) + "OpusHead")]);
+      return new Blob([fromText(`OggS${"\0".repeat(30)}OpusHead`)]);
     },
   };
   const result = await inspectLocalFile(file);
