@@ -1,18 +1,17 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
 
-const $ = (selector) => document.querySelector(selector);
+const getNode = (selector) => document.querySelector(selector);
 const { formatBytes, bindFileDrop } = globalThis.BenchLocalFiles;
-const fileInput = $("#files-input");
-const list = $("#files-list");
-const metadata = $("#files-metadata");
-const preview = $("#files-preview");
-const heading = $("#files-selected");
-const status = $("#files-status");
-const count = $("#files-count");
-const clearButton = $("#files-clear");
-const removeButton = $("#files-remove");
-const downloadButton = $("#files-download");
+const fileInput = getNode("#files-input");
+const list = getNode("#files-list");
+const metadata = getNode("#files-metadata");
+const preview = getNode("#files-preview");
+const heading = getNode("#files-selected");
+const status = getNode("#files-status");
+const count = getNode("#files-count");
+const clearButton = getNode("#files-clear");
+const removeButton = getNode("#files-remove");
 
 const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
@@ -95,14 +94,13 @@ function renderList() {
       element("span", "files-item-name", file.name || "(unnamed)"),
       element("span", "files-item-size", formatBytes(file.size)),
     );
-    button.addEventListener("click", () => void selectFile(index));
+    button.addEventListener("click", () => selectFile(index));
     fragment.append(button);
   });
   list.replaceChildren(fragment);
   count.textContent = String(files.length);
   clearButton.disabled = files.length === 0;
   removeButton.disabled = selectedIndex < 0;
-  downloadButton.disabled = selectedIndex < 0;
 }
 
 async function showZipContents(file, revision) {
@@ -127,17 +125,35 @@ async function showZipContents(file, revision) {
   preview.append(box);
 }
 
-function mediaPreview(file, tag, revision) {
-  previewUrl = URL.createObjectURL(file);
-  const media = element(tag, "files-media");
+const MEDIA_MIME = Object.freeze({
+  jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+  webp: "image/webp", avif: "image/avif", bmp: "image/bmp",
+  ico: "image/x-icon", jxl: "image/jxl", heic: "image/heic",
+  heif: "image/heif", tiff: "image/tiff", qoi: "image/qoi",
+  mp3: "audio/mpeg", opus: "audio/ogg", vorbis: "audio/ogg",
+  flac: "audio/flac", wav: "audio/wav", aiff: "audio/aiff",
+  ogg: "audio/ogg", m4a: "audio/mp4",
+  mp4: "video/mp4", webm: "video/webm",
+  mov: "video/quicktime", matroska: "video/x-matroska",
+});
+
+function mediaPreview(file, format, revision) {
+  // No SVG or active document embedding. Force a passive media MIME.
+  const passiveBlob = file.slice(0, file.size, MEDIA_MIME[format]);
+  previewUrl = URL.createObjectURL(passiveBlob);
+  const media = IMAGE_FORMATS.has(format)
+    ? document.createElement("img")
+    : AUDIO_FORMATS.has(format)
+      ? document.createElement("audio") : document.createElement("video");
+  media.className = "files-media";
   media.src = previewUrl;
-  if (tag === "img") {
-    media.alt = "Preview of " + (file.name || "local image");
+  if (media instanceof HTMLImageElement) {
+    media.alt = `Preview of ${file.name || "local image"}`;
     media.decoding = "async";
   } else {
     media.controls = true;
     media.preload = "metadata";
-    if (tag === "video") media.playsInline = true;
+    if (media instanceof HTMLVideoElement) media.playsInline = true;
   }
   const fallback = element("p", "files-note", "Native browser preview. Codec availability varies.");
   media.addEventListener("error", () => {
@@ -168,16 +184,16 @@ async function renderPreview(file, info, revision) {
     if (file.size > MAX_IMAGE_BYTES) {
       emptyPreview("Image preview disabled above " + formatBytes(MAX_IMAGE_BYTES) + " to protect browser memory.");
     } else {
-      mediaPreview(file, "img", revision);
+      mediaPreview(file, info.format, revision);
     }
     return;
   }
   if (AUDIO_FORMATS.has(info.format)) {
-    mediaPreview(file, "audio", revision);
+    mediaPreview(file, info.format, revision);
     return;
   }
   if (VIDEO_FORMATS.has(info.format)) {
-    mediaPreview(file, "video", revision);
+    mediaPreview(file, info.format, revision);
     return;
   }
   if (isTextFile(info)) {
@@ -253,39 +269,28 @@ function addFiles(input) {
   }
   const start = files.length;
   files.push(...added.slice(0, capacity));
-  void selectFile(start);
+  selectFile(start);
   if (added.length > capacity) {
     setStatus("Only " + capacity + " files added; limit " + MAX_FILES + ".", true);
   }
 }
 
-$("#files-open").addEventListener("click", () => fileInput.click());
+getNode("#files-open").addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {
   addFiles(fileInput.files);
   fileInput.value = "";
 });
 clearButton.addEventListener("click", () => {
   files.length = 0;
-  void selectFile(-1);
+  selectFile(-1);
 });
 removeButton.addEventListener("click", () => {
   if (selectedIndex < 0) return;
   const next = selectedIndex;
   files.splice(selectedIndex, 1);
-  void selectFile(files.length ? Math.min(next, files.length - 1) : -1);
+  selectFile(files.length ? Math.min(next, files.length - 1) : -1);
 });
-downloadButton.addEventListener("click", () => {
-  if (selectedIndex < 0) return;
-  const file = files[selectedIndex];
-  const href = URL.createObjectURL(file);
-  const link = element("a");
-  link.href = href;
-  link.download = file.name || "download";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(href), 1000);
-});
-
-bindFileDrop($("#files-drop-zone"), addFiles);
-bindFileDrop($("#files-list"), addFiles);
+bindFileDrop(getNode("#files-drop-zone"), addFiles);
+bindFileDrop(getNode("#files-list"), addFiles);
 window.addEventListener("pagehide", releasePreview);
-void selectFile(-1);
+selectFile(-1);

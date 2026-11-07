@@ -3,7 +3,7 @@
 (() => {
   function formatBytes(value) {
     if (!Number.isFinite(value) || value < 0) return "Unknown size";
-    if (value < 1024) return String(value) + " B";
+    if (value < 1024) return `${value} B`;
     const units = ["KiB", "MiB", "GiB", "TiB"];
     let size = value;
     let unit = -1;
@@ -11,7 +11,7 @@
       size /= 1024;
       unit += 1;
     } while (size >= 1024 && unit < units.length - 1);
-    return size.toFixed(size < 10 ? 1 : 0) + " " + units[unit];
+    return `${size.toFixed(size < 10 ? 1 : 0)} ${units[unit]}`;
   }
 
   function dragHasFiles(event) {
