@@ -113,6 +113,7 @@ jobs:
 
       - run: >-
           gradle
+          "-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=768m"
           :core:desktopTest
           :core:testAndroidHostTest
           :platforms:android:testDebugUnitTest
