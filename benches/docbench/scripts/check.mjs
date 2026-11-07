@@ -93,7 +93,7 @@ if (!webmcp.includes('const validateThroughUi = () =>')
 const index = await readFile("public/index.html", "utf8");
 const portableFiles = await readFile("public/portable.html", "utf8");
 for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-metadata", "files-preview"]) {
-  if (!index.includes('id="' + id + '"')) throw new Error("Files workspace missing " + id);
+  if (!index.includes(`id="${id}"`)) throw new Error(`Files workspace missing ${id}`);
 }
 if (!index.includes('src="/local-files.js"') || !index.includes('src="/files-workspace.mjs"')) {
   throw new Error("Files workspace scripts missing.");
