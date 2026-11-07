@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { Script } from "node:vm";
 
 const [
   html,
@@ -117,6 +118,7 @@ const filesWorkspacePortable = [
   filesController,
   "})();",
 ].join("\n");
+new Script(filesWorkspacePortable, { filename: "docbench-files-portable.js" });
 
 let portableFonts = fonts;
 for (const filename of [
