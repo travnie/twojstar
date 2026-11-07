@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="/fonts.css">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/document-enhancements.css">
+  <link rel="stylesheet" href="/files-workspace.css">
 </head>
 <body>
   <main class="app-shell">
@@ -53,6 +54,7 @@
     <nav class="mode-tabs" role="tablist" aria-label="Workspace">
       <button id="document-tab" class="mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="document-workspace" data-mode="document">Documents</button>
       <button id="pdf-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="pdf-workspace" data-mode="pdf">PDF</button>
+      <button id="files-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="files-workspace" data-mode="files">Files</button>
     </nav>
 
     <section id="document-workspace" class="workspace" role="tabpanel" aria-labelledby="document-tab">
@@ -282,12 +284,47 @@
       </div>
     </section>
 
+    <section id="files-workspace" class="workspace" role="tabpanel" aria-labelledby="files-tab" hidden>
+      <div class="toolbar files-toolbar">
+        <div class="files-toolbar-actions">
+          <button id="files-open" class="button compact primary" type="button">Add files</button>
+          <button id="files-remove" class="button compact" type="button" disabled>Remove selected</button>
+          <button id="files-clear" class="button compact" type="button" disabled>Clear list</button>
+          <button id="files-download" class="button compact" type="button" disabled>Download original</button>
+          <input id="files-input" type="file" multiple hidden>
+        </div>
+        <p class="files-hint">Local inspection only · no uploads or telemetry</p>
+      </div>
+      <div class="files-layout">
+        <aside class="files-queue" aria-label="Selected files">
+          <div class="panel-header">
+            <strong>Local files</strong>
+            <span id="files-count" class="files-count">0</span>
+          </div>
+          <div id="files-drop-zone" class="files-drop">Drop files here, or select Add files.</div>
+          <div id="files-list" class="files-list" aria-label="Files to inspect"></div>
+        </aside>
+        <section class="files-details" aria-label="File inspector">
+          <div class="panel-header">
+            <strong id="files-selected">Choose a file</strong>
+            <span id="files-status" role="status" aria-live="polite">Files remain on this device.</span>
+          </div>
+          <dl id="files-metadata" class="files-metadata"></dl>
+          <div id="files-preview" class="files-preview" role="region" aria-label="Local file preview">
+            <p class="files-empty">Open files or drop them here to inspect their headers.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <details class="answer-guide" id="about-docbench">
       <summary>About Doc Bench · supported files and privacy</summary>
       <h2>Which documents can I open?</h2>
       <p>Doc Bench opens UTF-8 text files even when their extensions are unfamiliar. It recognizes Markdown, JSON-family formats, YAML, XML, common config and script files, and offers previews or validation where supported.</p>
       <h2>What PDF operations are available?</h2>
       <p>Preview, merge, split, reorder and extract pages; edit bookmarks, metadata and attachments; optimize PDFs and convert to or from DOCX. PDF-to-DOCX is structure-first, not a pixel-perfect reproduction.</p>
+      <h2>What does Files support?</h2>
+      <p>The Files workspace inspects local headers, metadata, text and native media previews, and lists ZIP entries without extracting them. Modern formats may need a browser codec or a future decoder.</p>
       <h2>Are my documents uploaded?</h2>
       <p>No. Editing and PDF operations run locally in your browser. Saving directly to a local file depends on browser support; downloading an edited copy is the fallback. <a href="https://github.com/travnie/twojstar/tree/main/benches/docbench">Read the feature details</a>.</p>
     </details>
@@ -305,6 +342,7 @@
   <script src="/vendor/pdf-lib.min.js"></script>
   <script src="/vendor/fflate.min.js"></script>
   <script src="/document-formats.js"></script>
+  <script src="/local-files.js"></script>
   <script src="/app.js"></script>
   <script type="module" src="/document-enhancements.mjs"></script>
   <script src="/text-inspector-core.js"></script>
@@ -313,5 +351,6 @@
   <script src="/webmcp.js"></script>
   <script type="module" src="/docx-converter.mjs"></script>
   <script type="module" src="/pdf-app.mjs"></script>
+  <script type="module" src="/files-workspace.mjs"></script>
 </body>
 </html>

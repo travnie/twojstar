@@ -7,8 +7,17 @@ Shared npm workspace for the three browser tools in the Bench family:
 - [`streambench/`](streambench/) — IPTV, radio, HLS, M3U and XMLTV workshop.
 
 The applications remain separate Cloudflare Workers with independent runtime
-boundaries and `wrangler.jsonc` files. The workspace only centralizes dependency
+boundaries and `wrangler.jsonc` files. The workspace centralizes dependency
 installation, lockfile maintenance and common CI entry points.
+
+Shared browser primitives now live under [`shared/`](shared/). Existing i18n
+and WebMCP lifecycle code is synced to each application. The reusable local-file
+drop/byte-size controller is maintained in
+[`shared/local-files.js`](shared/local-files.js), with one generated copy in
+Docbench. Other Benches can opt into the same source via
+[`scripts/sync-local-files.mjs`](scripts/sync-local-files.mjs) as they add
+compatible features. Layout, theme, permissions and Worker routes remain
+product-owned; do not maintain parallel helper copies.
 
 ```sh
 cd benches

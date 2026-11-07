@@ -631,6 +631,7 @@
   const modeTabs = [...document.querySelectorAll(".mode-tab")];
   const documentWorkspace = $("#document-workspace");
   const pdfWorkspace = $("#pdf-workspace");
+  const filesWorkspace = $("#files-workspace");
 
   function activateModeTab(tab, focus = false) {
     modeTabs.forEach((item) => {
@@ -639,9 +640,10 @@
       item.setAttribute("aria-selected", String(active));
       item.tabIndex = active ? 0 : -1;
     });
-    const pdf = tab.dataset.mode === "pdf";
-    documentWorkspace.hidden = pdf;
-    pdfWorkspace.hidden = !pdf;
+    const mode = tab.dataset.mode;
+    documentWorkspace.hidden = mode !== "document";
+    pdfWorkspace.hidden = mode !== "pdf";
+    filesWorkspace.hidden = mode !== "files";
     if (focus) tab.focus();
   }
 
@@ -662,6 +664,7 @@
 
   document.addEventListener("keydown", (event) => {
     if (event.altKey || (!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== "s") return;
+    if (documentWorkspace.hidden && pdfWorkspace.hidden) return;
     event.preventDefault();
     if (!documentWorkspace.hidden) {
       saveFile();
