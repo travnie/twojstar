@@ -32,13 +32,30 @@ These are **investigation targets**, not a claim of existing implementation.
 Track each format separately as detect / metadata / preview or playback /
 extract / encode or pack / encrypted support / tested browsers.
 
-| Domain | First targets | Expansion / hard cases |
-| --- | --- | --- |
-| Archive/container | ZIP/ZIP64 (including AES and non-Deflate methods), 7z, RAR/RAR5, TAR, gzip, bzip2, xz, zstd | multi-volume, solid/password-protected archives, CAB, ISO/UDF, AR/CPIO, WIM/DMG and disk images as read-only exploration where practical |
-| Image | JPEG, PNG/APNG, GIF, WebP, AVIF, SVG, BMP, TIFF, ICO | **JPEG XL (JXL)**, HEIF/HEIC, QOI, animated and multipage images, raw camera formats later; color profiles and orientation |
-| Audio | **MP3 and Opus** (Ogg Opus / WebM Opus), Vorbis, FLAC, WAV/PCM, AAC/M4A, AIFF | ALAC, WavPack and other codecs when engines support them; waveform/spectrogram and album art |
-| Existing documents | TXT, Markdown, JSON-family, YAML/XML, PDF, DOCX and current supported configs/playlists | route archive entries into current preview and editing tools; never weaken preservation guarantees |
-| Metadata | hashes, file signature, MIME, timestamps, EXIF, XMP, IPTC, ICC, ID3, Vorbis comments, container/codec data | compare embedded versus filesystem metadata, report unknown fields, expose privacy-sensitive GPS explicitly |
+- **Archives/containers**
+  - First: ZIP/ZIP64 (AES and non-Deflate methods), 7z, RAR/RAR5, TAR,
+    gzip, bzip2, xz and zstd.
+  - Later: multi-volume, solid and password-protected archives; CAB,
+    ISO/UDF, AR/CPIO, WIM/DMG and read-only disk image exploration.
+- **Images**
+  - First: JPEG, PNG/APNG, GIF, WebP, AVIF, SVG, BMP, TIFF and ICO.
+  - Later: **JPEG XL (JXL)**, HEIF/HEIC, QOI, animated/multipage images,
+    camera RAW; color profiles and orientation.
+- **Audio**
+  - First: **MP3 and Opus** (Ogg Opus / WebM Opus), Vorbis, FLAC,
+    WAV/PCM, AAC/M4A and AIFF.
+  - Later: ALAC, WavPack, additional supported codecs, waveforms,
+    spectrograms and album art.
+- **Existing documents**
+  - First: TXT, Markdown, JSON-family, YAML/XML, PDF, DOCX and currently
+    supported configs/playlists.
+  - Later: route archive entries into current preview/editing tools;
+    preserve existing fidelity guarantees.
+- **Metadata**
+  - First: hashes, signatures, MIME, timestamps, EXIF, XMP, IPTC, ICC,
+    ID3, Vorbis comments and container/codec data.
+  - Later: compare embedded versus filesystem metadata; report unknown
+    fields; display privacy-sensitive GPS explicitly.
 
 "Supports Opus" must distinguish container from codec; likewise JPEG XL
 preview may need WASM even when a browser understands JPEG. Do not conflate
@@ -64,6 +81,7 @@ boundaries. Use lazy loading so opening a TXT does not download an audio codec
 or every archive engine.
 
 **Common capabilities (proposal, not a directory specification):**
+
 - File detection and input abstraction: sniffed format, capabilities and
   confidence; support random-access range reads and streaming where possible.
 - Preview registry: `canPreview`, `preview`, `inspectMetadata`, optional
@@ -137,6 +155,7 @@ results and trade-offs, not synthetic winners. Reuse a common test convention
 across Codebench, Docbench and Streambench **only if there is actual overlap**.
 
 First comparison set:
+
 1. ZIP: current fflate vs zip.js (create, list, selective extraction, ZIP64,
    encryption, output compatibility).
 2. Archive readers: exav vs libarchive-based choices vs 7z-specific path
