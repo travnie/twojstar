@@ -105,9 +105,9 @@ test("recognized MIME conflicts are independent of filename extensions", () => {
 });
 
 test("Ogg/Opus and MP4/M4A compatible containers do not conflict", () => {
-  const opus = fromText(`OggS${"\\0".repeat(30)}OpusHead`);
+  const opus = fromText(`OggS${"\0".repeat(30)}OpusHead`);
   assert.equal(inspectHeader(opus, { name: "voice.ogg", type: "audio/ogg" }).mismatch, false);
-  const mp4 = fromText("\\0\\0\\0\\u0018ftypisom\\0\\0\\0\\0mp42");
+  const mp4 = fromText("\0\0\0\u0018ftypisom\0\0\0\0mp42");
   assert.equal(inspectHeader(mp4, { name: "voice.m4a", type: "audio/mp4" }).mismatch, false);
 });
 
@@ -118,9 +118,9 @@ test("dotless filenames do not become extension hints", () => {
 });
 
 test("generic HEIF and QuickTime brands are not mislabeled MP4", () => {
-  const heif = fromText("\\0\\0\\0\\u0018ftypmif1\\0\\0\\0\\0mif1");
-  const quickTime = fromText("\\0\\0\\0\\u0018ftypqt  \\0\\0\\0\\0qt  ");
-  const unknown = fromText("\\0\\0\\0\\u0018ftypzzzz\\0\\0\\0\\0zzzz");
+  const heif = fromText("\0\0\0\u0018ftypmif1\0\0\0\0mif1");
+  const quickTime = fromText("\0\0\0\u0018ftypqt  \0\0\0\0qt  ");
+  const unknown = fromText("\0\0\0\u0018ftypzzzz\0\0\0\0zzzz");
   assert.equal(signatureFormat(heif), "heif");
   assert.equal(signatureFormat(quickTime), "mov");
   assert.equal(signatureFormat(unknown), "isobmff");
