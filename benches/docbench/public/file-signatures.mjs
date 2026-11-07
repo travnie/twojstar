@@ -80,7 +80,10 @@ export function signatureFormat(input) {
   if (starts(bytes, [0xff, 0x0a])) return "jxl";
   if (starts(bytes, [0, 0, 0, 12, 0x4a, 0x58, 0x4c, 0x20, 13, 10, 0x87, 10])) return "jxl";
   if (ascii(bytes, 0, 4) === "qoif") return "qoi";
-  if (ascii(bytes, 0, 2) === "BM") return "bmp";
+  if (ascii(bytes, 0, 2) === "BM" && bytes.length >= 18) {
+    const dibSize = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(14, true);
+    if ([12, 40, 52, 56, 64, 108, 124].includes(dibSize)) return "bmp";
+  }
   if (starts(bytes, [0x49, 0x49, 0x2a, 0]) || starts(bytes, [0x4d, 0x4d, 0, 0x2a])
     || starts(bytes, [0x49, 0x49, 0x2b, 0]) || starts(bytes, [0x4d, 0x4d, 0, 0x2b])) return "tiff";
   if (starts(bytes, [0, 0, 1, 0])) return "ico";
