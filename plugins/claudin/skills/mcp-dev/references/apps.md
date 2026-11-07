@@ -2,13 +2,34 @@
 
 One standard for both hosts: ChatGPT is fully MCP Apps-compatible since 2026-02; Claude renders MCP Apps in chat/desktop (check `claude-ai-docs` `/connectors/building/mcp-apps/getting-started` for current surfaces). SDK: `@modelcontextprotocol/ext-apps` (2.x as of 2026-11 — `npm view @modelcontextprotocol/ext-apps version`; old guides pin 1.x).
 
+## Setup that bites
+
+- ext-apps 2.x needs the split SDK v2 packages: `npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/server @modelcontextprotocol/node @modelcontextprotocol/express zod` (+ `client` if the view talks to other servers). Never add the v1 `@modelcontextprotocol/sdk` next to them.
+- Bundle the view into one HTML file: `vite` + `vite-plugin-singlefile`. Run TS servers with `tsx` (SDK examples use `bun`).
+- Working code beats memory: clone the SDK at the installed version, `git clone --depth 1 --branch "v$(npm view @modelcontextprotocol/ext-apps version)" https://github.com/modelcontextprotocol/ext-apps`, then read `examples/basic-server-{vanillajs,react,vue,svelte}` `docs/migrate_from_openai_apps.md` (OpenAI Apps SDK → MCP Apps) and `docs/migrate-to-2.md` (ext-apps 1.x → 2.x).
+- Official step-by-step skills (Claude Code): the `mcp-apps` plugin in that repo (`create-mcp-app`, `add-app-to-server`, `convert-web-app`, `migrate-oai-app`). It's not part of this plugin, so don't assume it's installed.
+
+## Which tools get a UI
+
+| Tool output | UI? |
+|---|---|
+| lists, tables, search results | yes: filter, sort, select |
+| metrics over time | yes: charts, gauges |
+| media (maps, PDFs, images, video) | yes: viewer/player |
+| confirmations, short text | no, text is fine |
+| data only other tools/the view need | app-only tool (`visibility: ["app"]`) |
+
 ## Wiring
 
 Spec + guide: modelcontextprotocol.io/extensions/apps (via `mcp-docs`).
 
 1. Register a resource `ui://<app>/<view>` with MIME `text/html;profile=mcp-app` (SDK constant `RESOURCE_MIME_TYPE`) containing a self-contained HTML bundle (inline JS/CSS; external assets need CSP declarations).
 2. Tool descriptor `_meta.ui.resourceUri` → that resource. `_meta.ui.visibility`: `["model","app"]` default; `["app"]` for UI-only helper tools.
-3. Tool returns data (`structuredContent`) — the view renders it; keep text content for the model.
+3. Tool returns data (`structuredContent`) — the view renders it; always keep `content` text as the fallback for non-UI hosts.
+4. `_meta.ui.csp` and `_meta.ui.domain` go on the `contents[]` items returned by the resource **read callback**, not in the `registerAppResource()` config. The usual silent failure.
+5. View: register every handler (`ontoolinput`, `ontoolresult`, `onhostcontextchanged`, `onteardown`) **before** `app.connect()`, or early messages are lost.
+6. Optional: `ontoolinputpartial` (render while args stream), `requestDisplayMode` (fullscreen), `updateModelContext` (keep the model told what the user did in the view), `sendLog` (logs reach the host, not just the iframe console).
+7. Mixed hosts: register the app tool only when `getUiCapability(clientCapabilities)` lists `RESOURCE_MIME_TYPE`, else a plain tool. Works where the transport still exposes client capabilities; on stateless 2026-07-28 servers keep one tool and rely on the text fallback.
 
 ## Bridge: standard first, OpenAI alias second
 
@@ -21,7 +42,15 @@ Spec + guide: modelcontextprotocol.io/extensions/apps (via `mcp-docs`).
 | follow-up message | `ui/message` | `window.openai.sendFollowUpMessage` |
 | open link | `ui/open-link` | `window.openai.openExternal` |
 
-ChatGPT-only extras (checkout, file upload, modals, `widgetState`): feature-detect, never branch on host name. Migrating an Apps SDK (`window.openai`, skybridge) app = swap to the standard column; keep aliases only for old clients.
+No MCP Apps equivalent yet (2026-11): `widgetState` (use server state or localStorage), file upload/download, modals, `window.openai.view`, `openai/toolInvocation/*` progress text, `openai/widgetDescription` (use `updateModelContext`). Feature-detect, never branch on host name. Migrating an Apps SDK (`window.openai`, skybridge) app = swap to the standard column; keep aliases only for old clients; re-derive CSP from what the app actually fetches.
+
+## Hybrid: one web app, two modes
+
+Existing SPA that must keep working standalone: detect the host (sandboxed iframe → `window.location.origin === "null"`, or a `?mcp` flag), then take inputs from `ontoolresult` instead of URL params, route API calls through app-only tools instead of `fetch`, and treat localStorage as best-effort. Same render code for both modes; host styling only in MCP mode.
+
+## Test locally
+
+`examples/basic-host` from the cloned repo: `SERVERS='["http://localhost:3001/mcp"]' npm run start`, open `:8080`. Then a real host (`mcp-dev` §4).
 
 ## Sandbox constraints
 

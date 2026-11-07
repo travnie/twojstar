@@ -16,12 +16,13 @@ The spec moved to **2026-07-28** (stateless: no `initialize` handshake, no `Mcp-
 | Local files, desktop app, localhost, OS | installers | **MCPB** bundle (runtime included) — Claude desktop/Code only; chat ignores local servers |
 | Just me, prototype | me | local stdio (`npx`/`uvx`), upgrade path MCPB |
 | Needs pickers, charts, previews in chat | any | **MCP App** = remote server + `ui://` resources → `references/apps.md` |
+| Ships workflows/know-how with the tools | any | **Skills over MCP** (`io.modelcontextprotocol/skills`, SEP-2640) → `references/skills.md` |
 
-Bartek default: Cloudflare Worker (`cloudflare` skill: `McpAgent`/Agents SDK, service bindings for same-account Worker calls). Portable: official TS SDK `@modelcontextprotocol/sdk` or Python FastMCP (jlowin's 3.x, not the frozen 1.0 in `mcp`).
+Bartek default: Cloudflare Worker (`cloudflare` skill: `McpAgent`/Agents SDK, service bindings for same-account Worker calls). Portable: official TS SDK v2 = split packages `@modelcontextprotocol/server` (+ `client`, `node`, `express`); `@modelcontextprotocol/sdk` is the v1 line, keep it only in existing v1 code and never mix the two. Python: FastMCP (jlowin's 3.x, not the frozen 1.0 in `mcp`). Install with `npm install <pkg>`, never hand-typed versions.
 
 ## 2. Tools
 
-≤15 actions → one tool each. 30+ → `search_actions` + `execute_action`, promote the top 3-5. Details and directory rules: `references/tools.md`. Non-negotiable for Claude's directory: read and write in separate tools, `title` + `readOnlyHint`/`destructiveHint` on every tool, names ≤64 chars, descriptions describe (never instruct the model), actionable errors.
+Wrapping a REST/OpenAPI API: curate, don't mirror every endpoint (`references/tools.md` → OpenAPI). ≤15 actions → one tool each. 30+ → `search_actions` + `execute_action`, promote the top 3-5. Details and directory rules: `references/tools.md`. Non-negotiable for Claude's directory: read and write in separate tools, `title` + `readOnlyHint`/`destructiveHint` on every tool, names ≤64 chars, descriptions describe (never instruct the model), actionable errors.
 
 ## 3. Auth
 

@@ -47,6 +47,16 @@ Read-only data source (docs, tickets, wiki, CRM) meant for ChatGPT company knowl
 
 Claude handles them like any tool, so one server serves both hosts.
 
+## Wrapping an OpenAPI / REST API
+
+Curate, don't mirror. >~30 operations → filter by tag, path prefix, explicit allowlist or GET-only, and keep the filter as a visible constant users can edit.
+
+- Name: `operationId` → snake_case; fallback `method_path`; ≤60 chars, log collisions.
+- Description: the spec's `summary` + `description` verbatim, no paraphrase; empty → `METHOD /path` plus a warning to fix the spec.
+- Params, flattened into one argument list: path → required; query → required only if the spec says so; JSON body object → splat its properties (primitive/array body → one `body` arg). Headers only when they're real input (idempotency key), prefixed `header_`; auth comes from env/OAuth, never from the model. Cookies: skip and warn.
+- Results: 2xx JSON as is (declare `outputSchema` when the spec has one); binary → "saved N bytes to <path>", never inline blobs; SSE/NDJSON → accumulate to text; non-2xx → `isError` with status + body.
+- Skip `webhooks`/`callbacks`, `deprecated` and `x-internal` operations by default and say so. GET → `readOnlyHint`; DELETE/overwrite → `destructiveHint`.
+
 ## Counts and patterns
 
 | Tools | Pattern |

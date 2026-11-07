@@ -114,7 +114,7 @@
       "name": "claudin",
       "source": "./plugins/claudin",
       "description": "Claude internals with live docs: six authless docs MCP servers (Claude Code, claude.ai, Claude Platform API, Model Context Protocol, OpenAI and xAI developer docs) plus skill-creator-v2 (skill lifecycle: create, eval, benchmark, package, claude.ai compat), plugin-dev (plugins across chat, Cowork, Claude Code, Codex/ChatGPT, Grok Build, Copilot CLI, Antigravity and Gemini CLI) and mcp-dev (MCP servers, MCP Apps, OAuth, MCPB, directory review, spec 2026-07-28).",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "displayName": "Claudin",
       "category": "Developer Tools",
       "mcpServers": {
