@@ -1,6 +1,7 @@
 # File Workbench: research and direction
 
-Status: working product direction / engine evaluation, not a blanket feature claim (2026-11-08).
+Status: working product direction / engine evaluation (2026-11-08).
+Not a claim that proposed features already ship.
 
 Docbench is already a **local-first document and PDF studio**. Expand that
 existing application into a general-purpose file workbench rather than creating
