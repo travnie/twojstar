@@ -1,0 +1,26 @@
+interface:
+  display_name: "Docs Lookup"
+  short_description: "Answers from live Claude, MCP, OpenAI and xAI docs, with links"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#D97757"
+  default_prompt: "Use $docs-lookup: how do Claude Code hooks block a tool call?"
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "openai-docs"
+      description: "OpenAI developer docs"
+      transport: "streamable_http"
+      url: "https://developers.openai.com/mcp"
+    - type: "mcp"
+      value: "claude-code-docs"
+      description: "Claude Code docs"
+      transport: "streamable_http"
+      url: "https://code.claude.com/docs/mcp"

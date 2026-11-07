@@ -1,6 +1,6 @@
 ---
 name: "plugin-dev"
-description: "Build, fix or port Claude plugins (skills, agents, hooks, .mcp.json, LSP, marketplaces) for claude.ai, Cowork, Claude Code, Codex, Grok Build, Copilot CLI, Antigravity and Gemini CLI; answers 'how does Claude X work' via live docs MCPs."
+description: "Build, fix or port Claude plugins (skills, agents, hooks, .mcp.json, LSP, marketplaces) for claude.ai, Cowork, Claude Code, Codex, Grok Build, Copilot CLI, Antigravity and Gemini CLI."
 license: Apache-2.0
 ---
 
@@ -10,18 +10,7 @@ Plugin and Claude-product facts change weekly (hook events, manifest keys, CLI f
 
 ## Live docs
 
-Bundled with this plugin (authless). Anything not in this table: don't assume it's connected — use it only if it's in the session's tool list, else WebFetch the official page (`references/hosts.md` lists them).
-
-| Server | Ask it about |
-|---|---|
-| `claude-code-docs` — code.claude.com/docs | plugins, manifest reference, skills frontmatter, hooks, subagents, LSP, marketplaces, `claude plugin validate`/`eval`, settings, CLI, Agent SDK |
-| `claude-ai-docs` — claude.com/docs | claude.ai/Cowork plugins & skills, **component support by surface**, connectors, directory submission + review criteria, MCP Apps in Claude |
-| `claude-platform-docs` — platform.claude.com/docs | Messages API, tools, MCP connector, Managed Agents, models, pricing, SDK reference (`sdk_language` param) |
-| `mcp-docs` — modelcontextprotocol.io | MCP spec revisions, SDKs, Inspector |
-| `openai-docs` — developers.openai.com | Codex/ChatGPT plugins, Agent Plugins manifest, Apps SDK, submission |
-| `xai-docs` — docs.x.ai | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI/Grok API. Tools: `search_docs`, `get_doc_page` (slug), `list_doc_pages` |
-
-Workflow: search → read the full page (`query_docs_filesystem…` `cat /path.mdx`, `fetch_openai_doc`, `get_doc_page`) → cite the URL. Building with the Claude API / SDKs → `references/claude-api.md` (pointers + drift table). Product/pricing questions also have the built-in `product-self-knowledge` skill.
+Look facts up with `docs-lookup` (which server answers what, how to read pages). Plugin-specific: manifest, hooks, marketplaces → `claude-code-docs`; component support by surface, directory review → `claude-ai-docs`; Codex/ChatGPT plugins → `openai-docs`. Building with the Claude API / SDKs → `references/claude-api.md` (pointers + drift table).
 
 ## Surface matrix (claude.com/docs/plugins/platform-support, 2026-11)
 

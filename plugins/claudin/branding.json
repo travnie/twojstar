@@ -24,6 +24,10 @@
     }
   },
   "skills": {
+    "docs-lookup": {
+      "iconSmall": "./skills/docs-lookup/assets/icon.svg",
+      "iconLarge": "./skills/docs-lookup/assets/icon.svg"
+    },
     "mcp-dev": {
       "iconSmall": "./skills/mcp-dev/assets/icon.svg",
       "iconLarge": "./skills/mcp-dev/assets/icon.svg"
