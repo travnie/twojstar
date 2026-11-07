@@ -113,10 +113,10 @@ async function showZipContents(file, revision) {
   for (const entry of result.entries) {
     const row = element("li", entry.safe ? "" : "files-unsafe");
     const name = element("span", "files-zip-name", entry.name);
-    const detail = element("small", "", entry.directory ? "Directory"
-      : formatBytes(entry.originalSize) + " · method " + entry.method
-        + (entry.encrypted ? " · encrypted" : "")
-        + (entry.zip64 ? " · ZIP64 sizes" : ""));
+    const detail = element("small", "", entry.zip64 ? "ZIP64 sizes · unsupported"
+      : entry.directory ? "Directory"
+        : `${formatBytes(entry.originalSize)} · method ${entry.method}`
+          + (entry.encrypted ? " · encrypted" : ""));
     row.append(name, detail);
     if (!entry.safe) row.append(element("strong", "files-unsafe-label", "Unsafe path"));
     listNode.append(row);
@@ -138,28 +138,43 @@ const MEDIA_MIME = Object.freeze({
 });
 
 function mediaPreview(file, format, revision) {
-  // No SVG or active document embedding. Force a passive media MIME.
-  const passiveBlob = file.slice(0, file.size, MEDIA_MIME[format]);
-  previewUrl = URL.createObjectURL(passiveBlob);
-  const media = IMAGE_FORMATS.has(format)
-    ? document.createElement("img")
-    : AUDIO_FORMATS.has(format)
-      ? document.createElement("audio") : document.createElement("video");
-  media.className = "files-media";
-  media.src = previewUrl;
-  if (media instanceof HTMLImageElement) {
-    media.alt = `Preview of ${file.name || "local image"}`;
-    media.decoding = "async";
-  } else {
-    media.controls = true;
-    media.preload = "metadata";
-    if (media instanceof HTMLVideoElement) media.playsInline = true;
-  }
+  // Passive MIME + concrete media element. Never embed SVG or active documents.
+  const blob = file.slice(0, file.size, MEDIA_MIME[format]);
+  previewUrl = URL.createObjectURL(blob);
   const fallback = element("p", "files-note", "Native browser preview. Codec availability varies.");
-  media.addEventListener("error", () => {
-    if (revision === selectionRevision) fallback.textContent = "This browser cannot decode the preview. The original file is unchanged.";
-  }, { once: true });
-  preview.append(media, fallback);
+  const onError = () => {
+    if (revision === selectionRevision) {
+      fallback.textContent = "This browser cannot decode the preview. The original file is unchanged.";
+    }
+  };
+  if (IMAGE_FORMATS.has(format)) {
+    const image = document.createElement("img");
+    image.className = "files-media";
+    image.alt = `Preview of ${file.name || "local image"}`;
+    image.decoding = "async";
+    image.addEventListener("error", onError, { once: true });
+    image.src = previewUrl;
+    preview.append(image, fallback);
+    return;
+  }
+  if (AUDIO_FORMATS.has(format)) {
+    const audio = document.createElement("audio");
+    audio.className = "files-media";
+    audio.controls = true;
+    audio.preload = "metadata";
+    audio.addEventListener("error", onError, { once: true });
+    audio.src = previewUrl;
+    preview.append(audio, fallback);
+    return;
+  }
+  const video = document.createElement("video");
+  video.className = "files-media";
+  video.controls = true;
+  video.preload = "metadata";
+  video.playsInline = true;
+  video.addEventListener("error", onError, { once: true });
+  video.src = previewUrl;
+  preview.append(video, fallback);
 }
 
 function isTextFile(info) {

@@ -41,6 +41,7 @@ test("ZIP rejects missing end record and malformed offsets", async () => {
 test("ZIP64 marker produces explicit unsupported result", async () => {
   const bytes = zipSync({ "a.txt": strToU8("a") });
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  view.setUint16(bytes.byteLength - 22 + 8, 0xffff, true);
   view.setUint16(bytes.byteLength - 22 + 10, 0xffff, true);
   await assert.rejects(readZipIndex(new Blob([bytes])), /ZIP64 index not yet supported/u);
 });
@@ -50,7 +51,7 @@ test("ZIP tail reads stay bounded", async () => {
   const lengths = [];
   const large = {
     size: 2 ** 33,
-    slice(start, end) {
+    slice(start, end = this.size) {
       lengths.push(end - start);
       return new Blob([bytes]);
     },

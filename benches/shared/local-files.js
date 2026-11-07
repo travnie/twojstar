@@ -10,7 +10,7 @@
     do {
       size /= 1024;
       unit += 1;
-    } while (size >= 1024 && unit < units.length - 1);
+    } while (size >= 1023.5 && unit < units.length - 1);
     return `${size.toFixed(size < 10 ? 1 : 0)} ${units[unit]}`;
   }
 
