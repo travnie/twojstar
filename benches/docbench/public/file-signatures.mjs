@@ -6,13 +6,15 @@ const formats = Object.freeze({
   tar: ["archive", "TAR"], gzip: ["archive", "gzip"], bzip2: ["archive", "bzip2"],
   xz: ["archive", "XZ"], zstd: ["archive", "Zstandard"],
   jpeg: ["image", "JPEG"], png: ["image", "PNG"], gif: ["image", "GIF"],
-  webp: ["image", "WebP"], avif: ["image", "AVIF"], heic: ["image", "HEIC/HEIF"],
+  webp: ["image", "WebP"], avif: ["image", "AVIF"], heic: ["image", "HEIC"],
+  heif: ["image", "HEIF"],
   jxl: ["image", "JPEG XL"], qoi: ["image", "QOI"], bmp: ["image", "BMP"],
   tiff: ["image", "TIFF"], ico: ["image", "ICO"], svg: ["image", "SVG"],
   opus: ["audio", "Opus"], vorbis: ["audio", "Vorbis"],
   flac: ["audio", "FLAC"], mp3: ["audio", "MP3"], wav: ["audio", "WAV"],
   aiff: ["audio", "AIFF"], m4a: ["media", "M4A/MP4"],
   ogg: ["media", "Ogg"], webm: ["media", "WebM"], mp4: ["media", "MP4"],
+  mov: ["media", "QuickTime"], isobmff: ["media", "ISO-BMFF"],
   pdf: ["document", "PDF"], docx: ["document", "DOCX"],
   txt: ["document", "Text"], json: ["document", "JSON"],
 });
@@ -23,11 +25,11 @@ const extensionHints = Object.freeze({
   bz2: "bzip2", tbz2: "bzip2", xz: "xz", txz: "xz", zst: "zstd",
   zstd: "zstd", jpeg: "jpeg", jpg: "jpeg", jpe: "jpeg",
   png: "png", apng: "png", gif: "gif", webp: "webp", avif: "avif",
-  heic: "heic", heif: "heic", jxl: "jxl", qoi: "qoi",
+  heic: "heic", heif: "heif", jxl: "jxl", qoi: "qoi",
   bmp: "bmp", tif: "tiff", tiff: "tiff", ico: "ico", svg: "svg",
   opus: "opus", oga: "ogg", ogg: "ogg", flac: "flac",
   mp3: "mp3", wav: "wav", wave: "wav", aif: "aiff", aiff: "aiff",
-  m4a: "m4a", m4b: "m4a", mp4: "mp4", webm: "webm",
+  m4a: "m4a", m4b: "m4a", mp4: "mp4", mov: "mov", webm: "webm",
   pdf: "pdf", docx: "docx", txt: "txt", json: "json",
 });
 
@@ -56,7 +58,7 @@ function mp3Frame(bytes) {
   const sampleRateIndex = (bytes[2] >>> 2) & 3;
   return bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0
     && (bytes[1] & 0x18) !== 0x08 && layer !== 0
-    && bitrateIndex !== 0 && bitrateIndex !== 15 && sampleRateIndex !== 3;
+    && bitrateIndex !== 15 && sampleRateIndex !== 3;
 }
 
 export function signatureFormat(input) {
@@ -102,8 +104,11 @@ export function signatureFormat(input) {
     }
     if (brands.some((brand) => brand === "avif" || brand === "avis")) return "avif";
     if (brands.some((brand) => ["heic", "heix", "hevc", "hevx", "heim", "heis"].includes(brand))) return "heic";
+    if (brands.some((brand) => ["mif1", "msf1", "hevm", "hevs"].includes(brand))) return "heif";
     if (brands.some((brand) => brand === "M4A " || brand === "M4B ")) return "m4a";
-    return "mp4";
+    if (brands.includes("qt  ")) return "mov";
+    if (brands.some((brand) => ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1", "dash", "M4V "].includes(brand))) return "mp4";
+    return "isobmff";
   }
   if (ascii(bytes, 0, 4) === "OggS") {
     if (hasAscii(bytes, "OpusHead", 512)) return "opus";
@@ -123,8 +128,35 @@ export function signatureFormat(input) {
 
 function filenameHint(filename) {
   const name = String(filename || "").replaceAll("\\", "/").split("/").at(-1).toLowerCase();
-  const extension = name.split(".").at(-1);
+  const dot = name.lastIndexOf(".");
+  const extension = dot > 0 && dot < name.length - 1 ? name.slice(dot + 1) : "";
   return Object.hasOwn(extensionHints, extension) ? extensionHints[extension] : null;
+}
+
+const mimeHints = Object.freeze({
+  "application/pdf": "pdf",
+  "application/zip": "zip",
+  "application/x-7z-compressed": "sevenz",
+  "application/vnd.rar": "rar",
+  "application/x-rar-compressed": "rar",
+  "image/jpeg": "jpeg", "image/png": "png", "image/gif": "gif",
+  "image/webp": "webp", "image/avif": "avif", "image/heic": "heic",
+  "image/heif": "heif", "image/jxl": "jxl", "image/svg+xml": "svg",
+  "audio/mpeg": "mp3", "audio/flac": "flac", "audio/x-flac": "flac",
+  "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg",
+  "application/ogg": "ogg", "audio/opus": "opus", "audio/webm": "webm",
+  "video/webm": "webm", "video/mp4": "mp4", "audio/mp4": "m4a",
+});
+
+function compatibleFormat(signature, hint) {
+  if (!signature || !hint || signature === hint) return true;
+  if (signature === "zip" && hint === "docx") return true;
+  if (["opus", "vorbis"].includes(signature) && hint === "ogg") return true;
+  if (signature === "ogg" && ["opus", "vorbis"].includes(hint)) return true;
+  if (["mp4", "m4a"].includes(signature) && ["mp4", "m4a"].includes(hint)) return true;
+  if (["heic", "heif"].includes(signature) && ["heic", "heif"].includes(hint)) return true;
+  if (signature === "isobmff" && ["mp4", "m4a", "mov", "heic", "heif", "avif"].includes(hint)) return true;
+  return false;
 }
 
 export function inspectHeader(input, { name = "", type = "" } = {}) {
@@ -133,13 +165,8 @@ export function inspectHeader(input, { name = "", type = "" } = {}) {
   const hint = filenameHint(name);
   const selected = signature || hint || null;
   const declaredMime = String(type || "");
-  const expectedContainer = signature === "zip"
-    && ["docx"].includes(hint);
-  const compatibleOgg = signature === "opus" && hint === "ogg"
-    || signature === "vorbis" && hint === "ogg"
-    || signature === "ogg" && ["opus", "vorbis"].includes(hint);
-  const compatibleMp4 = ["mp4", "m4a"].includes(signature)
-    && ["mp4", "m4a"].includes(hint);
+  const normalizedMime = declaredMime.split(";", 1)[0].trim().toLowerCase();
+  const mimeHint = Object.hasOwn(mimeHints, normalizedMime) ? mimeHints[normalizedMime] : null;
   return {
     format: selected,
     family: selected ? formats[selected][0] : "unknown",
@@ -148,8 +175,9 @@ export function inspectHeader(input, { name = "", type = "" } = {}) {
     signature,
     extensionHint: hint,
     declaredMime,
-    mismatch: Boolean(signature && hint && signature !== hint
-      && !expectedContainer && !compatibleOgg && !compatibleMp4),
+    mimeHint,
+    mismatch: Boolean(signature && (!compatibleFormat(signature, hint)
+      || !compatibleFormat(signature, mimeHint))),
     bytesInspected: bytes.length,
   };
 }

@@ -91,10 +91,43 @@ test("file suffix remains a low-confidence hint", () => {
   assert.equal(item.evidence, "extension");
 });
 
-test("Opus in WebM is reported as a container, not an unverified codec", () => {
+test("a bare EBML header is reported as a WebM container", () => {
   const item = inspectHeader(bytes(0x1a, 0x45, 0xdf, 0xa3), { name: "talk.webm" });
   assert.equal(item.format, "webm");
   assert.equal(item.family, "media");
+});
+
+test("recognized MIME conflicts are independent of filename extensions", () => {
+  const png = bytes(0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10);
+  assert.equal(inspectHeader(png, { name: "picture.png", type: "image/jpeg" }).mismatch, true);
+  assert.equal(inspectHeader(png, { name: "picture.jpg", type: "image/png" }).mismatch, true);
+  assert.equal(inspectHeader(png, { name: "picture.png", type: "application/octet-stream" }).mismatch, false);
+});
+
+test("Ogg/Opus and MP4/M4A compatible containers do not conflict", () => {
+  const opus = fromText(`OggS${"\\0".repeat(30)}OpusHead`);
+  assert.equal(inspectHeader(opus, { name: "voice.ogg", type: "audio/ogg" }).mismatch, false);
+  const mp4 = fromText("\\0\\0\\0\\u0018ftypisom\\0\\0\\0\\0mp42");
+  assert.equal(inspectHeader(mp4, { name: "voice.m4a", type: "audio/mp4" }).mismatch, false);
+});
+
+test("dotless filenames do not become extension hints", () => {
+  for (const name of ["pdf", "mp3", ".jxl"]) {
+    assert.equal(inspectHeader(new Uint8Array(), { name }).format, null, name);
+  }
+});
+
+test("generic HEIF and QuickTime brands are not mislabeled MP4", () => {
+  const heif = fromText("\\0\\0\\0\\u0018ftypmif1\\0\\0\\0\\0mif1");
+  const quickTime = fromText("\\0\\0\\0\\u0018ftypqt  \\0\\0\\0\\0qt  ");
+  const unknown = fromText("\\0\\0\\0\\u0018ftypzzzz\\0\\0\\0\\0zzzz");
+  assert.equal(signatureFormat(heif), "heif");
+  assert.equal(signatureFormat(quickTime), "mov");
+  assert.equal(signatureFormat(unknown), "isobmff");
+});
+
+test("free-format MP3 frames remain detectable", () => {
+  assert.equal(signatureFormat(bytes(0xff, 0xfb, 0x00, 0x00)), "mp3");
 });
 
 test("file inspection reads only a capped prefix", async () => {
@@ -111,7 +144,8 @@ test("file inspection reads only a capped prefix", async () => {
     },
   };
   const result = await inspectLocalFile(file);
-  assert.equal(requestedEnd, FILE_SIGNATURE_READ_LIMIT);
+  assert.equal(FILE_SIGNATURE_READ_LIMIT, 4096);
+  assert.equal(requestedEnd, 4096);
   assert.equal(result.format, "opus");
   assert.equal(result.size, 2 ** 33);
   assert.equal(result.lastModified, 1234);
