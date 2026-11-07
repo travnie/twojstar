@@ -16,6 +16,14 @@ trees, metadata and attachments are rebuilt or preserved as needed and verified
 before every PDF download. Metadata edits keep trailer Info and XMP consistent; PDF/A XMP keeps
 foreign extension blocks intact. PDF→DOCX extracts text in the current page order and maps the edited PDF bookmark tree to Word Heading 1–6 styles plus Word bookmarks; it is structural rather than pixel-perfect layout conversion.
 
+## File Workbench research
+
+The proposed archive, image, audio and shared metadata expansion, modern format
+coverage (including Opus and JPEG XL), candidate engines, Jaspr experiments,
+and reproducible performance comparisons are documented in
+[`FILE_WORKBENCH.md`](FILE_WORKBENCH.md). This is exploratory; the features are
+not shipped yet. The current app remains local-first.
+
 ## Local
 
 The ChatGPT plugin foundation and planned file-viewer integration are recorded in

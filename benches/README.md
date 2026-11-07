@@ -24,6 +24,14 @@ A dependency or source change inside one Bench should normally trigger only that
 Worker. Changes to `benches/package.json` and `benches/package-lock.json` are shared policy and should trigger all
 three builds.
 
+## Workbenches and benchmarks
+
+Each Bench remains a useful standalone tool. Where competing codecs, parsers or
+renderers matter, Bench development may also include reproducible comparisons
+of correctness, performance, memory and browser compatibility. Docbench's
+[file workbench research](docbench/FILE_WORKBENCH.md) tracks the first such
+experiments; no shared benchmark framework is imposed yet.
+
 ## Migration and license
 
 This workspace was extracted from [`trvny/trvny`](https://github.com/trvny/trvny)
