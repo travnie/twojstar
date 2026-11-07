@@ -82,10 +82,23 @@ export function signatureFormat(input) {
   if (starts(bytes, [0x49, 0x49, 0x2a, 0]) || starts(bytes, [0x4d, 0x4d, 0, 0x2a])
     || starts(bytes, [0x49, 0x49, 0x2b, 0]) || starts(bytes, [0x4d, 0x4d, 0, 0x2b])) return "tiff";
   if (starts(bytes, [0, 0, 1, 0])) return "ico";
-  if (bytes.length >= 12 && ascii(bytes, 4, 4) === "ftyp") {
+  if (bytes.length >= 16 && ascii(bytes, 4, 4) === "ftyp") {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const declaredSize = view.getUint32(0, false);
+    let brandOffset = 8;
+    let boxSize = declaredSize;
+    if (declaredSize === 1) {
+      if (bytes.length < 24) return "mp4";
+      const extendedSize = view.getBigUint64(8, false);
+      if (extendedSize > BigInt(Number.MAX_SAFE_INTEGER)) return "mp4";
+      boxSize = Number(extendedSize);
+      brandOffset = 16;
+    }
+    if (boxSize !== 0 && boxSize < brandOffset + 8) return "mp4";
+    const boxEnd = Math.min(bytes.length, boxSize || bytes.length, 512);
     const brands = [];
-    for (let i = 8; i + 4 <= Math.min(bytes.length, 64); i += 4) {
-      if (i !== 12) brands.push(ascii(bytes, i, 4));
+    for (let index = brandOffset; index + 4 <= boxEnd; index += 4) {
+      if (index !== brandOffset + 4) brands.push(ascii(bytes, index, 4));
     }
     if (brands.some((brand) => brand === "avif" || brand === "avis")) return "avif";
     if (brands.some((brand) => ["heic", "heix", "hevc", "hevx", "heim", "heis"].includes(brand))) return "heic";
@@ -111,7 +124,7 @@ export function signatureFormat(input) {
 function filenameHint(filename) {
   const name = String(filename || "").replaceAll("\\", "/").split("/").at(-1).toLowerCase();
   const extension = name.split(".").at(-1);
-  return extensionHints[extension] || null;
+  return Object.hasOwn(extensionHints, extension) ? extensionHints[extension] : null;
 }
 
 export function inspectHeader(input, { name = "", type = "" } = {}) {
