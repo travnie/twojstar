@@ -5,7 +5,7 @@ One standard for both hosts: ChatGPT is fully MCP Apps-compatible since 2026-02;
 ## Setup that bites
 
 - ext-apps 2.x needs the split SDK v2 packages: `npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/server @modelcontextprotocol/node @modelcontextprotocol/express zod` (+ `client` if the view talks to other servers). Never add the v1 `@modelcontextprotocol/sdk` next to them.
-- Bundle the view into one HTML file: `vite` + `vite-plugin-singlefile`. Run TS servers with `tsx` (SDK examples use `bun`).
+- Bundle the view into one HTML file: `vite` + `vite-plugin-singlefile`. Dev deps: `npm install -D vite vite-plugin-singlefile tsx typescript`. Run TS servers with `tsx` (SDK examples use `bun`).
 - Working code beats memory: clone the SDK at the installed version, `git clone --depth 1 --branch "v$(npm view @modelcontextprotocol/ext-apps version)" https://github.com/modelcontextprotocol/ext-apps`, then read `examples/basic-server-{vanillajs,react,vue,svelte}` `docs/migrate_from_openai_apps.md` (OpenAI Apps SDK → MCP Apps) and `docs/migrate-to-2.md` (ext-apps 1.x → 2.x).
 - Official step-by-step skills (Claude Code): the `mcp-apps` plugin in that repo (`create-mcp-app`, `add-app-to-server`, `convert-web-app`, `migrate-oai-app`). It's not part of this plugin, so don't assume it's installed.
 
@@ -46,7 +46,7 @@ No MCP Apps equivalent yet (2026-11): `widgetState` (keep state server-side via 
 
 ## Hybrid: one web app, two modes
 
-Existing SPA that must keep working standalone: pick the mode from an explicit signal the MCP build sets (build-time constant, `?mcp=1` in the resource HTML, a `data-mcp` attribute), or from bridge detection (embedded `window.parent !== window` and `app.connect()` succeeding within a short timeout). Never infer it from `window.location.origin`: it reflects the URL, not the iframe sandbox, so an HTTP-served view reads as standalone. Then take inputs from `ontoolresult` instead of URL params, route API calls through app-only tools instead of `fetch`, and treat localStorage as best-effort. Same render code for both modes; host styling only in MCP mode.
+Existing SPA that must keep working standalone: pick the mode from an explicit signal the MCP build sets (build-time constant, `?mcp=1` in the resource HTML, a `data-mcp` attribute), or from bridge detection (embedded `window.parent !== window` and `app.connect()` succeeding within a short timeout). Never infer it from `window.location.origin`: it reflects the URL, not the iframe sandbox, so an HTTP-served view reads as standalone. Then take the call's arguments from `ontoolinput` (data from `ontoolresult`) instead of URL params, route API calls through app-only tools instead of `fetch`, and treat localStorage as best-effort. Same render code for both modes; host styling only in MCP mode.
 
 ## Test locally
 
