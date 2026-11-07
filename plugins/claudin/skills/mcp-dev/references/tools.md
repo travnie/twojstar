@@ -51,11 +51,11 @@ Claude handles them like any tool, so one server serves both hosts.
 
 Curate, don't mirror. >~30 operations → filter by tag, path prefix, explicit allowlist or GET-only, and keep the filter as a visible constant users can edit.
 
-- Name: `operationId` → snake_case; fallback `method_path`; ≤60 chars, log collisions.
-- Description: the spec's `summary` + `description` verbatim, no paraphrase; empty → `METHOD /path` plus a warning to fix the spec.
-- Params, flattened into one argument list: path → required; query → required only if the spec says so; JSON body object → splat its properties (primitive/array body → one `body` arg). Headers only when they're real input (idempotency key), prefixed `header_`; auth comes from env/OAuth, never from the model. Cookies: skip and warn.
-- Results: 2xx JSON as is (declare `outputSchema` when the spec has one); binary → "saved N bytes to <path>", never inline blobs; SSE/NDJSON → accumulate to text; non-2xx → `isError` with status + body.
-- Skip `webhooks`/`callbacks`, `deprecated` and `x-internal` operations by default and say so. GET → `readOnlyHint`; DELETE/overwrite → `destructiveHint`.
+- Name: `operationId` → snake_case, fallback `method_path`, normalized to `[a-z0-9_]`, ≤60 chars. Collisions: disambiguate deterministically (method suffix) before publishing, and log it.
+- Description: the spec's `summary` as the first line, plus only the parts of `description` that change how to call it (limits, pagination). Don't paraphrase, don't paste essays: every word ships in each `tools/list`. Empty → `METHOD /path` plus a warning to fix the spec.
+- Params, flattened into one argument list: path → required; query → required only if the spec says so; JSON body object → splat its properties (primitive/array body → one `body` arg). Same name in two sources → prefix by source (`path_id`, `query_id`, `body_id`). Headers only when they're real input (idempotency key), prefixed `header_`; auth comes from env/OAuth, never from the model. Cookies: skip and warn.
+- Results: 2xx JSON as is, truncated with a "showing N of M" note when large (declare `outputSchema` when the spec has one); binary → "saved N bytes to <path>", never inline blobs; SSE/NDJSON → accumulate up to a time/byte cap and say when cut; non-2xx → `isError` with status + body.
+- Skip `webhooks`/`callbacks`, `deprecated` and `x-internal` operations by default and say so. Hints follow actual behaviour, not the verb: `readOnlyHint` only for verified side-effect-free calls (usually GET, but check), `destructiveHint` for deletes and overwrites.
 
 ## Counts and patterns
 

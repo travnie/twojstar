@@ -27,7 +27,7 @@ Declare in `server/discover` (spec 2026-07-28+):
 
 ## Host behaviour to design for
 
-- Reading `SKILL.md` does not activate it. The host verifies size, digest and frontmatter, asks for approval, then loads.
+- Reading `SKILL.md` does not activate it. The host checks frontmatter (and, with a full manifest, every size and digest), asks for approval, then loads.
 - Approval binds to the whole manifest. Any changed, added or removed file revokes it, so don't churn files casually.
 - No prefetch: files are read only when the model asks. Keep `SKILL.md` small and link everything else.
 - Content is untrusted. `allowed-tools` and script execution need explicit per-skill approval; cross-server reads need per-call approval.

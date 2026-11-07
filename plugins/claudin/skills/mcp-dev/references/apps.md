@@ -42,7 +42,7 @@ Spec + guide: modelcontextprotocol.io/extensions/apps (via `mcp-docs`).
 | follow-up message | `ui/message` | `window.openai.sendFollowUpMessage` |
 | open link | `ui/open-link` | `window.openai.openExternal` |
 
-No MCP Apps equivalent yet (2026-11): `widgetState` (use server state or localStorage), file upload/download, modals, `window.openai.view`, `openai/toolInvocation/*` progress text, `openai/widgetDescription` (use `updateModelContext`). Feature-detect, never branch on host name. Migrating an Apps SDK (`window.openai`, skybridge) app = swap to the standard column; keep aliases only for old clients; re-derive CSP from what the app actually fetches.
+No MCP Apps equivalent yet (2026-11): `widgetState` (keep state server-side via tool calls; localStorage only as a best-effort cache), file upload/download, modals, `window.openai.view`, `openai/toolInvocation/*` progress text, `openai/widgetDescription` (use `updateModelContext`). Feature-detect, never branch on host name. Migrating an Apps SDK (`window.openai`, skybridge) app = swap to the standard column; keep aliases only for old clients; re-derive CSP from what the app actually fetches.
 
 ## Hybrid: one web app, two modes
 

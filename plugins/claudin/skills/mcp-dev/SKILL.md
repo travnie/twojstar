@@ -18,7 +18,7 @@ The spec moved to **2026-07-28** (stateless: no `initialize` handshake, no `Mcp-
 | Needs pickers, charts, previews in chat | any | **MCP App** = remote server + `ui://` resources → `references/apps.md` |
 | Ships workflows/know-how with the tools | any | **Skills over MCP** (`io.modelcontextprotocol/skills`, SEP-2640) → `references/skills.md` |
 
-Bartek default: Cloudflare Worker (`cloudflare` skill: `McpAgent`/Agents SDK, service bindings for same-account Worker calls). Portable: official TS SDK v2 = split packages `@modelcontextprotocol/server` (+ `client`, `node`, `express`); `@modelcontextprotocol/sdk` is the v1 line, keep it only in existing v1 code and never mix the two. Python: FastMCP (jlowin's 3.x, not the frozen 1.0 in `mcp`). Install with `npm install <pkg>`, never hand-typed versions.
+Bartek default: Cloudflare Worker (`cloudflare` skill: `McpAgent`/Agents SDK, service bindings for same-account Worker calls). Portable: official TS SDK v2 = split packages `@modelcontextprotocol/server` (+ `client`, `node`, `express`); `@modelcontextprotocol/sdk` is the v1 line: new code on v2; both lines may coexist while migrating, but each module uses one API. Python: FastMCP (jlowin's 3.x, not the frozen 1.0 in `mcp`). Install with `npm install <pkg>`, never hand-typed versions.
 
 ## 2. Tools
 
