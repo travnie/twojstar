@@ -62,6 +62,23 @@ test("DOCX reports its ZIP container without a false mismatch", () => {
   assert.equal(item.mismatch, false);
 });
 
+test("Object prototype names are not treated as file format hints", () => {
+  for (const name of ["constructor", "notes.constructor", "__proto__", "toString"]) {
+    const item = inspectHeader(new Uint8Array(), { name });
+    assert.equal(item.format, null, name);
+    assert.equal(item.evidence, "unknown", name);
+  }
+});
+
+test("ftyp-compatible brands never leak into following boxes", () => {
+  const ftyp = fromText("\0\0\0\u0014ftypisom\0\0\0\0mp42");
+  const freeBox = fromText("\0\0\0\u000cfreeavif");
+  const combined = new Uint8Array(ftyp.length + freeBox.length);
+  combined.set(ftyp);
+  combined.set(freeBox, ftyp.length);
+  assert.equal(signatureFormat(combined), "mp4");
+});
+
 test("an unknown signature is never invented from raw text", () => {
   const item = inspectHeader(fromText("just content"), { name: "file" });
   assert.equal(item.format, null);
