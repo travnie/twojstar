@@ -1,6 +1,6 @@
 # File Workbench: research and direction
 
-Status: exploration / design notes, not an implementation commitment (2026-11-07).
+Status: working product direction / engine evaluation, not a blanket feature claim (2026-11-08).
 
 Docbench is already a **local-first document and PDF studio**. Expand that
 existing application into a general-purpose file workbench rather than creating
@@ -25,6 +25,95 @@ document fidelity rules and browser-only file handling. "Bench" may also mean
 - Keep Save as/download and the existing writable File System Access path where
   available; handle Android's more limited picker/storage APIs explicitly.
 - Optional offline/portable use; no mandatory backend, accounts or cloud sync.
+
+## Explorer and manager experience
+
+**Target UX, not yet shipped:** Files becomes the primary explorer and task
+workspace, with Documents/PDF retained as specialist workspaces. The current
+Files tab already provides a bounded header inspector, one-file preview and
+read-only ZIP entry listing; it does **not** yet select batches, browse local
+directories, extract archive entries, pack selections, or open preview dialogs.
+
+- **Desktop:** source/tree and breadcrumbs on the left; searchable sortable
+  file table or thumbnail grid in the center; contextual inspector on the right.
+  Resize/collapse panels without replacing document editing features.
+- **Mobile:** one main pane, a selection toolbar, a bottom-sheet inspector and
+  fullscreen preview on demand. Never require hover or desktop-only shortcuts.
+- **Selection:** distinguish focused/previewed item from selected items. Use
+  checkbox/tap selection, Shift range, Ctrl/Cmd toggle and explicit Select all
+  *visible*. Keep selection stable after search, sorting and view switching.
+  Always show batch count, total bytes and action eligibility.
+- **Preview:** single click/tap can open a lightbox for images, mini-player
+  for audio, or video/document viewer; Escape, backdrop, focus restoration,
+  next/previous navigation and keyboard accessibility are mandatory. A docked
+  mini-player may persist while browsing without keeping abandoned Blob URLs.
+  Unsupported formats get an explanation and metadata, not a blank panel.
+- **Actions:** create ZIP from selected files; inspect/compare/hash, extract
+  selected archive entries, and export a report. Queue operations with
+  progress, cancel, validation and honest partial failure states. Do not expose
+  destructive filesystem actions without a writable, explicit user grant.
+- **Source types:** local Files/Blobs, picker/dropped directories, read-only
+  virtual archive entries, transient OPFS results. All must use the *same*
+  explorer and preview components; do not fork them per archive codec.
+- **Scale:** virtualize very large lists and generate thumbnails only for
+  visible rows. Do not preload every file, preview, image decoder or WAV stream.
+
+**Browser permissions:** prefer standard file pickers/drag-and-drop. Offer
+`showDirectoryPicker()` only on supported browsers with user activation;
+`webkitdirectory` can serve as an import fallback. Firefox and Safari do not
+currently support the full File System Access picker family. Android pickers and
+directory handling need explicit tests; a read-only imported folder is **not**
+a filesystem mount. Never imply that the web page can browse or rewrite the
+device's entire disk. See [browser support](https://web-platform-dx.github.io/web-features-explorer/features/file-system-access/).
+
+### Internal contract
+
+Keep one canonical **virtual file model**, independent of UI frameworks:
+
+- Entry ID, display name, logical path, parent, source kind, immutable Blob
+  reference or bounded read/stream adapter, sniffed format, MIME/provenance,
+  size/timestamps and capabilities. Native files, dropped folders and archive
+  entries map to this model without copying complete file contents.
+- Entry operations: `readRange`, `stream`, `inspect`, `preview`, `listChildren`,
+  `extract`, `pack` and `export` only when supported by the selected adapter.
+  Encode supported/unsupported reasons explicitly; do not make a read-only ZIP
+  index look like a full archive editor.
+- Keep **selection state separate from active preview**, stable across list
+  reordering and filtering. Batch actions consume a snapshot of selected IDs,
+  validate permissions/duplicates/total size and preserve paths safely.
+- File work occurs in lazy task-specific modules and Web Workers. Worker
+  requests include cancellation and byte/entry/time budgets. Revoke object
+  URLs; clean temporary OPFS data; never read whole GB-scale archives merely
+  to populate thumbnails or the file tree.
+- Reuse the existing shared Bench primitives for truly common functionality
+  (local file drop, sizes, maybe later job progress/notifications). Keep each
+  Bench's shell, permission boundary, styling and Cloudflare Worker separate.
+
+### Beyond ordinary preview: file diagnostics
+
+These are candidate *utilities*, not promises of shipped detection accuracy:
+
+- **Text/code:** carry the existing token counter, hidden-Unicode/control-char
+  inspection, encoding/EOL checks and format validation into the explorer;
+  compare versions, spot duplicate content and report suspicious byte/name
+  mismatches with deterministic evidence.
+- **Archives:** compression ratios, duplicate names, traversal and symlink
+  warnings, encrypted entries, structure map, safe nested previews and a
+  reproducibility/round-trip report. Size estimates must not claim ZIP64 support
+  until the selected engine actually supports it.
+- **Images:** EXIF/GPS privacy inspection, ICC/orientation, palette and
+  histograms; side-by-side difference, perceptual duplicate candidates,
+  visually lossless export comparisons and codec size/quality bake-offs.
+- **Audio:** codec/tag/cover-art inspector, waveform/spectrogram, clipping,
+  long-silence detection, channel/bitrate analysis, volume comparison and
+  optional local trim/convert without mandatory FFmpeg loading.
+- **Video:** stream/track inventory, dimensions/rotation, duration, timecode,
+  poster frames and metadata anomalies; avoid implying every codec can play
+  merely because its container can be read.
+- **Cross-format:** hashes, exact-duplicate grouping, a comparison view, audit
+  export, and **local benchmark runs** recording engine, version, browser,
+  resource usage and correctness. All warnings are explainable heuristics,
+  not a malware verdict or guarantee of corruption detection.
 
 ### Format exploration matrix
 
@@ -75,10 +164,12 @@ policy and matching updates to the local-first contract here and in the
 [ChatGPT file viewer plan](CHATGPT_PLUGIN.md). R2/Containers are **not**
 authorized or in scope for this workbench implementation.
 
-**UI plane:** current Docbench UI until a measured prototype justifies change.
-Share the existing Bench workspace infrastructure, not Worker security
-boundaries. Use lazy loading so opening a TXT does not download an audio codec
-or every archive engine.
+**UI plane:** evolve the existing Docbench shell; start with the Files
+explorer as an isolated, mountable UI surface rather than rewrite the PDF and
+document editors. Svelte 5 is the leading candidate, subject to a measured
+prototype and normal/portable build proof. Reuse existing Bench workspace
+infrastructure without merging product Worker boundaries. Load codecs and
+archive engines lazily, never all at startup.
 
 **Common capabilities (proposal, not a directory specification):**
 
@@ -131,21 +222,51 @@ packing or encrypted RAR/7z writing based only on reading support.**
 
 ## UI and language experiments
 
-TypeScript is **not** a product requirement. Keep current TS/JS integration
-where it works; use Rust or C/C++ compiled to WASM for specialized parsers or
-codecs. Python, Dart and Swift are exploratory alternatives, not drop-in
-Worker runtimes for arbitrary native libraries.
+Choose technologies **per responsibility**, not one language per feature or
+multiple live UI runtimes. Keep a stable JS/TS interface for `File`, `Blob`,
+streams, workers and the capability registry. Rust/C/C++ compiled to WASM can
+implement selected codecs/parsers. Python, Dart and Swift are optional
+experiments, not drop-in Web Worker runtimes for arbitrary native libraries.
+A framework may render a view; it must not own the canonical file model.
 
-[Jaspr](https://jaspr.site/) is a serious Dart option: real HTML/DOM/CSS,
-component model, static generation and server rendering. It was used for the
-official Dart/Flutter site migration
-([Flutter account, 2026](https://flutter.dev/blog/we-rebuilt-flutters-websites-with-dart-and-jaspr)).
-A **static Jaspr client build** can be served through Workers Static Assets;
-that does not imply Dart SSR runs directly in the normal Worker. JavaScript
-interop can wrap existing PDF/file engines, but bridging, bundle cost and WASM
-startup must be measured. Prototype one file-tree/inspector view, **not** a
-whole-app rewrite. Compare with the current UI and incremental Web Components
-(Lit), Svelte or Solid only when a concrete UI problem warrants change.
+**Leading UI bake-off:**
+
+1. **Svelte 5, client-only Files island:** likely easiest incremental route for
+   a reactive tree, multi-selection, modal views and progress state. Compile
+   into static JS/CSS; no mandatory SvelteKit server. Test
+   [Bits UI](https://bits-ui.com/docs/introduction) for accessible dialogs and
+   menu primitives and [TanStack Virtual](https://tanstack.com/virtual/latest/docs/introduction)
+   when a large list requires windowing. Preserve current styling and the
+   document/PDF modules. Check bundle weight, ESM import paths, CSP and
+   single-file portable inlining before promotion.
+2. **Jaspr/Dart comparison slice:** [Jaspr](https://jaspr.site/) renders
+   real HTML/CSS, has client/static modes and [JS interop](https://docs.jaspr.site/dev/client).
+   Prototype exactly the same file tree/inspector interactions using a Dart
+   client build. Dart-to-JS is the default; WASM remains an experimental
+   comparison. A static client build can be served by Workers Static Assets;
+   Dart SSR is **not** assumed to run in the existing Worker.
+3. **Current vanilla DOM or Lit/Solid:** control baseline. Keep if incremental
+   components outperform a framework for startup, accessibility, migration
+   safety or portable output.
+
+**Decision gate:** compare identical fixtures and interactions for keyboard/
+touch behavior, first usable view, total and incremental asset bytes, idle/
+selection memory, 1k+ row responsiveness, testability, Worker CSP, offline
+portable packaging, and reuse of the existing file/preview API. Pick **one**
+production UI strategy after measurement; do not ship Svelte and Jaspr side by
+side just because both are interesting.
+
+**Engine shortlist for first experiments:** keep current fflate for existing
+small ZIP/PDF tasks; compare zip.js for large streaming ZIP/ZIP64/encryption.
+Try [Mediabunny](https://mediabunny.dev/guide/reading-media-files) for lazy
+container/track inspection and conversion;
+[music-metadata](https://github.com/Borewit/music-metadata) for rich audio
+tags and covers;
+[exifr](https://github.com/MikeKovarik/exifr) for EXIF/GPS/ICC; and
+[jSquash](https://github.com/jamsinclair/jSquash) for JXL/AVIF/QOI previews
+where native browser decoding fails. Use format and browser capability tests
+to select the engine; no automatic dependency installation from this list.
+Prefer only requested codec WASM; ffmpeg.wasm remains a heavy opt-in fallback.
 
 ## The other meaning of "Bench": engine bake-off
 
@@ -180,20 +301,39 @@ file operations or send user data to analytics.
 
 ## Practical sequencing
 
-1. **Research/corpus first:** current dependency audit, capability matrix,
-   licenses and small reproducible fixtures. Document measured results beside
-   these notes; do not preselect a winner from README claims.
-2. **Shared inspector:** detection, metadata panel, safe virtual-file/preview
-   contract, capability errors and progress/cancel.
-3. **Archive read path:** ZIP first, then 7z/RAR/TAR/modern compression; tree,
-   selective preview and temp extraction with strict budgets.
-4. **Viewer modules:** image formats including **JXL/AVIF/HEIC**, then audio
-   including **Opus/FLAC**; lazy engines, native-first with tested fallback.
-5. **Creation and advanced controls:** ZIP creation/settings first; add other
-   writable formats only when round-trip tests justify them.
-6. **Optional extras:** local conversion, batch operations and offline
-   packaging. Any R2/Containers proposal remains separately gated by explicit
-   approval, consent and a documented privacy-contract change.
+Existing baseline: deployed Files tab, bounded signature detection, one-file
+native preview, read-only ZIP central-directory index, shared local-file
+drop/size helper and portable build. They are **not** a file manager yet.
+
+1. **Explorer UI slice:** same current workspace, list/grid and basic virtual
+   folders; separate focus from multi-selection; search/sort and selection
+   tray; keyboard/mobile handling. Prototype Svelte 5 *against* the existing
+   UI before adopting it, rather than rewrite Documents/PDF.
+2. **Preview surfaces:** modal image lightbox and audio mini-player, video
+   viewer, metadata drawer, same virtual-entry APIs, object URL cleanup and
+   constrained native media handling. Keep browser feature fallbacks explicit.
+3. **First packing operation:** select multiple local files, stream a ZIP with
+   progress/cancel, collision-safe paths and round-trip tests. Benchmark
+   zip.js against existing fflate for constrained small files before picking
+   the primary archive writer; do not copy GB files into RAM.
+4. **Archive explorer:** browse selected nested ZIP entries without full
+   inflation, then 7z/RAR/TAR/modern compression through tested read adapters.
+   Apply safety budgets before extraction, and do not advertise unsupported
+   encryption or writable formats.
+5. **Inspector plugins:** exifr / music-metadata / Mediabunny for richer image
+   and audio/video reports. Add JXL/AVIF/HEIC/QOI via lazily loaded decoders
+   only where needed. Preserve baseline browser and portable UX.
+6. **Distinctive diagnostics and Bench Lab:** text token/Unicode analysis from
+   inside safe archive entries, metadata privacy review, image/audio
+   comparisons, duplicates/hashes and reproducible engine benchmarks.
+   Promote proven adapters to the capability registry one at a time.
+7. **Optional extras:** local batch conversion and offline packaging; a
+   server-only R2/Containers proposal requires separate approval, explicit
+   upload consent and a changed privacy contract.
+
+Every slice should expose real, tested behavior; avoid disabled decorative
+buttons and unsupported all-format claims. Track platform, correctness, memory
+and partial-failure behavior in the same acceptance review.
 
 Non-goals for this design stage: reimplement Docbench PDF/text editors,
 mandatory cloud uploads, new standalone "filebench" service, wholesale UI
