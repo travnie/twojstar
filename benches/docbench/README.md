@@ -16,13 +16,21 @@ trees, metadata and attachments are rebuilt or preserved as needed and verified
 before every PDF download. Metadata edits keep trailer Info and XMP consistent; PDF/A XMP keeps
 foreign extension blocks intact. PDF→DOCX extracts text in the current page order and maps the edited PDF bookmark tree to Word Heading 1–6 styles plus Word bookmarks; it is structural rather than pixel-perfect layout conversion.
 
-## File Workbench research
+## Files workspace
 
-The proposed archive, image, audio and shared metadata expansion, modern format
-coverage (including Opus and JPEG XL), candidate engines, Jaspr experiments,
-and reproducible performance comparisons are documented in
-[`FILE_WORKBENCH.md`](FILE_WORKBENCH.md). This is exploratory; the features are
-not shipped yet. The current app remains local-first.
+**Files** is a local-first multi-file inspector: drag/drop or pick up to 100
+files; inspect 4 KiB signatures, filename/MIME discrepancies, timestamps, sizes,
+and local inspection time. Preview supported images, audio/video through native
+browser decoders, text as source, or a bounded hex header. ZIP shows a
+**read-only central-directory index** without unpacking anything. Unsupported
+codecs (including JPEG XL/Opus on some browsers) stay clearly unsupported, not
+silently converted. Image previews are capped at 48 MiB, text at 128 KiB.
+No files are uploaded, and object URLs are released when switching files.
+
+The broader archive, image, audio, metadata and benchmark plan, candidate
+engines, Jaspr and WASM research remain in
+[`FILE_WORKBENCH.md`](FILE_WORKBENCH.md). ZIP extraction, other archive
+engines and additional codecs are not shipped yet.
 
 ## Local
 

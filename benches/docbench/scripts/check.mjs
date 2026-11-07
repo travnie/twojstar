@@ -6,6 +6,11 @@ for (const path of [
   "public/llms.txt",
   "public/llms-full.txt",
   "public/app.js",
+  "public/local-files.js",
+  "public/file-signatures.mjs",
+  "public/zip-index.mjs",
+  "public/files-workspace.mjs",
+  "public/files-workspace.css",
   "public/document-merge.mjs",
   "public/document-enhancements.mjs",
   "public/document-formats.js",
@@ -83,6 +88,24 @@ if (!webmcp.includes('const validateThroughUi = () =>')
   || !webmcp.includes('statusBadge.classList.contains("bad")')
   || webmcpValidationCalls.length < 2) {
   throw new Error("WebMCP writes and validation must route through the visible Validate control.");
+}
+
+const index = await readFile("public/index.html", "utf8");
+const portable = await readFile("public/portable.html", "utf8");
+for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-metadata", "files-preview"]) {
+  if (!index.includes('id="' + id + '"')) throw new Error("Files workspace missing " + id);
+}
+if (!index.includes('src="/local-files.js"') || !index.includes('src="/files-workspace.mjs"')) {
+  throw new Error("Files workspace scripts missing.");
+}
+if (portable.includes('src="/local-files.js"') || portable.includes('src="/files-workspace.mjs"')
+  || portable.includes('href="/files-workspace.css"')) {
+  throw new Error("Portable Files workspace must be inline.");
+}
+const sharedFiles = await readFile("../shared/local-files.js", "utf8");
+const copiedFiles = await readFile("public/local-files.js", "utf8");
+if (!copiedFiles.endsWith(sharedFiles)) {
+  throw new Error("Generated local-file controls diverge from shared source.");
 }
 
 const app = await readFile("public/app.js", "utf8");

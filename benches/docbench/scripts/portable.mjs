@@ -90,11 +90,29 @@ const [
   readFile("public/vendor/qpdf/lib/qpdf.wasm"),
 ]);
 
+const [localFileUi, filesCss, fileSignatures, zipIndex, filesWorkspace] = await Promise.all([
+  readFile("public/local-files.js", "utf8"),
+  readFile("public/files-workspace.css", "utf8"),
+  readFile("public/file-signatures.mjs", "utf8"),
+  readFile("public/zip-index.mjs", "utf8"),
+  readFile("public/files-workspace.mjs", "utf8"),
+]);
+
 const safeScript = (value) => value.replaceAll("$", "$$$$").replaceAll("</script", "<\\/script");
 const dataUrl = (mime, value) => {
   const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
   return `data:${mime};base64,${bytes.toString("base64")}`;
 };
+
+const filesWorkspacePortable = filesWorkspace
+  .replace(
+    'from "./file-signatures.mjs";',
+    "from " + JSON.stringify(dataUrl("text/javascript", fileSignatures)) + ";",
+  )
+  .replace(
+    'from "./zip-index.mjs";',
+    "from " + JSON.stringify(dataUrl("text/javascript", zipIndex)) + ";",
+  );
 
 let portableFonts = fonts;
 for (const filename of [
@@ -220,6 +238,7 @@ const portable = html
     '<link rel="stylesheet" href="/document-enhancements.css">',
     `<style>${enhancementsCss}</style>`,
   )
+  .replace('<link rel="stylesheet" href="/files-workspace.css">', `<style>${filesCss}</style>`)
   .replace('<script src="/i18n-runtime.js"></script>', `<script>${safeScript(i18nRuntime)}</script>`)
   .replace('<script src="/i18n.js"></script>', `<script>${safeScript(i18n)}</script>`)
   .replace(
@@ -247,6 +266,7 @@ const portable = html
     `<script>${safeScript(fflate)}</script>`,
   )
   .replace('<script src="/document-formats.js"></script>', `<script>${safeScript(documentFormats)}</script>`)
+  .replace('<script src="/local-files.js"></script>', `<script>${safeScript(localFileUi)}</script>`)
   .replace('<script src="/app.js"></script>', `<script>${safeScript(portableApp)}</script>`)
   .replace(
     '<script type="module" src="/document-enhancements.mjs"></script>',
@@ -261,6 +281,10 @@ const portable = html
   .replace('<script src="/webmcp.js"></script>', `<script>${safeScript(webmcp)}</script>`)
   .replace('<script type="module" src="/docx-converter.mjs"></script>', portableDocxScripts)
   .replace('<script type="module" src="/pdf-app.mjs"></script>', portablePdfScripts)
+  .replace(
+    '<script type="module" src="/files-workspace.mjs"></script>',
+    `<script type="module">${safeScript(filesWorkspacePortable)}</script>`,
+  )
   .replace('<link rel="manifest" href="/site.webmanifest">', "")
   .replace('<link rel="canonical" href="https://docbench.travny.workers.dev/">', "")
   .replace('<link rel="icon" type="image/svg+xml" href="/favicon.svg">', "")
