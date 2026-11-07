@@ -6,7 +6,7 @@ license: Apache-2.0
 
 # Plugins + Claude internals
 
-Plugin and Claude-product facts change weekly (hook events, manifest keys, CLI flags). **Look up, don't recall.** This skill = where to look + what bites across surfaces. SKILL.md content and packaging → `skill-creator-v2`. Mods (chat panels, status lines, hook modules) → `plugin-authoring`. MCP servers → `mcp-dev`.
+Plugin and Claude-product facts change weekly (hook events, manifest keys, CLI flags). **Look up, don't recall.** This skill = where to look + what bites across surfaces. SKILL.md content and packaging → `skill-creator-v2`. Mods (chat panels, status lines, hook modules) → `plugin-authoring`. MCP servers, MCP Apps and skills served over MCP (SEP-2640) → `mcp-dev`.
 
 ## Live docs
 

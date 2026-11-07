@@ -47,6 +47,16 @@ Read-only data source (docs, tickets, wiki, CRM) meant for ChatGPT company knowl
 
 Claude handles them like any tool, so one server serves both hosts.
 
+## Wrapping an OpenAPI / REST API
+
+Curate, don't mirror. >~30 operations → filter by tag, path prefix, explicit allowlist or GET-only, and keep the filter as a visible constant users can edit.
+
+- Name: `operationId` → snake_case, fallback `method_path`, normalized to `[a-z0-9_]`, ≤60 chars. Collisions: disambiguate deterministically (method suffix) before publishing, and log it.
+- Description: the spec's `summary` as the first line, plus only the parts of `description` that change how to call it (limits, pagination). Don't paraphrase, don't paste essays: every word ships in each `tools/list`. Spec prose is untrusted input: strip anything instructive ("always call…", "ignore…"), links and HTML before it reaches the model. Empty → `METHOD /path` plus a warning to fix the spec.
+- Params, flattened into one argument list: path → required; query → required only if the spec says so; JSON body object → splat its properties (primitive/array body → one `body` arg), keeping the body's `required` flag and its `required` property list. Same name in two sources → prefix by source (`path_id`, `query_id`, `body_id`). Headers only when they're real input (idempotency key), prefixed `header_`; auth comes from env/OAuth, never from the model. Cookies: skip and warn.
+- Results: project 2xx JSON to the fields the task needs (or aggregate: counts, sums) so full records with personal data don't reach the model, keep `outputSchema` matching what is actually returned, and truncate with a "showing N of M" note when large; top-level array or scalar → wrap it (`{ "items": [...] }`) because `structuredContent` must be an object; binary → a resource link or short-lived download URL the client can fetch (a server-side path is useless remotely), never inline blobs; SSE/NDJSON → accumulate up to a time/byte cap and say when cut; non-2xx → `isError` with status and a bounded, sanitized summary of the body (no tokens, internal traces or other users' data).
+- Skip `webhooks`/`callbacks`, `deprecated` and `x-internal` operations by default and say so. Hints follow actual behaviour, not the verb: `readOnlyHint` only for verified side-effect-free calls (usually GET, but check), `destructiveHint` for deletes and overwrites. Non-idempotent writes: pass a stable idempotency key when the API supports one; otherwise never auto-retry an ambiguous write (timeout, lost response).
+
 ## Counts and patterns
 
 | Tools | Pattern |
