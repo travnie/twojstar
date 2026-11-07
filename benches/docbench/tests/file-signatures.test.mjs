@@ -130,6 +130,14 @@ test("free-format MP3 frames remain detectable", () => {
   assert.equal(signatureFormat(bytes(0xff, 0xfb, 0x00, 0x00)), "mp3");
 });
 
+test("BMP detection needs a plausible DIB header, not just BM", () => {
+  const bitmap = new Uint8Array(54);
+  bitmap.set(fromText("BM"), 0);
+  bitmap.set(bytes(40, 0, 0, 0), 14);
+  assert.equal(signatureFormat(bitmap), "bmp");
+  assert.equal(signatureFormat(fromText("BM is also a text prefix")), null);
+});
+
 test("file inspection reads only a capped prefix", async () => {
   let requestedEnd = -1;
   const file = {
