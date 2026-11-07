@@ -46,7 +46,7 @@ No MCP Apps equivalent yet (2026-11): `widgetState` (use server state or localSt
 
 ## Hybrid: one web app, two modes
 
-Existing SPA that must keep working standalone: detect the host (sandboxed iframe → `window.location.origin === "null"`, or a `?mcp` flag), then take inputs from `ontoolresult` instead of URL params, route API calls through app-only tools instead of `fetch`, and treat localStorage as best-effort. Same render code for both modes; host styling only in MCP mode.
+Existing SPA that must keep working standalone: pick the mode from an explicit signal the MCP build sets (build-time constant, `?mcp=1` in the resource HTML, a `data-mcp` attribute), or from bridge detection (embedded `window.parent !== window` and `app.connect()` succeeding within a short timeout). Never infer it from `window.location.origin`: it reflects the URL, not the iframe sandbox, so an HTTP-served view reads as standalone. Then take inputs from `ontoolresult` instead of URL params, route API calls through app-only tools instead of `fetch`, and treat localStorage as best-effort. Same render code for both modes; host styling only in MCP mode.
 
 ## Test locally
 
