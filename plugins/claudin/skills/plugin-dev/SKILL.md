@@ -10,7 +10,7 @@ Plugin and Claude-product facts change weekly (hook events, manifest keys, CLI f
 
 ## Live docs
 
-Look facts up with `docs-lookup` (which server answers what, how to read pages). Plugin-specific: manifest, hooks, marketplaces → `claude-code-docs`; component support by surface, directory review → `claude-ai-docs`; Codex/ChatGPT plugins → `openai-docs`. Building with the Claude API / SDKs → `references/claude-api.md` (pointers + drift table).
+Look facts up with `docs-lookup` (which server answers what, how to read pages). Building with the Claude API / SDKs → `references/claude-api.md` (pointers + drift table).
 
 ## Surface matrix (claude.com/docs/plugins/platform-support, 2026-11)
 
