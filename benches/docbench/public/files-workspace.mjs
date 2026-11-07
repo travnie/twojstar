@@ -67,8 +67,8 @@ function appendMetadata(info, timeMs) {
   metadata.replaceChildren();
   const fields = [
     ["Name", info.name],
-    ["Size", formatBytes(info.size) + " (" + info.size.toLocaleString("en-US") + " bytes)"],
-    ["Detected", info.label + " · " + info.family],
+    ["Size", `${formatBytes(info.size)} (${info.size.toLocaleString("en-US")} bytes)`],
+    ["Detected", `${info.label} · ${info.family}`],
     ["Evidence", info.evidence],
     ["Signature", info.signature || "None"],
     ["Extension", info.extensionHint || "None"],
@@ -76,7 +76,7 @@ function appendMetadata(info, timeMs) {
     ["MIME hint", info.mimeHint || "None"],
     ["Modified", info.lastModified ? new Date(info.lastModified).toLocaleString() : "Unknown"],
     ["Header read", formatBytes(info.bytesInspected)],
-    ["Inspection", timeMs.toFixed(1) + " ms (local)"],
+    ["Inspection", `${timeMs.toFixed(1)} ms (local)`],
   ];
   for (const [label, value] of fields) metadata.append(field(label, value));
   if (info.mismatch) {
@@ -107,7 +107,7 @@ async function showZipContents(file, revision) {
   const result = await readZipIndex(file);
   if (revision !== selectionRevision) return;
   const box = element("section", "files-zip");
-  box.append(element("h3", "", "ZIP contents · " + result.count + " entries"));
+  box.append(element("h3", "", `ZIP contents · ${result.count} entries`));
   box.append(element("p", "files-note", "Index only. No decompression or automatic extraction."));
   const listNode = element("ol", "files-zip-list");
   for (const entry of result.entries) {
@@ -115,8 +115,7 @@ async function showZipContents(file, revision) {
     const name = element("span", "files-zip-name", entry.name);
     const detail = element("small", "", entry.zip64 ? "ZIP64 sizes · unsupported"
       : entry.directory ? "Directory"
-        : `${formatBytes(entry.originalSize)} · method ${entry.method}`
-          + (entry.encrypted ? " · encrypted" : ""));
+        : `${formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
     row.append(name, detail);
     if (!entry.safe) row.append(element("strong", "files-unsafe-label", "Unsafe path"));
     listNode.append(row);
@@ -197,7 +196,7 @@ async function renderPreview(file, info, revision) {
   }
   if (IMAGE_FORMATS.has(info.format)) {
     if (file.size > MAX_IMAGE_BYTES) {
-      emptyPreview("Image preview disabled above " + formatBytes(MAX_IMAGE_BYTES) + " to protect browser memory.");
+      emptyPreview(`Image preview disabled above ${formatBytes(MAX_IMAGE_BYTES)} to protect browser memory.`);
     } else {
       mediaPreview(file, info.format, revision);
     }
@@ -217,7 +216,7 @@ async function renderPreview(file, info, revision) {
     const box = element("pre", "files-text", source);
     preview.append(box);
     if (file.size > MAX_TEXT_BYTES) {
-      preview.prepend(element("p", "files-note", "Text preview limited to " + formatBytes(MAX_TEXT_BYTES) + "."));
+      preview.prepend(element("p", "files-note", `Text preview limited to ${formatBytes(MAX_TEXT_BYTES)}.`));
     }
     if (info.format === "svg") {
       preview.prepend(element("p", "files-note", "SVG shown as source only; external references are not loaded."));
@@ -239,9 +238,9 @@ async function renderPreview(file, info, revision) {
     const chunk = bytes.subarray(offset, offset + 16);
     const hex = [...chunk].map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
     const ascii = [...chunk].map((byte) => byte >= 32 && byte < 127 ? String.fromCharCode(byte) : ".").join("");
-    lines.push(offset.toString(16).padStart(6, "0") + "  " + hex.padEnd(47) + "  " + ascii);
+    lines.push(`${offset.toString(16).padStart(6, "0")}  ${hex.padEnd(47)}  ${ascii}`);
   }
-  preview.append(element("p", "files-note", "Hex header, first " + formatBytes(bytes.length) + ". No decoder selected."), element("pre", "files-hex", lines.join("\n")));
+  preview.append(element("p", "files-note", `Hex header, first ${formatBytes(bytes.length)}. No decoder selected.`), element("pre", "files-hex", lines.join("\n")));
 }
 
 async function selectFile(index) {
@@ -279,14 +278,14 @@ function addFiles(input) {
   if (!added.length) return;
   const capacity = MAX_FILES - files.length;
   if (capacity <= 0) {
-    setStatus("The " + MAX_FILES + "-file queue limit is reached.", true);
+    setStatus(`The ${MAX_FILES}-file queue limit is reached.`, true);
     return;
   }
   const start = files.length;
   files.push(...added.slice(0, capacity));
   selectFile(start);
   if (added.length > capacity) {
-    setStatus("Only " + capacity + " files added; limit " + MAX_FILES + ".", true);
+    setStatus(`Only ${capacity} files added; limit ${MAX_FILES}.`, true);
   }
 }
 
