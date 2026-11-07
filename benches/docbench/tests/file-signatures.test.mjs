@@ -10,6 +10,20 @@ const withAt = (length, offset, value) => {
   return buffer;
 };
 
+const oggPacket = (payload) => {
+  const header = new Uint8Array(28 + payload.length);
+  header.set(fromText("OggS"));
+  header[26] = 1;
+  header[27] = payload.length;
+  header.set(payload, 28);
+  return header;
+};
+const ebmlDocType = (name) => {
+  const payload = fromText(name);
+  return bytes(0x1a, 0x45, 0xdf, 0xa3, 0x80 | (3 + payload.length),
+    0x42, 0x82, 0x80 | payload.length, ...payload);
+};
+
 for (const [label, head, format] of [
   ["ZIP", bytes(0x50, 0x4b, 3, 4), "zip"],
   ["empty ZIP", bytes(0x50, 0x4b, 5, 6), "zip"],
@@ -31,17 +45,17 @@ for (const [label, head, format] of [
   ["HEIC", fromText("\0\0\0\u0018ftypmif1\0\0\0\0heic"), "heic"],
   ["QOI", fromText("qoif"), "qoi"],
   ["TIFF", bytes(0x49, 0x49, 0x2a, 0), "tiff"],
-  ["Ogg Opus", fromText(`OggS${"\0".repeat(30)}OpusHead`), "opus"],
-  ["Ogg Vorbis", fromText(`OggS${"\0".repeat(30)}vorbis`), "vorbis"],
+  ["Ogg Opus", oggPacket(fromText("OpusHead")), "opus"],
+  ["Ogg Vorbis", oggPacket(bytes(1, ...fromText("vorbis"))), "vorbis"],
   ["plain Ogg", fromText(`OggS${"\0".repeat(30)}`), "ogg"],
   ["FLAC", fromText("fLaC"), "flac"],
-  ["MP3 ID3", fromText("ID3\u0004\0"), "mp3"],
+  ["MP3 with ID3", bytes(...fromText("ID3"), 4, 0, 0, 0, 0, 0, 0, 0xff, 0xfb, 0x90, 0), "mp3"],
   ["MP3 frame", bytes(0xff, 0xfb, 0x90, 0x00), "mp3"],
   ["WAV", fromText("RIFF0000WAVE"), "wav"],
   ["AIFF", fromText("FORM0000AIFF"), "aiff"],
   ["M4A", fromText("\0\0\0\u0018ftypM4A \0\0\0\0isom"), "m4a"],
   ["MP4", fromText("\0\0\0\u0018ftypisom\0\0\0\0mp42"), "mp4"],
-  ["WebM", bytes(0x1a, 0x45, 0xdf, 0xa3), "webm"],
+  ["WebM", ebmlDocType("webm"), "webm"],
   ["PDF", fromText("%PDF-1.7"), "pdf"],
   ["SVG", fromText('<?xml version="1.0"?><svg width="2">'), "svg"],
 ]) {
@@ -93,7 +107,7 @@ test("file suffix remains a low-confidence hint", () => {
 
 test("a bare EBML header is reported as a WebM container", () => {
   const item = inspectHeader(bytes(0x1a, 0x45, 0xdf, 0xa3), { name: "talk.webm" });
-  assert.equal(item.format, "webm");
+  assert.equal(item.format, "ebml");
   assert.equal(item.family, "media");
 });
 
@@ -105,7 +119,7 @@ test("recognized MIME conflicts are independent of filename extensions", () => {
 });
 
 test("Ogg/Opus and MP4/M4A compatible containers do not conflict", () => {
-  const opus = fromText(`OggS${"\0".repeat(30)}OpusHead`);
+  const opus = oggPacket(fromText("OpusHead"));
   assert.equal(inspectHeader(opus, { name: "voice.ogg", type: "audio/ogg" }).mismatch, false);
   const mp4 = fromText("\0\0\0\u0018ftypisom\0\0\0\0mp42");
   assert.equal(inspectHeader(mp4, { name: "voice.m4a", type: "audio/mp4" }).mismatch, false);
@@ -138,6 +152,37 @@ test("BMP detection needs a plausible DIB header, not just BM", () => {
   assert.equal(signatureFormat(fromText("BM is also a text prefix")), null);
 });
 
+test("EBML DocType distinguishes Matroska from WebM", () => {
+  assert.equal(signatureFormat(ebmlDocType("matroska")), "matroska");
+  assert.equal(signatureFormat(ebmlDocType("webm")), "webm");
+  assert.equal(signatureFormat(bytes(0x1a, 0x45, 0xdf, 0xa3)), "ebml");
+});
+
+test("Ogg codec signatures must begin at the first packet", () => {
+  assert.equal(signatureFormat(oggPacket(fromText("comment OpusHead"))), "ogg");
+  assert.equal(signatureFormat(oggPacket(fromText("OpusHead"))), "opus");
+  assert.equal(signatureFormat(oggPacket(bytes(1, ...fromText("vorbis")))), "vorbis");
+});
+
+test("ID3 metadata does not itself prove an MP3 codec", () => {
+  assert.equal(signatureFormat(bytes(...fromText("ID3"), 4, 0, 0, 0, 0, 0, 0)), null);
+});
+
+test("UTF-16 SVG BOMs are inspected without depending on an extension", () => {
+  const source = "<svg xmlns='http://www.w3.org/2000/svg'></svg>";
+  for (const encoding of ["utf-16le", "utf-16be"]) {
+    const bom = encoding === "utf-16le" ? bytes(0xff, 0xfe) : bytes(0xfe, 0xff);
+    const encoded = new Uint8Array(source.length * 2 + 2);
+    encoded.set(bom);
+    for (let index = 0; index < source.length; index += 1) {
+      const code = source.charCodeAt(index);
+      encoded[2 + index * 2] = encoding === "utf-16le" ? code & 0xff : code >>> 8;
+      encoded[3 + index * 2] = encoding === "utf-16le" ? code >>> 8 : code & 0xff;
+    }
+    assert.equal(signatureFormat(encoded), "svg");
+  }
+});
+
 test("file inspection reads only a capped prefix", async () => {
   let requestedEnd = -1;
   const file = {
@@ -148,7 +193,7 @@ test("file inspection reads only a capped prefix", async () => {
     slice(start, end) {
       assert.equal(start, 0);
       requestedEnd = end;
-      return new Blob([fromText(`OggS${"\0".repeat(30)}OpusHead`)]);
+      return new Blob([oggPacket(fromText("OpusHead"))]);
     },
   };
   const result = await inspectLocalFile(file);

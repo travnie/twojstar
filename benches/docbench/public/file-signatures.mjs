@@ -13,7 +13,8 @@ const formats = Object.freeze({
   opus: ["audio", "Opus"], vorbis: ["audio", "Vorbis"],
   flac: ["audio", "FLAC"], mp3: ["audio", "MP3"], wav: ["audio", "WAV"],
   aiff: ["audio", "AIFF"], m4a: ["media", "M4A/MP4"],
-  ogg: ["media", "Ogg"], webm: ["media", "WebM"], mp4: ["media", "MP4"],
+  ogg: ["media", "Ogg"], webm: ["media", "WebM"], matroska: ["media", "Matroska"],
+  ebml: ["media", "EBML"], mp4: ["media", "MP4"],
   mov: ["media", "QuickTime"], isobmff: ["media", "ISO-BMFF"],
   pdf: ["document", "PDF"], docx: ["document", "DOCX"],
   txt: ["document", "Text"], json: ["document", "JSON"],
@@ -30,6 +31,7 @@ const extensionHints = Object.freeze({
   opus: "opus", oga: "ogg", ogg: "ogg", flac: "flac",
   mp3: "mp3", wav: "wav", wave: "wav", aif: "aiff", aiff: "aiff",
   m4a: "m4a", m4b: "m4a", mp4: "mp4", mov: "mov", webm: "webm",
+  mkv: "matroska", mka: "matroska", mk3d: "matroska",
   pdf: "pdf", docx: "docx", txt: "txt", json: "json",
 });
 
@@ -43,12 +45,64 @@ function ascii(bytes, start, length) {
   return String.fromCharCode(...bytes.subarray(start, start + length));
 }
 
-function hasAscii(bytes, needle, max = HEAD_LIMIT) {
-  const limit = Math.min(bytes.length, max);
-  for (let i = 0; i + needle.length <= limit; i += 1) {
-    if (ascii(bytes, i, needle.length) === needle) return true;
+function oggFormat(bytes) {
+  if (bytes.length < 28 || bytes[4] !== 0) return "ogg";
+  const segmentCount = bytes[26];
+  const packetOffset = 27 + segmentCount;
+  if (!segmentCount || packetOffset > bytes.length) return "ogg";
+  if (ascii(bytes, packetOffset, 8) === "OpusHead") return "opus";
+  if (starts(bytes, [1, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73], packetOffset)) return "vorbis";
+  return "ogg";
+}
+
+function ebmlSize(bytes, offset) {
+  if (offset >= bytes.length) return null;
+  const first = bytes[offset];
+  let mask = 0x80;
+  let length = 1;
+  while (length <= 8 && (first & mask) === 0) {
+    mask >>= 1;
+    length += 1;
   }
-  return false;
+  if (length > 8 || offset + length > bytes.length) return null;
+  let value = first & (mask - 1);
+  for (let index = 1; index < length; index += 1) value = value * 256 + bytes[offset + index];
+  return Number.isSafeInteger(value) ? { value, length } : null;
+}
+
+function ebmlFormat(bytes) {
+  const root = ebmlSize(bytes, 4);
+  if (!root) return "ebml";
+  let cursor = 4 + root.length;
+  const end = Math.min(bytes.length, cursor + root.value, 512);
+  while (cursor < end) {
+    const first = bytes[cursor];
+    const idLength = first & 0x80 ? 1 : first & 0x40 ? 2 : first & 0x20 ? 3 : first & 0x10 ? 4 : 0;
+    if (!idLength || cursor + idLength > end) break;
+    const isDocType = idLength === 2 && starts(bytes, [0x42, 0x82], cursor);
+    const size = ebmlSize(bytes, cursor + idLength);
+    if (!size) break;
+    const valueOffset = cursor + idLength + size.length;
+    if (valueOffset + size.value > end) break;
+    if (isDocType) {
+      const type = ascii(bytes, valueOffset, size.value);
+      if (type === "webm") return "webm";
+      if (type === "matroska") return "matroska";
+      return "ebml";
+    }
+    cursor = valueOffset + size.value;
+  }
+  return "ebml";
+}
+
+function id3MpegFrame(bytes) {
+  if (bytes.length < 10) return false;
+  const sizes = [...bytes.subarray(6, 10)];
+  if (sizes.some((part) => part & 0x80)) return false;
+  const payloadSize = sizes.reduce((size, part) => size * 128 + part, 0);
+  const footerSize = bytes[5] & 0x10 ? 10 : 0;
+  const frameOffset = 10 + payloadSize + footerSize;
+  return frameOffset + 4 <= bytes.length && mp3Frame(bytes.subarray(frameOffset, frameOffset + 4));
 }
 
 function mp3Frame(bytes) {
@@ -113,18 +167,17 @@ export function signatureFormat(input) {
     if (brands.some((brand) => ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1", "dash", "M4V "].includes(brand))) return "mp4";
     return "isobmff";
   }
-  if (ascii(bytes, 0, 4) === "OggS") {
-    if (hasAscii(bytes, "OpusHead", 512)) return "opus";
-    if (hasAscii(bytes, "vorbis", 512)) return "vorbis";
-    return "ogg";
-  }
+  if (ascii(bytes, 0, 4) === "OggS") return oggFormat(bytes);
   if (ascii(bytes, 0, 4) === "fLaC") return "flac";
-  if (ascii(bytes, 0, 3) === "ID3" || mp3Frame(bytes)) return "mp3";
+  if (ascii(bytes, 0, 3) === "ID3") return id3MpegFrame(bytes) ? "mp3" : null;
+  if (mp3Frame(bytes)) return "mp3";
   if (ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 4) === "WAVE") return "wav";
   if (ascii(bytes, 0, 4) === "FORM" && ["AIFF", "AIFC"].includes(ascii(bytes, 8, 4))) return "aiff";
-  if (starts(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return "webm";
+  if (starts(bytes, [0x1a, 0x45, 0xdf, 0xa3])) return ebmlFormat(bytes);
   if (ascii(bytes, 0, 5) === "%PDF-") return "pdf";
-  const text = new TextDecoder().decode(bytes.subarray(0, 512)).replace(/^\uFEFF/u, "").trimStart();
+  const encoding = starts(bytes, [0xfe, 0xff]) ? "utf-16be"
+    : starts(bytes, [0xff, 0xfe]) ? "utf-16le" : "utf-8";
+  const text = new TextDecoder(encoding).decode(bytes.subarray(0, 512)).replace(/^\uFEFF/u, "").trimStart();
   if (/^(?:<\?xml[^>]*>\s*)?<svg(?:\s|>)/iu.test(text)) return "svg";
   return null;
 }
@@ -148,7 +201,8 @@ const mimeHints = Object.freeze({
   "audio/mpeg": "mp3", "audio/flac": "flac", "audio/x-flac": "flac",
   "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg",
   "application/ogg": "ogg", "audio/opus": "opus", "audio/webm": "webm",
-  "video/webm": "webm", "video/mp4": "mp4", "audio/mp4": "m4a",
+  "video/webm": "webm", "video/x-matroska": "matroska",
+  "audio/x-matroska": "matroska", "video/mp4": "mp4", "audio/mp4": "m4a",
 });
 
 function compatibleFormat(signature, hint) {
@@ -159,6 +213,7 @@ function compatibleFormat(signature, hint) {
   if (["mp4", "m4a"].includes(signature) && ["mp4", "m4a"].includes(hint)) return true;
   if (["heic", "heif"].includes(signature) && ["heic", "heif"].includes(hint)) return true;
   if (signature === "isobmff" && ["mp4", "m4a", "mov", "heic", "heif", "avif"].includes(hint)) return true;
+  if (signature === "ebml" && ["webm", "matroska"].includes(hint)) return true;
   return false;
 }
 
