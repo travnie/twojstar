@@ -49,11 +49,14 @@ Android.
 ## Proposed architecture
 
 **Data plane:** user browser, local `File`/`Blob`/streams, Web Workers and
-on-demand WebAssembly. No bytes leave the device by default. Cloudflare Worker
-serves UI/assets and optional narrowly scoped API only; its memory/CPU quota is
-not a browser processing limit. If a genuinely server-only conversion becomes
-necessary, explore explicit opt-in R2 uploads plus a Container job and deletion
-policy; never silently turn the Worker into a file-processing/upload proxy.
+on-demand WebAssembly. **Docbench file operations stay browser-only: files are
+not uploaded.** Cloudflare Worker serves the UI/assets and narrow API endpoints
+that do not receive file contents; its memory/CPU quota is not a browser
+processing limit. A server-only conversion would require a separate, explicitly
+approved future product change with visible upload consent, retention/deletion
+policy and matching updates to the local-first contract here and in the
+[ChatGPT file viewer plan](CHATGPT_PLUGIN.md). R2/Containers are **not**
+authorized or in scope for this workbench implementation.
 
 **UI plane:** current Docbench UI until a measured prototype justifies change.
 Share the existing Bench workspace infrastructure, not Worker security
@@ -169,8 +172,9 @@ file operations or send user data to analytics.
    including **Opus/FLAC**; lazy engines, native-first with tested fallback.
 5. **Creation and advanced controls:** ZIP creation/settings first; add other
    writable formats only when round-trip tests justify them.
-6. **Optional extras:** conversion, batch operations, offline packaging,
-   server-side Containers/R2 only after a demonstrated local limitation.
+6. **Optional extras:** local conversion, batch operations and offline
+   packaging. Any R2/Containers proposal remains separately gated by explicit
+   approval, consent and a documented privacy-contract change.
 
 Non-goals for this design stage: reimplement Docbench PDF/text editors,
 mandatory cloud uploads, new standalone "filebench" service, wholesale UI
