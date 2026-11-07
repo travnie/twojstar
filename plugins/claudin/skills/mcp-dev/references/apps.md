@@ -17,7 +17,8 @@ One standard for both hosts: ChatGPT is fully MCP Apps-compatible since 2026-02;
 | metrics over time | yes: charts, gauges |
 | media (maps, PDFs, images, video) | yes: viewer/player |
 | confirmations, short text | no, text is fine |
-| data only other tools/the view need | app-only tool (`visibility: ["app"]`) |
+| data only the view needs (refresh, paging) | app-only tool (`visibility: ["app"]`) |
+| data the model needs to chain calls (look up an ID) | no UI, and keep it model-visible |
 
 ## Wiring
 
