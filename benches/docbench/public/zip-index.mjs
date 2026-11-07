@@ -10,7 +10,8 @@ function invalid(reason) {
 }
 
 function safePath(name) {
-  if (!name || /[\u0000-\u001f\u007f]/u.test(name) || name.startsWith("/")
+  if (!name || [...name].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
+    || name.startsWith("/")
     || name.startsWith("\\") || /^[A-Za-z]:/u.test(name)) return false;
   const segments = name.replaceAll("\\", "/").split("/");
   return !segments.includes("..") && !segments.includes(".");

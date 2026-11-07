@@ -99,8 +99,12 @@ if (!index.includes('src="/local-files.js"') || !index.includes('src="/files-wor
   throw new Error("Files workspace scripts missing.");
 }
 if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('src="/files-workspace.mjs"')
-  || portableFiles.includes('href="/files-workspace.css"')) {
-  throw new Error("Portable Files workspace must be inline.");
+  || portableFiles.includes('href="/files-workspace.css"')
+  || portableFiles.includes('from "./file-signatures.mjs"')
+  || portableFiles.includes('from "./zip-index.mjs"')
+  || !portableFiles.includes("async function inspectLocalFile(file)")
+  || !portableFiles.includes("async function readZipIndex(blob)")) {
+  throw new Error("Portable Files workspace and local dependencies must be inline.");
 }
 const sharedFiles = await readFile("../shared/local-files.js", "utf8");
 const copiedFiles = await readFile("public/local-files.js", "utf8");

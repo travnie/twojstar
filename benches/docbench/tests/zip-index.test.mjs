@@ -18,6 +18,8 @@ test("ZIP index lists stored paths and compressed sizes without inflating", asyn
   assert.equal(result.entries[1].name, "sub/inside.json");
   assert.equal(result.entries[1].safe, true);
   assert.equal(result.entries[0].originalSize, 5);
+  assert.ok(result.entries[0].compressedSize > 0);
+  assert.equal(result.entries[0].method, 8);
   assert.ok(result.indexedBytes < file.size * 2);
 });
 

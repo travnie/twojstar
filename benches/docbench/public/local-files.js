@@ -41,10 +41,7 @@
       if (!dragHasFiles(event)) return;
       event.preventDefault();
       depth = Math.max(0, depth - 1);
-      if (!depth || !element.contains(event.relatedTarget)) {
-        depth = 0;
-        element.classList.remove(activeClass);
-      }
+      if (!depth) element.classList.remove(activeClass);
     };
     const drop = (event) => {
       if (!dragHasFiles(event)) return;
