@@ -45,9 +45,10 @@ to the product that benefits, **not** to whichever repo discovered it.
   SVG/canvas rendering, palette handling and raster exports.
 - **Streambench:** audio/video/radio/HLS playback, live stream diagnostics,
   media/playlist parsing, track metadata and related tooling.
-- **Shared:** small proven primitives already used by multiple products
-  (i18n, WebMCP lifecycle and local-file ingress). Share additional code
-  only after a second genuine consumer appears; keep one maintained copy.
+- **Shared:** i18n and WebMCP lifecycle already have multiple consumers.
+  Local-file ingress has one canonical shared source but is used only by
+  Docbench so far. Share more only after a second genuine consumer; keep
+  one maintained copy.
 - **Rejected here, useful there:** pass a prototype and its findings to the
   better-matched Bench instead of forcing it into Docbench.
 

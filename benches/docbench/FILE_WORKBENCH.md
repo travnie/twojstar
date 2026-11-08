@@ -268,8 +268,8 @@ workers or headers. See [Workers limits](https://developers.cloudflare.com/worke
 All three Benches **already** register browser tools through the shared
 [`webmcp-lifecycle.js`](../shared/webmcp-lifecycle.js) and the experimental
 `document.modelContext` API. Docbench currently exposes document read,
-set, validate, format and text-inspection tools. Codebench has QR/barcode/
-scanner tools; Streambench exposes playlist search and playback controls.
+set, validate, format and text-inspection tools. Codebench has QR/barcode tools and scanner-state reporting;
+Streambench exposes playlist search and playback controls.
 No second parallel tool system or speculative remote MCP server is needed.
 
 **Target:** every useful, safe capability added to Files/Docs/PDF eventually
