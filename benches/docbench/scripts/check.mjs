@@ -127,7 +127,7 @@ for (const feature of ["#files-open-folder", "#files-select-visible", "#files-pr
     throw new Error("Explorer UI is missing " + feature);
   }
 }
-for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_files"]) {
+for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_files", "focus_local_file"]) {
   if (!webmcpFiles.includes('name: "' + tool + '"')) {
     throw new Error("WebMCP Files missing " + tool);
   }

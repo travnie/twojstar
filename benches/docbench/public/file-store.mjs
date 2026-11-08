@@ -18,7 +18,7 @@ export function createFileStore({ limit = 100 } = {}) {
   });
   function normalizedPath(file) {
     const raw = String(file.webkitRelativePath || file.name || "");
-    const value = raw.replaceAll("\\", "/");
+    const value = file.webkitRelativePath ? raw.replaceAll("\\", "/") : raw;
     const parts = value.split("/");
     if (!value || value.length > 2048 || value.startsWith("/")
       || /^[a-z]:/iu.test(value) || parts.some((part) => !part || part === ".." || part === "."
