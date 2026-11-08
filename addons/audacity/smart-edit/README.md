@@ -1,5 +1,11 @@
 # Audacity Smart Edit
 
+[![audacity-vst3-ci CI](https://github.com/travnie/twojstar/actions/workflows/audacity-vst3-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/audacity-vst3-ci.yml) [![Audacity](https://img.shields.io/badge/Audacity-0000CC?logo=audacity&logoColor=white&style=flat-square)](https://www.audacityteam.org/) [![C++20](https://img.shields.io/badge/C%2B%2B20-00599C?logo=cplusplus&logoColor=white&style=flat-square)](https://isocpp.org/)
+
+> **Agent entry:** Design and acceptance criteria for Smart Trim, Smart Cut/Join and Smart Transition; implementation experiments in [`../vst3/`](../vst3/).
+> **Validate / test:** [VST3 DSP + host CI](../../../.github/workflows/audacity-vst3-ci.yml); tests validate the prototype, not every roadmap goal.
+> **Boundary:** design/roadmap is **not** proof of a shipped Audacity 4 integration; keep deterministic edit and numeric-equivalence contracts intact.
+
 AI-assisted editing helpers for making cuts, joins and trims sound intentional instead of sounding like two waveforms were introduced with a stapler.
 
 ## Goal
