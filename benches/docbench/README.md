@@ -29,4 +29,4 @@ npm run check:docbench
 npm run dev --workspace=docbench
 ```
 
-Build also produces ignored `public/portable.html`. Cloudflare Workers Builds: root `benches`, commands `npm run build:docbench`, `npm run deploy:docbench`, `npm run preview:docbench`. Include `benches/shared/**` and `benches/scripts/**` in build watch paths. ZIP extraction and broader archive/media engines are not implemented yet.
+Build also produces ignored `public/portable.html`. Cloudflare Workers Builds: root `benches`, commands `npm run build:docbench`, `npm run deploy:docbench`, `npm run preview:docbench`. Watch `benches/docbench/**`, `benches/shared/**`, `benches/scripts/**`, `benches/package.json` and `benches/package-lock.json`. ZIP extraction and broader archive/media engines are not implemented yet.

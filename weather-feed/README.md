@@ -38,6 +38,15 @@ npm run dev
 # npm run deploy
 ```
 
-Local KV begins empty: to populate it, trigger both cron schedules in Wrangler's Local Explorer, or start `wrangler dev --test-scheduled` and call the local `/__scheduled` endpoint for each cron. Until scheduled handlers run, local `/healthz` may report 503.
+Local KV begins empty. Trigger both configured schedules in [Local Explorer](https://developers.cloudflare.com/workers/local-development/local-explorer/), or run:
+
+```sh
+npx wrangler dev --test-scheduled
+# In another shell, invoke the current cycle and forecast cycle:
+curl -G --data-urlencode 'cron=0 */2 * * *' http://localhost:8787/cdn-cgi/local/scheduled
+curl -G --data-urlencode 'cron=0 5 * * *' http://localhost:8787/cdn-cgi/local/scheduled
+```
+
+Without a completed current cycle, local `/healthz` may report 503. The two cron values select different handlers; `/__scheduled` is not the Wrangler route.
 
 Secrets: `OPENWEATHER_KEY`, `VISUALCROSSING_KEY`; Xweather uses `XWEATHER_CLIENT_ID` + `XWEATHER_CLIENT_SECRET` or `XWEATHER_API_KEY`; Pirate Weather uses `PIRATEWEATHER_API_KEY`. Open-Meteo/IMGW need no keys, so missing paid providers degrade coverage rather than break the service. The current `wrangler.jsonc` binds production `WEATHER_KV`; use a **separate KV namespace** for a new environment. CI validates TypeScript/tests (IMGW outages, expiry, Warsaw time, Atom IDs). See [workflow](../.github/workflows/weather-ci.yml).
