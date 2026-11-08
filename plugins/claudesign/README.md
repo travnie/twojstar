@@ -2,7 +2,7 @@
 
 <img src="assets/icon.svg" width="96" alt="Claudesign">
 
-One design plugin instead of four (design-skills, Website Design, frontend-design, Naming). Replaces the standalone `naming` skill — remove it after installing.
+One design plugin instead of four (design-skills, Website Design, frontend-design, Naming).
 
 | Skill | Covers |
 |---|---|
