@@ -389,6 +389,9 @@ dialog.addEventListener("close", () => {
   releasePreview(dialogBody);
   previewButton.focus();
 });
+dialog.addEventListener("click", (event) => {
+  if (event.target === dialog) dialog.close();
+});
 search.addEventListener("input", () => {
   query = search.value;
   renderList();
@@ -412,7 +415,8 @@ store.subscribe(() => {
   renderList();
   if (activeRendered !== store.activeId()) showActive();
 });
-window.addEventListener("pagehide", () => {
+window.addEventListener("pagehide", (event) => {
+  if (event.persisted) return;
   releasePreview();
   releasePreview(dialogBody);
   store.clear();

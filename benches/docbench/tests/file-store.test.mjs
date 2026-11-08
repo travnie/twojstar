@@ -79,6 +79,13 @@ test("agent snapshots are bounded and private by default", () => {
   assert.equal(store.count(), 0);
 });
 
+test("regular filenames with a backslash stay flat", () => {
+  const store = createFileStore();
+  store.addFiles([file("foo\\bar.txt")]);
+  assert.deepEqual(store.folders(), []);
+  assert.equal(store.visible()[0].path, "foo\\bar.txt");
+});
+
 test("invalid relative paths never mount virtual directories", () => {
   const store = createFileStore();
   store.addFiles([file("notes.txt", 10, "../hidden/notes.txt")]);
