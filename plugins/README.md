@@ -20,11 +20,11 @@ Portable ChatGPT/Codex and Claude Code plugin sources. [Agent Plugins 1.0](https
 ```sh
 python plugins/_shared/validate_branding.py --check
 python plugins/_shared/claude_marketplace.py --check
-python plugins/_shared/plugin_ci.py plan
+EVENT_NAME=workflow_dispatch python plugins/_shared/plugin_ci.py plan
 # CI owns packaging selected plugins via plugin_ci.py build
 ```
 
-Use the [latest successful Plugin Packages run on main](https://github.com/travnie/twojstar/actions/workflows/plugin-packages.yml?query=branch%3Amain) and download its `<name>-plugin` artifact. Builds select affected packages; not every run contains every ZIP. Artifacts expire, so **do not pin stale run IDs** into maintained docs. The ZIP is portable source/config, not an authenticated registered App.
+From [Plugin Packages runs on main](https://github.com/travnie/twojstar/actions/workflows/plugin-packages.yml?query=branch%3Amain), choose the newest successful run **containing the desired `<name>-plugin` artifact**. Builds select affected packages; not every run contains every ZIP. Artifacts expire, so **do not pin stale run IDs** into maintained docs. The ZIP is portable source/config, not an authenticated registered App.
 
 ## App binding is separate
 

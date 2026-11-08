@@ -7,7 +7,7 @@ Dependency-free C# codec for multi-frame Windows `.ico` files. [Latest ZIP](http
 ## Source / behavior
 
 - Opens PNG-backed and BMP/DIB-backed ICO frames as named layers; skips malformed frames. Exports multiple sizes (16–256 px), alpha and optional aspect-ratio padding.
-- `PaintDotNetIco.Modern.csproj`: Paint.NET **5.2+** FileTypes API / **.NET 11** SDK.
+- `PaintDotNetIco.Modern.csproj`: Paint.NET **5.2+** FileTypes API / **.NET 11 preview** SDK.
 - `PaintDotNetIco.csproj`: Paint.NET **5.1** compatibility API / **.NET 9** SDK.
 - Shared codec is plain C#, no Pillow/ImageSharp dependency.
 
