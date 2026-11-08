@@ -6,10 +6,10 @@ Local-first document, PDF and file workspace. **User files remain in the browser
 
 ## Implemented
 
-- **Documents:** preview/edit TXT, Markdown, JSON/JSONC/JSONL, XML/YAML, scripts/configs and playlists; safe HTML rendering; direct save where supported, otherwise download. TXT/Markdown and structured JSON merges; conflict reporting without number coercion.
+- **Documents:** preview/edit TXT, Markdown, JSON/JSONC/JSONL, XML/YAML, scripts/configs and playlists; safe HTML rendering; direct save where supported, otherwise download. TXT/Markdown and structured JSON merges; conflict reporting without number coercion. Inspection-guided text repairs can preview and explicitly apply removal of suspicious directional, control and invisible characters, with optional unusual-space normalization and one-step undo. Truncated scans and context-dependent findings stay manual.
 - **PDF:** DOCX↔PDF (structure-first PDF→DOCX, not pixel-perfect), merge/split, reorder/delete, extract, bookmarks, metadata, attachments and optimization. Verify structure and attachments before downloads.
 - **Files:** local folder/drop import, search/sort, independent selection and preview, signature/MIME and metadata inspection; read-only ZIP index. Image preview ≤48 MiB, text preview ≤128 KiB; unsupported codecs shown as unsupported.
-- **WebMCP:** bounded workspace snapshots and visible selection from the **same UI/store**, not a parallel hidden file engine. No arbitrary filesystem paths or system pickers.
+- **WebMCP:** bounded workspace snapshots and visible selection from the **same UI/store**, not a parallel hidden file engine. Includes read-only repair previews (counts and offsets only); actual repair requires the visible document UI. No arbitrary filesystem paths or system pickers.
 
 ## Source map
 

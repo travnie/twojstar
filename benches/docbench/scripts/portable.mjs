@@ -19,6 +19,7 @@ const [
   documentMerge,
   documentEnhancements,
   inspectorCore,
+  repairCore,
   inspector,
   webmcpLifecycle,
   webmcp,
@@ -63,6 +64,7 @@ const [
   readFile("public/document-merge.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
   readFile("public/text-inspector-core.js", "utf8"),
+  readFile("public/text-repair-core.js", "utf8"),
   readFile("public/text-inspector.js", "utf8"),
   readFile("public/webmcp-lifecycle.js", "utf8"),
   readFile("public/webmcp.js", "utf8"),
@@ -282,6 +284,7 @@ const portable = html
     `<script type="module">${safeScript(documentEnhancementsPortable)}</script>`,
   )
   .replace('<script src="/text-inspector-core.js"></script>', `<script>${safeScript(inspectorCore)}</script>`)
+  .replace('<script src="/text-repair-core.js"></script>', `<script>${safeScript(repairCore)}</script>`)
   .replace(
     '<script src="/text-inspector.js"></script>',
     `${portableTokenizerAssets}\n<script>${safeScript(inspectorPortable)}</script>`,

@@ -17,6 +17,7 @@ for (const path of [
   "public/document-formats.js",
   "public/document-enhancements.css",
   "public/text-inspector-core.js",
+  "public/text-repair-core.js",
   "public/text-inspector.js",
   "public/webmcp-lifecycle.js",
   "public/webmcp.js",
@@ -491,6 +492,7 @@ for (const leaked of [
   "/document-merge.mjs",
   "/text-inspector.js",
   "/text-inspector-core.js",
+  "/text-repair-core.js",
   "webmcp-lifecycle.js",
   "/webmcp-lifecycle.js",
   "webmcp.js",
@@ -523,10 +525,12 @@ if (!portable.includes("parseTree")) throw new Error("Portable build is missing 
 if (!portable.includes("DocBenchTextFormats") || !portable.includes("Playlist / M3U8")) {
   throw new Error("Portable build is missing extended text format support.");
 }
-if (!portable.includes("Text safety inspection") || !portable.includes("inspect-button")) {
-  throw new Error("Portable build is missing text inspector support.");
+if (!portable.includes("Text safety inspection") || !portable.includes("inspect-button")
+  || !portable.includes("DocBenchTextRepair") || !portable.includes("inspect-preview-repairs")) {
+  throw new Error("Portable build is missing text inspector and repair support.");
 }
-for (const toolName of ["read_document", "set_document_text", "validate_document", "format_document", "inspect_document"]) {
+for (const toolName of ["read_document", "set_document_text", "validate_document", "format_document",
+  "inspect_document", "preview_document_repairs"]) {
   if (!portable.includes(`name: "${toolName}"`)) {
     throw new Error(`Portable build is missing WebMCP tool: ${toolName}`);
   }
