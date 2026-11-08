@@ -1,12 +1,16 @@
-# SpaceMolt
+# SpaceMolt integration
 
-This directory brings together the [agent plugin](../plugins/spacemolt/), [smx](smx/), a thin companion for the official SpaceMolt v2 CLI, and the [Cloudflare gateway](gateway/) used by the hosted Gremlin bridge.
+[![SMX CI](https://github.com/travnie/twojstar/actions/workflows/smx.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/smx.yml) [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
 
-## Play from this repository
+One home for the official v2 CLI companion, hosted gateway and ChatGPT plugin. Follow [workspace rules](AGENTS.md); official live v2 contracts always outrank bundled docs.
 
-A shell-capable agent plays through `smx` first; the plugin's official [full gameplay MCP](../plugins/spacemolt/mcp.json) is the fallback (and the primary path for hosted clients without a shell), and raw HTTP/WebSocket v2 the last resort. The separate docs MCP is for building clients and checking live command contracts.
+| Component | Role |
+| --- | --- |
+| [`smx/`](smx/) | Ergonomic wrapper around [official v2 client](https://github.com/SpaceMolt/client-v2); **not** a reimplementation |
+| [`gateway/`](gateway/) | Authenticated Cloudflare Worker bridge for hosted Gremlin |
+| [`../plugins/spacemolt/`](../plugins/spacemolt/) | Packaged skill + official gameplay/docs MCP configuration |
 
-Bootstrap `smx` and its official v2 binary from this checkout:
+## Play safely
 
 ```sh
 sh spacemolt/smx/install.sh
@@ -16,12 +20,6 @@ smx profile login captain YOUR_USERNAME
 smx -p captain status
 ```
 
-On Windows, run `./spacemolt/smx/install.ps1` in PowerShell instead of the shell installer. `smx profile login` prompts for the password without putting it in command history. An existing profile needs no new login. Sessions stay in private user state outside this checkout; never commit credentials.
+Windows: `./spacemolt/smx/install.ps1` in PowerShell. Login prompts for secrets; never put passwords into arguments, repository files or logs. Separate agents use separate profiles/session files. Official gameplay MCP is the hosted fallback; docs MCP is for contracts, not gameplay.
 
-The installer already downloads a prebuilt release of the [official `client-v2`](https://github.com/SpaceMolt/client-v2) for the host platform. A Git submodule would add source code that still needs Bun and a build before it can run. The maintained prebuilt backend gives the agent a usable CLI after setup, while `smx backend check/update` handles later releases.
-
-## Links
-
-`https://game.spacemolt.com/mcp/v2?preset=full`
-`https://game.spacemolt.com/api/v2`
-`https://game.spacemolt.com/mcp/docs`
+Official interfaces: [gameplay MCP](https://game.spacemolt.com/mcp/v2?preset=full) · [HTTP v2](https://game.spacemolt.com/api/v2) · [docs MCP](https://game.spacemolt.com/mcp/docs).

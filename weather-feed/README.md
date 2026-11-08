@@ -1,92 +1,34 @@
-# [weather-feed](https://weather.travny.workers.dev)
+# [Weather Feed](https://weather.travny.workers.dev/)
 
-Canonical dashboard, schema, sitemap and Atom links use `weather.travny.workers.dev`.
-The custom domain remains an accessible alias. Existing Atom feed and entry IDs
-stay unchanged; the origin migration does not rewrite stored state.
+[![Weather CI](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/) [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=flat-square)](https://www.typescriptlang.org/)
 
-[![Weather](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml/badge.svg)](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml)
+Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to five weather sources; publishes **changes**, not repeated readings. [Canonical host](https://weather.travny.workers.dev/) stays authoritative for schema, sitemap and Atom IDs.
 
-Multi-source weather aggregator for **Kościelec (Chrzanów)**,
-50.14 N / 19.42 E, served as an Atom feed of changes rather than a firehose
-of identical readings.
+## Public routes
 
-## What it does
-
-- Up to five point sources are normalized and reduced to median + spread.
-- IMGW meteo warnings are filtered to powiat chrzanowski (TERYT `1203`);
-  hydro warnings are filtered to małopolskie.
-- A partial IMGW outage preserves the last known warnings for the failed
-  category, so a timeout cannot manufacture false “warning lifted” entries.
-- Preserved warnings expire at their IMGW end time. Records without a usable
-  end time remain until that IMGW category responds again.
-- Current entries use condition changes, |Δ temperature| ≥ 3 °C, or
-  precipitation start/stop. Forecast entries use max-temperature revisions
-  or a 50% rain-probability crossing.
-- OpenWeather three-hour slots are bucketed into `Europe/Warsaw` days.
-- The nearest IMGW station is reference context only and is not blended.
-
-## Schedule
-
-| cron | cycle |
+| Route | Output |
 | --- | --- |
-| `0 */2 * * *` | current conditions, air quality, and IMGW warnings |
-| `0 5 * * *` | daily forecast revision check |
+| `/` | Weather dashboard |
+| `/feed.atom` | Condition/forecast change events |
+| `/warnings.atom` | IMGW alerts |
+| `/state.json` | Ensemble, warnings, air quality, station reference |
+| `/healthz` | 503 for stale/unhealthy cycle |
 
-## Endpoints
+## Schedule / behavior
 
-- `GET /feed.atom` — all change entries
-- `GET /warnings.atom` — IMGW warning entries with their own Atom ID
-  and self URL
-- `GET /state.json` — latest ensemble, active warnings, air quality,
-  and station reference
-- `GET /healthz` — returns 503 when the current cycle is stale or unhealthy
-- `GET /`
+- `0 */2 * * *`: current observations, air quality and IMGW warnings. `0 5 * * *`: forecast revisions.
+- Ensemble: median and spread. Change triggers include ≥3 °C, rain start/stop, major forecast revision. OpenWeather 3-hour slots use `Europe/Warsaw` days.
+- IMGW meteo limited to powiat `1203`, hydro to Małopolskie. Partial outages preserve still-valid alerts and **never fabricate an alert-cleared event**. Station readings are reference only, not blended.
+- Read-only HTTP paths; scheduled events own KV writes. Quotas cap refresh frequency.
 
-The request path is read-only. KV writes happen only during scheduled cycles.
-
-## Setup
+## Work / deploy
 
 ```sh
-npm install
-wrangler secret put OPENWEATHER_KEY
-wrangler secret put VISUALCROSSING_KEY
-
-# Xweather Weather API: preferred explicit pair
-wrangler secret put XWEATHER_CLIENT_ID
-wrangler secret put XWEATHER_CLIENT_SECRET
-
-# Or a single combined value: client_id_client_secret
-wrangler secret put XWEATHER_API_KEY
-
-# Pirate Weather
-wrangler secret put PIRATEWEATHER_API_KEY
-
+cd weather-feed
+npm ci
 npm run check
-wrangler deploy
+npm run dev
+# npm run deploy  # only with correct secrets / WEATHER_KV
 ```
 
-`wrangler.jsonc` is pinned to the existing production `WEATHER_KV` namespace.
-For a new environment, create a separate namespace with
-`wrangler kv namespace create WEATHER_KV` and replace `kv_namespaces[0].id`
-with the returned ID before deploying.
-
-Open-Meteo and IMGW need no key. Xweather requires a client ID + client secret;
-`XWEATHER_API_KEY` is accepted as the combined `client_id_client_secret` form.
-Pirate Weather uses `PIRATEWEATHER_API_KEY` and sends it in the `apikey` request header,
-so the real key never appears in request URLs or source code.
-Without keyed providers the Worker continues in degraded single-source mode.
-The public page includes the attribution required when Xweather data is displayed.
-
-## Tests
-
-`npm test` covers partial and total IMGW outages, warning expiry,
-Warsaw timestamp handling, and Atom feed identity. CI runs `npm run check`,
-combining TypeScript validation and tests.
-
-## Known caveats
-
-- IMGW meteo field fallbacks should still be verified against the next live
-  stopień-2 event and tightened if its shape differs.
-- Upstream validation remains hand-written and zero-dependency. Zod-style
-  schemas would make future API-shape changes easier to diagnose.
-- Free-tier quotas remain the binding constraint before increasing frequency.
+Secrets: `OPENWEATHER_KEY`, `VISUALCROSSING_KEY`; Xweather uses `XWEATHER_CLIENT_ID` + `XWEATHER_CLIENT_SECRET` or `XWEATHER_API_KEY`; Pirate Weather uses `PIRATEWEATHER_API_KEY`. Open-Meteo/IMGW need no keys, so missing paid providers degrade coverage rather than break the service. The current `wrangler.jsonc` binds production `WEATHER_KV`; use a **separate KV namespace** for a new environment. CI validates TypeScript/tests (IMGW outages, expiry, Warsaw time, Atom IDs). See [workflow](../.github/workflows/weather-ci.yml).

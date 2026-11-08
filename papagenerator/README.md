@@ -1,44 +1,21 @@
-# Papagenerator
+# [Papagenerator](https://travny.pages.dev/papagenerator/)
 
-A zero-backend, mobile-friendly image sticker editor. Runs entirely in the browser; uploaded photos never leave the device.
+[![HTML Canvas](https://img.shields.io/badge/HTML_Canvas-E34F26?logo=html5&logoColor=white&style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=white&style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-## Features
-
-- Upload a photo, use the demo gradient, or switch to a transparent blank canvas.
-- Add original papaj-inspired cartoon stickers, a yellow halo, or a custom transparent PNG.
-- Drag, rotate, resize, duplicate, layer, delete.
-- Export PNG at the source resolution when safe (max 4096 px per edge / 12 megapixels; larger photos are scaled down).
-- Browser-only rendering; no accounts, storage, cookies, or analytics.
-- Brainrot-flavored browser math in `brainrot.js`; production editor logic stays readable.
-- Executable Brainrot and Rickroll-Lang examples in `brainrot/` and `rickroll/`.
+Static, mobile-first sticker editor. No server, account, cookies, analytics or file uploads. Browser canvas operations only.
 
 ## Run
 
-Serve this directory with any static file server:
-
 ```sh
 python -m http.server 8000 --directory papagenerator
+# visit http://localhost:8000
 ```
 
-Open http://localhost:8000.
+Use an ordinary static host; Vercel may use `papagenerator/` as the project root with no build step. The [TRAVNY Pages build](https://github.com/trvny/trvny/blob/main/pages/README.md) **pins this directory to a commit** and copies it into the existing hub; do not create a second maintained editor.
 
-## Vercel
+## Source / limits
 
-Create a Vercel project from `travnie/twojstar`, set **Root Directory** to `papagenerator`, Framework Preset **Other**, and leave Build Command empty. No environment variables required.
-
-## Meme-language demos
-
-These are real source files in their respective esoteric languages, but optional demos rather than browser runtime dependencies:
-
-- `brainrot/center.brainrot`: calculate the default papaj spawn coordinates with `skibidi`, `rizz`, `yapping` and `bussin`.
-- `rickroll/hello.rr`: a Rickroll-Lang welcome line.
-
-Run with the external [Brainrot](https://github.com/Brainrotlang/brainrot) or [Rickroll-Lang](https://github.com/Rick-Lang/rickroll-lang) interpreter respectively. The Vercel deployment runs only HTML and JavaScript.
-
-## Assets
-
-Starter stickers are original inline SVG cartoons, not downloaded images of a real person. You may upload your own sticker files.
-
-## License
-
-See the repository license.
+- Photo or blank canvas; original cartoon stickers, halo, custom transparent PNG. Drag, rotate, resize, duplicate, reorder, remove.
+- PNG export caps at 4096 pixels per edge / 12 megapixels; larger photos scale down.
+- `brainrot.js` contains optional meme-language browser math; examples in `brainrot/` and `rickroll/` are **not** runtime dependencies. External [Brainrot](https://github.com/Brainrotlang/brainrot) / [Rickroll-Lang](https://github.com/Rick-Lang/rickroll-lang) interpreters are only for those demos.
+- Original inline SVG starter art; custom user images stay local. [Repository license](../LICENSE).
