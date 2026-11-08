@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
 from typing import Any, Mapping
 
 APP_NAME = "smx"
+
+_BACKEND_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _is_safe_backend_executable(value: str) -> bool:
+    if not value or any(ch in value for ch in ("\x00", "\n", "\r")):
+        return False
+    if value in {".", ".."}:
+        return False
+    if any(ch in value for ch in ('"', "'", "`", ";", "&", "|", "$", ">", "<")):
+        return False
+
+    path = Path(value)
+    if path.name != value:
+        return True
+
+    return bool(_BACKEND_SAFE_NAME_RE.fullmatch(value))
 
 
 def _expanded(value: str) -> Path:
@@ -62,17 +80,23 @@ def resolve_backend(
     **kwargs: Any,
 ) -> str:
     env = os.environ if env is None else env
-    if binary:
+    if binary and _is_safe_backend_executable(binary):
         return binary
-    if env.get("SMX_BACKEND"):
-        return env["SMX_BACKEND"]
+
+    candidate = env.get("SMX_BACKEND")
+    if candidate and _is_safe_backend_executable(candidate):
+        return candidate
 
     managed = managed_backend_path(env, **kwargs)
     if managed.is_file():
-        return str(managed)
+        managed_str = str(managed)
+        if _is_safe_backend_executable(managed_str):
+            return managed_str
 
     found = shutil.which("spacemolt")
-    return found or "spacemolt"
+    if found and _is_safe_backend_executable(found):
+        return found
+    return "spacemolt"
 
 
 def ensure_private_state_dir(path: Path) -> None:
