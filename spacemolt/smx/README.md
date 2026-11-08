@@ -4,7 +4,7 @@
 
 > **Agent entry:** `src/smx/` wraps the authoritative official v2 CLI; packages/declarations live in `pyproject.toml`.
 > **Validate:** `cd spacemolt/smx && python -m pip install -e .` (Python ≥3.14); CI uses fake-backend unit tests.
-> **Boundary:** unknown commands must pass through. Credential/session state stays outside the checkout; separate profiles for concurrent agents; no live gameplay in CI.
+> **Boundary:** unknown commands must pass through. By default credentials/sessions live outside the checkout. Keep `SMX_STATE_DIR` and `SPACEMOLT_SESSION` overrides outside it too; separate profiles for concurrent agents; no live gameplay in CI.
 
 `smx` is a small human/agent-friendly companion for the official [SpaceMolt v2 client](https://github.com/SpaceMolt/client-v2).
 

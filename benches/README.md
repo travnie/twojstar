@@ -15,10 +15,9 @@ Three **independent Workers**, one npm workspace/lockfile. Follow [scoped worksp
 ```sh
 cd benches
 npm ci
-npm run check
-npm run check:docbench  # or check:codebench / check:streambench
-npm run build:docbench  # matching per-product build
 ```
+
+Then **choose** `npm run check` for all three, or `npm run check:<name>` for one (`docbench`, `codebench`, `streambench`). Use `npm run build:<name>` when a build is needed; do not rerun the full workspace check first.
 
 Cloudflare Workers Builds uses `benches/` as the root, with `build:<name>`, `deploy:<name>` and `preview:<name>` scripts. All three are checked by [Benches portable release CI](../.github/workflows/benches-release.yml); a green shared badge is **not** an individual deployment signal.
 

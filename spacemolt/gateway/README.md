@@ -4,7 +4,7 @@
 
 > **Agent entry:** Cloudflare Worker entry and `wrangler.jsonc` own the authenticated Gremlin bridge and scheduled autopilot.
 > **Validate:** `cd spacemolt/gateway && npm ci && npm test && npm run check`; deploy only through the configured Workers Builds path.
-> **Boundary:** persistent KV state and signed auth are production-owned; gameplay guards forbid self-destruct and cap automated purchases; respect `AGENTS.md` and official v2 contract.
+> **Boundary:** KV state and **shared bearer-token authentication** are production-owned (not per-request signatures); gameplay guards forbid self-destruct and cap automated purchases. Follow [parent agent rules](../AGENTS.md) and official v2 contract.
 
 Source of truth for the deployed `spacemolt-gateway` Cloudflare Worker.
 

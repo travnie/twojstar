@@ -28,7 +28,14 @@ cd weather-feed
 npm ci
 npm run check
 npm run dev
-# npm run deploy  # only with correct secrets / WEATHER_KV
+# Set up the environment before a production deploy (examples):
+# npx wrangler kv namespace create WEATHER_KV  # new environments only; bind ID in wrangler.jsonc
+# npx wrangler secret put OPENWEATHER_KEY
+# npx wrangler secret put VISUALCROSSING_KEY
+# npx wrangler secret put XWEATHER_CLIENT_ID
+# npx wrangler secret put XWEATHER_CLIENT_SECRET
+# npx wrangler secret put PIRATEWEATHER_API_KEY
+# npm run deploy
 ```
 
 Secrets: `OPENWEATHER_KEY`, `VISUALCROSSING_KEY`; Xweather uses `XWEATHER_CLIENT_ID` + `XWEATHER_CLIENT_SECRET` or `XWEATHER_API_KEY`; Pirate Weather uses `PIRATEWEATHER_API_KEY`. Open-Meteo/IMGW need no keys, so missing paid providers degrade coverage rather than break the service. The current `wrangler.jsonc` binds production `WEATHER_KV`; use a **separate KV namespace** for a new environment. CI validates TypeScript/tests (IMGW outages, expiry, Warsaw time, Atom IDs). See [workflow](../.github/workflows/weather-ci.yml).

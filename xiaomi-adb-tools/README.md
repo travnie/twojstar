@@ -2,7 +2,7 @@
 
 [![xiaomi-adb-tools-ci CI](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml) [![JavaFX](https://img.shields.io/badge/JavaFX-E76F00?logo=openjdk&logoColor=white&style=flat-square)](https://openjfx.io/) [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white&style=flat-square)](https://kotlinlang.org/)
 
-> **Agent entry:** Gradle/Kotlin/JavaFX desktop frontend; bundled platform tools used only when `adb`/`fastboot` absent from `PATH`.
+> **Agent entry:** Gradle/Kotlin/JavaFX desktop frontend; uses `adb`/`fastboot` from `PATH` when available, otherwise downloads platform-tools on demand into private app data.
 > **Validate / distribution:** [Xiaomi CI](../.github/workflows/xiaomi-adb-tools-ci.yml) builds native archives for five platforms; [download](https://github.com/travnie/twojstar/releases/latest/download/xiaomi-adb-tools.zip).
 > **Boundary:** device modifications are consequential; preserve app list/provenance and vetted labels. Original fork license: MIT.
 
