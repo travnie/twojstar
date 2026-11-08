@@ -217,6 +217,53 @@
     },
   });
 
+
+  register({
+    name: "preview_document_repairs",
+    title: "Preview Docbench text repairs",
+    description: "Plan exact-offset text repairs without changing the editor. Returns counts and bounded codepoint/offset descriptions, never document contents. Applying requires user review in Docbench.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        groups: {
+          type: "array", maxItems: 4, uniqueItems: true,
+          items: { type: "string", enum: ["bidi", "controls", "invisible", "spaces"] },
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute({ groups } = {}) {
+      const repair = globalThis.DocBenchTextRepair;
+      const inspect = globalThis.DocBenchTextInspector;
+      if (!repair?.planRepairs || !inspect?.scanText) {
+        return { ok: false, error: "Text repair engine is not ready." };
+      }
+      if (groups !== undefined && (!Array.isArray(groups) || groups.length > 4
+        || new Set(groups).size !== groups.length
+        || groups.some((group) => !repair.groups.some((item) => item.id === group)))) {
+        return { ok: false, error: "Invalid repair groups." };
+      }
+      const source = editor.value;
+      const findings = inspect.scanText(source);
+      const plan = repair.planRepairs(source, findings, groups);
+      return {
+        ok: !plan.blocked,
+        blocked: plan.blocked,
+        reason: plan.reason,
+        categories: plan.counts,
+        proposed: plan.changes.length,
+        examples: plan.changes.slice(0, 30).map((change) => ({
+          group: change.group,
+          codepoint: change.codepoint,
+          offset: change.offset,
+          operation: change.replacement ? "replace_with_space" : "remove",
+        })),
+        examplesTruncated: plan.changes.length > 30,
+      };
+    },
+  });
+
   register({
     name: "inspect_document",
     title: "Inspect Docbench document",
