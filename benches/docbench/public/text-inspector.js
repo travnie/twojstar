@@ -127,9 +127,11 @@ function repairSection(findings) {
     return box;
   }
   if (!Object.values(eligible.counts).some(Boolean)) {
-    const warning = document.createElement("p");
-    warning.textContent = t("These findings need manual review; no deterministic repair is available.");
-    box.append(warning);
+    if (findings.length) {
+      const warning = document.createElement("p");
+      warning.textContent = t("These findings need manual review; no deterministic repair is available.");
+      box.append(warning);
+    }
     return box;
   }
 
