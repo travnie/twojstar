@@ -1,64 +1,26 @@
-# [Code Bench — QR & Barcode Studio](https://codebench.travny.workers.dev)
+# [Codebench](https://codebench.travny.workers.dev/)
 
-[![codebench](public/apple-touch-icon.png)](https://codebench.travny.workers.dev)
+[![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml) [![zxing-wasm](https://img.shields.io/badge/zxing-wasm-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/zxing-wasm) [![bwip-js](https://img.shields.io/badge/bwip-js-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/bwip-js) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
 
-Client-side QR and barcode studio. The UI remains a single HTML document,
-while a small Cloudflare Worker wraps static assets with security headers,
-local font injection, and a focused hardening module. Scanned and generated
-values never leave the browser.
+Browser-only QR/barcode maker and camera scanner. Input and generated values never leave the browser. The Worker serves static assets with security headers; vendor libraries/fonts are pinned and self-hosted. Camera needs HTTPS/localhost.
 
-Runtime libraries and fonts are copied from pinned npm packages into `public/`
-during the build. Production performs no Google Fonts or other third-party CDN
-requests.
+## Work here
 
-## Deploy via Cloudflare Workers Builds
-
-This lives in the `travnie/twojstar` workshop under `benches/codebench/`.
-
-1. Cloudflare dashboard → **Workers & Pages** → **Create** →
-   **Import a repository**.
-2. Connect GitHub and select **travnie/twojstar**.
-3. Configure:
-   - **Worker name:** `codebench`
-   - **Root directory:** `benches`
-   - **Build command:** `npm run build:codebench`
-   - **Deploy command:** `npm run deploy:codebench`
-   - **Preview deploy command:** `npm run preview:codebench`
-4. Set build watch includes to `benches/codebench/*`, `benches/package.json` and `benches/package-lock.json`; exclude `*.md`.
-5. Deploy.
-
-The camera scanner needs HTTPS or localhost.
-
-The canonical application is `https://codebench.travny.workers.dev/`.
-The custom domain remains an accessible alias. Both serve the same application
-with durable canonical, structured data and sitemap URLs; existing browser
-sessions keep their origin.
-
-## Local
+| Concern | Maintained file |
+| --- | --- |
+| UI and application | `public/index.html` |
+| Input validation/exports | `public/hardening.js` |
+| Worker headers/HTML injection | `src/index.ts` |
+| Vendor and portable build | `scripts/vendor.mjs`, `scripts/portable.mjs` |
+| Shared browser utilities | [`../shared/`](../shared/) |
 
 ```sh
 cd benches
 npm ci
+npm run check:codebench
 npm run dev --workspace=codebench
 ```
 
-`npm run build` also generates `public/portable.html`: a single-file build with
-its runtime libraries, fonts and ZXing WASM embedded. It can be saved and opened
-without the Worker.
+`npm run build:codebench` also generates ignored `codebench/public/portable.html` with embedded dependencies and ZXing WASM. Do not edit generated `public/vendor/`, `public/fonts/`, `worker-configuration.d.ts`, or the portable HTML.
 
-`npm run typecheck` generates Worker types from `wrangler.jsonc` and runs strict
-TypeScript checks. `npm run deploy` builds vendored assets and deploys them.
-
-## Layout
-
-- `public/index.html` — UI and original application logic;
-- `public/hardening.js` — validation, safe exports, bounded image work,
-  and print fixes;
-- `public/fonts.css` — self-hosted Space Grotesk and Space Mono declarations;
-- `src/index.ts` — static-asset Worker, HTML injection, and security headers;
-- `scripts/vendor.mjs` — copies pinned libraries and WOFF2 files from
-  `node_modules`;
-- `scripts/portable.mjs` — generates the standalone HTML build.
-
-Generated `worker-configuration.d.ts`, `public/vendor/`, `public/fonts/`,
-`public/portable.html`, and `node_modules/` remain ignored by Git.
+**Deploy:** Cloudflare Worker `codebench`, root `benches/`, commands `npm run build:codebench`, `deploy:codebench`, `preview:codebench`; watch product paths plus shared lockfile. [CI](../../.github/workflows/benches-release.yml) runs checks across the workspace.
