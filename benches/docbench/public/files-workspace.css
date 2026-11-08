@@ -329,3 +329,5 @@
   .files-explorer-tools select { max-width: none; }
   .files-preview-dialog { width: 96vw; max-height: 93vh; }
 }
+
+.files-row-selected .files-item { background: rgb(224 68 56 / 15%); }
