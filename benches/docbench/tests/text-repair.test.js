@@ -23,6 +23,14 @@ const optIn = planRepairs(original, findings, ["spaces"]);
 assert.equal(optIn.changes.length, 1);
 assert.equal(optIn.result, original.replace("\u00a0", " "));
 assert.equal(planRepairs(original, findings, []).result, original);
+assert.equal(planRepairs(original, findings, []).changes.length, 0,
+  "no selected repair groups must propose no edits");
+const separators = "a\u0085b\u001cc\u001dd\u001ee";
+assert.equal(planRepairs(separators, scanText(separators)).result, separators,
+  "NEL and control record separators must remain intact");
+const forged = [{ kind: "control", offset: 0, length: 1, label: "Control character" }];
+assert.equal(planRepairs("ordinary", forged).result, "ordinary",
+  "mismatched finding must never delete ordinary text");
 
 const preserve = "\ufeffx\u200d\u200c \ufe0f\uFFFD y";
 assert.equal(planRepairs(preserve, scanText(preserve)).result, preserve,

@@ -33,7 +33,9 @@
     let group;
     let replacement = "";
     if (finding.kind === "invisible" && bidi.has(point)) group = "bidi";
-    else if (finding.kind === "control" && point !== 0x09 && point !== 0x0a && point !== 0x0d) group = "controls";
+    else if (finding.kind === "control"
+      && ((point < 0x20 && ![0x09, 0x0a, 0x0d, 0x1c, 0x1d, 0x1e].includes(point))
+        || (point >= 0x7f && point <= 0x9f && point !== 0x85))) group = "controls";
     else if (finding.kind === "invisible" && invisible.has(point)) {
       if (point === 0xfeff && finding.offset === 0) return null;
       group = "invisible";
