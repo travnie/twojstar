@@ -1,5 +1,11 @@
 # SpaceMolt Gateway
 
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/) [![Workers AI](https://img.shields.io/badge/Workers_AI-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers-ai/)
+
+> **Agent entry:** Cloudflare Worker entry and `wrangler.jsonc` own the authenticated Gremlin bridge and scheduled autopilot.
+> **Validate:** `cd spacemolt/gateway && npm ci && npm test && npm run check`; deploy only through the configured Workers Builds path.
+> **Boundary:** persistent KV state and signed auth are production-owned; gameplay guards forbid self-destruct and cap automated purchases; respect `AGENTS.md` and official v2 contract.
+
 Source of truth for the deployed `spacemolt-gateway` Cloudflare Worker.
 
 The Worker exposes the authenticated SpaceMolt bridge used by Gremlin, keeps its short-lived game session in the `STATE` KV namespace, and runs the existing `37 19,20 * * *` UTC cron.
