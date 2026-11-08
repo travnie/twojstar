@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#11131d"><meta name="description" content="Papagenerator: a local-first meme sticker workshop.">
+<meta name="theme-color" content="#11131d"><meta name="description" content="Papagenerator: a local-first meme sticker workshop. Drop stickers onto photos right in the browser; nothing is uploaded.">
 <title>PAPAGENERATOR // Holy image manipulation</title>
 <style>
 :root{font-family:ui-sans-serif,system-ui,sans-serif;color:#f5f5f8;background:#101118;font-synthesis:none}*{box-sizing:border-box}
 body{margin:0;background:radial-gradient(ellipse at 80% -20%,#34210e,transparent 55%),#101118}
 header{max-width:1140px;margin:auto;padding:26px 20px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{font-size:clamp(24px,5vw,36px);font-weight:900;letter-spacing:-.05em}.brand b{color:#ffd866}small,.muted{color:#a6a6b8}
+.brand{margin:0;font-size:clamp(24px,5vw,36px);font-weight:900;letter-spacing:-.05em}.brand b{color:#ffd866}small,.muted{color:#a6a6b8}
 main{max-width:1140px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;padding:0 20px 30px}
 .panel{background:#1c1e28;border:1px solid #393945;border-radius:18px;padding:16px}
 .stage{background:#13141b;border:1px dashed #53515a;border-radius:14px;min-height:360px;display:grid;place-items:center;overflow:hidden}
@@ -23,7 +23,7 @@ button:hover,.filebtn:hover{border-color:#ffd866}button:focus-visible,.filebtn:f
 @media(max-width:800px){main{grid-template-columns:1fr}.stage{min-height:280px}.side{grid-template-columns:1fr 1fr}.side .panel:first-child{grid-column:span 2}}
 @media(max-width:490px){.side{grid-template-columns:1fr}.side .panel:first-child{grid-column:auto}header{align-items:start;flex-direction:column}.stage{min-height:240px}.bar button,.bar .filebtn{flex:1}}
 </style></head>
-<body><header><div><div class="subtitle">THE HOLY IMAGE LAB / EST. 2137</div><div class="brand">PAPA<b>GENERATOR</b> ✦</div><small>Unreasonably powerful papaj placement technology.</small></div><span class="muted">100% browser · zero uploads</span></header>
+<body><header><div><div class="subtitle">THE HOLY IMAGE LAB / EST. 2137</div><h1 class="brand">PAPA<b>GENERATOR</b> ✦</h1><small>Unreasonably powerful papaj placement technology.</small></div><span class="muted">100% browser · zero uploads</span></header>
 <main><section class="panel">
 <div class="bar"><label class="filebtn">📁 Upload image<input id="backgroundFile" type="file" accept="image/*"></label><button id="clearBackground">Blank canvas</button><button class="primary" id="download">⬇ Export PNG</button></div>
 <div class="stage"><canvas id="canvas" width="900" height="700" aria-label="Meme editor canvas"></canvas></div>
