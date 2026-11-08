@@ -1,0 +1,10 @@
+{
+  "id": "gptomek",
+  "displayName": "GPTomek",
+  "description": "A teal token gremlin with a tangerine antenna and a suspiciously good memory.",
+  "spritesheetPath": "spritesheet.webp",
+  "spriteVersionNumber": 2,
+  "version": "1.0.0",
+  "author": "trvny",
+  "tags": ["chatgpt", "codex", "gremlin", "original", "animated"]
+}
