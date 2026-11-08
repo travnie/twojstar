@@ -10,7 +10,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 - Validate and format structured text, plus minify or explicitly repair JSON-family documents; scripts and loose configs remain raw to avoid unsafe rewrites.
 - Save directly back to an opened file only when the browser grants a writable file handle; otherwise use Save as or download an edited copy.
 - Inspect Markdown, JSON-family formats, YAML and XML with richer previews.
-- Review and selectively apply text-inspection repairs for bidi controls, hidden separators and non-printing controls; optionally normalize unusual spaces. Inspect changes before Apply and use one-step Undo. Findings truncated by inspection and context-dependent results remain manual.
+- Review text-inspection repairs for hidden separators, bidi and control
+  characters. Normalize unusual spaces only when selected. Inspect changes
+  before Apply; Undo is available. Truncated/contextual findings stay manual.
 - Preserve UTF-8 BOM and LF, CRLF or CR line endings unless deliberately changed.
 - Merge multiple TXT/Markdown files in picker order into a new editable document; mixed TXT/Markdown output becomes Markdown.
 - Save back to a selected local file in supported browsers or download the result.
@@ -27,7 +29,13 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 
 ## Privacy and agent access
 
-Files stay in the browser and the application has no telemetry. On WebMCP-capable browser hosts, `read_document`, `set_document_text`, `validate_document`, `format_document`, `inspect_document` and read-only `preview_document_repairs` operate on the visible editor state. Repair previews return counts, offsets, codepoints and operations, not document text; applying requires the visible UI. Returned tool results can contain document text and are then subject to the host/model data-handling policy.
+Files stay in the browser; the application has no telemetry. On WebMCP
+hosts, `read_document`, `set_document_text`, `validate_document`,
+`format_document`, `inspect_document` and read-only
+`preview_document_repairs` operate on the visible editor state.
+Repair previews return counts, offsets, codepoints and operations, not
+source text; applying repairs requires the visible UI. Other tool results
+can contain document text and follow the host/model data-handling policy.
 
 ## Links
 
