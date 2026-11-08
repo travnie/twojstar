@@ -3,7 +3,7 @@
 [![remotely-save-gdrive-patch-ci CI](https://github.com/travnie/twojstar/actions/workflows/remotely-save-gdrive-patch-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/remotely-save-gdrive-patch-ci.yml) [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/) [![Obsidian](https://img.shields.io/badge/Obsidian-7C3AED?logo=obsidian&logoColor=white&style=flat-square)](https://obsidian.md/)
 
 > **Agent entry:** `patch_gdrive.py` patches the downloaded upstream Remotely Save Obsidian build in-place.
-> **Validate / test:** [Patch CI](../../.github/workflows/remotely-save-gdrive-patch-ci.yml) downloads upstream, applies the patch, and runs generated behavioral tests; it never publishes patched builds.
+> **Validate / test:** [Patch CI](../../.github/workflows/remotely-save-gdrive-patch-ci.yml) downloads upstream, applies the patch, and tests deduplication/upload behavior against a fake Drive; it never publishes patched builds.
 > **Boundary:** upstream `pro/` has PolyForm Strict restrictions: **personal use, never publish/push patched binaries**; keep fixes local.
 
 Third-party patch for the
