@@ -2,7 +2,7 @@
 
 [![HTML Canvas](https://img.shields.io/badge/HTML_Canvas-E34F26?logo=html5&logoColor=white&style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=white&style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-Static, mobile-first sticker editor. No server, account, cookies, analytics or file uploads. Browser canvas operations only.
+Static, mobile-first sticker editor. No backend, account, cookies, analytics or server-side uploads. Users can select local photos and sticker files; all canvas work remains in the browser.
 
 ## Run
 

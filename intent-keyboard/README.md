@@ -2,7 +2,7 @@
 
 [![intent-keyboard-ci CI](https://github.com/travnie/twojstar/actions/workflows/intent-keyboard-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/intent-keyboard-ci.yml) [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-7F52FF?logo=kotlin&logoColor=white&style=flat-square)](https://kotlinlang.org/docs/multiplatform.html) [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white&style=flat-square)](https://developer.android.com/develop)
 
-> **Agent entry:** `core/` is the Kotlin Multiplatform intent engine; `platforms/android/`, `desktop/`, and iOS extension are platform adapters.
+> **Agent entry:** `core/` is the Kotlin Multiplatform intent engine; `platforms/android/`, `platforms/desktop/` and `platforms/ios/` are platform adapters.
 > **Validate / distribution:** [Intent Keyboard CI](../.github/workflows/intent-keyboard-ci.yml) runs affected Android/core and iOS jobs.
 > **Boundary:** early prototype; local LiteRT-LM first, remote fallback explicitly opt-in; Android IME and iOS extension must preserve input/privacy semantics.
 
