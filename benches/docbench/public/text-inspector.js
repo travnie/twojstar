@@ -101,7 +101,7 @@ function repairSection(findings) {
   title.textContent = t("Repair suggestions");
   const note = document.createElement("p");
   note.className = "inspect-repair-note";
-  note.textContent = t("Review changes before applying. Repairs may alter meaning; originals are never overwritten.");
+  note.textContent = t("Repairs change only the editor. Saving may overwrite an opened file; review changes first.");
   box.append(title, note);
 
   if (canUndo) {
@@ -193,14 +193,16 @@ function repairSection(findings) {
     const status = document.createElement("p");
     status.textContent = planned.blocked
       ? t("Inspection truncated. Repair a smaller document to avoid partial changes.")
-      : planned.changes.length + " " + t("proposed changes") + ".";
+      : t(planned.changes.length + (planned.changes.length === 1
+        ? " proposed change." : " proposed changes."));
     result.append(status);
     if (applyButton.disabled) return;
     const changes = document.createElement("ol");
     changes.className = "inspect-repair-changes";
     for (const change of planned.changes.slice(0, 32)) {
       const item = document.createElement("li");
-      item.textContent = change.codepoint + " · " + t(change.label)
+      const group = repairGroups.find((entry) => entry.id === change.group);
+      item.textContent = change.codepoint + " · " + t(group?.label || change.group)
         + " · " + t(change.replacement ? "replace with a space" : "remove")
         + " · " + t("offset") + " " + change.offset;
       changes.append(item);

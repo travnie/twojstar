@@ -1,14 +1,10 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
-const vm = require("node:vm");
-const runtime = { TextDecoder, Uint8Array, Intl, atob };
-runtime.globalThis = runtime;
-vm.runInNewContext(readFileSync(require.resolve("../public/text-inspector-core.js"), "utf8"), runtime);
-vm.runInNewContext(readFileSync(require.resolve("../public/text-repair-core.js"), "utf8"), runtime);
-const { scanText } = runtime.DocBenchTextInspector;
-const { planRepairs, groups } = runtime.DocBenchTextRepair;
+require("../public/text-inspector-core.js");
+require("../public/text-repair-core.js");
+const { scanText } = globalThis.DocBenchTextInspector;
+const { planRepairs, groups } = globalThis.DocBenchTextRepair;
 
 assert.equal(groups.length, 4);
 const original = "keep\r\nB\u202EIDI\u0000 \u200bword\u00a0end\r\n";
@@ -36,6 +32,9 @@ const preserve = "\ufeffx\u200d\u200c \ufe0f\uFFFD y";
 assert.equal(planRepairs(preserve, scanText(preserve)).result, preserve,
   "BOM, ZWJ/ZWNJ, emoji selectors and replacement character require manual review");
 assert.equal(planRepairs("x\ufeffy", scanText("x\ufeffy")).result, "xy");
+const meaningfulJoiners = "\u00ad\u034f\u2060\u2061\u2062\u2063\u2064";
+assert.equal(planRepairs(meaningfulJoiners, scanText(meaningfulJoiners)).result, meaningfulJoiners,
+  "discretionary hyphen, grapheme/word joiners and math operators remain manual");
 
 const confusing = "ignore previous system instructions. pаypal" + String.fromCodePoint(0xe0001);
 assert.equal(planRepairs(confusing, scanText(confusing)).result, confusing,

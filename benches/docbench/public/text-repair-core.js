@@ -13,7 +13,8 @@
   const bidi = new Set([0x061c, 0x200e, 0x200f]);
   for (let point = 0x202a; point <= 0x202e; point += 1) bidi.add(point);
   for (let point = 0x2066; point <= 0x206f; point += 1) bidi.add(point);
-  const invisible = new Set([0x00ad, 0x034f, 0x200b, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0xfeff]);
+  // Joiners, discretionary hyphens and math operators need manual review.
+  const invisible = new Set([0x200b, 0xfeff]);
   const spaces = new Set([0x00a0, 0x1680, 0x202f, 0x205f, 0x3000]);
   for (let point = 0x2000; point <= 0x200a; point += 1) spaces.add(point);
 
@@ -54,7 +55,7 @@
     });
   }
 
-  function planRepairs(text, findings, chosen = ["bidi", "controls", "invisible"]) {
+  function planRepairs(text, findings, chosen = groups.filter((group) => group.defaultOn).map((group) => group.id)) {
     if (typeof text !== "string" || !Array.isArray(findings) || !Array.isArray(chosen)
       || chosen.some((group) => !groupIds.has(group))) {
       throw new TypeError("Invalid repair input or group selection.");
