@@ -97,8 +97,10 @@ function repairSection(findings) {
   const box = document.createElement("section");
   box.className = "inspect-repairs";
   const title = document.createElement("h3");
+  title.className = "inspect-repair-title";
   title.textContent = t("Repair suggestions");
   const note = document.createElement("p");
+  note.className = "inspect-repair-note";
   note.textContent = t("Review changes before applying. Repairs may alter meaning; originals are never overwritten.");
   box.append(title, note);
 
