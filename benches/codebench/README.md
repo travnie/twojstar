@@ -9,7 +9,7 @@ Browser-only QR/barcode maker and camera scanner. Input and generated values nev
 | Concern | Maintained file |
 | --- | --- |
 | UI and application | `public/index.html` |
-| Input validation/exports | `public/hardening.js` |
+| Input validation/exports | `client/hardening.ts` (source; compiled to generated `public/hardening.js`) |
 | Worker headers/HTML injection | `src/index.ts` |
 | Vendor and portable build | `scripts/vendor.mjs`, `scripts/portable.mjs` |
 | Shared browser utilities | [`../shared/`](../shared/) |
@@ -23,4 +23,4 @@ npm run dev --workspace=codebench
 
 `npm run build:codebench` also generates ignored `codebench/public/portable.html` with embedded dependencies and ZXing WASM. Do not edit generated `public/vendor/`, `public/fonts/`, `worker-configuration.d.ts`, or the portable HTML.
 
-**Deploy:** Cloudflare Worker `codebench`, root `benches/`, commands `npm run build:codebench`, `deploy:codebench`, `preview:codebench`; watch product paths plus shared lockfile. [CI](../../.github/workflows/benches-release.yml) runs checks across the workspace.
+**Deploy:** Cloudflare Worker `codebench`, root `benches/`, commands `npm run build:codebench`, `deploy:codebench`, `preview:codebench`; watch `benches/codebench/**`, `benches/package.json` and `benches/package-lock.json`. [CI](../../.github/workflows/benches-release.yml) runs checks across the workspace.

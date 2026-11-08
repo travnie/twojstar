@@ -8,7 +8,7 @@ Browser workshop for IPTV, radio, M3U/M3U8, XMLTV and HLS. **No open proxy:** th
 
 - HLS with vendored `hls.js`, ICY/Radio Paradise metadata, playlist editing/filtering, M3U export, favorites/recent entries, XMLTV now/next via `tvg-id`, masked stream diagnostics.
 - Provider catalog: Free-TV Lite, iptv-org and Radio Browser. Fixed allowlisted upstream hosts; user-provided URLs are **never** signed for relay.
-- Supported video-site pages (YouTube/Twitch/Vimeo) open externally. No remote import of arbitrary playlist URLs.
+- Supported video-site pages (YouTube/Twitch/Vimeo) open externally. Remote M3U URLs can be fetched **directly by the browser**; the Worker does **not** proxy arbitrary playlist imports.
 - `public/portable.html` includes static player/playlist code; provider APIs, metadata and constrained relay still require the deployed Worker.
 - Different browser origins keep **separate** local libraries; moving between Workers URL and custom domain does not migrate state.
 
@@ -20,7 +20,7 @@ Browser workshop for IPTV, radio, M3U/M3U8, XMLTV and HLS. **No open proxy:** th
 | `GET /api/catalog?provider=<id>` | Allowed catalog |
 | `GET /api/playlist?provider=<id>&type=<scope>&id=<value>` | Signed provider playlist |
 
-Legacy `/api/providers/<id>/catalog|playlist` routes remain compatible. Product sources in `public/` and `src/`; shared browser lifecycle in [`../shared/`](../shared/).
+Legacy `/api/providers/<id>/catalog|playlist` routes remain compatible. `client/` owns the TypeScript browser sources compiled into `public/`; `src/` owns the Worker; shared browser lifecycle in [`../shared/`](../shared/).
 
 ```sh
 cd benches
@@ -29,4 +29,4 @@ npm run check:streambench
 npm run dev --workspace=streambench
 ```
 
-**Deploy:** Cloudflare Worker `streambench`, root `benches/`, scripts `build:streambench`, `deploy:streambench`, `preview:streambench`; set `STREAMBENCH_RELAY_SECRET` (≥32 random chars) in Worker secrets. Run the [smoke script](scripts/smoke.mjs) after deployment.
+**Deploy:** Cloudflare Worker `streambench`, root `benches/`, scripts `build:streambench`, `deploy:streambench`, `preview:streambench`; set `STREAMBENCH_RELAY_SECRET` (≥32 random chars) in Worker secrets. After deployment run `cd benches && npm run smoke --workspace=streambench -- https://streambench.travny.workers.dev` ([smoke script](scripts/smoke.mjs)).
