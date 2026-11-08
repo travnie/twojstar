@@ -24,6 +24,10 @@
     "xai-docs": {
       "type": "streamable-http",
       "url": "https://docs.x.ai/api/mcp"
+    },
+    "acp-docs": {
+      "type": "streamable-http",
+      "url": "https://agentclientprotocol.com/mcp"
     }
   }
 }
