@@ -2,7 +2,7 @@
 (() => {
   const pairs = [
   ["Repair suggestions","Sugestie napraw"],
-  ["Review changes before applying. Repairs may alter meaning; originals are never overwritten.","Sprawdź zmiany przed zatwierdzeniem. Naprawy mogą zmienić znaczenie; oryginalne pliki nie są nadpisywane."],
+  ["Repairs change only the editor. Saving may overwrite an opened file; review changes first.","Naprawy zmieniają tylko zawartość edytora. Zapis może nadpisać otwarty plik; najpierw sprawdź zmiany."],
   ["Undo last repair","Cofnij ostatnią naprawę"],
   ["Inspection truncated. Repair a smaller document to avoid partial changes.","Analiza została skrócona. Napraw mniejszy dokument, aby uniknąć niepełnych zmian."],
   ["These findings need manual review; no deterministic repair is available.","Te znaleziska wymagają ręcznej oceny; brak jednoznacznej naprawy."],
@@ -13,7 +13,6 @@
   ["Replace unusual spaces with ASCII spaces","Zamień nietypowe spacje na zwykłe"],
   ["Preview repairs","Podgląd napraw"],
   ["Apply reviewed repairs","Zastosuj sprawdzone naprawy"],
-  ["proposed changes","proponowanych zmian"],
   ["replace with a space","zamień na spację"],
   ["remove","usuń"],
   ["offset","pozycja"],
@@ -205,6 +204,7 @@
 
   const patterns = {
   pl: [
+    [/^(\d+) proposed changes?\.$/u, (_match, count) => `${count} ${plPlural(count, "proponowana zmiana", "proponowane zmiany", "proponowanych zmian")}.`],
     [/^(\d+) · (\d+) selected$/, (_match, total, selected) => `${total} · ${selected} ${plPlural(selected, "zaznaczony", "zaznaczone", "zaznaczonych")}`],
     [/^Select (.+)$/, "Zaznacz $1"],
     [/^Only (\d+) files added\. Queue limit: 100\.$/, "Dodano tylko $1 plików. Limit kolejki: 100."],
@@ -227,6 +227,7 @@
     [/^Inspect · (\d+\+?)$/, "Analiza · $1"]
   ],
   en: [
+    [/^(\d+) (?:proponowana zmiana|proponowane zmiany|proponowanych zmian)\.$/u, (_match, count) => `${count} proposed ${enPlural(count, "change", "changes")}.`],
     [/^(\d+) · (\d+) (?:zaznaczony|zaznaczone|zaznaczonych)$/, "$1 · $2 selected"],
     [/^Zaznacz (.+)$/, "Select $1"],
     [/^Dodano tylko (\d+) plików\. Limit kolejki: 100\.$/, "Only $1 files added. Queue limit: 100."],
