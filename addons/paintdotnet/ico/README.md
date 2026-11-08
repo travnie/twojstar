@@ -21,4 +21,4 @@ dotnet build .\PaintDotNetIco.csproj -c Release -p:PaintDotNetDir='D:\Apps\paint
 
 ## Install
 
-Use the release ZIP's `Install.bat` and choose Classic, Store or custom folder; restart Paint.NET. Classic: `C:\Program Files\paint.net\FileTypes`; Store: `Documents\Paint.NET App Files\FileTypes`; portable: `<Paint.NET directory>\FileTypes`. CI builds both adapters; a passing badge does **not** claim host compatibility beyond tested Paint.NET versions.
+Use the release ZIP's `Install.bat` and choose Classic, Store or custom folder; restart Paint.NET. Classic: `C:\Program Files\paint.net\FileTypes`; Store: `Documents\Paint.NET App Files\FileTypes`; portable: `<Paint.NET directory>\FileTypes`. If a portable folder is writable without elevation, use the ZIP's `INSTALL.txt` to copy the matching adapter DLL into its `FileTypes` folder manually; `Install.bat` may request administrator rights and exit when denied. CI builds both adapters; a passing badge does **not** claim untested host compatibility.

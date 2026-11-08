@@ -23,4 +23,4 @@ npm run dev --workspace=codebench
 
 `npm run build:codebench` also generates ignored `codebench/public/portable.html` with embedded dependencies and ZXing WASM. Do not edit generated `public/vendor/`, `public/fonts/`, `worker-configuration.d.ts`, or the portable HTML.
 
-**Deploy:** Cloudflare Worker `codebench`, root `benches/`, commands `npm run build:codebench`, `deploy:codebench`, `preview:codebench`; watch `benches/codebench/**`, `benches/package.json` and `benches/package-lock.json`. [CI](../../.github/workflows/benches-release.yml) runs checks across the workspace.
+**Deploy:** Cloudflare Worker `codebench`, root `benches/`, commands `npm run build:codebench`, `npm run deploy:codebench`, `npm run preview:codebench`; watch `benches/codebench/**`, `benches/shared/**`, `benches/scripts/**`, `benches/package.json` and `benches/package-lock.json`. [CI](../../.github/workflows/benches-release.yml) runs checks across the workspace.
