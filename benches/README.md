@@ -19,7 +19,7 @@ npm ci
 
 Then **choose** `npm run check` for all three, or `npm run check:<name>` for one (`docbench`, `codebench`, `streambench`). Use `npm run build:<name>` when a build is needed; do not rerun the full workspace check first.
 
-Cloudflare Workers Builds uses `benches/` as the root, with `npm run build:<name>`, `npm run deploy:<name>` and `npm run preview:<name>` commands. All three are checked by [Benches portable release CI](../.github/workflows/benches-release.yml); a green shared badge is **not** an individual deployment signal. `preview:<name>` uploads a Worker version; `preview_urls: false` currently prevents accessible preview URLs.
+Cloudflare Workers Builds uses `benches/` as the root, with `npm run build:<name>`, `npm run deploy:<name>` and `npm run preview:<name>` commands. [Benches CI](../.github/workflows/benches-release.yml) builds/checks all three products and packages portable artifacts; it **does not deploy or upload preview versions**. Those are separate, explicitly invoked npm commands. A green shared badge is not an individual deployment signal. `preview:<name>` uploads a Worker version; `preview_urls: false` currently prevents accessible preview URLs.
 
 ## Source boundaries
 

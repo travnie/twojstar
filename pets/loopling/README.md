@@ -18,7 +18,7 @@ Original animated ChatGPT/Codex desktop pet. Unofficial fan artwork, not an Open
 ./scripts/install.sh
 ```
 
-Or copy `pet/pet.json` and `pet/spritesheet.webp` into the pet directory: `$CODEX_HOME/pets/loopling/` on Unix shells, `$env:CODEX_HOME\pets\loopling\` in Windows PowerShell (default `~/.codex/pets/loopling/`). Restart ChatGPT, refresh **Settings → Pets**, select Loopling.
+Or copy `pet/pet.json` and `pet/spritesheet.webp` into the pet directory: `$CODEX_HOME/pets/loopling/` on Unix shells, `$env:CODEX_HOME\pets\loopling\` in Windows PowerShell (when unset, use `$HOME/.codex/pets/loopling/` in a Unix shell or `$HOME\.codex\pets\loopling\` in PowerShell). Restart ChatGPT, refresh **Settings → Pets**, select Loopling.
 
 ## Maintained sources
 
