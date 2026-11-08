@@ -148,6 +148,7 @@ function repairSection(findings) {
     checkbox.value = group.id;
     checkbox.checked = group.defaultOn && eligible.counts[group.id] > 0;
     checkbox.disabled = eligible.counts[group.id] === 0;
+    label.classList.toggle("is-disabled", checkbox.disabled);
     const labelText = document.createElement("span");
     labelText.textContent = t(group.label) + " (" + eligible.counts[group.id] + ")";
     label.append(checkbox, labelText);
@@ -199,6 +200,8 @@ function repairSection(findings) {
     if (applyButton.disabled) return;
     const changes = document.createElement("ol");
     changes.className = "inspect-repair-changes";
+    changes.tabIndex = 0;
+    changes.setAttribute("aria-label", t("Proposed repair changes"));
     for (const change of planned.changes.slice(0, 32)) {
       const item = document.createElement("li");
       const group = repairGroups.find((entry) => entry.id === change.group);
