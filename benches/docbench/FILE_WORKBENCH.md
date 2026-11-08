@@ -6,8 +6,9 @@ Not a claim that proposed features already ship.
 Docbench is already a **local-first document and PDF studio**. Expand that
 existing application into a general-purpose file workbench rather than creating
 a parallel app, forked editor, or second file library. Preserve the current
-document fidelity rules and browser-only file handling. "Bench" may also mean
-**measured comparisons of file engines**, not just a collection of tools.
+document fidelity rules and browser-only file handling. "Bench" can also mean
+**hands-on experiments with competing engines**, not a stopwatch contest.
+Compile, run, use real files, then keep only genuinely useful discoveries.
 
 ## Desired experience
 
@@ -169,6 +170,54 @@ preview may need WASM even when a browser understands JPEG. Do not conflate
 extraction**. Native API support varies across Chrome, Firefox, Safari and
 Android.
 
+## Experiment routing across the Bench family
+
+Docbench is not the final destination for every good idea. The existing
+[Bench workspace](../README.md#experiment-routing) is the routing map:
+
+- **Docbench:** archives, file trees, document editing, standalone file
+  inspection, local conversion, metadata and cross-format operations.
+- **Codebench:** QR/barcode generation, image/scanner input, SVG/canvas and
+  raster output, color/palette tooling, image safety, optical decoding.
+  A graphics library may be more useful here than in a general image viewer.
+- **Streambench:** live audio/video, radio, playlists, player state, HLS,
+  stream/track diagnostics and metadata. Try promising media, waveform and
+  container candidates here when they serve live playback better than a
+  local-file inspector.
+- **Shared Bench primitives:** file/Blob ingress, bounded diagnostics,
+  capability schemas, WebMCP registration, progress/cancel or preview
+  conventions **only after two real consumers justify sharing**. Each Bench
+  owns its UI, Cloudflare Worker, security policy, browser permissions
+  and release flow. No copied engines or second canonical registry.
+- **Candidate afterlife:** failed or ill-fitting Docbench prototypes may
+  move to Codebench/Streambench with their notes and fixtures. A candidate
+  can also remain an optional experiment, not a permanent dependency.
+
+Experiment with language and ecosystem *where useful*: Svelte or Jaspr/Dart
+for a UI slice; Rust, C/C++, Zig, Swift/JavaScriptKit, or another credible
+browser-targeted compiler for a parser/codec. JS/TS interop remains the small
+common browser boundary, not the required implementation language. Test a
+tiny compiled slice before any wholesale migration. Measure practical
+integration and learning value, not novelty for its own sake.
+
+### Practical admission check
+
+1. **Does it compile?** Reproducible, pinned source and basic build in CI.
+   If it needs extra runtime features, state those limits and stop early.
+2. **Does it run?** Open a real file or stream in the deployed/static build,
+   not only in an isolated language playground. Preserve CSP, offline/
+   single-file portable output and lazy loading where applicable.
+3. **Does it feel useful?** Try normal clicks, touch, open/close, playback,
+   batch failures and navigating back on a phone and a desktop. Prefer
+   practical success and a usable feature over millisecond rankings.
+4. **Does it preserve data/privacy?** Bounded input, readable errors,
+   cancellation, cleanup, no silent uploads, destructive actions or
+   unsupported-format promises. Archive safety and document fidelity
+   remain hard gates regardless of hobby/experiment status.
+5. **Where does it fit?** Adopt into the owner Bench, share only a genuinely
+   reusable primitive, or keep the exploration notes and move on.
+   No compulsory 20-run performance tournament before prototyping.
+
 ## Proposed architecture
 
 **Data plane:** user browser, local `File`/`Blob`/streams, Web Workers and
@@ -214,6 +263,59 @@ CSP, vendors browser dependencies and builds `public/portable.html`. Test all
 changes against **both** normal and portable output before adding codecs,
 workers or headers. See [Workers limits](https://developers.cloudflare.com/workers/platform/limits/).
 
+## Complete WebMCP coverage, one UI truth
+
+All three Benches **already** register browser tools through the shared
+[`webmcp-lifecycle.js`](../shared/webmcp-lifecycle.js) and the experimental
+`document.modelContext` API. Docbench currently exposes document read,
+set, validate, format and text-inspection tools. Codebench has QR/barcode/
+scanner tools; Streambench exposes playlist search and playback controls.
+No second parallel tool system or speculative remote MCP server is needed.
+
+**Target:** every useful, safe capability added to Files/Docs/PDF eventually
+gets a matching WebMCP operation, **backed by the same state and adapter as the
+visible control**. The agent and user must observe the same result and progress;
+WebMCP does not bypass UI validation, permissions, confirmation or capability
+checks. Register tools only when their implementation actually ships.
+
+- **Discovery:** `list_file_capabilities`, available engines/formats, limits
+  and unsupported reasons. Return observed functionality, not wishlist items.
+- **Workspace:** list selected/imported virtual entries (bounded metadata),
+  inspect one by opaque ID, navigate/select entries and preview through visible
+  controls. Keep per-mount IDs short-lived and reject stale selections.
+- **Inspection:** fetch bounded metadata/diagnostics, safe text analyses and
+  per-format reports, with explicit opt-in for source text, GPS fields,
+  sensitive names or other private content. No raw Blob/base64 by default.
+- **Operations:** queue ZIP packing, extraction, conversion, compare or
+  export **after the feature exists in the UI**. Use matching capability
+  gates, user-visible progress, cancellation and confirmation for
+  writes/extraction/large or sensitive output. A browser agent cannot silently
+  open the OS picker, mount arbitrary directories or gain writable access.
+- **Result contract:** `ok`, `kind`, `sourceIds`, `warnings`, `truncated`,
+  `capabilities` and relevant typed data; report unsupported features and
+  partial failures without inventing success. Bound all strings, entry counts
+  and returned metadata; never treat file content as model instructions.
+- **Lifecycle:** register/unregister on workspace or capability availability,
+  using the existing shared lifecycle helper. Validate arguments against
+  both schema and runtime state. Handle cancellation and stale views; do not
+  duplicate hidden business logic for agent calls.
+- **Testing:** normal UI still works when WebMCP is absent; test the
+  registered tools in a supporting browser, their input/output bounds,
+  permissions, file lifetime, stale IDs and visible UI synchronization.
+  The platform is experimental, so do not assume all browsers or agent
+  hosts implement the same draft.
+
+**Boundary:** WebMCP runs in the webpage/browser, not an authenticated remote
+file server. The separate
+[ChatGPT file-entrypoint/MCP App plan](CHATGPT_PLUGIN.md) is a host-provided
+file resource workflow. It must reuse the same Docbench adapters where
+possible, but retain its own host permission/ETag contract. Neither WebMCP
+nor the MCP App authorizes uploading local file bytes through the Worker.
+
+Current API reference:
+[WebMCP Community Group draft](https://webmachinelearning.github.io/webmcp/).
+Keep draft details isolated behind the shared registration helper.
+
 ## Candidate engines (evaluate, do not install all)
 
 | Job | Candidate | Why investigate / caveat |
@@ -239,12 +341,14 @@ packing or encrypted RAR/7z writing based only on reading support.**
 
 ## UI and language experiments
 
-Choose technologies **per responsibility**, not one language per feature or
-multiple live UI runtimes. Keep a stable JS/TS interface for `File`, `Blob`,
-streams, workers and the capability registry. Rust/C/C++ compiled to WASM can
-implement selected codecs/parsers. Python, Dart and Swift are optional
-experiments, not drop-in Web Worker runtimes for arbitrary native libraries.
-A framework may render a view; it must not own the canonical file model.
+Choose technologies **per responsibility**, not one familiar language for
+everything. Keep a small JS/TS interface for `File`, `Blob`, streams,
+workers and the capability registry. Rust/C/C++, Zig and Swift compiled
+to WASM can own specialized tasks; Dart/Jaspr or Svelte can own an
+isolated UI slice. Try credible alternatives, including less conventional
+toolchains, when there is a real reason. Any compiled module must expose
+a browser-compatible import/interop boundary, not assume a native runtime.
+One consistent file model; no duplicate state in multiple frameworks.
 
 **Leading UI bake-off:**
 
@@ -266,12 +370,13 @@ A framework may render a view; it must not own the canonical file model.
    components outperform a framework for startup, accessibility, migration
    safety or portable output.
 
-**Decision gate:** compare identical fixtures and interactions for keyboard/
-touch behavior, first usable view, total and incremental asset bytes, idle/
-selection memory, 1k+ row responsiveness, testability, Worker CSP, offline
-portable packaging, and reuse of the existing file/preview API. Pick **one**
-production UI strategy after measurement; do not ship Svelte and Jaspr side by
-side just because both are interesting.
+**Practical gate:** first compile and mount identical small explorer
+interactions in the real app, then try keyboard/touch, file selection and
+preview, phone and desktop, CSP and portable output. Note obvious slow
+startup, runaway memory or huge downloads, but do not let a benchmark
+spreadsheet decide the UI. Choose the simplest convincing integration.
+Different language modules can coexist across distinct tasks when the
+interop/maintenance cost pays for itself; never duplicate the main file state.
 
 **Engine shortlist for first experiments:** keep current fflate for existing
 small ZIP/PDF tasks; compare zip.js for large streaming ZIP/ZIP64/encryption.
@@ -285,12 +390,15 @@ where native browser decoding fails. Use format and browser capability tests
 to select the engine; no automatic dependency installation from this list.
 Prefer only requested codec WASM; ffmpeg.wasm remains a heavy opt-in fallback.
 
-## The other meaning of "Bench": engine bake-off
+## The other meaning of "Bench": practical engine experiments
 
-A Bench is a useful tool **and** a place to validate competing implementations.
-Run reproducible comparisons before dependency migrations; publish measured
-results and trade-offs, not synthetic winners. Reuse a common test convention
-across Codebench, Docbench and Streambench **only if there is actual overlap**.
+A Bench is both a useful tool and a playground for credible alternatives.
+Start with a tiny build that exercises a real file or stream. A passing
+compile, basic interop, truthful format support, good mobile behavior and
+normal UX beat synthetic microbench winners. Record blockers and useful
+findings in this existing file, including candidates better suited to
+Codebench or Streambench. Only compare detailed performance when a
+real usability, size or memory problem demands it.
 
 First comparison set:
 
@@ -306,16 +414,14 @@ First comparison set:
    fixtures and interactions (bundle weight, startup, mobile responsiveness,
    keyboard accessibility, JS/WASM interoperability and portable CSP).
 
-**Protocol:** pin exact versions/commit SHAs; capture hardware, browser and
-settings; repeat cold/warm runs; track bytes downloaded, startup, wall time,
-throughput, peak memory where measurable, output hashes or correctness,
-cancellation, file handle leaks and failures. Include tiny/large and
-compressed/incompressible inputs; UTF-8/unicode and hostile filenames; corrupt,
-truncated, malicious, multi-volume and encrypted archives; deep nesting and
-expansion bombs under bounded tests; phone memory pressure (Android) and
-desktop Chrome/Firefox/Safari as available. Include legal, redistributable
-fixtures. Mark untested platforms honestly. Benchmarking must not block normal
-file operations or send user data to analytics.
+**Minimum smoke:** pinned toolchain/dependency, one reproducible build, real
+import/export or playback, correct result, cancellation/cleanup and understandable
+error. Try the built site and portable output, desktop plus Android where
+applicable. Keep small legal test fixtures, including malformed/unicode and
+large/hostile cases under strict budgets. **Optional diagnostics:** loaded
+bytes, memory, wall time and codec quality only to explain actual problems.
+Do not mandate repeated runs, hardware rankings or benchmarks before an
+experiment can earn a place in the UI. Never send private inputs to analytics.
 
 ## Practical sequencing
 
@@ -325,8 +431,8 @@ drop/size helper and portable build. They are **not** a file manager yet.
 
 1. **Explorer UI slice:** same current workspace, list/grid and basic virtual
    folders; separate focus from multi-selection; search/sort and selection
-   tray; keyboard/mobile handling. Prototype Svelte 5 *against* the existing
-   UI before adopting it, rather than rewrite Documents/PDF.
+   tray; keyboard/mobile handling. Compile Svelte 5 and one credible Dart/
+   Jaspr or other atypical slice before deciding; no Documents/PDF rewrite.
 2. **Preview surfaces:** modal image lightbox and audio mini-player, video
    viewer, metadata drawer, same virtual-entry APIs, object URL cleanup and
    constrained native media handling. Keep browser feature fallbacks explicit.
@@ -345,7 +451,11 @@ drop/size helper and portable build. They are **not** a file manager yet.
    inside safe archive entries, metadata privacy review, image/audio
    comparisons, duplicates/hashes and reproducible engine benchmarks.
    Promote proven adapters to the capability registry one at a time.
-7. **Optional extras:** local batch conversion and offline packaging; a
+7. **WebMCP per working slice:** add corresponding capability discovery,
+   read/inspect, then safe actions to the existing WebMCP registration.
+   Verify agent-visible results, browser restrictions and permission flow
+   against the visible UI. Reuse the shared lifecycle helper.
+8. **Optional extras:** local batch conversion and offline packaging; a
    server-only R2/Containers proposal requires separate approval, explicit
    upload consent and a changed privacy contract.
 

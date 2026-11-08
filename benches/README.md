@@ -33,13 +33,50 @@ A dependency or source change inside one Bench should normally trigger only that
 Worker. Changes to `benches/package.json` and `benches/package-lock.json` are shared policy and should trigger all
 three builds.
 
-## Workbenches and benchmarks
+## Experiment routing
 
-Each Bench remains a useful standalone tool. Where competing codecs, parsers or
-renderers matter, Bench development may also include reproducible comparisons
-of correctness, performance, memory and browser compatibility. Docbench's
-[file workbench research](docbench/FILE_WORKBENCH.md) tracks the first such
-experiments; no shared benchmark framework is imposed yet.
+Each Bench is a standalone product and a practical playground for engines,
+frameworks, codecs and language toolchains. Keep the experiment attached
+to the product that benefits, **not** to whichever repo discovered it.
+
+- **Docbench:** local files, documents/PDF, archives, file inspections and
+  conversions. An imaging/media engine starts here only if it helps files.
+- **Codebench:** QR/barcode scanner and maker, camera/image pipelines,
+  SVG/canvas rendering, palette handling and raster exports.
+- **Streambench:** audio/video/radio/HLS playback, live stream diagnostics,
+  media/playlist parsing, track metadata and related tooling.
+- **Shared:** small proven primitives already used by multiple products
+  (i18n, WebMCP lifecycle and local-file ingress). Share additional code
+  only after a second genuine consumer appears; keep one maintained copy.
+- **Rejected here, useful there:** pass a prototype and its findings to the
+  better-matched Bench instead of forcing it into Docbench.
+
+### How to experiment
+
+Prefer new or unusual candidates when useful: Svelte, Dart/Jaspr, Rust,
+Swift/WASM + JavaScriptKit, Zig/WASM, C/C++/WASM and others. **No fixed
+TypeScript/Kotlin monoculture**, but no novelty-only rewrite either.
+A small reproducible compile and real browser smoke test outrank elaborate
+millisecond charts. Keep successful builds, actual file/playback behavior,
+mobile/desktop, CSP, single-file portable and truthful failure handling
+as release gates. Check payload/memory only when it affects usability.
+Pin toolchains and record why something works or fails.
+
+### WebMCP and other agent surfaces
+
+All three Benches already expose browser-side tools via
+[`shared/webmcp-lifecycle.js`](shared/webmcp-lifecycle.js) and the
+experimental `document.modelContext` API. Every new meaningful capability
+should get an equivalent bounded WebMCP tool **when implemented**; tools
+must execute the existing visible UI/service logic, not a hidden parallel
+algorithm. Preserve local file permissions, user approval for consequential
+actions, no silent uploads and short-lived source IDs. Unsupported browsers
+retain the ordinary UI. Host-based MCP Apps are a separate permission
+boundary, not interchangeable with WebMCP.
+
+Docbench's [single File Workbench roadmap](docbench/FILE_WORKBENCH.md)
+contains the detailed explorer, candidate engines, cross-Bench reuse and
+WebMCP capability plan.
 
 ## Migration and license
 
