@@ -5,9 +5,8 @@ const { readFileSync } = require("node:fs");
 const vm = require("node:vm");
 const runtime = { TextDecoder, Uint8Array, Intl, atob };
 runtime.globalThis = runtime;
-for (const file of ["text-inspector-core.js", "text-repair-core.js"]) {
-  vm.runInNewContext(readFileSync(require.resolve("../public/" + file), "utf8"), runtime);
-}
+vm.runInNewContext(readFileSync(require.resolve("../public/text-inspector-core.js"), "utf8"), runtime);
+vm.runInNewContext(readFileSync(require.resolve("../public/text-repair-core.js"), "utf8"), runtime);
 const { scanText } = runtime.DocBenchTextInspector;
 const { planRepairs, groups } = runtime.DocBenchTextRepair;
 
