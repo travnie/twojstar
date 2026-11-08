@@ -18,14 +18,23 @@ foreign extension blocks intact. PDF→DOCX extracts text in the current page or
 
 ## Files workspace
 
-**Files** is a local-first multi-file inspector: drag/drop or pick up to 100
-files; inspect 4 KiB signatures, filename/MIME discrepancies, timestamps, sizes,
+**Files** is a local-first explorer and inspector: drag/drop, pick files or
+import an entire folder (where the browser allows), up to 100 files. It has
+search, sort, folder filtering, list/grid views, independent multi-selection,
+and a native preview dialog. Use Ctrl/Cmd for toggles, Shift for a range,
+or Select visible. Removal acts on the selection, not the active preview.
+Inspect 4 KiB signatures, filename/MIME discrepancies, timestamps, sizes,
 and local inspection time. Preview supported images, audio/video through native
 browser decoders, text as source, or a bounded hex header. ZIP shows a
 **read-only central-directory index** without unpacking anything. Unsupported
 codecs (including JPEG XL/Opus on some browsers) stay clearly unsupported, not
 silently converted. Image previews are capped at 48 MiB, text at 128 KiB.
 No files are uploaded, and object URLs are released when switching files.
+The canonical queue/selection model is `public/file-store.mjs`; the UI and
+WebMCP read the same store. Browser WebMCP supports bounded workspace
+snapshots, format inspection, visible selection and focus. It cannot open
+system pickers or access arbitrary filesystem paths. Batch ZIP creation,
+archive extraction and a new Svelte renderer are not yet shipped.
 
 The broader archive, image, audio, metadata and benchmark plan, candidate
 engines, Jaspr and WASM research remain in

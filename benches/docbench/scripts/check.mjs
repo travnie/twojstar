@@ -9,6 +9,7 @@ for (const path of [
   "public/local-files.js",
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
+  "public/file-store.mjs",
   "public/files-workspace.mjs",
   "public/files-workspace.css",
   "public/document-merge.mjs",
@@ -103,7 +104,9 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || portableFiles.includes('from "./file-signatures.mjs"')
   || portableFiles.includes('from "./zip-index.mjs"')
   || !portableFiles.includes("async function inspectLocalFile(file)")
-  || !portableFiles.includes("async function readZipIndex(blob)")) {
+  || !portableFiles.includes("async function readZipIndex(blob)")
+  || !portableFiles.includes("function createFileStore(")
+  || !portableFiles.includes("docbench:files-ready")) {
   throw new Error("Portable Files workspace and local dependencies must be inline.");
 }
 const sharedFiles = await readFile("../shared/local-files.js", "utf8");
@@ -114,6 +117,23 @@ const generatedBanner = [
 ].join("\n");
 if (copiedFiles !== generatedBanner + sharedFiles) {
   throw new Error("Generated local-file controls diverge from shared source.");
+}
+
+const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
+const webmcpFiles = await readFile("public/webmcp.js", "utf8");
+for (const feature of ["#files-open-folder", "#files-select-visible", "#files-preview-dialog",
+  "#files-search", "#files-view-grid"]) {
+  if (!index.includes('id="' + feature.slice(1) + '"')) {
+    throw new Error("Explorer UI is missing " + feature);
+  }
+}
+for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_files"]) {
+  if (!webmcpFiles.includes('name: "' + tool + '"')) {
+    throw new Error("WebMCP Files missing " + tool);
+  }
+}
+if (!filesWorkspaceSource.includes('from "./file-store.mjs"')) {
+  throw new Error("Files explorer must reuse canonical file store.");
 }
 
 const app = await readFile("public/app.js", "utf8");
