@@ -1,5 +1,11 @@
 # Paint.NET AI
 
+[![paintdotnet-ci CI](https://github.com/travnie/twojstar/actions/workflows/paintdotnet-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/paintdotnet-ci.yml) [![ONNX](https://img.shields.io/badge/ONNX-005CED?logo=onnx&logoColor=white&style=flat-square)](https://onnx.ai/) [![C Sharp](https://img.shields.io/badge/C_Sharp-512BD4?logo=dotnet&logoColor=white&style=flat-square)](https://dotnet.microsoft.com/)
+
+> **Agent entry:** Paint.NET effect adapters for 5.1 and 5.2+ plus one shared local ONNX Runtime/model payload.
+> **Validate / distribution:** [Paint.NET CI](../../../.github/workflows/paintdotnet-ci.yml) builds both adapters and model smoke tests; [release](https://github.com/travnie/twojstar/releases/latest/download/paintdotnet-ai.zip).
+> **Boundary:** local inference only, no runtime model downloads/uploads; 1x restoration is shipped, document-resizing upscale remains a proposal.
+
 Local AI/restoration pack for Paint.NET. **AI Restore** stays the fast, small general default; **AI DeJPEG** and **AI Denoise** add stronger 1x restoration for compression artifacts and real-world noise without changing the canvas size.
 
 ## Profiles

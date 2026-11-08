@@ -1,5 +1,11 @@
 # Feedboard
 
+[![feedboard-ci CI](https://github.com/travnie/twojstar/actions/workflows/feedboard-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/feedboard-ci.yml) [![.NET](https://img.shields.io/badge/.NET-512BD4?logo=dotnet&logoColor=white&style=flat-square)](https://dotnet.microsoft.com/) [![Windows](https://img.shields.io/badge/Windows-0078D4?logo=windows11&logoColor=white&style=flat-square)](https://learn.microsoft.com/en-us/windows/apps/)
+
+> **Agent entry:** `src/Feedboard.WidgetProvider/` handles Windows Widgets/Adaptive Cards; `src/Feedboard.Settings/` is WinUI settings.
+> **Validate / distribution:** [Feedboard CI](../.github/workflows/feedboard-ci.yml) builds and attests Windows x64 MSIX; [release ZIP](https://github.com/travnie/twojstar/releases/latest/download/feedboard.zip).
+> **Boundary:** development prototype, local feeds/storage and sideload trust chain; no backend or cloud account.
+
 A local-first RSS/Atom/JSON Feed reader for the Windows 11 Widgets Board.
 
 > Status: working development prototype. The packaged provider, WinUI settings app, feed parser, local state, OPML plumbing and adaptive-card renderer are implemented. CI produces an attested x64 sideload bundle, and the package has passed a real Windows 11 install/picker/render/resize smoke test.
