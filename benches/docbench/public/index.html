@@ -288,9 +288,12 @@
       <div class="toolbar files-toolbar">
         <div class="files-toolbar-actions">
           <button id="files-open" class="button compact primary" type="button">Add files</button>
+          <button id="files-open-folder" class="button compact" type="button">Add folder</button>
+          <button id="files-preview-open" class="button compact" type="button" disabled>Open preview</button>
           <button id="files-remove" class="button compact" type="button" disabled>Remove selected</button>
           <button id="files-clear" class="button compact" type="button" disabled>Clear list</button>
           <input id="files-input" type="file" multiple hidden>
+          <input id="files-folder-input" type="file" webkitdirectory directory multiple hidden>
         </div>
         <p class="files-hint">Local inspection only · no uploads or telemetry</p>
       </div>
@@ -300,7 +303,22 @@
             <strong>Local files</strong>
             <span id="files-count" class="files-count">0</span>
           </div>
-          <div id="files-drop-zone" class="files-drop">Drop files here, or select Add files.</div>
+          <div id="files-drop-zone" class="files-drop">Drop files or import a folder. Everything stays local.</div>
+          <div class="files-explorer-tools">
+            <label class="files-explorer-search">Find <input id="files-search" type="search" placeholder="Name or path" autocomplete="off"></label>
+            <label class="files-explorer-sort">Sort <select id="files-sort">
+              <option value="name">Name</option>
+              <option value="size">Size</option>
+              <option value="modified">Modified</option>
+              <option value="type">Type</option>
+            </select></label>
+            <label class="files-explorer-folder">Folder <select id="files-folder-filter"><option value="">All folders</option></select></label>
+            <div class="files-explorer-views" role="group" aria-label="Explorer view">
+              <button id="files-view-list" class="button compact" type="button" aria-pressed="true">List</button>
+              <button id="files-view-grid" class="button compact" type="button" aria-pressed="false">Grid</button>
+            </div>
+            <button id="files-select-visible" class="button compact" type="button" disabled>Select visible</button>
+          </div>
           <div id="files-list" class="files-list" role="group" aria-label="Files to inspect"></div>
         </aside>
         <section class="files-details" aria-label="File inspector">
@@ -315,6 +333,14 @@
         </section>
       </div>
     </section>
+
+    <dialog id="files-preview-dialog" class="files-preview-dialog" aria-labelledby="files-dialog-name">
+      <div class="files-dialog-header">
+        <strong id="files-dialog-name">File preview</strong>
+        <button id="files-dialog-close" class="button compact" type="button">Close</button>
+      </div>
+      <div id="files-dialog-body" class="files-preview"></div>
+    </dialog>
 
     <details class="answer-guide" id="about-docbench">
       <summary>About Doc Bench · supported files and privacy</summary>
