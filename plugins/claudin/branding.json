@@ -21,6 +21,9 @@
     },
     "xai-docs": {
       "logo": "./assets/icon.svg"
+    },
+    "acp-docs": {
+      "logo": "./assets/icon.svg"
     }
   },
   "skills": {

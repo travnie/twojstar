@@ -1,6 +1,6 @@
 ---
 name: "docs-lookup"
-description: "Answer questions about Claude Code, claude.ai/Cowork, the Claude API, MCP, OpenAI/Codex/ChatGPT and xAI/Grok from their live official docs, with links. Use for any 'how does X work', 'is there a flag/setting for', 'what changed', limits or config question about these, even when nothing is being built."
+description: "Answer questions about Claude Code, claude.ai/Cowork, the Claude API, MCP, the Agent Client Protocol (ACP), OpenAI/Codex/ChatGPT and xAI/Grok from their live official docs, with links. Use for any 'how does X work', 'is there a flag/setting for', 'what changed', limits or config question about these, even when nothing is being built."
 license: Apache-2.0
 ---
 
@@ -18,6 +18,7 @@ Bundled with this plugin, public and authless:
 | `claude-ai-docs` — claude.com/docs | claude.ai and Cowork: features, plugins & skills, **component support by surface**, connectors, directory submission + review criteria, MCP Apps in Claude |
 | `claude-platform-docs` — platform.claude.com/docs | Claude API: Messages, tools, MCP connector, Managed Agents, models, pricing, SDK reference (`sdk_language` param) |
 | `mcp-docs` — modelcontextprotocol.io | MCP spec revisions and changelogs, SDKs, extensions (Apps, Skills), Inspector |
+| `acp-docs` — agentclientprotocol.com | Agent Client Protocol (editor ↔ coding agent): protocol v1/v2 and migration, sessions, tool calls, terminals, transports, libraries (TS, Python, Rust, Kotlin, Java), ACP registry, RFDs |
 | `openai-docs` — developers.openai.com | OpenAI API, Codex, ChatGPT apps/plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — docs.x.ai | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API. Tools: `search_docs`, `get_doc_page` (slug), `list_doc_pages` |
 

@@ -2,7 +2,7 @@
 
 <img src="assets/icon.svg" width="96" alt="Claudin">
 
-Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, OpenAI/Codex and xAI/Grok — looked up, not remembered. Plus builder skills for plugins, MCP servers and skills. Replaces Anthropic's `plugin-dev` and `mcp-server-dev` and the MCP `mcp-apps` plugin (their pins had gone stale: hook list, manifest fields, ext-apps 1.x, pre-2026 spec).
+Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the Agent Client Protocol, OpenAI/Codex and xAI/Grok — looked up, not remembered. Plus builder skills for plugins, MCP servers and skills. Replaces Anthropic's `plugin-dev` and `mcp-server-dev` and the MCP `mcp-apps` plugin (their pins had gone stale: hook list, manifest fields, ext-apps 1.x, pre-2026 spec).
 
 ## Just want answers
 
@@ -14,6 +14,7 @@ Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork 
 | `claude-ai-docs` — `https://claude.com/docs/mcp` | claude.ai/Cowork features, plugins & skills, surface support matrix, connectors, directory review |
 | `claude-platform-docs` — `https://platform.claude.com/docs/mcp` | Claude API, SDK reference, Managed Agents, models |
 | `mcp-docs` — `https://modelcontextprotocol.io/mcp` | MCP spec revisions, SDKs, extensions (Apps, Skills), Inspector |
+| `acp-docs` — `https://agentclientprotocol.com/mcp` | Agent Client Protocol (editor ↔ coding agent): spec v1/v2, libraries, registry, RFDs |
 | `openai-docs` — `https://developers.openai.com/mcp` | OpenAI API, Codex/ChatGPT plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — `https://docs.x.ai/api/mcp` | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API |
 
@@ -29,7 +30,7 @@ Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork 
 
 ## Surfaces
 
-- **claude.ai chat / Cowork:** skills + the six remote MCPs. The sandbox runs `mcp_probe.py` against public URLs.
+- **claude.ai chat / Cowork:** skills + the seven remote MCPs. The sandbox runs `mcp_probe.py` against public URLs.
 - **Claude Code:** same, plus `claude plugin validate`, Inspector, local servers, MCPB packing.
 - **Codex / ChatGPT:** `.codex-plugin/plugin.json` overlay; skills are provider-neutral where it matters.
 - **Antigravity:** `agy plugin import claude`, or the `.antigravity-plugin/` + `mcp_config.json` overlay from the account build. **Gemini CLI:** needs a `gemini-extension.json`. Neither overlay is kept in this repo: both would duplicate the `mcp.json` URL list.
@@ -49,7 +50,7 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.7.0.zip
+python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.8.0.zip
 ```
 
 Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).
