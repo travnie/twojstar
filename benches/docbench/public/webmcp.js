@@ -46,6 +46,100 @@
     return result;
   };
 
+
+  // The Files module loads after this classic script in both hosted and portable builds.
+  // Expose the existing visible workspace state, never a second file store.
+  let filesToolsRegistered = false;
+  function registerFilesTools() {
+    const files = globalThis.DocBenchFiles;
+    if (filesToolsRegistered || !files) return;
+    filesToolsRegistered = true;
+
+    register({
+      name: "read_file_workspace",
+      title: "Read Docbench Files workspace",
+      description: "Read bounded local file queue metadata. Names and paths are hidden unless explicitly requested.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          includeNames: { type: "boolean", default: false },
+          limit: { type: "integer", minimum: 1, maximum: 100, default: 30 },
+        },
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      execute({ includeNames = false, limit = 30 } = {}) {
+        if (typeof includeNames !== "boolean" || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+          return { ok: false, error: "Invalid includeNames or limit." };
+        }
+        return { ok: true, ...files.snapshot({ includeNames, limit }) };
+      },
+    });
+
+    register({
+      name: "inspect_local_file",
+      title: "Inspect local file header",
+      description: "Inspect a user-imported file by short-lived ID. Returns format/evidence only, not source bytes or filename.",
+      inputSchema: {
+        type: "object",
+        properties: { id: { type: "string", maxLength: 128 } },
+        required: ["id"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      async execute({ id } = {}) {
+        if (typeof id !== "string" || id.length > 128) {
+          return { ok: false, error: "Invalid file ID." };
+        }
+        return files.inspect(id);
+      },
+    });
+
+    register({
+      name: "select_local_files",
+      title: "Select Docbench Files entries",
+      description: "Update the visible local file selection by IDs. Does not open OS file pickers or read contents.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          ids: { type: "array", maxItems: 100, items: { type: "string", maxLength: 128 } },
+        },
+        required: ["ids"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: true },
+      execute({ ids } = {}) {
+        if (!Array.isArray(ids) || ids.length > 100
+          || ids.some((id) => typeof id !== "string" || id.length > 128)) {
+          return { ok: false, error: "Invalid file IDs." };
+        }
+        if (!files.select(ids)) return { ok: false, error: "Unknown or stale file ID." };
+        return { ok: true, ...files.snapshot() };
+      },
+    });
+
+    register({
+      name: "focus_local_file",
+      title: "Focus Docbench file inspector",
+      description: "Focus an imported file by ID using the existing Files UI, without selecting extra files.",
+      inputSchema: {
+        type: "object",
+        properties: { id: { type: "string", maxLength: 128 } },
+        required: ["id"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: true },
+      execute({ id } = {}) {
+        if (typeof id !== "string" || id.length > 128 || !files.focus(id)) {
+          return { ok: false, error: "Unknown or stale file ID." };
+        }
+        return { ok: true, ...files.snapshot() };
+      },
+    });
+  }
+  document.addEventListener("docbench:files-ready", registerFilesTools, { once: true });
+  registerFilesTools();
+
   register({
     name: "read_document",
     title: "Read Docbench document",
