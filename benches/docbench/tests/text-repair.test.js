@@ -52,6 +52,8 @@ assert.equal(planRepairs("abc", invalid).result, "abc");
 const capped = scanText("\u00a0".repeat(501));
 assert.equal(capped.truncated, true);
 assert.equal(planRepairs("\u00a0".repeat(501), capped, ["spaces"]).blocked, true);
+assert.equal(planRepairs("\u00a0".repeat(501), capped, ["spaces"]).counts, null,
+  "truncated inspections must not report zero eligible changes");
 
 assert.throws(() => planRepairs("text", [], ["none"]), /Invalid/);
 assert.equal(planRepairs("a\nb", scanText("a\nb")).changes.length, 0);

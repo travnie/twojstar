@@ -64,7 +64,7 @@
     if (findings.truncated || findings.length > MAX_CHANGES) {
       return Object.freeze({
         blocked: true, reason: "Inspection was truncated. Review a smaller document before repairs.",
-        source: text, result: text, changes: [], counts,
+        source: text, result: text, changes: [], counts: null,
       });
     }
     const selected = new Set(chosen);

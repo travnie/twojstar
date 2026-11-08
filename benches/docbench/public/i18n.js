@@ -2,6 +2,7 @@
 (() => {
   const pairs = [
   ["Repair suggestions","Sugestie napraw"],
+  ["Proposed repair changes","Proponowane naprawy"],
   ["Repairs change only the editor. Saving may overwrite an opened file; review changes first.","Naprawy zmieniają tylko zawartość edytora. Zapis może nadpisać otwarty plik; najpierw sprawdź zmiany."],
   ["Undo last repair","Cofnij ostatnią naprawę"],
   ["Inspection truncated. Repair a smaller document to avoid partial changes.","Analiza została skrócona. Napraw mniejszy dokument, aby uniknąć niepełnych zmian."],
