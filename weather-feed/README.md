@@ -9,10 +9,10 @@ Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to 
 | Route | Output |
 | --- | --- |
 | `/` | Weather dashboard |
-| `/feed.atom` | Condition/forecast change events |
+| `/feed.atom` | All change events, including weather, air quality and IMGW alerts |
 | `/warnings.atom` | IMGW alerts |
 | `/state.json` | Ensemble, warnings, air quality, station reference |
-| `/healthz` | 503 for stale/unhealthy cycle |
+| `/healthz` | 503 for stale/unhealthy **current** cycle; forecast health reported separately in JSON body |
 
 ## Schedule / behavior
 
@@ -37,5 +37,7 @@ npm run dev
 # npx wrangler secret put PIRATEWEATHER_API_KEY
 # npm run deploy
 ```
+
+Local KV begins empty: to populate it, trigger both cron schedules in Wrangler's Local Explorer, or start `wrangler dev --test-scheduled` and call the local `/__scheduled` endpoint for each cron. Until scheduled handlers run, local `/healthz` may report 503.
 
 Secrets: `OPENWEATHER_KEY`, `VISUALCROSSING_KEY`; Xweather uses `XWEATHER_CLIENT_ID` + `XWEATHER_CLIENT_SECRET` or `XWEATHER_API_KEY`; Pirate Weather uses `PIRATEWEATHER_API_KEY`. Open-Meteo/IMGW need no keys, so missing paid providers degrade coverage rather than break the service. The current `wrangler.jsonc` binds production `WEATHER_KV`; use a **separate KV namespace** for a new environment. CI validates TypeScript/tests (IMGW outages, expiry, Warsaw time, Atom IDs). See [workflow](../.github/workflows/weather-ci.yml).

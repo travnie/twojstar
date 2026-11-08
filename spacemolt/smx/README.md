@@ -3,8 +3,8 @@
 [![SMX CI](https://github.com/travnie/twojstar/actions/workflows/smx.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/smx.yml) [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)
 
 > **Agent entry:** `src/smx/` wraps the authoritative official v2 CLI; packages/declarations live in `pyproject.toml`.
-> **Validate:** `cd spacemolt/smx && python -m pip install -e .` (Python ≥3.14); CI uses fake-backend unit tests.
-> **Boundary:** unknown commands must pass through. By default credentials/sessions live outside the checkout. Keep `SMX_STATE_DIR` and `SPACEMOLT_SESSION` overrides outside it too; separate profiles for concurrent agents; no live gameplay in CI.
+> **Validate:** from repo root (Python ≥3.14), run `python -m pip install -e spacemolt/smx && python -m unittest discover -s spacemolt/smx/tests -v`. CI uses fake-backend tests.
+> **Boundary:** unknown commands must pass through. By default credentials/sessions live outside the checkout. Keep `SMX_STATE_DIR` and `SPACEMOLT_SESSION` overrides outside it too (the app does not validate override locations); separate profiles for concurrent agents; no live gameplay in CI.
 
 `smx` is a small human/agent-friendly companion for the official [SpaceMolt v2 client](https://github.com/SpaceMolt/client-v2).
 
