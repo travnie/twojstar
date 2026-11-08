@@ -84,7 +84,7 @@ export function createFileStore({ limit = 100 } = {}) {
     notify();
     return true;
   }
-  function choose(id, { toggle = false, range = false, visibleIds = [] } = {}) {
+  function choose(id, { toggle = false, range = false, visibleIds = [], focus = true } = {}) {
     if (!owns(id)) return false;
     if (range && owns(anchorId)) {
       const a = visibleIds.indexOf(anchorId);
@@ -97,6 +97,7 @@ export function createFileStore({ limit = 100 } = {}) {
       } else {
         selected.clear();
         selected.add(id);
+        anchorId = id;
       }
     } else if (toggle) {
       if (selected.has(id)) selected.delete(id);
@@ -107,7 +108,7 @@ export function createFileStore({ limit = 100 } = {}) {
       selected.add(id);
       anchorId = id;
     }
-    activeId = id;
+    if (focus) activeId = id;
     notify();
     return true;
   }
@@ -145,7 +146,10 @@ export function createFileStore({ limit = 100 } = {}) {
   }
   return Object.freeze({
     addFiles, visible, choose, setSelection, setActive, remove, clear, snapshot,
-    get: (id) => entries.get(id) || null,
+    get: (id) => {
+      const entry = entries.get(id);
+      return entry ? Object.freeze({ ...entry }) : null;
+    },
     selectedIds: () => [...selected],
     activeId: () => activeId,
     count: () => entries.size,

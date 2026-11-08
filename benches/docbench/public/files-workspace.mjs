@@ -113,6 +113,7 @@ function iconFor(entry) {
 }
 
 function renderList() {
+  if (folder && !store.folders().includes(folder)) folder = "";
   const entries = currentVisible();
   const ids = entries.map((entry) => entry.id);
   const fragment = document.createDocumentFragment();
@@ -125,7 +126,7 @@ function renderList() {
     checkbox.checked = entry.selected;
     checkbox.setAttribute("aria-label", "Select " + entry.name);
     checkbox.addEventListener("change", () => {
-      store.choose(entry.id, { toggle: true });
+      store.choose(entry.id, { toggle: true, focus: false });
     });
     const button = element("button", "files-item");
     button.type = "button";
@@ -409,7 +410,7 @@ bindFileDrop(getNode("#files-drop-zone"), addFiles);
 bindFileDrop(list, addFiles);
 store.subscribe(() => {
   renderList();
-  showActive();
+  if (activeRendered !== store.activeId()) showActive();
 });
 window.addEventListener("pagehide", () => {
   releasePreview();
