@@ -1,5 +1,11 @@
 # Audacity VST3
 
+[![audacity-vst3-ci CI](https://github.com/travnie/twojstar/actions/workflows/audacity-vst3-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/audacity-vst3-ci.yml) [![C++20](https://img.shields.io/badge/C%2B%2B20-00599C?logo=cplusplus&logoColor=white&style=flat-square)](https://isocpp.org/) [![CMake](https://img.shields.io/badge/CMake-064F8C?logo=cmake&logoColor=white&style=flat-square)](https://cmake.org/)
+
+> **Agent entry:** `CMakeLists.txt` builds C++20 DSP, VST3 effects and validators; source in `src/`, tests in `tests/`.
+> **Validate / test:** `cmake -S addons/audacity/vst3 -B addons/audacity/vst3/build -DBUILD_TESTING=ON && cmake --build addons/audacity/vst3/build && ctest --test-dir addons/audacity/vst3/build --output-on-failure` (from repo root).
+> **Boundary:** DSP tests are not host QA; Smart Transition is still a prototype, and release/host compatibility must be verified separately.
+
 Cross-platform VST3 **audio effects** aimed first at Audacity and usable in other compatible hosts.
 
 ## Auto Declip 0.1

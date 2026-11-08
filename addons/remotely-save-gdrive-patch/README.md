@@ -1,5 +1,11 @@
 # remotely-save-gdrive-patch
 
+[![remotely-save-gdrive-patch-ci CI](https://github.com/travnie/twojstar/actions/workflows/remotely-save-gdrive-patch-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/remotely-save-gdrive-patch-ci.yml) [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/) [![Obsidian](https://img.shields.io/badge/Obsidian-7C3AED?logo=obsidian&logoColor=white&style=flat-square)](https://obsidian.md/)
+
+> **Agent entry:** `patch_gdrive.py` patches the downloaded upstream Remotely Save Obsidian build in-place.
+> **Validate / test:** [Patch CI](../../.github/workflows/remotely-save-gdrive-patch-ci.yml) fetches upstream and smoke-tests patch applicability only.
+> **Boundary:** upstream `pro/` has PolyForm Strict restrictions: **personal use, never publish/push patched binaries**; keep fixes local.
+
 Third-party patch for the
 [Remotely Save](https://github.com/remotely-save/remotely-save) Obsidian
 plugin: its Google Drive backend `writeFile`/`mkdir` always `POST` a new
