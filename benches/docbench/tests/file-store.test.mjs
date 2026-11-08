@@ -36,6 +36,7 @@ test("selection is independent from preview and survives filtering", () => {
   assert.equal(store.activeId(), ids[1]);
   store.choose(ids[0], { toggle: true, focus: false });
   assert.equal(store.activeId(), ids[1]);
+  store.choose(ids[0], { toggle: true, focus: false });
   assert.deepEqual(store.visible({ query: "b." }).map((entry) => entry.id), [ids[1]]);
   store.remove([ids[2]]);
   assert.deepEqual(store.selectedIds(), [ids[0]]);
