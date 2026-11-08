@@ -41,6 +41,7 @@ test("range selection, toggling and bounded queue", () => {
   const added = store.addFiles([file("2.txt"), file("1.txt"), file("3.txt"), file("4.txt")]);
   assert.equal(added.skipped, 1);
   const visible = store.visible().map((entry) => entry.id);
+  store.choose(visible[0]);
   store.choose(visible[2], { range: true, visibleIds: visible });
   assert.equal(store.selectedIds().length, 3);
   store.choose(visible[0], { toggle: true });
