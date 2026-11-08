@@ -246,3 +246,86 @@
     display: none !important;
   }
 }
+
+/* Explorer controls stay inside the Files island. */
+.files-explorer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.files-explorer-tools label {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 0.69rem;
+}
+.files-explorer-tools input,
+.files-explorer-tools select {
+  min-width: 0;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.files-explorer-search { flex: 1 1 120px; }
+.files-explorer-search input { width: 100%; }
+.files-explorer-folder { flex: 1 1 130px; }
+.files-explorer-folder select { width: 100%; }
+.files-explorer-views { display: flex; gap: 4px; }
+.files-explorer-views [aria-pressed="true"] { border-color: var(--accent); }
+.files-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.files-row-selected { background: rgb(224 68 56 / 7%); }
+.files-row-active { border-color: var(--accent); }
+.files-checkbox { margin: 0 5px 0 8px; }
+.files-row .files-item { flex: 1; }
+.files-row .files-item[aria-current="true"] { border-color: transparent; }
+.files-item-icon { font-size: 1.1rem; color: var(--accent-hover); }
+.files-item-path {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.69rem;
+}
+.files-list.files-list-grid {
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+}
+.files-list-grid .files-row { align-items: start; }
+.files-list-grid .files-item { min-height: 110px; }
+.files-preview-dialog {
+  width: min(94vw, 1060px);
+  max-height: 90vh;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 28px 100px rgb(0 0 0 / 65%);
+}
+.files-preview-dialog::backdrop { background: rgb(0 0 0 / 77%); }
+.files-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.files-dialog-header strong { overflow-wrap: anywhere; }
+.files-preview-dialog .files-preview {
+  max-height: calc(90vh - 70px);
+  overflow: auto;
+}
+@media (max-width: 800px) {
+  .files-explorer-tools input,
+  .files-explorer-tools select { max-width: none; }
+  .files-preview-dialog { width: 96vw; max-height: 93vh; }
+}

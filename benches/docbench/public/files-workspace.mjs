@@ -1,5 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
+import { createFileStore } from "./file-store.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
 const { formatBytes, bindFileDrop } = globalThis.BenchLocalFiles;
@@ -12,6 +13,17 @@ const status = getNode("#files-status");
 const count = getNode("#files-count");
 const clearButton = getNode("#files-clear");
 const removeButton = getNode("#files-remove");
+const previewButton = getNode("#files-preview-open");
+const folderInput = getNode("#files-folder-input");
+const folderSelect = getNode("#files-folder-filter");
+const search = getNode("#files-search");
+const sort = getNode("#files-sort");
+const viewList = getNode("#files-view-list");
+const viewGrid = getNode("#files-view-grid");
+const selectVisible = getNode("#files-select-visible");
+const dialog = getNode("#files-preview-dialog");
+const dialogBody = getNode("#files-dialog-body");
+const dialogHeading = getNode("#files-dialog-name");
 
 const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
@@ -22,10 +34,14 @@ const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "
 const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
 const TEXT_EXTENSIONS = /\.(?:txt|text|log|md|markdown|jsonc?|json5|jsonl|ndjson|ya?ml|xml|ini|conf|cfg|toml|env|csv|tsv|sh|ps1|bat|cmd|m3u8?|pls|css|js|ts|html?|py|rs|kt|java)$/iu;
 
-const files = [];
-let selectedIndex = -1;
+const store = createFileStore({ limit: 100 });
+const previewUrls = new Map();
 let selectionRevision = 0;
-let previewUrl = null;
+let viewMode = "list";
+let query = "";
+let folder = "";
+let sortBy = "name";
+let activeRendered = null;
 
 function element(tag, className, value) {
   const node = document.createElement(tag);
@@ -39,22 +55,21 @@ function setStatus(message, failed = false) {
   status.classList.toggle("files-error", failed);
 }
 
-function releasePreview() {
-  const media = preview.querySelector("audio, video");
+function releasePreview(target = preview) {
+  const media = target.querySelector("audio, video");
   if (media) {
     media.pause();
     media.removeAttribute("src");
     media.load();
   }
-  preview.replaceChildren();
-  if (previewUrl) {
-    URL.revokeObjectURL(previewUrl);
-    previewUrl = null;
-  }
+  target.replaceChildren();
+  const url = previewUrls.get(target);
+  if (url) URL.revokeObjectURL(url);
+  previewUrls.delete(target);
 }
 
-function emptyPreview(message) {
-  preview.append(element("p", "files-empty", message));
+function emptyPreview(message, target = preview) {
+  target.append(element("p", "files-empty", message));
 }
 
 function field(label, value) {
@@ -84,26 +99,76 @@ function appendMetadata(info, timeMs) {
   }
 }
 
-function renderList() {
-  const fragment = document.createDocumentFragment();
-  files.forEach((file, index) => {
-    const button = element("button", "files-item");
-    button.type = "button";
-    button.setAttribute("aria-pressed", String(index === selectedIndex));
-    button.append(
-      element("span", "files-item-name", file.name || "(unnamed)"),
-      element("span", "files-item-size", formatBytes(file.size)),
-    );
-    button.addEventListener("click", () => selectFile(index));
-    fragment.append(button);
-  });
-  list.replaceChildren(fragment);
-  count.textContent = String(files.length);
-  clearButton.disabled = files.length === 0;
-  removeButton.disabled = selectedIndex < 0;
+function currentVisible() {
+  return store.visible({ query, folder, sort: sortBy });
 }
 
-async function showZipContents(file, revision) {
+function iconFor(entry) {
+  const name = entry.name.toLowerCase();
+  if (/\.(?:png|jpe?g|gif|webp|avif|jxl|heic|qoi)$/u.test(name)) return "▧";
+  if (/\.(?:mp3|opus|ogg|flac|wav|m4a)$/u.test(name)) return "♫";
+  if (/\.(?:mp4|webm|mov|mkv)$/u.test(name)) return "▶";
+  if (/\.(?:zip|rar|7z|tar|gz|xz)$/u.test(name)) return "▣";
+  return "▤";
+}
+
+function renderList() {
+  const entries = currentVisible();
+  const ids = entries.map((entry) => entry.id);
+  const fragment = document.createDocumentFragment();
+  for (const entry of entries) {
+    const row = element("div", "files-row");
+    row.classList.toggle("files-row-active", entry.active);
+    row.classList.toggle("files-row-selected", entry.selected);
+    const checkbox = element("input", "files-checkbox");
+    checkbox.type = "checkbox";
+    checkbox.checked = entry.selected;
+    checkbox.setAttribute("aria-label", "Select " + entry.name);
+    checkbox.addEventListener("change", () => {
+      store.choose(entry.id, { toggle: true });
+    });
+    const button = element("button", "files-item");
+    button.type = "button";
+    button.setAttribute("aria-current", entry.active ? "true" : "false");
+    button.append(
+      element("span", "files-item-icon", iconFor(entry)),
+      element("span", "files-item-name", entry.name),
+      element("span", "files-item-size", formatBytes(entry.size)),
+    );
+    if (entry.folder) button.append(element("small", "files-item-path", entry.folder));
+    button.addEventListener("click", (event) => store.choose(entry.id, {
+      toggle: event.ctrlKey || event.metaKey,
+      range: event.shiftKey,
+      visibleIds: ids,
+    }));
+    button.addEventListener("dblclick", () => openDialog());
+    row.append(checkbox, button);
+    fragment.append(row);
+  }
+  if (!entries.length) {
+    fragment.append(element("p", "files-note", store.count()
+      ? "No files match the current filters." : "Add files to begin."));
+  }
+  list.replaceChildren(fragment);
+  list.classList.toggle("files-list-grid", viewMode === "grid");
+  const selectedCount = store.selectedIds().length;
+  count.textContent = store.count() + " · " + selectedCount + " selected";
+  clearButton.disabled = store.count() === 0;
+  removeButton.disabled = selectedCount === 0;
+  previewButton.disabled = !store.activeId();
+  selectVisible.disabled = !ids.length;
+
+  const available = store.folders();
+  const requested = folder;
+  folderSelect.replaceChildren(new Option("All folders", ""));
+  for (const path of available) folderSelect.add(new Option(path, path));
+  if (requested && !available.includes(requested)) folder = "";
+  folderSelect.value = folder;
+  viewList.setAttribute("aria-pressed", String(viewMode === "list"));
+  viewGrid.setAttribute("aria-pressed", String(viewMode === "grid"));
+}
+
+async function showZipContents(file, revision, target = preview) {
   const result = await readZipIndex(file);
   if (revision !== selectionRevision) return;
   const box = element("section", "files-zip");
@@ -121,7 +186,7 @@ async function showZipContents(file, revision) {
     listNode.append(row);
   }
   box.append(listNode);
-  preview.append(box);
+  target.append(box);
 }
 
 const MEDIA_MIME = Object.freeze({
@@ -136,10 +201,11 @@ const MEDIA_MIME = Object.freeze({
   mov: "video/quicktime", matroska: "video/x-matroska",
 });
 
-function mediaPreview(file, format, revision) {
+function mediaPreview(file, format, revision, target = preview) {
   // Passive MIME + concrete media element. Never embed SVG or active documents.
   const blob = file.slice(0, file.size, MEDIA_MIME[format]);
-  previewUrl = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  previewUrls.set(target, url);
   const fallback = element("p", "files-note", "Native browser preview. Codec availability varies.");
   const onError = () => {
     if (revision === selectionRevision) {
@@ -152,8 +218,8 @@ function mediaPreview(file, format, revision) {
     image.alt = `Preview of ${file.name || "local image"}`;
     image.decoding = "async";
     image.addEventListener("error", onError, { once: true });
-    image.src = previewUrl;
-    preview.append(image, fallback);
+    image.src = url;
+    target.append(image, fallback);
     return;
   }
   if (AUDIO_FORMATS.has(format)) {
@@ -162,8 +228,8 @@ function mediaPreview(file, format, revision) {
     audio.controls = true;
     audio.preload = "metadata";
     audio.addEventListener("error", onError, { once: true });
-    audio.src = previewUrl;
-    preview.append(audio, fallback);
+    audio.src = url;
+    target.append(audio, fallback);
     return;
   }
   const video = document.createElement("video");
@@ -172,8 +238,8 @@ function mediaPreview(file, format, revision) {
   video.preload = "metadata";
   video.playsInline = true;
   video.addEventListener("error", onError, { once: true });
-  video.src = previewUrl;
-  preview.append(video, fallback);
+  video.src = url;
+  target.append(video, fallback);
 }
 
 function isTextFile(info) {
@@ -184,53 +250,53 @@ function isTextFile(info) {
     || ["txt", "json"].includes(info.format);
 }
 
-async function renderPreview(file, info, revision) {
-  releasePreview();
+async function renderPreview(file, info, revision, target = preview) {
+  releasePreview(target);
   if (info.format === "zip") {
     try {
-      await showZipContents(file, revision);
+      await showZipContents(file, revision, target);
     } catch (error) {
-      if (revision === selectionRevision) emptyPreview(error.message || "ZIP index unavailable.");
+      if (revision === selectionRevision) emptyPreview(error.message || "ZIP index unavailable.", target);
     }
     return;
   }
   if (IMAGE_FORMATS.has(info.format)) {
     if (file.size > MAX_IMAGE_BYTES) {
-      emptyPreview(`Image preview disabled above ${formatBytes(MAX_IMAGE_BYTES)} to protect browser memory.`);
+      emptyPreview(`Image preview disabled above ${formatBytes(MAX_IMAGE_BYTES)} to protect browser memory.`, target);
     } else {
-      mediaPreview(file, info.format, revision);
+      mediaPreview(file, info.format, revision, target);
     }
     return;
   }
   if (AUDIO_FORMATS.has(info.format)) {
-    mediaPreview(file, info.format, revision);
+    mediaPreview(file, info.format, revision, target);
     return;
   }
   if (VIDEO_FORMATS.has(info.format)) {
-    mediaPreview(file, info.format, revision);
+    mediaPreview(file, info.format, revision, target);
     return;
   }
   if (isTextFile(info)) {
     const source = await file.slice(0, MAX_TEXT_BYTES).text();
     if (revision !== selectionRevision) return;
     const box = element("pre", "files-text", source);
-    preview.append(box);
+    target.append(box);
     if (file.size > MAX_TEXT_BYTES) {
-      preview.prepend(element("p", "files-note", `Text preview limited to ${formatBytes(MAX_TEXT_BYTES)}.`));
+      target.prepend(element("p", "files-note", `Text preview limited to ${formatBytes(MAX_TEXT_BYTES)}.`));
     }
     if (info.format === "svg") {
-      preview.prepend(element("p", "files-note", "SVG shown as source only; external references are not loaded."));
+      target.prepend(element("p", "files-note", "SVG shown as source only; external references are not loaded."));
     }
     return;
   }
   if (info.format === "pdf" || info.format === "docx") {
-    emptyPreview("Use the PDF workspace for document operations. This inspector leaves the file untouched.");
+    emptyPreview("Use the PDF workspace for document operations. This inspector leaves the file untouched.", target);
     return;
   }
   const bytes = new Uint8Array(await file.slice(0, MAX_HEX_BYTES).arrayBuffer());
   if (revision !== selectionRevision) return;
   if (!bytes.length) {
-    emptyPreview("Empty file.");
+    emptyPreview("Empty file.", target);
     return;
   }
   const lines = [];
@@ -240,30 +306,37 @@ async function renderPreview(file, info, revision) {
     const ascii = [...chunk].map((byte) => byte >= 32 && byte < 127 ? String.fromCharCode(byte) : ".").join("");
     lines.push(`${offset.toString(16).padStart(6, "0")}  ${hex.padEnd(47)}  ${ascii}`);
   }
-  preview.append(element("p", "files-note", `Hex header, first ${formatBytes(bytes.length)}. No decoder selected.`), element("pre", "files-hex", lines.join("\n")));
+  target.append(element("p", "files-note", `Hex header, first ${formatBytes(bytes.length)}. No decoder selected.`), element("pre", "files-hex", lines.join("\n")));
 }
 
-async function selectFile(index) {
-  selectedIndex = index >= 0 && index < files.length ? index : -1;
+async function showActive() {
+  const activeId = store.activeId();
+  if (activeRendered !== activeId) {
+    if (dialog.open) dialog.close();
+    releasePreview(dialogBody);
+    activeRendered = activeId;
+  }
   const revision = ++selectionRevision;
-  renderList();
   releasePreview();
   metadata.replaceChildren();
-  if (selectedIndex < 0) {
+  if (!activeId) {
     heading.textContent = "Choose a file";
     setStatus("Files remain on this device.");
     emptyPreview("Open files or drop them here to inspect their headers.");
     return;
   }
 
-  const file = files[selectedIndex];
-  heading.textContent = file.name || "(unnamed)";
+  const entry = store.get(activeId);
+  if (!entry) return;
+  const file = entry.file;
+  heading.textContent = entry.path;
   setStatus("Inspecting…");
   const start = performance.now();
   try {
     const info = await inspectLocalFile(file);
     if (revision !== selectionRevision) return;
     appendMetadata(info, performance.now() - start);
+    metadata.prepend(field("Virtual path", entry.path));
     setStatus(info.mismatch ? "Signature mismatch" : info.label, info.mismatch);
     await renderPreview(file, info, revision);
   } catch (error) {
@@ -273,38 +346,89 @@ async function selectFile(index) {
   }
 }
 
-function addFiles(input) {
-  const added = Array.from(input || []).filter((file) => file && typeof file.slice === "function");
-  if (!added.length) return;
-  const capacity = MAX_FILES - files.length;
-  if (capacity <= 0) {
-    setStatus(`The ${MAX_FILES}-file queue limit is reached.`, true);
-    return;
-  }
-  const start = files.length;
-  files.push(...added.slice(0, capacity));
-  selectFile(start);
-  if (added.length > capacity) {
-    setStatus(`Only ${capacity} files added; limit ${MAX_FILES}.`, true);
+async function openDialog() {
+  const entry = store.get(store.activeId());
+  if (!entry) return;
+  dialogHeading.textContent = entry.path;
+  dialog.showModal();
+  const revision = selectionRevision;
+  releasePreview(dialogBody);
+  emptyPreview("Preparing preview…", dialogBody);
+  try {
+    const info = await inspectLocalFile(entry.file);
+    if (!dialog.open || revision !== selectionRevision) return;
+    await renderPreview(entry.file, info, revision, dialogBody);
+  } catch (error) {
+    if (!dialog.open || revision !== selectionRevision) return;
+    releasePreview(dialogBody);
+    emptyPreview(error.message || "Preview unavailable.", dialogBody);
   }
 }
 
+function addFiles(input) {
+  const result = store.addFiles(input);
+  if (result.skipped) setStatus("Only " + result.ids.length + " files added. Queue limit: 100.", true);
+}
+
 getNode("#files-open").addEventListener("click", () => fileInput.click());
+getNode("#files-open-folder").addEventListener("click", () => folderInput.click());
 fileInput.addEventListener("change", () => {
   addFiles(fileInput.files);
   fileInput.value = "";
 });
-clearButton.addEventListener("click", () => {
-  files.length = 0;
-  selectFile(-1);
+folderInput.addEventListener("change", () => {
+  addFiles(folderInput.files);
+  folderInput.value = "";
 });
-removeButton.addEventListener("click", () => {
-  if (selectedIndex < 0) return;
-  const next = selectedIndex;
-  files.splice(selectedIndex, 1);
-  selectFile(files.length ? Math.min(next, files.length - 1) : -1);
+clearButton.addEventListener("click", () => store.clear());
+removeButton.addEventListener("click", () => store.remove(store.selectedIds()));
+previewButton.addEventListener("click", () => openDialog());
+getNode("#files-dialog-close").addEventListener("click", () => dialog.close());
+dialog.addEventListener("close", () => {
+  releasePreview(dialogBody);
+  previewButton.focus();
+});
+search.addEventListener("input", () => {
+  query = search.value;
+  renderList();
+});
+sort.addEventListener("change", () => {
+  sortBy = sort.value;
+  renderList();
+});
+folderSelect.addEventListener("change", () => {
+  folder = folderSelect.value;
+  renderList();
+});
+viewList.addEventListener("click", () => { viewMode = "list"; renderList(); });
+viewGrid.addEventListener("click", () => { viewMode = "grid"; renderList(); });
+selectVisible.addEventListener("click", () => {
+  store.setSelection(currentVisible().map((entry) => entry.id));
 });
 bindFileDrop(getNode("#files-drop-zone"), addFiles);
-bindFileDrop(getNode("#files-list"), addFiles);
-window.addEventListener("pagehide", releasePreview);
-selectFile(-1);
+bindFileDrop(list, addFiles);
+store.subscribe(() => {
+  renderList();
+  showActive();
+});
+window.addEventListener("pagehide", () => {
+  releasePreview();
+  releasePreview(dialogBody);
+  store.clear();
+});
+globalThis.DocBenchFiles = Object.freeze({
+  snapshot: (options) => store.snapshot(options),
+  inspect: async (id) => {
+    const entry = store.get(id);
+    if (!entry) return { ok: false, error: "Unknown or stale file ID." };
+    const info = await inspectLocalFile(entry.file);
+    return { ok: true, id, format: info.format, family: info.family,
+      size: info.size, mismatch: Boolean(info.mismatch),
+      evidence: info.evidence, signature: info.signature || null };
+  },
+  select: (ids) => store.setSelection(ids),
+  focus: (id) => store.setActive(id),
+});
+document.dispatchEvent(new Event("docbench:files-ready"));
+renderList();
+showActive();
