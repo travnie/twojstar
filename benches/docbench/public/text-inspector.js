@@ -2,6 +2,12 @@
 
 (() => {
 const { scanText, summarizeFindings } = globalThis.DocBenchTextInspector;
+const { planRepairs, groups: repairGroups } = globalThis.DocBenchTextRepair;
+let lastRepair = null;
+let internalEdit = false;
+
+const t = (value) => globalThis.BenchI18n?.t(value) || value;
+
 
 const select = (selector) => document.querySelector(selector);
 const editor = select("#editor");
@@ -83,6 +89,151 @@ function summaryRow(summary, truncated) {
   return row;
 }
 
+function repairSection(findings) {
+  const eligible = planRepairs(editor.value, findings, []);
+  const canUndo = lastRepair && editor.value === lastRepair.after;
+  if (!findings.length && !canUndo) return null;
+
+  const box = document.createElement("section");
+  box.className = "inspect-repairs";
+  const title = document.createElement("h3");
+  title.textContent = t("Repair suggestions");
+  const note = document.createElement("p");
+  note.textContent = t("Review changes before applying. Repairs may alter meaning; originals are never overwritten.");
+  box.append(title, note);
+
+  if (canUndo) {
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.className = "button compact";
+    undo.textContent = t("Undo last repair");
+    undo.addEventListener("click", () => {
+      if (!lastRepair || editor.value !== lastRepair.after) return;
+      const previous = lastRepair.before;
+      lastRepair = null;
+      updateEditor(previous);
+      inspectDocument();
+    });
+    box.append(undo);
+  }
+
+  if (eligible.blocked) {
+    const warning = document.createElement("p");
+    warning.className = "inspect-repair-warning";
+    warning.textContent = t("Inspection truncated. Repair a smaller document to avoid partial changes.");
+    box.append(warning);
+    return box;
+  }
+  if (!Object.values(eligible.counts).some(Boolean)) {
+    const warning = document.createElement("p");
+    warning.textContent = t("These findings need manual review; no deterministic repair is available.");
+    box.append(warning);
+    return box;
+  }
+
+  const options = document.createElement("fieldset");
+  options.className = "inspect-repair-options";
+  const legend = document.createElement("legend");
+  legend.textContent = t("Choose repair types");
+  options.append(legend);
+  const checkboxes = [];
+  for (const group of repairGroups) {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = group.id;
+    checkbox.checked = group.defaultOn && eligible.counts[group.id] > 0;
+    checkbox.disabled = eligible.counts[group.id] === 0;
+    const labelText = document.createElement("span");
+    labelText.textContent = t(group.label) + " (" + eligible.counts[group.id] + ")";
+    label.append(checkbox, labelText);
+    options.append(label);
+    checkboxes.push(checkbox);
+  }
+  box.append(options);
+
+  const actions = document.createElement("div");
+  actions.className = "inspect-repair-actions";
+  const previewButton = document.createElement("button");
+  previewButton.id = "inspect-preview-repairs";
+  previewButton.className = "button compact";
+  previewButton.type = "button";
+  previewButton.textContent = t("Preview repairs");
+  const applyButton = document.createElement("button");
+  applyButton.id = "inspect-apply-repairs";
+  applyButton.className = "button compact primary";
+  applyButton.type = "button";
+  applyButton.textContent = t("Apply reviewed repairs");
+  applyButton.disabled = true;
+  actions.append(previewButton, applyButton);
+  const result = document.createElement("div");
+  result.className = "inspect-repair-result";
+  result.setAttribute("aria-live", "polite");
+  box.append(actions, result);
+
+  let planned = null;
+  for (const checkbox of checkboxes) {
+    checkbox.addEventListener("change", () => {
+      planned = null;
+      applyButton.disabled = true;
+      result.replaceChildren();
+    });
+  }
+  previewButton.addEventListener("click", () => {
+    const selected = checkboxes.filter((item) => item.checked).map((item) => item.value);
+    const source = editor.value;
+    const current = scanText(source);
+    planned = planRepairs(source, current, selected);
+    result.replaceChildren();
+    applyButton.disabled = planned.blocked || planned.changes.length === 0;
+    const status = document.createElement("p");
+    status.textContent = planned.blocked
+      ? t("Inspection truncated. Repair a smaller document to avoid partial changes.")
+      : planned.changes.length + " " + t("proposed changes") + ".";
+    result.append(status);
+    if (applyButton.disabled) return;
+    const changes = document.createElement("ol");
+    changes.className = "inspect-repair-changes";
+    for (const change of planned.changes.slice(0, 32)) {
+      const item = document.createElement("li");
+      item.textContent = change.codepoint + " · " + t(change.label)
+        + " · " + t(change.replacement ? "replace with a space" : "remove")
+        + " · " + t("offset") + " " + change.offset;
+      changes.append(item);
+    }
+    result.append(changes);
+    if (planned.changes.length > 32) {
+      const extra = document.createElement("p");
+      extra.textContent = t("Showing the first 32 proposed changes. All selected changes will apply.");
+      result.append(extra);
+    }
+  });
+  applyButton.addEventListener("click", () => {
+    if (!planned || planned.blocked || !planned.changes.length) return;
+    if (editor.value !== planned.source) {
+      planned = null;
+      applyButton.disabled = true;
+      result.textContent = t("Document changed. Preview repairs again.");
+      return;
+    }
+    lastRepair = { before: planned.source, after: planned.result };
+    updateEditor(planned.result);
+    inspectDocument();
+  });
+  return box;
+}
+
+function updateEditor(value) {
+  internalEdit = true;
+  try {
+    editor.value = value;
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    document.dispatchEvent(new Event("docbench:document-change"));
+  } finally {
+    internalEdit = false;
+  }
+}
+
 function inspectDocument() {
   document.dispatchEvent(new Event("docbench:inspect-start"));
   const findings = scanText(editor.value);
@@ -90,14 +241,16 @@ function inspectDocument() {
   preview.className = "preview-inspector";
   previewTitle.textContent = "Text safety inspection";
   if (!findings.length) {
-    preview.replaceChildren(cleanResult());
+    const repairs = repairSection(findings);
+    preview.replaceChildren(cleanResult(), ...(repairs ? [repairs] : []));
     setStatus("good", "Inspect · clean");
     return;
   }
   const list = document.createElement("div");
   list.className = "inspect-findings";
   for (const finding of findings) list.append(findingRow(finding));
-  preview.replaceChildren(summaryRow(summary, findings.truncated), list);
+  const repairs = repairSection(findings);
+  preview.replaceChildren(summaryRow(summary, findings.truncated), ...(repairs ? [repairs] : []), list);
   setStatus(summary.high ? "bad" : "neutral", `Inspect · ${findings.length}${findings.truncated ? "+" : ""}`);
 }
 
@@ -107,6 +260,12 @@ function enableInspectionAfterInitialPreview() {
   }, 0);
 }
 
+editor.addEventListener("input", () => {
+  if (!internalEdit) lastRepair = null;
+});
+document.addEventListener("docbench:document-change", () => {
+  if (!internalEdit) lastRepair = null;
+});
 inspectButton.disabled = true;
 inspectButton.addEventListener("click", inspectDocument);
 if (document.readyState === "complete") enableInspectionAfterInitialPreview();
