@@ -74,7 +74,9 @@ function emptyPreview(message, target = preview) {
 
 function field(label, value) {
   const wrapper = element("div", "files-meta-field");
-  wrapper.append(element("dt", "", label), element("dd", "", value === null || value === "" ? "Unknown" : value));
+  const body = element("dd", "", value === null || value === "" ? "Unknown" : value);
+  body.dataset.i18nSkip = "";
+  wrapper.append(element("dt", "", label), body);
   return wrapper;
 }
 
@@ -131,12 +133,18 @@ function renderList() {
     const button = element("button", "files-item");
     button.type = "button";
     button.setAttribute("aria-current", entry.active ? "true" : "false");
+    const name = element("span", "files-item-name", entry.name);
+    name.dataset.i18nSkip = "";
     button.append(
       element("span", "files-item-icon", iconFor(entry)),
-      element("span", "files-item-name", entry.name),
+      name,
       element("span", "files-item-size", formatBytes(entry.size)),
     );
-    if (entry.folder) button.append(element("small", "files-item-path", entry.folder));
+    if (entry.folder) {
+      const pathLabel = element("small", "files-item-path", entry.folder);
+      pathLabel.dataset.i18nSkip = "";
+      button.append(pathLabel);
+    }
     button.addEventListener("click", (event) => store.choose(entry.id, {
       toggle: event.ctrlKey || event.metaKey,
       range: event.shiftKey,
@@ -162,7 +170,11 @@ function renderList() {
   const available = store.folders();
   const requested = folder;
   folderSelect.replaceChildren(new Option("All folders", ""));
-  for (const path of available) folderSelect.add(new Option(path, path));
+  for (const path of available) {
+    const option = new Option(path, path);
+    option.dataset.i18nSkip = "";
+    folderSelect.add(option);
+  }
   if (requested && !available.includes(requested)) folder = "";
   folderSelect.value = folder;
   viewList.setAttribute("aria-pressed", String(viewMode === "list"));
@@ -179,6 +191,7 @@ async function showZipContents(file, revision, target = preview) {
   for (const entry of result.entries) {
     const row = element("li", entry.safe ? "" : "files-unsafe");
     const name = element("span", "files-zip-name", entry.name);
+    name.dataset.i18nSkip = "";
     const detail = element("small", "", entry.zip64 ? "ZIP64 sizes · unsupported"
       : entry.directory ? "Directory"
         : `${formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
@@ -321,6 +334,7 @@ async function showActive() {
   releasePreview();
   metadata.replaceChildren();
   if (!activeId) {
+    heading.removeAttribute("data-i18n-skip");
     heading.textContent = "Choose a file";
     setStatus("Files remain on this device.");
     emptyPreview("Open files or drop them here to inspect their headers.");
@@ -330,6 +344,7 @@ async function showActive() {
   const entry = store.get(activeId);
   if (!entry) return;
   const file = entry.file;
+  heading.dataset.i18nSkip = "";
   heading.textContent = entry.path;
   setStatus("Inspecting…");
   const start = performance.now();
@@ -350,6 +365,7 @@ async function showActive() {
 async function openDialog() {
   const entry = store.get(store.activeId());
   if (!entry) return;
+  dialogHeading.dataset.i18nSkip = "";
   dialogHeading.textContent = entry.path;
   dialog.showModal();
   const revision = selectionRevision;
