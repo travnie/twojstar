@@ -17,7 +17,8 @@ Local-first document, PDF and file workspace. **User files remain in the browser
 | --- | --- |
 | File selection/preview | `public/file-store.mjs`, `public/files-workspace.mjs` |
 | Document formats, merges | `public/document-formats.js`, `public/document-merge.mjs` |
-| Document undo/redo | `public/document-history-core.js`, `public/document-history.js` |
+| Undo/Redo | `public/document-history.js` |
+| History model | `public/document-history-core.js` |
 | PDF/editor features | `public/pdf-app.mjs`, `public/pdf-core.mjs`, `public/docx-converter.mjs`, `public/pdf-to-docx.mjs`, `public/document-enhancements.mjs` |
 | Shared file ingress | [`../shared/local-files.js`](../shared/local-files.js); generated consumer copy, **do not edit** |
 | Future archive/codec work | [`FILE_WORKBENCH.md`](FILE_WORKBENCH.md); research, **not shipped** |
