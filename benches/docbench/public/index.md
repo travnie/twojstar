@@ -10,6 +10,9 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 - Validate and format structured text, plus minify or explicitly repair JSON-family documents; scripts and loose configs remain raw to avoid unsafe rewrites.
 - Save directly back to an opened file only when the browser grants a writable file handle; otherwise use Save as or download an edited copy.
 - Inspect Markdown, JSON-family formats, YAML and XML with richer previews.
+- Undo/Redo document changes using toolbar controls or Ctrl/Cmd+Z, Ctrl+Y
+  and Ctrl/Cmd+Shift+Z. Held Backspace is grouped into one reversible step.
+  The bounded history resets after opening, merging or creating a document.
 - Review text-inspection repairs for hidden separators, bidi and control
   characters. Normalize unusual spaces only when selected. Inspect changes
   before Apply; Undo is available. Truncated/contextual findings stay manual.
@@ -32,7 +35,8 @@ Doc Bench runs at https://docbench.travny.workers.dev/.
 Files stay in the browser; the application has no telemetry. On WebMCP
 hosts, `read_document`, `set_document_text`, `validate_document`,
 `format_document`, `inspect_document` and read-only
-`preview_document_repairs` operate on the visible editor state.
+`preview_document_repairs`, `undo_document` and `redo_document` use
+the visible editor state.
 Repair previews return counts, offsets, codepoints and operations, not
 source text; applying repairs requires the visible UI. Other tool results
 can contain document text and follow the host/model data-handling policy.
