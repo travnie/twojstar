@@ -64,6 +64,8 @@
           <button id="merge-files-button" class="button compact" type="button" title="Merge TXT/Markdown, JSON/JSONC or JSONL/NDJSON files">Merge files</button>
           <button id="merge-now-button" class="button compact primary" type="button" hidden>Merge selected</button>
           <button id="new-button" class="button compact" type="button">New</button>
+          <button id="undo-button" class="button compact" type="button" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
+          <button id="redo-button" class="button compact" type="button" aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z" disabled>Redo</button>
           <input id="file-input" type="file" hidden>
           <input id="merge-files-input" type="file" hidden>
           <span id="merge-files-feedback" class="merge-files-feedback" role="status" aria-live="polite" hidden></span>
@@ -369,6 +371,8 @@
   <script src="/document-formats.js"></script>
   <script src="/local-files.js"></script>
   <script src="/app.js"></script>
+  <script src="/document-history-core.js"></script>
+  <script src="/document-history.js"></script>
   <script type="module" src="/document-enhancements.mjs"></script>
   <script src="/text-inspector-core.js"></script>
   <script src="/text-repair-core.js"></script>

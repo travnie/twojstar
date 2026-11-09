@@ -474,6 +474,7 @@
       eolSelect.value = first.eol.target;
       formatSelect.value = merged.format;
       filenameLabel.textContent = state.filename;
+      globalThis.DocBenchDocumentHistory?.reset();
       document.dispatchEvent(new CustomEvent("docbench:primary-document-state", {
         detail: {
           filename: state.filename,
@@ -519,9 +520,19 @@
     eolSelect.value = eol.target;
     filenameLabel.textContent = state.filename;
     setFormatFromFile(state.filename, raw);
+    globalThis.DocBenchDocumentHistory?.reset();
     document.dispatchEvent(new Event("docbench:document-change"));
     renderValidation();
   }
+
+  document.addEventListener("docbench:history-restore", (event) => {
+    if (typeof event.detail?.filename === "string") {
+      state.filename = event.detail.filename;
+      filenameLabel.textContent = state.filename;
+    }
+    state.mixedEol = false;
+    updateMeta();
+  });
 
   function saveFile() {
     const raw = applyEol(editor.value, eolSelect.value);
@@ -543,6 +554,7 @@
     eolSelect.value = "LF";
     editor.value = "";
     filenameLabel.textContent = state.filename;
+    globalThis.DocBenchDocumentHistory?.reset();
     document.dispatchEvent(new Event("docbench:document-change"));
     renderValidation();
     editor.focus();
