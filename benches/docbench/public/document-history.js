@@ -10,12 +10,15 @@
   const redoButton = document.querySelector("#redo-button");
   const history = globalThis.DocBenchHistoryCore.createHistory();
   let restoring = false;
+  let batchDepth = 0;
+  let mixedEol = false;
 
   const snapshot = () => ({
     text: editor.value,
     format: format.value,
     eol: eol.value,
     filename: filename.textContent,
+    mixedEol,
     start: editor.selectionStart,
     end: editor.selectionEnd,
     direction: editor.selectionDirection,
@@ -35,8 +38,9 @@
 
       if (formatChanged) format.dispatchEvent(new Event("change", { bubbles: true }));
       if (eolChanged) eol.dispatchEvent(new Event("change", { bubbles: true }));
+      mixedEol = entry.mixedEol;
       document.dispatchEvent(new CustomEvent("docbench:history-restore", {
-        detail: { filename: entry.filename },
+        detail: { filename: entry.filename, mixedEol },
       }));
       editor.dispatchEvent(new Event("input", { bubbles: true }));
       document.dispatchEvent(new Event("docbench:document-change"));
@@ -79,7 +83,7 @@
   });
 
   editor.addEventListener("input", (event) => {
-    if (restoring) return;
+    if (restoring || batchDepth) return;
     if (event.inputType === "historyUndo") {
       performUndo();
       return;
@@ -98,17 +102,22 @@
   });
 
   document.addEventListener("docbench:document-change", () => {
-    if (!restoring) history.record(snapshot(), { kind: "programmatic" });
+    if (!restoring && !batchDepth) history.record(snapshot(), { kind: "programmatic" });
   });
   format.addEventListener("change", () => {
-    if (!restoring) history.record(snapshot(), { kind: "metadata" });
-  });
+    if (restoring || batchDepth) return;
+    queueMicrotask(() => {
+      if (!restoring && !batchDepth) history.record(snapshot(), { kind: "metadata" });
+    });
+  }, true);
   eol.addEventListener("change", () => {
-    if (!restoring) history.record(snapshot(), { kind: "metadata" });
-  });
+    if (restoring || batchDepth) return;
+    mixedEol = false;
+    history.record(snapshot(), { kind: "metadata" });
+  }, true);
   filename.addEventListener("blur", () => {
     queueMicrotask(() => {
-      if (!restoring) history.record(snapshot(), { kind: "metadata" });
+      if (!restoring && !batchDepth) history.record(snapshot(), { kind: "metadata" });
     });
   });
 
@@ -127,8 +136,26 @@
   }, true);
 
   globalThis.DocBenchDocumentHistory = Object.freeze({
-    reset: () => history.reset(snapshot()),
-    record: () => !restoring && history.record(snapshot(), { kind: "programmatic" }),
+    reset: ({ mixedEol: nextMixed = false } = {}) => {
+      mixedEol = Boolean(nextMixed);
+      return history.reset(snapshot());
+    },
+    record: ({ mixedEol: nextMixed } = {}) => {
+      if (nextMixed !== undefined) mixedEol = Boolean(nextMixed);
+      return !restoring && !batchDepth
+        && history.record(snapshot(), { kind: "programmatic" });
+    },
+    setMixedEol: (value) => { mixedEol = Boolean(value); },
+    transaction(callback) {
+      if (typeof callback !== "function") throw new TypeError("Expected transaction callback.");
+      batchDepth += 1;
+      try {
+        return callback();
+      } finally {
+        batchDepth -= 1;
+        if (!batchDepth && !restoring) history.record(snapshot(), { kind: "programmatic" });
+      }
+    },
     status: () => history.status(),
     undo: performUndo,
     redo: performRedo,

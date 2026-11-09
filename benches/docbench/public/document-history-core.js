@@ -26,6 +26,7 @@
         format: String(value.format || "txt"),
         eol: String(value.eol || "LF"),
         filename: String(value.filename || "untitled.txt"),
+        mixedEol: Boolean(value.mixedEol),
         start: position(value.start),
         end: position(value.end),
         direction: value.direction === "backward" ? "backward" : "forward",
@@ -34,7 +35,8 @@
     };
 
     const sameContent = (a, b) => a.text === b.text && a.format === b.format
-      && a.eol === b.eol && a.filename === b.filename;
+      && a.eol === b.eol && a.filename === b.filename
+      && a.mixedEol === b.mixedEol;
     const notify = () => {
       const state = { canUndo: past.length > 0, canRedo: future.length > 0,
         limited: Boolean(current && current.text.length > maxSnapshotChars) };
@@ -64,7 +66,10 @@
 
     function updateSelection(snapshot) {
       const next = normalize(snapshot);
-      if (current && sameContent(current, next)) current = next;
+      if (!current || !sameContent(current, next)) return;
+      if (current.start !== next.start || current.end !== next.end
+        || current.direction !== next.direction) lastKind = null;
+      current = next;
     }
 
     function record(snapshot, { kind = "programmatic", now = Date.now() } = {}) {
@@ -113,18 +118,20 @@
       return current;
     }
 
+    const status = () => Object.freeze({
+      canUndo: past.length > 0,
+      canRedo: future.length > 0,
+      limited: Boolean(current && current.text.length > maxSnapshotChars),
+    });
+
     return Object.freeze({
       record, reset, undo, redo, updateSelection,
       current: () => current,
-      status: () => Object.freeze({
-        canUndo: past.length > 0,
-        canRedo: future.length > 0,
-        limited: Boolean(current && current.text.length > maxSnapshotChars),
-      }),
+      status,
       subscribe(listener) {
         if (typeof listener !== "function") throw new TypeError("Expected history listener.");
         listeners.add(listener);
-        listener(this.status());
+        listener(status());
         return () => listeners.delete(listener);
       },
     });

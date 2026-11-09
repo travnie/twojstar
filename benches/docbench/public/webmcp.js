@@ -196,13 +196,18 @@
       if (format !== undefined && !allowedFormats.has(format)) {
         return { ok: false, error: `format must be one of: ${documentFormats.join(", ")}.` };
       }
-      editor.value = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
-      if (format) {
-        formatSelect.value = format;
-        formatSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      eolSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      const setTextAndFormat = () => {
+        editor.value = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+        if (format) {
+          formatSelect.value = format;
+          formatSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        eolSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      const history = globalThis.DocBenchDocumentHistory;
+      if (history?.transaction) history.transaction(setTextAndFormat);
+      else setTextAndFormat();
       const validation = validateThroughUi();
       if (!validation.ready) return { ok: false, error: "Document validator is not ready." };
       return { ok: validation.ok, ...snapshot({ includeText: true }) };
