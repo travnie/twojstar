@@ -9,6 +9,7 @@ Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY
 - Edit arbitrary UTF-8 text and recognize TXT/Markdown, JSON-family, YAML/XML, INI/config, Batch/CMD, PowerShell, shell/dotfiles, .env and M3U/M3U8/PLS playlist files, with conservative content detection for generic or unknown filenames.
 - Save back to the opened file when the browser provides a writable handle; otherwise use Save as or download, while preserving or deliberately changing UTF-8 BOM and LF/CRLF/CR line endings.
 - Validate and format structured documents while keeping scripts and loose configs raw unless a safe parser exists.
+- Undo and redo document edits using toolbar buttons or keyboard shortcuts, including held Backspace, formatting and JSON repair. History is bounded and local to the active document, not persisted across file loads or saves.
 - Inspect hidden Unicode text controls, review deterministic removal/space-normalization proposals, explicitly apply selected changes and undo the last repair. No automatic rewriting of prompt-injection heuristics or ambiguous multilingual characters.
 - Render Markdown safely and inspect JSON-family/YAML/XML in structured tree previews.
 - Merge multiple TXT/Markdown files in picker order into a new editable `merged.txt` or `merged.md` document; mixed inputs become Markdown.
@@ -32,7 +33,7 @@ User documents and PDFs are processed locally in the browser. The application ha
 
 ## Agent access
 
-On browser hosts that implement WebMCP, Doc Bench exposes the current local editor through `read_document`, `set_document_text`, `validate_document`, `format_document`, `inspect_document` and read-only `preview_document_repairs`. These tools reuse the visible application state. Doc Bench itself does not upload documents, but WebMCP tool results can contain editor text; once returned to a host or model, that data is governed by the host/model data-handling policy.
+On browser hosts that implement WebMCP, Doc Bench exposes the current local editor through `read_document`, `set_document_text`, `validate_document`, `format_document`, `inspect_document` and read-only `preview_document_repairs`, plus `undo_document` and `redo_document`. These tools reuse the visible application state. Doc Bench itself does not upload documents, but WebMCP tool results can contain editor text; once returned to a host or model, that data is governed by the host/model data-handling policy.
 
 ## Public pages
 

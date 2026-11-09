@@ -6,6 +6,8 @@ for (const path of [
   "public/llms.txt",
   "public/llms-full.txt",
   "public/app.js",
+  "public/document-history-core.js",
+  "public/document-history.js",
   "public/local-files.js",
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
@@ -94,6 +96,17 @@ if (!webmcp.includes('const validateThroughUi = () =>')
 
 const index = await readFile("public/index.html", "utf8");
 const portableFiles = await readFile("public/portable.html", "utf8");
+for (const id of ["undo-button", "redo-button"]) {
+  if (!index.includes(`id="${id}"`)) throw new Error(`Document history control missing ${id}`);
+}
+if (!index.includes('src="/document-history-core.js"')
+  || !index.includes('src="/document-history.js"')
+  || portableFiles.includes('src="/document-history-core.js"')
+  || portableFiles.includes('src="/document-history.js"')
+  || !portableFiles.includes("DocBenchHistoryCore")
+  || !portableFiles.includes("DocBenchDocumentHistory")) {
+  throw new Error("Document undo/redo must work in both hosted and portable builds.");
+}
 for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-metadata", "files-preview"]) {
   if (!index.includes(`id="${id}"`)) throw new Error(`Files workspace missing ${id}`);
 }

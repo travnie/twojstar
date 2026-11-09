@@ -6,7 +6,7 @@ Local-first document, PDF and file workspace. **User files remain in the browser
 
 ## Implemented
 
-- **Documents:** preview/edit TXT, Markdown, JSON/JSONC/JSONL, XML/YAML, scripts/configs and playlists; safe HTML rendering; direct save where supported, otherwise download. TXT/Markdown and structured JSON merges; conflict reporting without number coercion. Inspection-guided text repairs can preview and explicitly apply removal of suspicious directional, control and invisible characters, with optional unusual-space normalization and one-step undo. Truncated scans and context-dependent findings stay manual.
+- **Documents:** preview/edit TXT, Markdown, JSON/JSONC/JSONL, XML/YAML, scripts/configs and playlists; safe HTML rendering; direct save where supported, otherwise download. TXT/Markdown and structured JSON merges; conflict reporting without number coercion. The Documents editor provides Undo/Redo toolbar buttons and Ctrl/Cmd+Z / Ctrl+Y or Ctrl/Cmd+Shift+Z shortcuts, with bounded in-memory history. Repeated Backspace is grouped; formatting, JSON transformations and WebMCP edits are covered. History resets when loading, merging or creating a document, and does not reverse saved disk writes. Inspection-guided text repairs can preview and explicitly apply removal of suspicious directional, control and invisible characters, with optional unusual-space normalization and one-step undo. Truncated scans and context-dependent findings stay manual.
 - **PDF:** DOCX↔PDF (structure-first PDF→DOCX, not pixel-perfect), merge/split, reorder/delete, extract, bookmarks, metadata, attachments and optimization. Verify structure and attachments before downloads.
 - **Files:** local folder/drop import, search/sort, independent selection and preview, signature/MIME and metadata inspection; read-only ZIP index. Image preview ≤48 MiB, text preview ≤128 KiB; unsupported codecs shown as unsupported.
 - **WebMCP:** bounded workspace snapshots and visible selection from the **same UI/store**, not a parallel hidden file engine. Includes read-only repair previews (category counts, offsets, codepoints and operation examples); actual repair requires the visible document UI. No arbitrary filesystem paths or system pickers.
@@ -17,6 +17,7 @@ Local-first document, PDF and file workspace. **User files remain in the browser
 | --- | --- |
 | File selection/preview | `public/file-store.mjs`, `public/files-workspace.mjs` |
 | Document formats, merges | `public/document-formats.js`, `public/document-merge.mjs` |
+| Document undo/redo | `public/document-history-core.js`, `public/document-history.js` |
 | PDF/editor features | `public/pdf-app.mjs`, `public/pdf-core.mjs`, `public/docx-converter.mjs`, `public/pdf-to-docx.mjs`, `public/document-enhancements.mjs` |
 | Shared file ingress | [`../shared/local-files.js`](../shared/local-files.js); generated consumer copy, **do not edit** |
 | Future archive/codec work | [`FILE_WORKBENCH.md`](FILE_WORKBENCH.md); research, **not shipped** |
