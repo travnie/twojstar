@@ -21,6 +21,8 @@
 
   const extensionToFormat = Object.freeze({
     txt: "txt", text: "txt", log: "txt", out: "txt",
+    css: "txt", js: "txt", ts: "txt", html: "txt", htm: "txt",
+    py: "txt", rs: "txt", kt: "txt", java: "txt",
     md: "md", markdown: "md",
     json: "json", jsonc: "jsonc", json5: "json5", jsonl: "jsonl", ndjson: "jsonl",
     yml: "yaml", yaml: "yaml",
@@ -238,6 +240,7 @@
     definitions,
     formatIds,
     formatFromFilename,
+    formatHintFromFilename,
     formatFromContent,
     detectFormat,
     preferredExtension,

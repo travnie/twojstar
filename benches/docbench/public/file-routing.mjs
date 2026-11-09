@@ -1,13 +1,13 @@
 // Shared file-type routing for the Files shell. No UI or file reads.
 const MAX_EDIT_BYTES = 32 * 1024 * 1024;
-const TEXT_EXTENSIONS = /\.(?:txt|text|log|md|markdown|jsonc?|json5|jsonl|ndjson|ya?ml|xml|ini|conf|cfg|toml|env|csv|tsv|sh|ps1|bat|cmd|m3u8?|pls|css|js|ts|html?|py|rs|kt|java)$/iu;
 
 export function isTextFile(info) {
   if (!info) return false;
   if (info.format === "svg") return true;
-  if (info.signature && info.family !== "document") return false;
+  if (info.signature) return false;
+  const documentFormats = globalThis.DocBenchTextFormats;
   return info.declaredMime.startsWith("text/")
-    || TEXT_EXTENSIONS.test(info.name)
+    || Boolean(documentFormats?.formatHintFromFilename?.(info.name))
     || ["txt", "json"].includes(info.format);
 }
 
