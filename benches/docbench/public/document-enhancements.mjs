@@ -744,6 +744,7 @@ function repairJsonDocument() {
   state.documentRevision += 1;
   state.mixedEol = false;
   updateFilenameForStrictJson();
+  globalThis.DocBenchDocumentHistory?.record();
   renderEnhancedPreview();
   setStatus("good", "Repaired → strict JSON");
 }
@@ -768,6 +769,7 @@ function transformJsonFamily(mode) {
   }
   state.documentRevision += 1;
   state.mixedEol = false;
+  globalThis.DocBenchDocumentHistory?.record();
   renderEnhancedPreview();
   setStatus("good", compact ? "Minified" : "Formatted");
   return true;
@@ -1243,6 +1245,22 @@ document.addEventListener("docbench:inspect-start", () => {
   previewTimer = undefined;
 });
 
+document.addEventListener("docbench:history-restore", (event) => {
+  const name = event.detail?.filename;
+  if (typeof name !== "string") return;
+  state.documentRevision += 1;
+  if (name !== state.filename) {
+    state.handle = null;
+    state.filename = name;
+  }
+  state.eol = eolSelect.value;
+  state.mixedEol = false;
+  updateFormatButton();
+  updateSaveButton();
+  updateMeta();
+  schedulePreview(0);
+});
+
 document.addEventListener("docbench:primary-document-state", (event) => {
   const detail = event.detail || {};
   state.documentRevision += 1;
@@ -1396,6 +1414,7 @@ async function loadNativeHandle(handle, revision) {
   formatSelect.value = detectFormat(state.filename, raw);
   filenameLabel.textContent = state.filename;
   updateFormatButton();
+  globalThis.DocBenchDocumentHistory?.reset();
   editor.dispatchEvent(new Event("input", { bubbles: true }));
   updateSaveButton();
   schedulePreview();
@@ -1417,6 +1436,7 @@ async function syncFallbackFile(file, revision) {
     filenameLabel.textContent = state.filename;
     updateFormatButton();
     updateSaveButton();
+    globalThis.DocBenchDocumentHistory?.reset();
     document.dispatchEvent(new Event("docbench:document-change"));
     renderEnhancedPreview();
   } catch (error) {
