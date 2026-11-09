@@ -256,6 +256,24 @@
     [/^Analiza · (\d+\+?)$/, "Inspect · $1"]
   ]
 };
+  // Reuse existing locale strings for new workbench controls, without duplicating translations.
+  const knownTranslations = new Map(pairs);
+  for (const [nextLabel, existingLabel] of [
+    ["Text editor", "Document editor"],
+    ["PDF tools", "Open PDF"],
+    ["New document", "New"],
+    ["Read-only inspection", "Inspection"],
+    ["File workbench tools", "Workspace"],
+    ["File workspace", "Workspace"],
+    ["Open in text editor", "Document editor"],
+    ["Open in PDF tools", "Open PDF"],
+    ["Convert DOCX to PDF", "DOCX → PDF"],
+    ["Source files stay untouched · no uploads or telemetry", "Local inspection only · no uploads or telemetry"],
+  ]) {
+    const translated = knownTranslations.get(existingLabel);
+    if (translated && !knownTranslations.has(nextLabel)) pairs.push([nextLabel, translated]);
+  }
+
   globalThis.BenchI18n = globalThis.createBenchI18n({
     baseLanguage: "en",
     storageKey: "docbench.language.v1",

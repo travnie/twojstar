@@ -39,6 +39,32 @@ const state = {
 };
 
 
+let lastSavedDocument = null;
+function markDocumentSaved() {
+  lastSavedDocument = {
+    text: editor.value,
+    filename: state.filename,
+    eol: eolSelect.value,
+    bom: state.bom,
+    mixedEol: state.mixedEol,
+  };
+}
+function hasUnsavedDocument() {
+  const original = lastSavedDocument;
+  if (!original) return Boolean(editor.value);
+  return original.text !== editor.value
+    || original.filename !== state.filename
+    || original.eol !== eolSelect.value
+    || original.bom !== state.bom
+    || original.mixedEol !== state.mixedEol;
+}
+markDocumentSaved();
+document.addEventListener("docbench:confirm-document-replace", (event) => {
+  if (hasUnsavedDocument() && !globalThis.confirm(
+    "Replace the unsaved document? Save or download your changes first if you need them."
+  )) event.preventDefault();
+});
+
 const nativeOpenSupported = globalThis.isSecureContext
   && typeof globalThis.showOpenFilePicker === "function";
 const nativeSaveSupported = globalThis.isSecureContext
@@ -1303,6 +1329,7 @@ function downloadDocument(snapshot = currentDocumentSnapshot()) {
   link.download = snapshot.filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  if (snapshot.revision === state.documentRevision) markDocumentSaved();
 }
 
 async function ensureWritePermission(handle) {
@@ -1356,6 +1383,7 @@ async function writeHandle(handle, snapshot) {
   updateMeta();
   updateSaveButton();
   flashSaveState("Saved ✓");
+  markDocumentSaved();
 }
 
 async function chooseSaveHandle(snapshot) {
@@ -1418,13 +1446,14 @@ async function loadNativeHandle(handle, revision) {
   editor.dispatchEvent(new Event("input", { bubbles: true }));
   updateSaveButton();
   schedulePreview();
+  markDocumentSaved();
   return true;
 }
 
 async function syncFallbackFile(file, revision) {
   try {
     const { raw, bom, eol } = await readTextFile(file);
-    if (state.documentRevision !== revision) return;
+    if (state.documentRevision !== revision) return { ok: false, error: "A newer document took precedence." };
     state.handle = null;
     state.filename = file.name || "document.txt";
     state.bom = bom;
@@ -1439,11 +1468,14 @@ async function syncFallbackFile(file, revision) {
     globalThis.DocBenchDocumentHistory?.reset();
     document.dispatchEvent(new Event("docbench:document-change"));
     renderEnhancedPreview();
+    markDocumentSaved();
+    return { ok: true };
   } catch (error) {
-    if (state.documentRevision !== revision) return;
+    if (state.documentRevision !== revision) return { ok: false, error: "A newer document took precedence." };
     setStatus("bad", "Open failed");
     statusBadge.title = error?.message || String(error);
     updateSaveButton();
+    return { ok: false, error: error?.message || String(error) };
   }
 }
 
@@ -1507,7 +1539,7 @@ document.addEventListener("docbench:open-document-file", (event) => {
   if (!file || typeof file.slice !== "function") return;
   event.preventDefault();
   const revision = state.documentRevision += 1;
-  void syncFallbackFile(file, revision);
+  event.detail.openPromise = syncFallbackFile(file, revision);
 });
 
 fileInput.addEventListener("change", (event) => {
@@ -1573,6 +1605,7 @@ newButton.addEventListener("click", () => {
     state.eol = eolSelect.value;
     updateSaveButton();
     renderEnhancedPreview();
+    markDocumentSaved();
   });
 });
 

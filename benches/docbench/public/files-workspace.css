@@ -121,6 +121,7 @@
 }
 
 .files-inspector-header strong {
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 
