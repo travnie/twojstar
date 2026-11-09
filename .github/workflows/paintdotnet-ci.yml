@@ -88,8 +88,8 @@ jobs:
     name: AI - build, smoke-test and package
     needs: changes
     concurrency:
-      group: paintdotnet-ai-${{ github.ref }}
-      cancel-in-progress: true
+      group: paintdotnet-ai-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     if: needs.changes.outputs.ai == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
@@ -341,8 +341,8 @@ jobs:
     name: ICO - build and package
     needs: changes
     concurrency:
-      group: paintdotnet-ico-${{ github.ref }}
-      cancel-in-progress: true
+      group: paintdotnet-ico-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     if: needs.changes.outputs.ico == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
