@@ -34,7 +34,7 @@ permissions:
 jobs:
   test:
     concurrency:
-      group: smx-test-${{ github.event_name }}-${{ github.ref }}-${{ matrix.os }}
+      group: smx-test-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}-${{ matrix.os }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
     strategy:
