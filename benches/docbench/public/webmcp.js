@@ -155,6 +155,26 @@
     },
   });
 
+
+  for (const [name, title, action] of [
+    ["undo_document", "Undo last document edit", "undo"],
+    ["redo_document", "Redo document edit", "redo"],
+  ]) {
+    register({
+      name,
+      title,
+      description: "Use the visible Documents editor history. Local only; cannot restore another opened file.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      annotations: { readOnlyHint: false, untrustedContentHint: true },
+      execute() {
+        const history = globalThis.DocBenchDocumentHistory;
+        if (!history) return { ok: false, error: "Document history is unavailable." };
+        const changed = history[action]();
+        return { ok: changed, changed, ...history.status() };
+      },
+    });
+  }
+
   register({
     name: "set_document_text",
     title: "Set Docbench document text",

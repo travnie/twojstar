@@ -16,6 +16,8 @@ const [
   fflate,
   documentFormats,
   app,
+  historyCore,
+  historyUi,
   documentMerge,
   documentEnhancements,
   inspectorCore,
@@ -61,6 +63,8 @@ const [
   readFile("public/vendor/fflate.min.js", "utf8"),
   readFile("public/document-formats.js", "utf8"),
   readFile("public/app.js", "utf8"),
+  readFile("public/document-history-core.js", "utf8"),
+  readFile("public/document-history.js", "utf8"),
   readFile("public/document-merge.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
   readFile("public/text-inspector-core.js", "utf8"),
@@ -279,6 +283,8 @@ const portable = html
   .replace('<script src="/document-formats.js"></script>', `<script>${safeScript(documentFormats)}</script>`)
   .replace('<script src="/local-files.js"></script>', `<script>${safeScript(localFileUi)}</script>`)
   .replace('<script src="/app.js"></script>', `<script>${safeScript(portableApp)}</script>`)
+  .replace('<script src="/document-history-core.js"></script>', `<script>${safeScript(historyCore)}</script>`)
+  .replace('<script src="/document-history.js"></script>', `<script>${safeScript(historyUi)}</script>`)
   .replace(
     '<script type="module" src="/document-enhancements.mjs"></script>',
     `<script type="module">${safeScript(documentEnhancementsPortable)}</script>`,
