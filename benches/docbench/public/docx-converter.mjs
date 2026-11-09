@@ -127,6 +127,7 @@ button.addEventListener("click", () => input.click());
 document.addEventListener("docbench:convert-docx-file", (event) => {
   const file = event.detail?.file;
   if (!file || typeof file.arrayBuffer !== "function") return;
+  event.preventDefault();
   void convertDocx(file).catch((error) => {
     console.error(error);
     setStatus(error?.message || String(error), true);

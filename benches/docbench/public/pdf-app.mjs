@@ -1149,7 +1149,9 @@ $("#pdf-add-button").addEventListener("click", () => addPdfInput.click());
 docxExportButton.addEventListener("click", exportPdfToDocx);
 document.addEventListener("docbench:open-pdf-file", (event) => {
   const file = event.detail?.file;
-  if (file && typeof file.arrayBuffer === "function") void openFiles([file], false).catch(showError);
+  if (!file || typeof file.arrayBuffer !== "function") return;
+  event.preventDefault();
+  void openFiles([file], false).catch(showError);
 });
 pdfInput.addEventListener("change", async () => {
   try { await openFiles(pdfInput.files || [], false); } catch (error) { showError(error); }

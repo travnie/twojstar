@@ -15,7 +15,7 @@ Local-first file workbench with document and PDF tools. Files is the starting ex
 
 | Concern | Source |
 | --- | --- |
-| File selection/preview | `public/file-store.mjs`, `public/files-workspace.mjs` |
+| File selection/preview | `public/file-store.mjs`, `public/file-routing.mjs`, `public/files-workspace.mjs` |
 | Document formats, merges | `public/document-formats.js`, `public/document-merge.mjs` |
 | Undo/Redo | `public/document-history.js` |
 | History model | `public/document-history-core.js` |
