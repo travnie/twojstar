@@ -19,6 +19,15 @@ from scripts.utils import parse_skill_md
 
 _MODEL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
+# Explicit allowlist of models permitted for subprocess invocation.
+# Keep this list in sync with models supported by your Claude CLI setup.
+_ALLOWED_MODELS = {
+    "claude-3-5-haiku-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-7-sonnet-latest",
+    "claude-sonnet-4-0",
+}
+
 
 def _validate_model_name(model: str) -> str:
     """Validate model identifier before passing it to subprocess args."""
@@ -30,6 +39,10 @@ def _validate_model_name(model: str) -> str:
     if not _MODEL_NAME_RE.fullmatch(normalized):
         raise ValueError(
             "Invalid model name. Allowed characters: letters, digits, '.', '_', ':', '-'."
+        )
+    if normalized not in _ALLOWED_MODELS:
+        raise ValueError(
+            f"Unsupported model '{normalized}'. Allowed models: {', '.join(sorted(_ALLOWED_MODELS))}."
         )
     return normalized
 
