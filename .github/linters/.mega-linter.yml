@@ -55,6 +55,10 @@ ENABLE_ERRORS_LINTERS:
   - JSON_JSONLINT
   - PYTHON_RUFF
 
+# actionlint 1.7.12 predates the GitHub concurrency queue extension.
+ACTION_ACTIONLINT_ARGUMENTS: >-
+  -ignore 'unexpected key "queue" for "concurrency" section'
+
 ACTION_ZIZMOR_ARGUMENTS:
   - "--offline"
   - "--min-severity=medium"

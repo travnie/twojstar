@@ -40,7 +40,7 @@ on:
           - spacemolt
 
 concurrency:
-  group: plugin-packages-${{ github.ref }}
+  group: plugin-packages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
