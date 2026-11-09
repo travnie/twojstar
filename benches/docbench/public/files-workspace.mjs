@@ -330,20 +330,45 @@ function updateTool(entry, info) {
   toolActions.hidden = false;
 }
 
-function openInTool() {
+let openingTool = false;
+async function openInTool() {
   const entry = store.get(store.activeId());
-  if (!activeTool || !entry || activeTool.id !== entry.id) return;
-  const request = new CustomEvent(activeTool.event, {
-    cancelable: true,
-    detail: { file: entry.file },
-  });
-  if (document.dispatchEvent(request)) {
-    setStatus("The selected tool is still loading. Try again.", true);
-    return;
+  if (openingTool || !activeTool || !entry || activeTool.id !== entry.id) return;
+  const action = { ...activeTool };
+  if (action.mode === "document" && !document.dispatchEvent(
+    new Event("docbench:confirm-document-replace", { cancelable: true })
+  )) return;
+
+  openingTool = true;
+  toolButton.disabled = true;
+  setStatus("Opening in specialist tool…");
+  try {
+    const request = new CustomEvent(action.event, {
+      cancelable: true,
+      detail: { file: entry.file, openPromise: null },
+    });
+    if (document.dispatchEvent(request)) {
+      setStatus("The selected tool is not ready. Try again.", true);
+      return;
+    }
+    if (!request.detail.openPromise) {
+      setStatus("The selected tool did not acknowledge opening.", true);
+      return;
+    }
+    const result = await request.detail.openPromise;
+    if (!result?.ok) {
+      setStatus(result?.error || "File opening was canceled.", !result?.cancelled);
+      return;
+    }
+    document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
+      detail: { mode: action.mode },
+    }));
+  } catch (error) {
+    setStatus(error?.message || "Could not open this file.", true);
+  } finally {
+    openingTool = false;
+    toolButton.disabled = false;
   }
-  document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
-    detail: { mode: activeTool.mode },
-  }));
 }
 
 async function showActive() {
@@ -414,6 +439,7 @@ function addFiles(input) {
 
 toolButton.addEventListener("click", openInTool);
 getNode("#files-new-document").addEventListener("click", () => {
+  if (!document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }))) return;
   getNode("#new-button").click();
   document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
     detail: { mode: "document" },

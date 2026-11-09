@@ -183,6 +183,13 @@ for (const [path, event] of [
     throw new Error("Editor bridge missing " + event);
   }
 }
+if (!filesWorkspaceSource.includes("await request.detail.openPromise")
+  || !filesWorkspaceSource.includes("docbench:confirm-document-replace")
+  || !(await readFile("public/document-enhancements.mjs", "utf8")).includes("hasUnsavedDocument()")
+  || !(await readFile("public/pdf-app.mjs", "utf8")).includes("allowPdfReplacement()")
+  || !(await readFile("public/docx-converter.mjs", "utf8")).includes("conversionInFlight")) {
+  throw new Error("Files-to-editor actions must await safe opening, protect edits and serialize conversions.");
+}
 
 const app = await readFile("public/app.js", "utf8");
 const documentEnhancements = await readFile(

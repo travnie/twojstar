@@ -117,10 +117,33 @@ async function convertDocx(file) {
     if (!handled) {
       downloadPdf(pdfBytes, filename);
       setStatus(`Converted ${file.name} · downloaded ${filename}`);
+      return { opened: false };
     }
+    const result = event.detail.openPromise ? await event.detail.openPromise : { ok: true };
+    if (!result?.ok) throw new Error(result?.error || "Converted PDF could not be opened.");
+    return { opened: true };
   } finally {
     button.disabled = false;
   }
+}
+
+let conversionInFlight = null;
+function requestConversion(file) {
+  if (conversionInFlight) {
+    return Promise.resolve({ ok: false, error: "A DOCX conversion is already running." });
+  }
+  const task = convertDocx(file);
+  conversionInFlight = task;
+  return task
+    .then((result) => result?.opened
+      ? { ok: true }
+      : { ok: false, cancelled: true, error: "Converted PDF was downloaded instead of opened." })
+    .catch((error) => {
+      console.error(error);
+      setStatus(error?.message || String(error), true);
+      return { ok: false, error: error?.message || String(error) };
+    })
+    .finally(() => { if (conversionInFlight === task) conversionInFlight = null; });
 }
 
 button.addEventListener("click", () => input.click());
@@ -128,19 +151,10 @@ document.addEventListener("docbench:convert-docx-file", (event) => {
   const file = event.detail?.file;
   if (!file || typeof file.arrayBuffer !== "function") return;
   event.preventDefault();
-  void convertDocx(file).catch((error) => {
-    console.error(error);
-    setStatus(error?.message || String(error), true);
-  });
+  event.detail.openPromise = requestConversion(file);
 });
 input.addEventListener("change", async () => {
   const file = input.files?.[0];
   input.value = "";
-  if (!file) return;
-  try {
-    await convertDocx(file);
-  } catch (error) {
-    console.error(error);
-    setStatus(error?.message || String(error), true);
-  }
+  if (file) await requestConversion(file);
 });

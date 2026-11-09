@@ -1147,11 +1147,25 @@ async function splitAllPages() {
 $("#pdf-open-button").addEventListener("click", () => pdfInput.click());
 $("#pdf-add-button").addEventListener("click", () => addPdfInput.click());
 docxExportButton.addEventListener("click", exportPdfToDocx);
+function allowPdfReplacement() {
+  return !state.sources.length || globalThis.confirm(
+    "Replace the current PDF workspace? Save or download your edits first to keep changed pages, bookmarks, metadata and attachments."
+  );
+}
 document.addEventListener("docbench:open-pdf-file", (event) => {
   const file = event.detail?.file;
   if (!file || typeof file.arrayBuffer !== "function") return;
   event.preventDefault();
-  void openFiles([file], false).catch(showError);
+  if (!allowPdfReplacement()) {
+    event.detail.openPromise = Promise.resolve({ ok: false, cancelled: true });
+    return;
+  }
+  event.detail.openPromise = openFiles([file], false)
+    .then(() => ({ ok: true }))
+    .catch((error) => {
+      showError(error);
+      return { ok: false, error: error?.message || String(error) };
+    });
 });
 pdfInput.addEventListener("change", async () => {
   try { await openFiles(pdfInput.files || [], false); } catch (error) { showError(error); }
@@ -1247,18 +1261,24 @@ function countOutlineItems(items = state.outline) {
 document.addEventListener("docbench:open-pdf-bytes", (event) => {
   const { bytes, filename, sourceName, sourceKind } = event.detail || {};
   if (!(bytes instanceof Uint8Array) || !filename) return;
+  if (!allowPdfReplacement()) return;
   event.preventDefault();
 
   const file = new File([bytes], filename, { type: "application/pdf" });
-  void openFiles([file], false)
+  event.detail.openPromise = openFiles([file], false)
     .then(() => {
-      if (sourceKind !== "docx") return;
-      const bookmarks = countOutlineItems();
-      setStatus(
-        `Converted ${sourceName || "DOCX"} · ${state.plan.length} page${state.plan.length === 1 ? "" : "s"} · ${bookmarks} bookmark${bookmarks === 1 ? "" : "s"}`,
-      );
+      if (sourceKind === "docx") {
+        const bookmarks = countOutlineItems();
+        setStatus(
+          `Converted ${sourceName || "DOCX"} · ${state.plan.length} page${state.plan.length === 1 ? "" : "s"} · ${bookmarks} bookmark${bookmarks === 1 ? "" : "s"}`,
+        );
+      }
+      return { ok: true };
     })
-    .catch(showError);
+    .catch((error) => {
+      showError(error);
+      return { ok: false, error: error?.message || String(error) };
+    });
 });
 
 window.addEventListener("beforeunload", () => state.qpdfRunner?.destroy?.());
