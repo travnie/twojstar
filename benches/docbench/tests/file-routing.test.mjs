@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { inspectHeader } from "../public/file-signatures.mjs";
 import { isTextFile, resolveFileTool } from "../public/file-routing.mjs";
+import "../public/document-formats.js";
 
 const header = (name, bytes = [], type = "") =>
   ({ ...inspectHeader(new Uint8Array(bytes), { name, type }), name });
@@ -28,12 +29,18 @@ test("A spoofed DOCX extension cannot force conversion", () => {
 test("Text and SVG source use the existing text editor", () => {
   const markdown = header("notes.md");
   assert.equal(isTextFile(markdown), true);
-  assert.equal(resolveFileTool(markdown, 1024)?.mode, "document");
-  assert.equal(resolveFileTool(header("icon.svg"), 1024)?.mode, "document");
+  assert.equal(resolveFileTool(markdown, 1024)?.event, "docbench:open-document-file");
+  assert.equal(resolveFileTool(header("icon.svg"), 1024)?.event, "docbench:open-document-file");
+  for (const name of ["install.bash", "playlist.xspf", ".gitignore", "script.ts"]) {
+    assert.equal(resolveFileTool(header(name), 1024)?.event, "docbench:open-document-file", name);
+  }
 });
 
 test("Unknown binary and oversized documents remain inspect-only", () => {
   assert.equal(resolveFileTool(header("unknown.bin"), 4), null);
+  const disguisedPdf = header("notes.txt", [37, 80, 68, 70, 45], "text/plain");
+  assert.equal(isTextFile(disguisedPdf), false);
+  assert.equal(resolveFileTool(disguisedPdf, 1024)?.event, "docbench:open-pdf-file");
   assert.equal(resolveFileTool(header("notes.md"), 33 * 1024 * 1024), null);
   assert.equal(resolveFileTool(header("report.docx", [80, 75, 3, 4]), 33 * 1024 * 1024), null);
 });
