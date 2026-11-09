@@ -1,6 +1,7 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
 import { createFileStore } from "./file-store.mjs";
+import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
 const { formatBytes, bindFileDrop } = globalThis.BenchLocalFiles;
@@ -29,13 +30,11 @@ const dialogHeading = getNode("#files-dialog-name");
 
 const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
-const MAX_EDIT_BYTES = 32 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 48 * 1024 * 1024;
 const MAX_HEX_BYTES = 256;
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
 const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "ogg", "m4a"]);
 const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
-const TEXT_EXTENSIONS = /\.(?:txt|text|log|md|markdown|jsonc?|json5|jsonl|ndjson|ya?ml|xml|ini|conf|cfg|toml|env|csv|tsv|sh|ps1|bat|cmd|m3u8?|pls|css|js|ts|html?|py|rs|kt|java)$/iu;
 
 const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
@@ -260,14 +259,6 @@ function mediaPreview(file, format, revision, target = preview) {
   target.append(video, fallback);
 }
 
-function isTextFile(info) {
-  if (info.format === "svg") return true;
-  if (info.signature && info.family !== "document") return false;
-  return info.declaredMime.startsWith("text/")
-    || TEXT_EXTENSIONS.test(info.name)
-    || ["txt", "json"].includes(info.format);
-}
-
 async function renderPreview(file, info, revision, target = preview) {
   releasePreview(target);
   if (info.format === "zip") {
@@ -332,23 +323,24 @@ function updateTool(entry, info) {
   toolActions.hidden = true;
   if (!entry || !info) return;
 
-  if (info.format === "pdf") {
-    activeTool = { id: entry.id, mode: "pdf", event: "docbench:open-pdf-file", label: "Open in PDF tools" };
-  } else if (info.format === "docx" && entry.size <= MAX_EDIT_BYTES) {
-    activeTool = { id: entry.id, mode: "pdf", event: "docbench:convert-docx-file", label: "Convert DOCX to PDF" };
-  } else if (isTextFile(info) && entry.size <= MAX_EDIT_BYTES) {
-    activeTool = { id: entry.id, mode: "document", event: "docbench:open-document-file", label: "Open in text editor" };
-  }
-
-  if (!activeTool) return;
-  toolButton.textContent = activeTool.label;
+  const action = resolveFileTool(info, entry.size);
+  if (!action) return;
+  activeTool = { ...action, id: entry.id };
+  toolButton.textContent = action.label;
   toolActions.hidden = false;
 }
 
 function openInTool() {
   const entry = store.get(store.activeId());
   if (!activeTool || !entry || activeTool.id !== entry.id) return;
-  document.dispatchEvent(new CustomEvent(activeTool.event, { detail: { file: entry.file } }));
+  const request = new CustomEvent(activeTool.event, {
+    cancelable: true,
+    detail: { file: entry.file },
+  });
+  if (document.dispatchEvent(request)) {
+    setStatus("The selected tool is still loading. Try again.", true);
+    return;
+  }
   document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
     detail: { mode: activeTool.mode },
   }));

@@ -12,6 +12,7 @@ for (const path of [
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
   "public/file-store.mjs",
+  "public/file-routing.mjs",
   "public/files-workspace.mjs",
   "public/files-workspace.css",
   "public/document-merge.mjs",
@@ -120,6 +121,7 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || !portableFiles.includes("async function inspectLocalFile(file)")
   || !portableFiles.includes("async function readZipIndex(blob)")
   || !portableFiles.includes("function createFileStore(")
+  || !portableFiles.includes("function resolveFileTool(")
   || !portableFiles.includes("docbench:files-ready")) {
   throw new Error("Portable Files workspace and local dependencies must be inline.");
 }
@@ -153,14 +155,23 @@ for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_f
     throw new Error("WebMCP Files missing " + tool);
   }
 }
-if (!filesWorkspaceSource.includes('from "./file-store.mjs"')) {
-  throw new Error("Files explorer must reuse canonical file store.");
+if (!filesWorkspaceSource.includes('from "./file-store.mjs"')
+  || !filesWorkspaceSource.includes('from "./file-routing.mjs"')) {
+  throw new Error("Files explorer must reuse canonical file store and tool routing.");
 }
-for (const event of ["docbench:activate-workspace", "docbench:open-document-file",
+const fileRoutingSource = await readFile("public/file-routing.mjs", "utf8");
+for (const event of ["docbench:open-document-file",
   "docbench:open-pdf-file", "docbench:convert-docx-file"]) {
-  if (!filesWorkspaceSource.includes(event)) {
+  if (!fileRoutingSource.includes(event)) {
     throw new Error("Files action router missing " + event);
   }
+}
+if (!fileRoutingSource.includes('info.format === "zip" && info.signature === "zip"')
+  || !fileRoutingSource.includes('info.extensionHint === "docx"')) {
+  throw new Error("DOCX routing must accept verified ZIP containers.");
+}
+if (!filesWorkspaceSource.includes("docbench:activate-workspace")) {
+  throw new Error("Files must activate the selected specialist workspace.");
 }
 for (const [path, event] of [
   ["public/app.js", "docbench:activate-workspace"],
