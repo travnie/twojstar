@@ -22,10 +22,10 @@ _MODEL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 # Explicit allowlist of models permitted for subprocess invocation.
 # Keep this list in sync with models supported by your Claude CLI setup.
 _ALLOWED_MODELS = {
-    "claude-3-5-haiku-latest",
-    "claude-3-5-sonnet-latest",
-    "claude-3-7-sonnet-latest",
-    "claude-sonnet-4-0",
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5",
+    "claude-opus-5-5",
+    "opusplan",
 }
 
 
