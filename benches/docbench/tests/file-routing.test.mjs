@@ -31,9 +31,10 @@ test("Text and SVG source use the existing text editor", () => {
   assert.equal(isTextFile(markdown), true);
   assert.equal(resolveFileTool(markdown, 1024)?.event, "docbench:open-document-file");
   assert.equal(resolveFileTool(header("icon.svg"), 1024)?.event, "docbench:open-document-file");
-  for (const name of ["install.bash", "playlist.xspf", ".gitignore", "script.ts"]) {
+  for (const name of ["install.bash", "playlist.xspf", ".gitignore", "script.ts", "data.csv", "data.tsv"]) {
     assert.equal(resolveFileTool(header(name), 1024)?.event, "docbench:open-document-file", name);
   }
+  assert.equal(resolveFileTool(header("data.csv", [], "application/vnd.ms-excel"), 1024)?.mode, "document");
 });
 
 test("Unknown binary and oversized documents remain inspect-only", () => {
