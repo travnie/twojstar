@@ -111,8 +111,9 @@
     });
   }, true);
   eol.addEventListener("change", () => {
-    if (restoring || batchDepth) return;
+    if (restoring) return;
     mixedEol = false;
+    if (batchDepth) return;
     history.record(snapshot(), { kind: "metadata" });
   }, true);
   filename.addEventListener("blur", () => {
