@@ -124,6 +124,14 @@ async function convertDocx(file) {
 }
 
 button.addEventListener("click", () => input.click());
+document.addEventListener("docbench:convert-docx-file", (event) => {
+  const file = event.detail?.file;
+  if (!file || typeof file.arrayBuffer !== "function") return;
+  void convertDocx(file).catch((error) => {
+    console.error(error);
+    setStatus(error?.message || String(error), true);
+  });
+});
 input.addEventListener("change", async () => {
   const file = input.files?.[0];
   input.value = "";

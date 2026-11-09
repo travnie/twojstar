@@ -1,8 +1,15 @@
 # Doc Bench
 
-> Local-first browser studio for documents and PDFs, designed to edit, inspect and export without uploading source files.
+> Local-first file workbench with contextual text, PDF and DOCX tools. Source files remain in the browser.
 
 Doc Bench runs at https://docbench.travny.workers.dev/.
+
+## Files (start here)
+
+- Import local files and folders, then search, sort, inspect detected signatures and preview without uploads.
+- Open supported text and PDF files in their specialist tools; convert DOCX through the existing local converter.
+- Preview images, audio, video and ZIP indexes when supported. Unsupported formats still show bounded properties and diagnostics.
+- Removing items from the workspace does not delete source files on disk.
 
 ## Documents
 
