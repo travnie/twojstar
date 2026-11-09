@@ -17,6 +17,23 @@ from pathlib import Path
 from scripts.utils import parse_skill_md
 
 
+_MODEL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+def _validate_model_name(model: str) -> str:
+    """Validate model identifier before passing it to subprocess args."""
+    normalized = model.strip()
+    if not normalized:
+        raise ValueError("Model must not be empty.")
+    if normalized.startswith("-"):
+        raise ValueError("Model must not start with '-'.")
+    if not _MODEL_NAME_RE.fullmatch(normalized):
+        raise ValueError(
+            "Invalid model name. Allowed characters: letters, digits, '.', '_', ':', '-'."
+        )
+    return normalized
+
+
 def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
     """Run `claude -p` with the prompt on stdin and return the text response.
 
@@ -25,7 +42,8 @@ def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
     """
     cmd = ["claude", "-p", "--output-format", "text"]
     if model:
-        cmd.extend(["--model", model])
+        safe_model = _validate_model_name(model)
+        cmd.extend(["--model", safe_model])
 
     # Remove CLAUDECODE env var to allow nesting claude -p inside a
     # Claude Code session. The guard is for interactive terminal conflicts;
