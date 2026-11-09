@@ -351,6 +351,7 @@
       }
       if (formatSelect.value === "xml") editor.value = `${formatXml(editor.value)}\n`;
       state.mixedEol = false;
+      globalThis.DocBenchDocumentHistory?.setMixedEol(false);
       document.dispatchEvent(new Event("docbench:document-change"));
       statusBadge.dataset.formatResult = "success";
       renderValidation();
@@ -474,7 +475,7 @@
       eolSelect.value = first.eol.target;
       formatSelect.value = merged.format;
       filenameLabel.textContent = state.filename;
-      globalThis.DocBenchDocumentHistory?.reset();
+      globalThis.DocBenchDocumentHistory?.reset({ mixedEol: state.mixedEol });
       document.dispatchEvent(new CustomEvent("docbench:primary-document-state", {
         detail: {
           filename: state.filename,
@@ -520,7 +521,7 @@
     eolSelect.value = eol.target;
     filenameLabel.textContent = state.filename;
     setFormatFromFile(state.filename, raw);
-    globalThis.DocBenchDocumentHistory?.reset();
+    globalThis.DocBenchDocumentHistory?.reset({ mixedEol: state.mixedEol });
     document.dispatchEvent(new Event("docbench:document-change"));
     renderValidation();
   }
@@ -530,7 +531,7 @@
       state.filename = event.detail.filename;
       filenameLabel.textContent = state.filename;
     }
-    state.mixedEol = false;
+    state.mixedEol = Boolean(event.detail?.mixedEol);
     updateMeta();
   });
 
@@ -554,7 +555,7 @@
     eolSelect.value = "LF";
     editor.value = "";
     filenameLabel.textContent = state.filename;
-    globalThis.DocBenchDocumentHistory?.reset();
+    globalThis.DocBenchDocumentHistory?.reset({ mixedEol: state.mixedEol });
     document.dispatchEvent(new Event("docbench:document-change"));
     renderValidation();
     editor.focus();
