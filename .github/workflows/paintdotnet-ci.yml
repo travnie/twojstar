@@ -27,6 +27,10 @@ on: # yamllint disable-line rule:truthy
         type: choice
         options: [both, ai, ico]
 
+concurrency:
+  group: paintdotnet-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 jobs:

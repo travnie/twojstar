@@ -33,6 +33,9 @@ permissions:
 
 jobs:
   test:
+    concurrency:
+      group: smx-test-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     if: github.event_name != 'schedule' && github.event_name != 'repository_dispatch'
     strategy:
       matrix:
@@ -64,6 +67,10 @@ jobs:
   # releases (GitHub proxy allows only attached repos) but can reach this repo;
   # the cloud environment session-start hook downloads from here.
   backend-mirror:
+    concurrency:
+      group: smx-backend-mirror
+      queue: max
+      cancel-in-progress: false
     if: github.event_name != 'pull_request' && github.event_name != 'repository_dispatch'
     runs-on: ubuntu-slim
     permissions:

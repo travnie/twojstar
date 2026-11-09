@@ -12,6 +12,10 @@ on:
       - ".github/workflows/audacity-vst3-ci.yml"
   workflow_dispatch:
 
+concurrency:
+  group: audacity-vst3-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
