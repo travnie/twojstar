@@ -14,6 +14,8 @@ const count = getNode("#files-count");
 const clearButton = getNode("#files-clear");
 const removeButton = getNode("#files-remove");
 const previewButton = getNode("#files-preview-open");
+const toolButton = getNode("#files-open-tool");
+const toolActions = getNode("#files-inspector-actions");
 const folderInput = getNode("#files-folder-input");
 const folderSelect = getNode("#files-folder-filter");
 const search = getNode("#files-search");
@@ -27,6 +29,7 @@ const dialogHeading = getNode("#files-dialog-name");
 
 const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
+const MAX_EDIT_BYTES = 32 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 48 * 1024 * 1024;
 const MAX_HEX_BYTES = 256;
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
@@ -42,6 +45,7 @@ let query = "";
 let folder = "";
 let sortBy = "name";
 let activeRendered = null;
+let activeTool = null;
 
 function element(tag, className, value) {
   const node = document.createElement(tag);
@@ -323,8 +327,36 @@ async function renderPreview(file, info, revision, target = preview) {
   target.append(element("p", "files-note", `Hex header, first ${formatBytes(bytes.length)}. No decoder selected.`), element("pre", "files-hex", lines.join("\n")));
 }
 
+function updateTool(entry, info) {
+  activeTool = null;
+  toolActions.hidden = true;
+  if (!entry || !info) return;
+
+  if (info.format === "pdf") {
+    activeTool = { id: entry.id, mode: "pdf", event: "docbench:open-pdf-file", label: "Open in PDF tools" };
+  } else if (info.format === "docx" && entry.size <= MAX_EDIT_BYTES) {
+    activeTool = { id: entry.id, mode: "pdf", event: "docbench:convert-docx-file", label: "Convert DOCX to PDF" };
+  } else if (isTextFile(info) && entry.size <= MAX_EDIT_BYTES) {
+    activeTool = { id: entry.id, mode: "document", event: "docbench:open-document-file", label: "Open in text editor" };
+  }
+
+  if (!activeTool) return;
+  toolButton.textContent = activeTool.label;
+  toolActions.hidden = false;
+}
+
+function openInTool() {
+  const entry = store.get(store.activeId());
+  if (!activeTool || !entry || activeTool.id !== entry.id) return;
+  document.dispatchEvent(new CustomEvent(activeTool.event, { detail: { file: entry.file } }));
+  document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
+    detail: { mode: activeTool.mode },
+  }));
+}
+
 async function showActive() {
   const activeId = store.activeId();
+  updateTool(null, null);
   if (activeRendered !== activeId) {
     if (dialog.open) dialog.close();
     releasePreview(dialogBody);
@@ -352,6 +384,7 @@ async function showActive() {
     const info = await inspectLocalFile(file);
     if (revision !== selectionRevision) return;
     appendMetadata(info, performance.now() - start);
+    updateTool(entry, info);
     metadata.prepend(field("Virtual path", entry.path));
     setStatus(info.mismatch ? "Signature mismatch" : info.label, info.mismatch);
     await renderPreview(file, info, revision);
@@ -387,6 +420,13 @@ function addFiles(input) {
   if (result.skipped) setStatus("Only " + result.ids.length + " files added. Queue limit: 100.", true);
 }
 
+toolButton.addEventListener("click", openInTool);
+getNode("#files-new-document").addEventListener("click", () => {
+  getNode("#new-button").click();
+  document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
+    detail: { mode: "document" },
+  }));
+});
 getNode("#files-open").addEventListener("click", () => fileInput.click());
 getNode("#files-open-folder").addEventListener("click", () => folderInput.click());
 fileInput.addEventListener("change", () => {

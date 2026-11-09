@@ -107,7 +107,7 @@ if (!index.includes('src="/document-history-core.js"')
   || !portableFiles.includes("DocBenchDocumentHistory")) {
   throw new Error("Document undo/redo must work in both hosted and portable builds.");
 }
-for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-metadata", "files-preview"]) {
+for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-metadata", "files-preview", "files-open-tool"]) {
   if (!index.includes(`id="${id}"`)) throw new Error(`Files workspace missing ${id}`);
 }
 if (!index.includes('src="/local-files.js"') || !index.includes('src="/files-workspace.mjs"')) {
@@ -133,6 +133,13 @@ if (copiedFiles !== generatedBanner + sharedFiles) {
   throw new Error("Generated local-file controls diverge from shared source.");
 }
 
+if (!index.includes('id="files-tab" class="mode-tab active"')
+  || !index.includes('id="document-workspace" class="workspace" role="tabpanel" aria-labelledby="document-tab" hidden')
+  || !index.includes('id="files-workspace" class="workspace" role="tabpanel" aria-labelledby="files-tab">')
+  || !portableFiles.includes('id="files-tab" class="mode-tab active"')) {
+  throw new Error("Files must be the initial workbench in hosted and portable builds.");
+}
+
 const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
 const webmcpFiles = await readFile("public/webmcp.js", "utf8");
 for (const feature of ["#files-open-folder", "#files-select-visible", "#files-preview-dialog",
@@ -148,6 +155,22 @@ for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_f
 }
 if (!filesWorkspaceSource.includes('from "./file-store.mjs"')) {
   throw new Error("Files explorer must reuse canonical file store.");
+}
+for (const event of ["docbench:activate-workspace", "docbench:open-document-file",
+  "docbench:open-pdf-file", "docbench:convert-docx-file"]) {
+  if (!filesWorkspaceSource.includes(event)) {
+    throw new Error("Files action router missing " + event);
+  }
+}
+for (const [path, event] of [
+  ["public/app.js", "docbench:activate-workspace"],
+  ["public/document-enhancements.mjs", "docbench:open-document-file"],
+  ["public/pdf-app.mjs", "docbench:open-pdf-file"],
+  ["public/docx-converter.mjs", "docbench:convert-docx-file"],
+]) {
+  if (!(await readFile(path, "utf8")).includes(event)) {
+    throw new Error("Editor bridge missing " + event);
+  }
 }
 
 const app = await readFile("public/app.js", "utf8");

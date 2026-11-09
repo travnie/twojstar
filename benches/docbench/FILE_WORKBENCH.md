@@ -30,11 +30,12 @@ Compile, run, use real files, then keep only genuinely useful discoveries.
 
 ## Explorer and manager experience
 
-**Target UX, not yet shipped:** Files becomes the primary explorer and task
-workspace, with Documents/PDF retained as specialist workspaces. The current
-Files tab already accepts up to 100 files, offers a bounded header inspector,
-one-file preview and read-only ZIP listing. It still lacks **multi-selection
-for batch actions**, directory browsing, extraction, packing and preview dialogs.
+**Initial Files-first shell (2026-11-09):** Files opens by default, with
+responsive explorer/preview/inspector panes and contextual links to the existing
+text editor, PDF tools and DOCX converter. The shared file store handles up to
+100 files, bounded header inspection, preview, multiselection and read-only ZIP
+listing. Remaining goals include batch operations, navigable directory trees,
+selective extraction, packing and richer format-specific inspectors.
 
 - **Desktop:** source/tree and breadcrumbs on the left; searchable sortable
   file table or thumbnail grid in the center; contextual inspector on the right.

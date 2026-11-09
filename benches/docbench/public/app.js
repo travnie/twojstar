@@ -660,6 +660,11 @@
     if (focus) tab.focus();
   }
 
+  document.addEventListener("docbench:activate-workspace", (event) => {
+    const tab = modeTabs.find((item) => item.dataset.mode === event.detail?.mode);
+    if (tab) activateModeTab(tab);
+  });
+
   modeTabs.forEach((tab) => {
     tab.addEventListener("click", () => activateModeTab(tab));
     tab.addEventListener("keydown", (event) => {

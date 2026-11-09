@@ -1502,6 +1502,13 @@ function printDocument() {
 
 printButton.addEventListener("click", printDocument);
 
+document.addEventListener("docbench:open-document-file", (event) => {
+  const file = event.detail?.file;
+  if (!file || typeof file.slice !== "function") return;
+  const revision = state.documentRevision += 1;
+  void syncFallbackFile(file, revision);
+});
+
 fileInput.addEventListener("change", (event) => {
   const file = fileInput.files?.[0];
   if (!file) return;

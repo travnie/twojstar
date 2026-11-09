@@ -1,8 +1,14 @@
 # Doc Bench
 
-> Local-first document and PDF studio that runs in the browser without uploading user files.
+> Local-first file workbench for local inspection, editing and PDF maintenance without uploads.
 
 Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY Bench family and is designed for document inspection, editing and PDF maintenance while keeping source files on the device.
+
+## Files (default workspace)
+
+- Add local files or folders; inspect signatures, MIME hints, metadata and previews without uploading content.
+- Open supported text and PDFs in existing specialist tools, or convert DOCX locally; unsupported formats remain inspectable.
+- Selection and active preview are independent. ZIP listing is read-only; extraction and packing are future work.
 
 ## Documents
 

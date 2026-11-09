@@ -7,18 +7,18 @@
   <meta name="google-site-verification" content="Qu5-7v2tWoKtUYUVlQXisaFkGGVEImYlmycKDUg0QBw">
   <meta name="msvalidate.01" content="23A368B2C5F4DF3471A67EA6CB057149">
   <meta name="application-name" content="Doc Bench">
-  <meta name="description" content="Local-first browser studio for editing and previewing TXT, Markdown, JSON, YAML and XML, plus merging, organizing and optimizing PDFs without uploads.">
+  <meta name="description" content="Local-first file workbench for exploring, inspecting and previewing files, editing text and working with PDFs without uploads.">
   <meta name="author" content="trvny">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
-  <meta property="og:title" content="Doc Bench — local document & PDF studio">
-  <meta property="og:description" content="Edit structured text and work with PDFs locally in the browser: previews, validation, merge, pages, bookmarks and optimization.">
+  <meta property="og:title" content="Doc Bench — local file workbench">
+  <meta property="og:description" content="Explore local files, inspect their properties and open text, PDF and DOCX tools without uploads.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Doc Bench">
   <meta property="og:url" content="https://docbench.travny.workers.dev/">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Doc Bench — local document & PDF studio">
-  <meta name="twitter:description" content="Local-first document editing, rich previews and PDF tools without uploads.">
-  <title>Doc Bench — Document & PDF Studio</title>
+  <meta name="twitter:title" content="Doc Bench — local file workbench">
+  <meta name="twitter:description" content="Local-first file exploration, previews, text editing and PDF tools without uploads.">
+  <title>Doc Bench — Local File Workbench</title>
   <link rel="canonical" href="https://docbench.travny.workers.dev/">
   <link rel="sitemap" type="application/xml" href="/sitemap.xml">
   <link rel="alternate" type="text/markdown" href="/index.md" title="Doc Bench Markdown">
@@ -47,17 +47,17 @@
           <h1>Doc Bench</h1>
           <span class="privacy-chip"><span class="privacy-dot" aria-hidden="true"></span>Local only</span>
         </div>
-        <p class="tagline">Document & PDF Studio · edit, inspect and export without uploading.</p>
+        <p class="tagline">Local file workbench · explore, preview, inspect and open the right tool without uploading.</p>
       </div>
     </header>
 
-    <nav class="mode-tabs" role="tablist" aria-label="Workspace">
-      <button id="document-tab" class="mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="document-workspace" data-mode="document">Documents</button>
-      <button id="pdf-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="pdf-workspace" data-mode="pdf">PDF</button>
-      <button id="files-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="files-workspace" data-mode="files">Files</button>
+    <nav class="mode-tabs" role="tablist" aria-label="File workbench tools">
+      <button id="files-tab" class="mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="files-workspace" data-mode="files">Files</button>
+      <button id="document-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="document-workspace" data-mode="document">Text editor</button>
+      <button id="pdf-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="pdf-workspace" data-mode="pdf">PDF tools</button>
     </nav>
 
-    <section id="document-workspace" class="workspace" role="tabpanel" aria-labelledby="document-tab">
+    <section id="document-workspace" class="workspace" role="tabpanel" aria-labelledby="document-tab" hidden>
       <div class="toolbar document-toolbar">
         <div class="toolbar-group document-file-group">
           <button id="open-button" class="button compact primary" type="button">Open file</button>
@@ -286,18 +286,19 @@
       </div>
     </section>
 
-    <section id="files-workspace" class="workspace" role="tabpanel" aria-labelledby="files-tab" hidden>
+    <section id="files-workspace" class="workspace" role="tabpanel" aria-labelledby="files-tab">
       <div class="toolbar files-toolbar">
         <div class="files-toolbar-actions">
           <button id="files-open" class="button compact primary" type="button">Add files</button>
           <button id="files-open-folder" class="button compact" type="button">Add folder</button>
+          <button id="files-new-document" class="button compact" type="button">New document</button>
           <button id="files-preview-open" class="button compact" type="button" disabled>Open preview</button>
           <button id="files-remove" class="button compact" type="button" disabled>Remove selected</button>
           <button id="files-clear" class="button compact" type="button" disabled>Clear list</button>
           <input id="files-input" type="file" multiple hidden>
           <input id="files-folder-input" type="file" webkitdirectory directory multiple hidden>
         </div>
-        <p class="files-hint">Local inspection only · no uploads or telemetry</p>
+        <p class="files-hint">Source files stay untouched · no uploads or telemetry</p>
       </div>
       <div class="files-layout">
         <aside class="files-queue" aria-label="Selected files">
@@ -323,15 +324,25 @@
           </div>
           <div id="files-list" class="files-list" role="group" aria-label="Files to inspect"></div>
         </aside>
-        <section class="files-details" aria-label="File inspector">
-          <div class="panel-header">
-            <strong id="files-selected">Choose a file</strong>
-            <span id="files-status" role="status" aria-live="polite">Files remain on this device.</span>
+        <section class="files-details" aria-label="File workspace">
+          <div class="files-preview-pane">
+            <div class="panel-header">
+              <strong>Preview</strong><span>Read-only inspection</span>
+            </div>
+            <div id="files-preview" class="files-preview" role="region" aria-label="Local file preview">
+              <p class="files-empty">Open files or drop them here to inspect their headers.</p>
+            </div>
           </div>
-          <dl id="files-metadata" class="files-metadata"></dl>
-          <div id="files-preview" class="files-preview" role="region" aria-label="Local file preview">
-            <p class="files-empty">Open files or drop them here to inspect their headers.</p>
-          </div>
+          <aside class="files-inspector" aria-label="File inspector">
+            <div class="panel-header files-inspector-header">
+              <strong id="files-selected">Choose a file</strong>
+              <span id="files-status" role="status" aria-live="polite">Files remain on this device.</span>
+            </div>
+            <div id="files-inspector-actions" class="files-inspector-actions" hidden>
+              <button id="files-open-tool" class="button compact primary" type="button">Open in tool</button>
+            </div>
+            <dl id="files-metadata" class="files-metadata"></dl>
+          </aside>
         </section>
       </div>
     </section>
