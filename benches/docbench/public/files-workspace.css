@@ -391,3 +391,26 @@
 }
 
 .files-row-selected .files-item { background: rgb(224 68 56 / 15%); }
+.files-audio-dock {
+  position: sticky;
+  bottom: 8px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 35%);
+}
+.files-audio-dock[hidden] { display: none; }
+.files-audio-title { min-width: 0; overflow-wrap: anywhere; }
+.files-audio-title strong { display: block; }
+.files-audio-title span { display: block; font-size: .76rem; color: var(--muted); }
+.files-audio-dock audio { width: 100%; min-width: 0; }
+@media (max-width: 800px) {
+  .files-audio-dock { grid-template-columns: minmax(0, 1fr) auto; }
+  .files-audio-dock audio { grid-column: 1 / -1; grid-row: 2; }
+}
