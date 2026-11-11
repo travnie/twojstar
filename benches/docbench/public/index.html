@@ -350,7 +350,12 @@
     <dialog id="files-preview-dialog" class="files-preview-dialog" aria-labelledby="files-dialog-name">
       <div class="files-dialog-header">
         <strong id="files-dialog-name">File preview</strong>
-        <button id="files-dialog-close" class="button compact" type="button">Close</button>
+        <div class="files-dialog-controls" role="group" aria-label="Preview navigation">
+          <span id="files-dialog-position" class="files-dialog-position" aria-live="polite"></span>
+          <button id="files-dialog-previous" class="button compact" type="button" disabled>Previous file</button>
+          <button id="files-dialog-next" class="button compact" type="button" disabled>Next file</button>
+          <button id="files-dialog-close" class="button compact" type="button">Close</button>
+        </div>
       </div>
       <div id="files-dialog-body" class="files-preview"></div>
     </dialog>

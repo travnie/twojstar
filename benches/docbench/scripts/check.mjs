@@ -143,6 +143,16 @@ if (!index.includes('id="files-tab" class="mode-tab active"')
 }
 
 const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
+for (const id of ["files-dialog-previous", "files-dialog-next", "files-dialog-position"]) {
+  if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
+    throw new Error("Preview navigation missing in hosted or portable build: " + id);
+  }
+}
+if (!filesWorkspaceSource.includes("adjacentVisibleId(dialogIds, dialogId, step)")
+  || !filesWorkspaceSource.includes("isCurrentPreview(dialogBody, revision)")
+  || !portableFiles.includes("function adjacentVisibleId(ids, currentId, step)")) {
+  throw new Error("Preview navigation must use the canonical visible IDs and cancel stale dialog previews.");
+}
 const webmcpFiles = await readFile("public/webmcp.js", "utf8");
 for (const feature of ["#files-open-folder", "#files-select-visible", "#files-preview-dialog",
   "#files-search", "#files-view-grid"]) {

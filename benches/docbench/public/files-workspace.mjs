@@ -1,6 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
-import { createFileStore } from "./file-store.mjs";
+import { createFileStore, adjacentVisibleId } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
@@ -27,6 +27,9 @@ const selectVisible = getNode("#files-select-visible");
 const dialog = getNode("#files-preview-dialog");
 const dialogBody = getNode("#files-dialog-body");
 const dialogHeading = getNode("#files-dialog-name");
+const dialogPrevious = getNode("#files-dialog-previous");
+const dialogNext = getNode("#files-dialog-next");
+const dialogPosition = getNode("#files-dialog-position");
 
 const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
@@ -45,6 +48,16 @@ let folder = "";
 let sortBy = "name";
 let activeRendered = null;
 let activeTool = null;
+let dialogIds = [];
+let dialogId = null;
+let dialogRevision = 0;
+let dialogFocusReturn = null;
+
+function isCurrentPreview(target, revision) {
+  return target === dialogBody
+    ? dialog.open && revision === dialogRevision
+    : revision === selectionRevision;
+}
 
 function element(tag, className, value) {
   const node = document.createElement(tag);
@@ -186,7 +199,7 @@ function renderList() {
 
 async function showZipContents(file, revision, target = preview) {
   const result = await readZipIndex(file);
-  if (revision !== selectionRevision) return;
+  if (!isCurrentPreview(target, revision)) return;
   const box = element("section", "files-zip");
   box.append(element("h3", "", `ZIP contents · ${result.count} entries`));
   box.append(element("p", "files-note", "Index only. No decompression or automatic extraction."));
@@ -225,7 +238,7 @@ function mediaPreview(file, format, revision, target = preview) {
   previewUrls.set(target, url);
   const fallback = element("p", "files-note", "Native browser preview. Codec availability varies.");
   const onError = () => {
-    if (revision === selectionRevision) {
+    if (isCurrentPreview(target, revision)) {
       fallback.textContent = "This browser cannot decode the preview. The original file is unchanged.";
     }
   };
@@ -265,7 +278,7 @@ async function renderPreview(file, info, revision, target = preview) {
     try {
       await showZipContents(file, revision, target);
     } catch (error) {
-      if (revision === selectionRevision) emptyPreview(error.message || "ZIP index unavailable.", target);
+      if (isCurrentPreview(target, revision)) emptyPreview(error.message || "ZIP index unavailable.", target);
     }
     return;
   }
@@ -287,7 +300,7 @@ async function renderPreview(file, info, revision, target = preview) {
   }
   if (isTextFile(info)) {
     const source = await file.slice(0, MAX_TEXT_BYTES).text();
-    if (revision !== selectionRevision) return;
+    if (!isCurrentPreview(target, revision)) return;
     const box = element("pre", "files-text", source);
     target.append(box);
     if (file.size > MAX_TEXT_BYTES) {
@@ -303,7 +316,7 @@ async function renderPreview(file, info, revision, target = preview) {
     return;
   }
   const bytes = new Uint8Array(await file.slice(0, MAX_HEX_BYTES).arrayBuffer());
-  if (revision !== selectionRevision) return;
+  if (!isCurrentPreview(target, revision)) return;
   if (!bytes.length) {
     emptyPreview("Empty file.", target);
     return;
@@ -408,24 +421,52 @@ async function showActive() {
   }
 }
 
-async function openDialog() {
-  const entry = store.get(store.activeId());
-  if (!entry) return;
+function updateDialogNavigation() {
+  const index = dialogIds.indexOf(dialogId);
+  dialogPrevious.disabled = index <= 0;
+  dialogNext.disabled = index < 0 || index >= dialogIds.length - 1;
+  dialogPosition.textContent = index >= 0 ? `${index + 1} / ${dialogIds.length}` : "";
+}
+
+async function showDialogEntry(id) {
+  if (!dialog.open) return;
+  const entry = store.get(id);
+  if (!entry) {
+    dialog.close();
+    return;
+  }
+  const revision = ++dialogRevision;
+  dialogId = id;
   dialogHeading.dataset.i18nSkip = "";
   dialogHeading.textContent = entry.path;
-  dialog.showModal();
-  const revision = selectionRevision;
+  updateDialogNavigation();
   releasePreview(dialogBody);
   emptyPreview("Preparing preview…", dialogBody);
   try {
     const info = await inspectLocalFile(entry.file);
-    if (!dialog.open || revision !== selectionRevision) return;
+    if (!isCurrentPreview(dialogBody, revision)) return;
     await renderPreview(entry.file, info, revision, dialogBody);
   } catch (error) {
-    if (!dialog.open || revision !== selectionRevision) return;
+    if (!isCurrentPreview(dialogBody, revision)) return;
     releasePreview(dialogBody);
     emptyPreview(error.message || "Preview unavailable.", dialogBody);
   }
+}
+
+function navigateDialog(step) {
+  const next = adjacentVisibleId(dialogIds, dialogId, step);
+  if (next) void showDialogEntry(next);
+}
+
+function openDialog() {
+  if (dialog.open) return;
+  const currentId = store.activeId();
+  if (!currentId || !store.get(currentId)) return;
+  dialogIds = currentVisible().map((entry) => entry.id);
+  if (!dialogIds.includes(currentId)) dialogIds = [currentId];
+  dialogFocusReturn = document.activeElement;
+  dialog.showModal();
+  void showDialogEntry(currentId);
 }
 
 function addFiles(input) {
@@ -453,11 +494,29 @@ folderInput.addEventListener("change", () => {
 });
 clearButton.addEventListener("click", () => store.clear());
 removeButton.addEventListener("click", () => store.remove(store.selectedIds()));
-previewButton.addEventListener("click", () => openDialog());
+previewButton.addEventListener("click", openDialog);
 getNode("#files-dialog-close").addEventListener("click", () => dialog.close());
+dialogPrevious.addEventListener("click", () => navigateDialog(-1));
+dialogNext.addEventListener("click", () => navigateDialog(1));
+dialog.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey
+    || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  if (event.target instanceof Element
+    && event.target.closest("audio, video, input, select, textarea, [contenteditable]")) return;
+  event.preventDefault();
+  navigateDialog(event.key === "ArrowRight" ? 1 : -1);
+});
 dialog.addEventListener("close", () => {
+  dialogRevision += 1;
+  dialogIds = [];
+  dialogId = null;
   releasePreview(dialogBody);
-  previewButton.focus();
+  dialogPosition.textContent = "";
+  const focusTarget = dialogFocusReturn;
+  dialogFocusReturn = null;
+  if (focusTarget instanceof HTMLElement && focusTarget.isConnected
+    && !focusTarget.disabled && !focusTarget.closest("[hidden]")) focusTarget.focus();
+  else if (!previewButton.disabled) previewButton.focus();
 });
 dialog.addEventListener("click", (event) => {
   if (event.target === dialog) dialog.close();

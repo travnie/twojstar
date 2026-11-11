@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createFileStore } from "../public/file-store.mjs";
+import { createFileStore, adjacentVisibleId } from "../public/file-store.mjs";
 
 function file(name, size = 4, path = "") {
   return {
@@ -77,6 +77,23 @@ test("agent snapshots are bounded and private by default", () => {
   assert.equal(store.snapshot({ limit: 100 }).truncated, false);
   store.clear();
   assert.equal(store.count(), 0);
+});
+
+test("preview navigation follows visible order without changing selection", () => {
+  const store = createFileStore();
+  const { ids } = store.addFiles([file("third.txt", 30), file("first.txt", 10), file("second.txt", 20)]);
+  store.setSelection([ids[0]]);
+  store.setActive(ids[1]);
+  const visible = store.visible({ sort: "size" }).map((entry) => entry.id);
+  assert.deepEqual(visible, [ids[1], ids[2], ids[0]]);
+  assert.equal(adjacentVisibleId(visible, ids[1], 1), ids[2]);
+  assert.equal(adjacentVisibleId(visible, ids[2], -1), ids[1]);
+  assert.equal(adjacentVisibleId(visible, ids[0], 1), null);
+  assert.equal(adjacentVisibleId(visible, ids[1], -1), null);
+  assert.equal(adjacentVisibleId(visible, "stale", 1), null);
+  assert.equal(adjacentVisibleId(visible, ids[1], 0), null);
+  assert.equal(store.activeId(), ids[1]);
+  assert.deepEqual(store.selectedIds(), [ids[0]]);
 });
 
 test("regular filenames with a backslash stay flat", () => {
