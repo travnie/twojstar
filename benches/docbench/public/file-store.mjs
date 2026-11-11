@@ -1,5 +1,12 @@
 // Canonical local-only virtual file queue; never reads file bytes on insertion.
 let storeSerial = 0;
+
+export function adjacentVisibleId(ids, currentId, step) {
+  if (!Array.isArray(ids) || (step !== -1 && step !== 1)) return null;
+  const index = ids.indexOf(currentId);
+  const next = index + step;
+  return index >= 0 && next >= 0 && next < ids.length ? ids[next] : null;
+}
 export function createFileStore({ limit = 100 } = {}) {
   const mountId = "local-" + ++storeSerial;
   const entries = new Map();
