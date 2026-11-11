@@ -39,6 +39,9 @@ test("Text and SVG source use the existing text editor", () => {
 
 test("Unknown binary and oversized documents remain inspect-only", () => {
   assert.equal(resolveFileTool(header("unknown.bin"), 4), null);
+  for (const name of ["constructor", "toString", "notes.constructor"]) {
+    assert.equal(resolveFileTool(header(name), 4), null, name);
+  }
   const disguisedPdf = header("notes.txt", [37, 80, 68, 70, 45], "text/plain");
   assert.equal(isTextFile(disguisedPdf), false);
   assert.equal(resolveFileTool(disguisedPdf, 1024)?.event, "docbench:open-pdf-file");

@@ -1261,8 +1261,11 @@ function countOutlineItems(items = state.outline) {
 document.addEventListener("docbench:open-pdf-bytes", (event) => {
   const { bytes, filename, sourceName, sourceKind } = event.detail || {};
   if (!(bytes instanceof Uint8Array) || !filename) return;
-  if (!allowPdfReplacement()) return;
   event.preventDefault();
+  if (!allowPdfReplacement()) {
+    event.detail.openPromise = Promise.resolve({ ok: false, cancelled: true, error: "PDF replacement canceled." });
+    return;
+  }
 
   const file = new File([bytes], filename, { type: "application/pdf" });
   event.detail.openPromise = openFiles([file], false)

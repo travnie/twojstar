@@ -335,10 +335,6 @@ async function openInTool() {
   const entry = store.get(store.activeId());
   if (openingTool || !activeTool || !entry || activeTool.id !== entry.id) return;
   const action = { ...activeTool };
-  if (action.mode === "document" && !document.dispatchEvent(
-    new Event("docbench:confirm-document-replace", { cancelable: true })
-  )) return;
-
   openingTool = true;
   toolButton.disabled = true;
   setStatus("Opening in specialist tool…");
@@ -439,8 +435,8 @@ function addFiles(input) {
 
 toolButton.addEventListener("click", openInTool);
 getNode("#files-new-document").addEventListener("click", () => {
-  if (!document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }))) return;
-  getNode("#new-button").click();
+  const newButton = getNode("#new-button");
+  if (!newButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))) return;
   document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
     detail: { mode: "document" },
   }));

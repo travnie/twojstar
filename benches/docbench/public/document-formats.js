@@ -79,11 +79,12 @@
   function formatHintFromFilename(name) {
     const base = basename(name);
     if (!base) return null;
-    if (filenameToFormat[base]) return filenameToFormat[base];
+    if (Object.hasOwn(filenameToFormat, base)) return filenameToFormat[base];
     if (base.startsWith(".env.")) return "env";
     const dot = base.lastIndexOf(".");
     if (dot < 0 || dot === base.length - 1) return null;
-    return extensionToFormat[base.slice(dot + 1)] || null;
+    const extension = base.slice(dot + 1);
+    return Object.hasOwn(extensionToFormat, extension) ? extensionToFormat[extension] : null;
   }
 
   function formatFromFilename(name) {

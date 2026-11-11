@@ -55,6 +55,9 @@ assert.equal(formats.mimeFor("stations.m3u"), "audio/x-mpegurl;charset=utf-8");
 assert.equal(formats.mimeFor("playlist.xspf"), "application/xspf+xml;charset=utf-8");
 assert.ok(formats.formatIds.includes("config"));
 assert.ok(formats.formatIds.includes("playlist"));
+for (const name of ["constructor", "toString", "hasOwnProperty", "notes.constructor"]) {
+  assert.equal(formats.formatHintFromFilename(name), null, name);
+}
 
 for (const [filename, content, expected] of [
   ["payload.txt", "{\"ok\":true}", "json"],
