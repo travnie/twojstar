@@ -16,6 +16,11 @@ const clearButton = getNode("#files-clear");
 const removeButton = getNode("#files-remove");
 const previewButton = getNode("#files-preview-open");
 const toolButton = getNode("#files-open-tool");
+const audioOpenButton = getNode("#files-play-audio");
+const audioDock = getNode("#files-audio-dock");
+const audioDockTitle = getNode("#files-audio-title");
+const audioDockStatus = getNode("#files-audio-status");
+const audioDockPlayer = getNode("#files-audio-player");
 const toolActions = getNode("#files-inspector-actions");
 const folderInput = getNode("#files-folder-input");
 const folderSelect = getNode("#files-folder-filter");
@@ -48,6 +53,9 @@ let folder = "";
 let sortBy = "name";
 let activeRendered = null;
 let activeTool = null;
+let activeAudioTool = null;
+let audioDockId = null;
+let audioDockUrl = null;
 let dialogIds = [];
 let dialogId = null;
 let dialogRevision = 0;
@@ -69,6 +77,17 @@ function element(tag, className, value) {
 function setStatus(message, failed = false) {
   status.textContent = message;
   status.classList.toggle("files-error", failed);
+}
+
+function closeAudioDock() {
+  audioDockPlayer.pause();
+  audioDockPlayer.removeAttribute("src");
+  audioDockPlayer.load();
+  if (audioDockUrl) URL.revokeObjectURL(audioDockUrl);
+  audioDockUrl = null;
+  audioDockId = null;
+  audioDock.hidden = true;
+  audioDockStatus.textContent = "";
 }
 
 function releasePreview(target = preview) {
@@ -231,6 +250,28 @@ const MEDIA_MIME = Object.freeze({
   mov: "video/quicktime", matroska: "video/x-matroska",
 });
 
+function playAudioDock() {
+  const selection = activeAudioTool;
+  const entry = store.get(selection?.id);
+  if (!entry || entry.id !== store.activeId() || !AUDIO_FORMATS.has(selection.format)) return;
+  closeAudioDock();
+  const blob = entry.file.slice(0, entry.file.size, MEDIA_MIME[selection.format]);
+  audioDockUrl = URL.createObjectURL(blob);
+  audioDockId = entry.id;
+  audioDockTitle.dataset.i18nSkip = "";
+  audioDockTitle.textContent = entry.path;
+  audioDockPlayer.src = audioDockUrl;
+  audioDock.hidden = false;
+  preview.querySelector("audio")?.pause();
+  dialogBody.querySelector("audio")?.pause();
+  const started = audioDockPlayer.play();
+  if (started && typeof started.catch === "function") {
+    void started.catch(() => {
+      if (audioDockId === entry.id) audioDockStatus.textContent = "Press Play to start audio.";
+    });
+  }
+}
+
 function mediaPreview(file, format, revision, target = preview) {
   // Passive MIME + concrete media element. Never embed SVG or active documents.
   const blob = file.slice(0, file.size, MEDIA_MIME[format]);
@@ -333,13 +374,22 @@ async function renderPreview(file, info, revision, target = preview) {
 
 function updateTool(entry, info) {
   activeTool = null;
+  activeAudioTool = null;
   toolActions.hidden = true;
+  toolButton.hidden = true;
+  audioOpenButton.hidden = true;
   if (!entry || !info) return;
 
+  if (AUDIO_FORMATS.has(info.format)) {
+    activeAudioTool = { id: entry.id, format: info.format };
+    audioOpenButton.hidden = false;
+    toolActions.hidden = false;
+  }
   const action = resolveFileTool(info, entry.size);
   if (!action) return;
   activeTool = { ...action, id: entry.id };
   toolButton.textContent = action.label;
+  toolButton.hidden = false;
   toolActions.hidden = false;
 }
 
@@ -475,6 +525,11 @@ function addFiles(input) {
 }
 
 toolButton.addEventListener("click", openInTool);
+audioOpenButton.addEventListener("click", playAudioDock);
+getNode("#files-audio-close").addEventListener("click", closeAudioDock);
+audioDockPlayer.addEventListener("error", () => {
+  if (audioDockId) audioDockStatus.textContent = "This browser cannot play the selected audio codec.";
+});
 getNode("#files-new-document").addEventListener("click", () => {
   const newButton = getNode("#new-button");
   if (!newButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))) return;
@@ -541,11 +596,17 @@ selectVisible.addEventListener("click", () => {
 bindFileDrop(getNode("#files-drop-zone"), addFiles);
 bindFileDrop(list, addFiles);
 store.subscribe(() => {
+  if (audioDockId && !store.get(audioDockId)) closeAudioDock();
   renderList();
   if (activeRendered !== store.activeId()) showActive();
 });
+const filesPanel = getNode("#files-workspace");
+new MutationObserver(() => {
+  if (filesPanel.hidden && audioDockId) closeAudioDock();
+}).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
+  closeAudioDock();
   releasePreview();
   releasePreview(dialogBody);
   store.clear();

@@ -340,10 +340,19 @@
             </div>
             <div id="files-inspector-actions" class="files-inspector-actions" hidden>
               <button id="files-open-tool" class="button compact primary" type="button">Open in tool</button>
+              <button id="files-play-audio" class="button compact" type="button" hidden>Play audio</button>
             </div>
             <dl id="files-metadata" class="files-metadata"></dl>
           </aside>
         </section>
+      </div>
+      <div id="files-audio-dock" class="files-audio-dock" role="region" aria-label="Audio mini-player" hidden>
+        <div class="files-audio-title">
+          <strong id="files-audio-title">Audio</strong>
+          <span id="files-audio-status" role="status" aria-live="polite"></span>
+        </div>
+        <audio id="files-audio-player" controls preload="metadata"></audio>
+        <button id="files-audio-close" class="button compact" type="button">Close player</button>
       </div>
     </section>
 

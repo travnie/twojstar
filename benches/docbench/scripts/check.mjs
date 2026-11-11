@@ -143,6 +143,16 @@ if (!index.includes('id="files-tab" class="mode-tab active"')
 }
 
 const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
+for (const id of ["files-play-audio", "files-audio-dock", "files-audio-player", "files-audio-close"]) {
+  if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
+    throw new Error("Audio dock missing in hosted or portable build: " + id);
+  }
+}
+for (const guard of ["function closeAudioDock()", "URL.revokeObjectURL(audioDockUrl)",
+  "if (audioDockId && !store.get(audioDockId)) closeAudioDock()",
+  "if (filesPanel.hidden && audioDockId) closeAudioDock()"]) {
+  if (!filesWorkspaceSource.includes(guard)) throw new Error("Audio dock cleanup missing: " + guard);
+}
 for (const id of ["files-dialog-previous", "files-dialog-next", "files-dialog-position"]) {
   if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
     throw new Error("Preview navigation missing in hosted or portable build: " + id);
