@@ -120,6 +120,7 @@ async function convertDocx(file) {
       return { opened: false };
     }
     const result = event.detail.openPromise ? await event.detail.openPromise : { ok: true };
+    if (result?.cancelled) return { opened: false, cancelled: true };
     if (!result?.ok) throw new Error(result?.error || "Converted PDF could not be opened.");
     return { opened: true };
   } finally {
@@ -137,7 +138,9 @@ function requestConversion(file) {
   return task
     .then((result) => result?.opened
       ? { ok: true }
-      : { ok: false, cancelled: true, error: "Converted PDF was downloaded instead of opened." })
+      : { ok: false, cancelled: true, error: result?.cancelled
+        ? "PDF replacement canceled."
+        : "Converted PDF was downloaded instead of opened." })
     .catch((error) => {
       console.error(error);
       setStatus(error?.message || String(error), true);

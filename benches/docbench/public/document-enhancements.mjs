@@ -65,6 +65,10 @@ document.addEventListener("docbench:confirm-document-replace", (event) => {
   )) event.preventDefault();
 });
 
+function confirmDocumentReplacement() {
+  return document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }));
+}
+
 const nativeOpenSupported = globalThis.isSecureContext
   && typeof globalThis.showOpenFilePicker === "function";
 const nativeSaveSupported = globalThis.isSecureContext
@@ -1499,7 +1503,7 @@ openButton.addEventListener("click", (event) => {
       statusBadge.title = error?.message || String(error);
       return;
     }
-    if (!handle) return;
+    if (!handle || !confirmDocumentReplacement()) return;
     const revision = state.documentRevision += 1;
     try {
       await loadNativeHandle(handle, revision);
@@ -1538,6 +1542,10 @@ document.addEventListener("docbench:open-document-file", (event) => {
   const file = event.detail?.file;
   if (!file || typeof file.slice !== "function") return;
   event.preventDefault();
+  if (!confirmDocumentReplacement()) {
+    event.detail.openPromise = Promise.resolve({ ok: false, cancelled: true });
+    return;
+  }
   const revision = state.documentRevision += 1;
   event.detail.openPromise = syncFallbackFile(file, revision);
 });
@@ -1546,6 +1554,10 @@ fileInput.addEventListener("change", (event) => {
   const file = fileInput.files?.[0];
   if (!file) return;
   event.stopImmediatePropagation();
+  if (!confirmDocumentReplacement()) {
+    fileInput.value = "";
+    return;
+  }
   const revision = state.documentRevision += 1;
   void syncFallbackFile(file, revision).finally(() => {
     if (state.documentRevision === revision) fileInput.value = "";
@@ -1558,6 +1570,7 @@ dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
   event.stopImmediatePropagation();
   dropZone.classList.remove("drop-active");
+  if (!confirmDocumentReplacement()) return;
   const revision = state.documentRevision += 1;
   void syncFallbackFile(file, revision);
 }, true);
@@ -1595,6 +1608,11 @@ filenameLabel.addEventListener("keydown", (event) => {
   }
 });
 filenameLabel.addEventListener("blur", commitFilenameEdit);
+newButton.addEventListener("click", (event) => {
+  if (confirmDocumentReplacement()) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
 newButton.addEventListener("click", () => {
   queueMicrotask(() => {
     state.documentRevision += 1;

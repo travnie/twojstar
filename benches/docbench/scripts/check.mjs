@@ -184,11 +184,27 @@ for (const [path, event] of [
   }
 }
 if (!filesWorkspaceSource.includes("await request.detail.openPromise")
-  || !filesWorkspaceSource.includes("docbench:confirm-document-replace")
   || !(await readFile("public/document-enhancements.mjs", "utf8")).includes("hasUnsavedDocument()")
   || !(await readFile("public/pdf-app.mjs", "utf8")).includes("allowPdfReplacement()")
   || !(await readFile("public/docx-converter.mjs", "utf8")).includes("conversionInFlight")) {
   throw new Error("Files-to-editor actions must await safe opening, protect edits and serialize conversions.");
+}
+
+const docBridge = await readFile("public/document-enhancements.mjs", "utf8");
+const appBridge = await readFile("public/app.js", "utf8");
+const pdfBridge = await readFile("public/pdf-app.mjs", "utf8");
+const converterBridge = await readFile("public/docx-converter.mjs", "utf8");
+for (const [source, pattern, label] of [
+  [docBridge, /document\.addEventListener\("docbench:open-document-file",[\s\S]{0,300}?confirmDocumentReplacement\(\)/, "Files text open"],
+  [docBridge, /fileInput\.addEventListener\("change",[\s\S]{0,250}?confirmDocumentReplacement\(\)/, "Text file input"],
+  [docBridge, /dropZone\.addEventListener\("drop",[\s\S]{0,300}?confirmDocumentReplacement\(\)/, "Text drop"],
+  [docBridge, /openButton\.addEventListener\("click",[\s\S]{0,1300}?confirmDocumentReplacement\(\)/, "Native text picker"],
+  [docBridge, /newButton\.addEventListener\("click",[\s\S]{0,160}?confirmDocumentReplacement\(\)/, "New document"],
+  [appBridge, /async function mergeQueuedFiles\(\) \{[\s\S]{0,450}?docbench:confirm-document-replace/, "Text merge"],
+  [pdfBridge, /document\.addEventListener\("docbench:open-pdf-bytes",[\s\S]{0,350}?cancelled: true/, "Converted PDF cancellation"],
+  [converterBridge, /if \(conversionInFlight\)[\s\S]{0,180}?already running/, "Single-flight DOCX conversion"],
+]) {
+  if (!pattern.test(source)) throw new Error("Document safety wiring missing: " + label);
 }
 
 const app = await readFile("public/app.js", "utf8");

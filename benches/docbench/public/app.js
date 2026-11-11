@@ -437,6 +437,8 @@
 
   async function mergeQueuedFiles() {
     if (mergeBusy || mergeQueue.length < 2) return;
+    if (!document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }))) return;
+    const originalEditorValue = editor.value;
     const queued = [...mergeQueue];
     mergeBusy = true;
     updateMergeControls();
@@ -465,6 +467,8 @@
       }
 
       const merged = mergeDocuments(documents);
+      if (editor.value !== originalEditorValue
+        && !document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }))) return;
       const first = documents[0];
       state.filename = merged.filename;
       state.bom = first.bom;
@@ -511,6 +515,7 @@
   }
 
   async function openFile(file) {
+    if (!document.dispatchEvent(new Event("docbench:confirm-document-replace", { cancelable: true }))) return;
     const { raw, bom, eol } = await readTextFile(file);
     resetMergeQueue({ clearFeedback: true });
 

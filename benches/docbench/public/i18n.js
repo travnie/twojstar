@@ -20,6 +20,7 @@
   ["Showing the first 32 proposed changes. All selected changes will apply.","Wyświetlono pierwsze 32 zmiany. Wszystkie zaznaczone zostaną zastosowane."],
   ["Document changed. Preview repairs again.","Dokument uległ zmianie. Ponownie sprawdź podgląd napraw."],
   ["Files","Pliki"],
+  ["Convert DOCX to PDF","Konwertuj DOCX na PDF"],
   ["Add folder","Dodaj folder"],
   ["Open preview","Otwórz podgląd"],
   ["Remove selected","Usuń zaznaczone"],
@@ -271,7 +272,9 @@
     ["Source files stay untouched · no uploads or telemetry", "Local inspection only · no uploads or telemetry"],
   ]) {
     const translated = knownTranslations.get(existingLabel);
-    if (translated && !knownTranslations.has(nextLabel)) pairs.push([nextLabel, translated]);
+    if (translated && translated !== existingLabel && !knownTranslations.has(nextLabel)) {
+      pairs.push([nextLabel, translated]);
+    }
   }
 
   globalThis.BenchI18n = globalThis.createBenchI18n({
