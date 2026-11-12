@@ -121,6 +121,8 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || !portableFiles.includes("async function inspectLocalFile(file)")
   || !portableFiles.includes("async function readZipIndex(blob)")
   || !portableFiles.includes("function createFileStore(")
+  || !portableFiles.includes("function importLocalFile(")
+  || !portableFiles.includes("importFile: (file) => importLocalFile(store, file,")
   || !portableFiles.includes("function resolveFileTool(")
   || !portableFiles.includes("docbench:files-ready")) {
   throw new Error("Portable Files workspace and local dependencies must be inline.");

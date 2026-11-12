@@ -1,6 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
-import { createFileStore, adjacentVisibleId } from "./file-store.mjs";
+import { createFileStore, adjacentVisibleId, importLocalFile } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
@@ -612,6 +612,17 @@ window.addEventListener("pagehide", (event) => {
   store.clear();
 });
 globalThis.DocBenchFiles = Object.freeze({
+  version: 1,
+  importFile: (file) => importLocalFile(store, file, () => {
+    query = "";
+    search.value = "";
+    folder = "";
+    folderSelect.value = "";
+    renderList();
+    document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
+      detail: { mode: "files" },
+    }));
+  }),
   snapshot: (options) => store.snapshot(options),
   inspect: async (id) => {
     const entry = store.get(id);

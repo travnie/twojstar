@@ -32,3 +32,19 @@ npm run dev --workspace=docbench
 ```
 
 Build also produces ignored `public/portable.html`. Cloudflare Workers Builds: root `benches`, commands `npm run build:docbench`, `npm run deploy:docbench`, `npm run preview:docbench`. Watch `benches/docbench/**`, `benches/shared/**`, `benches/scripts/**`, `benches/package.json` and `benches/package-lock.json`. ZIP extraction and broader archive/media engines are not implemented yet.
+
+## Embedded file ingress (v1)
+
+Android and other first-party shells can pass a browser `File` to
+`globalThis.DocBenchFiles.importFile(file)` after the `docbench:files-ready`
+event. This synchronous API returns `{ ok: true, id }` on acceptance or
+`{ ok: false, error }` when the shared queue is full or the file is invalid.
+`DocBenchFiles.version === 1` identifies the contract. It imports into the
+**existing** Files store, clears filters and opens Files; the user can then
+inspect or explicitly open a supported editor/converter. No file bytes leave the
+browser, no original is overwritten and no element IDs are part of this API.
+
+Older portable builds do not expose this method. Native clients may retain a
+legacy picker fallback until their pinned offline Bench is updated. Update the
+Kanarek staging commit and all three portable hashes together only after
+cross-app import/export checks pass.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createFileStore, adjacentVisibleId } from "../public/file-store.mjs";
+import { createFileStore, adjacentVisibleId, importLocalFile } from "../public/file-store.mjs";
 
 function file(name, size = 4, path = "") {
   return {
@@ -107,4 +107,23 @@ test("invalid relative paths never mount virtual directories", () => {
   const store = createFileStore();
   store.addFiles([file("notes.txt", 10, "../hidden/notes.txt")]);
   assert.equal(store.visible()[0].path, "notes.txt");
+});
+
+test("embedded file ingress shares the Files queue and reveals the imported entry", () => {
+  const store = createFileStore({ limit: 2 });
+  let activated = 0;
+  const open = (file) => importLocalFile(store, file, () => { activated++; });
+  const first = open(file("report.pdf"));
+  assert.equal(first.ok, true);
+  assert.equal(store.get(first.id).name, "report.pdf");
+  assert.equal(store.activeId(), first.id);
+  assert.equal(store.snapshot().count, 1);
+  assert.equal(activated, 1);
+  assert.equal(open(file("recording.flac")).ok, true);
+  assert.equal(store.snapshot().count, 2);
+  assert.equal(activated, 2);
+  assert.equal(open(file("third.zip")).ok, false);
+  assert.equal(open(null).ok, false);
+  assert.equal(activated, 2);
+  assert.equal(store.snapshot().count, 2);
 });
