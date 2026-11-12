@@ -122,6 +122,7 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || !portableFiles.includes("async function readZipIndex(blob)")
   || !portableFiles.includes("function createFileStore(")
   || !portableFiles.includes("function importLocalFile(")
+  || !portableFiles.includes("function createFileIngress(")
   || !portableFiles.includes("importFile: (file) => importLocalFile(store, file,")
   || !portableFiles.includes("function resolveFileTool(")
   || !portableFiles.includes("docbench:files-ready")) {
@@ -178,7 +179,10 @@ for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_f
   }
 }
 if (!filesWorkspaceSource.includes('from "./file-store.mjs"')
-  || !filesWorkspaceSource.includes('from "./file-routing.mjs"')) {
+  || !filesWorkspaceSource.includes('from "./file-routing.mjs"')
+  || !filesWorkspaceSource.includes("createFileIngress(store, {")
+  || !filesWorkspaceSource.includes('nativeImportSerial++')
+  || !filesWorkspaceSource.includes('detail: { mode: "files" }')) {
   throw new Error("Files explorer must reuse canonical file store and tool routing.");
 }
 const fileRoutingSource = await readFile("public/file-routing.mjs", "utf8");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createFileStore, adjacentVisibleId, importLocalFile } from "../public/file-store.mjs";
+import { createFileStore, adjacentVisibleId, importLocalFile, createFileIngress } from "../public/file-store.mjs";
 
 function file(name, size = 4, path = "") {
   return {
@@ -119,11 +119,34 @@ test("embedded file ingress shares the Files queue and reveals the imported entr
   assert.equal(store.activeId(), first.id);
   assert.equal(store.snapshot().count, 1);
   assert.equal(activated, 1);
-  assert.equal(open(file("recording.flac")).ok, true);
+  assert.equal(open(null).ok, false);
+  assert.equal(activated, 1);
+  assert.equal(store.snapshot().count, 1);
+  const next = open(file("recording.flac"));
+  assert.equal(next.ok, true);
+  assert.equal(store.activeId(), next.id);
   assert.equal(store.snapshot().count, 2);
   assert.equal(activated, 2);
   assert.equal(open(file("third.zip")).ok, false);
-  assert.equal(open(null).ok, false);
   assert.equal(activated, 2);
   assert.equal(store.snapshot().count, 2);
+});
+
+test("embedded ingress v1 activates Files and clears filters", () => {
+  const store = createFileStore({ limit: 1 });
+  const ui = { mode: "document", query: "hidden", folder: "archived" };
+  const ingress = createFileIngress(store, {
+    resetView: () => { ui.query = ""; ui.folder = ""; },
+    activateFiles: () => { ui.mode = "files"; },
+  });
+  assert.equal(ingress.version, 1);
+  assert.equal(ingress.importFile(null).ok, false);
+  assert.deepEqual(ui, { mode: "document", query: "hidden", folder: "archived" });
+  const accepted = ingress.importFile(file("sample.pdf"));
+  assert.equal(accepted.ok, true);
+  assert.equal(store.activeId(), accepted.id);
+  assert.deepEqual(ui, { mode: "files", query: "", folder: "" });
+  ui.mode = "pdf";
+  assert.equal(ingress.importFile(file("overflow.zip")).ok, false);
+  assert.equal(ui.mode, "pdf");
 });
