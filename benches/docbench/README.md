@@ -40,7 +40,8 @@ Android and other first-party shells can pass a browser `File` to
 first; when absent, subscribe with `document.addEventListener` to the one-shot
 `docbench:files-ready` event and recheck the interface (the event is dispatched
 on `document` and is not replayed). This synchronous API returns `{ ok: true, id }` on acceptance or
-`{ ok: false, error }` when the shared queue is full or the file is invalid.
+`{ ok: false, error }` when the shared queue is full, the file is invalid,
+or a specialist file open is still pending. In the last case, retry the import.
 `DocBenchFiles.version === 1` identifies the contract. It imports into the
 **existing** Files store, clears filters and opens Files; the user can then
 inspect or explicitly open a supported editor/converter. No file bytes leave the
