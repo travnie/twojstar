@@ -181,7 +181,7 @@ for (const tool of ["read_file_workspace", "inspect_local_file", "select_local_f
 if (!filesWorkspaceSource.includes('from "./file-store.mjs"')
   || !filesWorkspaceSource.includes('from "./file-routing.mjs"')
   || !filesWorkspaceSource.includes("createFileIngress(store, {")
-  || !filesWorkspaceSource.includes('nativeImportSerial++')
+  || !filesWorkspaceSource.includes('canImport: () => !openingTool')
   || !filesWorkspaceSource.includes('detail: { mode: "files" }')) {
   throw new Error("Files explorer must reuse canonical file store and tool routing.");
 }

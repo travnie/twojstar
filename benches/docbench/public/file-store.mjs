@@ -8,20 +8,21 @@ export function adjacentVisibleId(ids, currentId, step) {
   return index >= 0 && next >= 0 && next < ids.length ? ids[next] : null;
 }
 // Embedded clients import into the same Files queue as the visible picker and WebMCP.
-export function importLocalFile(store, file, activateFiles = () => {}) {
+export function importLocalFile(store, file, activateFiles = () => {}, canImport = () => true) {
+  if (!canImport()) return { ok: false, error: "Another file is opening. Retry the import." };
   const { ids } = store.addFiles([file]);
   if (ids.length !== 1) return { ok: false, error: "File queue full or unsupported input." };
   activateFiles();
   return { ok: true, id: ids[0] };
 }
 
-export function createFileIngress(store, { resetView, activateFiles }) {
+export function createFileIngress(store, { resetView, activateFiles, canImport = () => true }) {
   return Object.freeze({
     version: 1,
     importFile: (file) => importLocalFile(store, file, () => {
       resetView();
       activateFiles();
-    }),
+    }, canImport),
   });
 }
 

@@ -135,11 +135,16 @@ test("embedded file ingress shares the Files queue and reveals the imported entr
 test("embedded ingress v1 activates Files and clears filters", () => {
   const store = createFileStore({ limit: 1 });
   const ui = { mode: "document", query: "hidden", folder: "archived" };
+  let opening = true;
   const ingress = createFileIngress(store, {
+    canImport: () => !opening,
     resetView: () => { ui.query = ""; ui.folder = ""; },
     activateFiles: () => { ui.mode = "files"; },
   });
   assert.equal(ingress.version, 1);
+  assert.equal(ingress.importFile(file("busy.pdf")).ok, false);
+  assert.equal(store.snapshot().count, 0);
+  opening = false;
   assert.equal(ingress.importFile(null).ok, false);
   assert.deepEqual(ui, { mode: "document", query: "hidden", folder: "archived" });
   const accepted = ingress.importFile(file("sample.pdf"));
