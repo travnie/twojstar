@@ -36,8 +36,9 @@ Build also produces ignored `public/portable.html`. Cloudflare Workers Builds: r
 ## Embedded file ingress (v1)
 
 Android and other first-party shells can pass a browser `File` to
-`globalThis.DocBenchFiles.importFile(file)` after the `docbench:files-ready`
-event. This synchronous API returns `{ ok: true, id }` on acceptance or
+`globalThis.DocBenchFiles.importFile(file)`. Check for `DocBenchFiles.version === 1`
+first; when absent, subscribe to the one-shot `docbench:files-ready` event and
+recheck the interface (the event is not replayed). This synchronous API returns `{ ok: true, id }` on acceptance or
 `{ ok: false, error }` when the shared queue is full or the file is invalid.
 `DocBenchFiles.version === 1` identifies the contract. It imports into the
 **existing** Files store, clears filters and opens Files; the user can then
