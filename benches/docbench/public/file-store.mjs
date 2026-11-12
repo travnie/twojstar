@@ -7,6 +7,14 @@ export function adjacentVisibleId(ids, currentId, step) {
   const next = index + step;
   return index >= 0 && next >= 0 && next < ids.length ? ids[next] : null;
 }
+// Embedded clients import into the same Files queue as the visible picker and WebMCP.
+export function importLocalFile(store, file, activateFiles = () => {}) {
+  const { ids } = store.addFiles([file]);
+  if (ids.length !== 1) return { ok: false, error: "File queue full or unsupported input." };
+  activateFiles();
+  return { ok: true, id: ids[0] };
+}
+
 export function createFileStore({ limit = 100 } = {}) {
   const mountId = "local-" + ++storeSerial;
   const entries = new Map();

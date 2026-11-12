@@ -118,7 +118,7 @@ const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:func
 const filesController = filesWorkspace
   .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
   .replace('import { readZipIndex } from "./zip-index.mjs";', "")
-  .replace('import { createFileStore, adjacentVisibleId } from "./file-store.mjs";', "")
+  .replace('import { createFileStore, adjacentVisibleId, importLocalFile } from "./file-store.mjs";', "")
   .replace('import { isTextFile, resolveFileTool } from "./file-routing.mjs";', "");
 const filesWorkspacePortable = [
   "(() => {",
