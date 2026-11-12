@@ -15,6 +15,16 @@ export function importLocalFile(store, file, activateFiles = () => {}) {
   return { ok: true, id: ids[0] };
 }
 
+export function createFileIngress(store, { resetView, activateFiles }) {
+  return Object.freeze({
+    version: 1,
+    importFile: (file) => importLocalFile(store, file, () => {
+      resetView();
+      activateFiles();
+    }),
+  });
+}
+
 export function createFileStore({ limit = 100 } = {}) {
   const mountId = "local-" + ++storeSerial;
   const entries = new Map();

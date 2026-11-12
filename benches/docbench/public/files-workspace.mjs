@@ -1,6 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
-import { createFileStore, adjacentVisibleId, importLocalFile } from "./file-store.mjs";
+import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
@@ -394,10 +394,12 @@ function updateTool(entry, info) {
 }
 
 let openingTool = false;
+let nativeImportSerial = 0;
 async function openInTool() {
   const entry = store.get(store.activeId());
   if (openingTool || !activeTool || !entry || activeTool.id !== entry.id) return;
   const action = { ...activeTool };
+  const importSerial = nativeImportSerial;
   openingTool = true;
   toolButton.disabled = true;
   setStatus("Opening in specialist tool…");
@@ -415,6 +417,7 @@ async function openInTool() {
       return;
     }
     const result = await request.detail.openPromise;
+    if (importSerial !== nativeImportSerial) return;
     if (!result?.ok) {
       setStatus(result?.error || "File opening was canceled.", !result?.cancelled);
       return;
@@ -611,18 +614,21 @@ window.addEventListener("pagehide", (event) => {
   releasePreview(dialogBody);
   store.clear();
 });
-globalThis.DocBenchFiles = Object.freeze({
-  version: 1,
-  importFile: (file) => importLocalFile(store, file, () => {
+const nativeIngress = createFileIngress(store, {
+  resetView: () => {
+    nativeImportSerial++;
     query = "";
     search.value = "";
     folder = "";
     folderSelect.value = "";
     renderList();
-    document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
-      detail: { mode: "files" },
-    }));
-  }),
+  },
+  activateFiles: () => document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
+    detail: { mode: "files" },
+  })),
+});
+globalThis.DocBenchFiles = Object.freeze({
+  ...nativeIngress,
   snapshot: (options) => store.snapshot(options),
   inspect: async (id) => {
     const entry = store.get(id);
