@@ -53,6 +53,9 @@ class OpenAIBuildToolsTests(unittest.TestCase):
                             "--description", "Useful", "--skill", "on", "--skill", "true")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             dest = Path(temp) / "keywords-plugin"
+            for name in ("on", "true"):
+                text = (dest / "skills" / name / "SKILL.md").read_text()
+                self.assertIn(f'name: "{name}"', text)
             self.assertEqual(invoke("validate_plugin.py", dest).returncode, 0)
 
 

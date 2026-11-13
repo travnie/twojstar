@@ -40,7 +40,7 @@
           "Interactive",
           "Read"
         ],
-        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/claudin",
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/devloom",
         "defaultPrompt": [
           "Build a cross-platform agent plugin and validate its portable package.",
           "Review this ChatGPT MCP App against current docs and scaffold a safe fix.",
