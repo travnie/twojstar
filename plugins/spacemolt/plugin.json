@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "spacemolt",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
   "author": {
     "name": "twojstar",
@@ -10,6 +10,7 @@
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
   "repository": "https://github.com/travnie/twojstar",
   "license": "ISC",
+  "icon": "./assets/icon.png",
   "keywords": [
     "spacemolt",
     "game",

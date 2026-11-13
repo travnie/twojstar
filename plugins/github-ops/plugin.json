@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "github-ops",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
   "author": {
     "name": "travnie",
@@ -10,6 +10,7 @@
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
   "repository": "https://github.com/travnie/twojstar",
   "license": "ISC AND CC-BY-SA-4.0",
+  "icon": "./assets/icon.png",
   "keywords": [
     "github",
     "pull-requests",

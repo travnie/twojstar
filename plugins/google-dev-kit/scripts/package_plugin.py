@@ -340,7 +340,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
     overlay = {
         key: value
         for key, value in manifest.items()
-        if key not in {"$schema", "extensions"}
+        if key not in {"$schema", "extensions", "icon"}
     }
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")

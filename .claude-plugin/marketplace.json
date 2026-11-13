@@ -10,7 +10,7 @@
       "name": "spacemolt",
       "source": "./plugins/spacemolt",
       "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
-      "version": "0.2.8",
+      "version": "0.2.9",
       "displayName": "SpaceMolt",
       "category": "Entertainment",
       "mcpServers": {
@@ -36,7 +36,7 @@
       "name": "openai-dev-kit",
       "source": "./plugins/openai-dev-kit",
       "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "displayName": "OpenAI Dev Kit",
       "category": "Developer Tools",
       "mcpServers": {
@@ -50,7 +50,7 @@
       "name": "google-dev-kit",
       "source": "./plugins/google-dev-kit",
       "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "displayName": "Google Dev Kit",
       "category": "Developer Tools",
       "mcpServers": {
@@ -100,7 +100,7 @@
       "name": "google",
       "source": "./plugins/google",
       "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "displayName": "Android & Chrome",
       "category": "Developer Tools",
       "mcpServers": {
@@ -114,7 +114,7 @@
       "name": "claudin",
       "source": "./plugins/claudin",
       "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
-      "version": "1.9.1",
+      "version": "1.9.2",
       "displayName": "Claudin",
       "category": "Developer Tools",
       "mcpServers": {
@@ -152,7 +152,7 @@
       "name": "desktop-commander",
       "source": "./plugins/desktop-commander",
       "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "Desktop Commander",
       "category": "Developer Tools",
       "mcpServers": {
@@ -166,7 +166,7 @@
       "name": "cloudflare",
       "source": "./plugins/cloudflare",
       "description": "Cloudflare platform workflows paired with the token-efficient Cloudflare API MCP.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "Cloudflare",
       "category": "Developer Tools",
       "mcpServers": {
@@ -180,7 +180,7 @@
       "name": "github-ops",
       "source": "./plugins/github-ops",
       "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "GitHub Ops",
       "category": "Developer Tools",
       "mcpServers": {
@@ -194,7 +194,7 @@
       "name": "claudesign",
       "source": "./plugins/claudesign",
       "description": "Design toolkit in three skills: web-design (direction, DESIGN.md tokens, landing pages, anti-AI-slop build, rendered checks, site reviews), ux-design (heuristic critique, WCAG 2.2 audits, microcopy, interaction states, research and journey maps) and naming (metaphor-driven names with availability checks).",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "displayName": "Claudesign",
       "category": "Design"
     }

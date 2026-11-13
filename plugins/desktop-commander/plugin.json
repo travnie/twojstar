@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "desktop-commander",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
   "author": {
     "name": "travnie",
@@ -10,6 +10,7 @@
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
   "repository": "https://github.com/travnie/twojstar",
   "license": "MIT AND ISC",
+  "icon": "./assets/icon.png",
   "keywords": [
     "desktop-commander",
     "remote-mcp",

@@ -190,7 +190,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
         (target / "plugin.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         bindings = {"apps": {name: {"id": value.removeprefix("plugin_")} for name, value in apps.items()}}
         (target / ".app.json").write_text(json.dumps(bindings, indent=2) + "\n", encoding="utf-8")
-    overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
+    overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions", "icon"}}
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")
     (target / ".codex-plugin").mkdir()
