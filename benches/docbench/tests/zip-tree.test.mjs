@@ -72,7 +72,7 @@ test("ZIP tree treats canonically equivalent Unicode names as collisions", () =>
   assert.equal(tree.indexedFiles, 2);
   assert.equal(tree.skipped, 2);
   assert.deepEqual(tree.list("").files.map((x) => x.name), ["café.txt"]);
-  assert.equal(tree.list("café"), null);
+  assert.deepEqual(tree.list("café").files.map((entry) => entry.name), ["readme.txt"]);
 });
 
 test("ZIP tree rejects excessive depth and entry count", () => {
