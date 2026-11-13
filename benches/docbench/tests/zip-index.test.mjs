@@ -20,6 +20,11 @@ test("ZIP index lists stored paths and compressed sizes without inflating", asyn
   assert.equal(result.entries[0].originalSize, 5);
   assert.ok(result.entries[0].compressedSize > 0);
   assert.equal(result.entries[0].method, 8);
+  assert.equal(result.entries[0].localHeaderOffset, 0);
+  assert.equal(result.entries[0].nameBytesLength, 9);
+  assert.ok(Number.isInteger(result.entries[0].crc32));
+  assert.equal(result.entries[0].symlink, false);
+  assert.ok(result.directoryOffset < file.size);
   assert.ok(result.indexedBytes < file.size * 2);
 });
 
@@ -61,6 +66,21 @@ test("ZIP tail reads stay bounded", async () => {
   await assert.rejects(readZipIndex(large), /ZIP index unavailable/u);
   assert.ok(lengths[0] <= ZIP_INDEX_LIMITS.maxTailBytes);
   assert.ok(lengths[1] <= ZIP_INDEX_LIMITS.maxDirectoryBytes);
+});
+
+test("ZIP index flags Unix symbolic-link metadata", async () => {
+  const bytes = zipSync({ "link.txt": strToU8("not a symlink") });
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let offset = -1;
+  for (let i = 0; i + 46 <= bytes.length; i += 1) {
+    if (view.getUint32(i, true) === 0x02014b50) { offset = i; break; }
+  }
+  assert.ok(offset >= 0);
+  view.setUint16(offset + 4, (3 << 8) | 20, true);
+  view.setUint32(offset + 38, 0xa1ff0000, true);
+  const indexed = await readZipIndex(new Blob([bytes]));
+  assert.equal(indexed.entries[0].symlink, true);
+  assert.equal(indexed.entries[0].unixMode & 0xf000, 0xa000);
 });
 
 test("ZIP decodes legacy CP437 filenames", async () => {
