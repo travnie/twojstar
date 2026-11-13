@@ -168,17 +168,18 @@ if (!filesWorkspaceSource.includes("createZipTree(result.entries)")
   || !filesWorkspaceSource.includes("isCurrentPreview(target, revision)")) {
   throw new Error("ZIP folder browsing must reuse bounded central-directory metadata.");
 }
-for (const id of ["files-pack-zip", "files-zip-progress", "files-zip-status", "files-zip-cancel"]) {
+for (const id of ["files-pack-zip", "files-zip-compression", "files-zip-progress", "files-zip-status", "files-zip-cancel"]) {
   if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
     throw new Error("ZIP packing controls missing in hosted or portable build: " + id);
   }
 }
 for (const guard of ["function packSelectedZip()", "store.selectedIds().map((id) => store.get(id))",
-  "packZip(selected.items", "zipController?.abort()", "ZIP_PACK_LIMITS.maxMemoryBytes"]) {
+  "packZip(selected.items", "profile: compressionSelect.value", "zipController?.abort()", "ZIP_PACK_LIMITS.maxMemoryBytes"]) {
   if (!filesWorkspaceSource.includes(guard)) throw new Error("ZIP packing safety wiring missing: " + guard);
 }
 if (!portableFiles.includes("async function packZip(entries, {")
-  || !portableFiles.includes("function planZipEntries(entries,")) {
+  || !portableFiles.includes("function planZipEntries(entries,")
+  || !portableFiles.includes("function zipCompressionFor(path, profile")) {
   throw new Error("Portable build must include the local ZIP pack engine.");
 }
 for (const id of ["files-play-audio", "files-audio-dock", "files-audio-player", "files-audio-close"]) {

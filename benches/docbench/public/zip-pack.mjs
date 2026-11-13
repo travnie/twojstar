@@ -10,6 +10,27 @@ export const ZIP_PACK_LIMITS = Object.freeze({
   maxPathBytes: 1024,
 });
 
+export const ZIP_PACK_PROFILES = Object.freeze({
+  smart: Object.freeze({ level: 6, label: "Smart" }),
+  store: Object.freeze({ level: null, label: "Store" }),
+  fast: Object.freeze({ level: 1, label: "Fast" }),
+  balanced: Object.freeze({ level: 3, label: "Balanced" }),
+  maximum: Object.freeze({ level: 9, label: "Maximum" }),
+});
+
+const ALREADY_COMPRESSED = /\.(?:7z|avi|avif|br|bz2|flac|gif|gz|heic|heif|jpe?g|m4a|mkv|mov|mp3|mp4|ogg|opus|pdf|png|rar|webm|webp|xz|zip|zst)$/iu;
+
+export function zipCompressionFor(path, profile = "smart") {
+  const selected = ZIP_PACK_PROFILES[profile];
+  if (!Object.hasOwn(ZIP_PACK_PROFILES, profile) || !selected) {
+    throw new Error("Unknown ZIP compression profile.");
+  }
+  const stored = selected.level === null
+    || profile === "smart" && ALREADY_COMPRESSED.test(path);
+  return Object.freeze({ method: stored ? 0 : 8,
+    level: stored ? null : selected.level });
+}
+
 function zipMtime(file) {
   const oldest = new Date(1980, 0, 1).getTime();
   const newest = new Date(2099, 11, 31, 23, 59, 58).getTime();
@@ -115,12 +136,16 @@ export async function packZip(entries, {
   zipApi,
   sink,
   signal,
+  profile = "smart",
   maxSourceBytes = ZIP_PACK_LIMITS.maxSourceBytes,
   maxOutputBytes = ZIP_PACK_LIMITS.maxStreamBytes,
   onProgress = () => {},
 } = {}) {
   const plan = planZipEntries(entries, { maxSourceBytes });
-  if (!zipApi?.Zip || !zipApi?.ZipDeflate) throw new Error("ZIP compression engine unavailable.");
+  zipCompressionFor("", profile);
+  if (!zipApi?.Zip || !zipApi?.ZipDeflate || !zipApi?.ZipPassThrough) {
+    throw new Error("ZIP compression engine unavailable.");
+  }
   if (typeof sink?.write !== "function" || typeof sink.close !== "function"
     || typeof sink.abort !== "function") throw new TypeError("ZIP output sink required.");
 
@@ -152,7 +177,10 @@ export async function packZip(entries, {
 
     for (const [index, item] of plan.items.entries()) {
       abortIfRequested(signal);
-      const stream = new zipApi.ZipDeflate(item.path, { level: 3 });
+      const compression = zipCompressionFor(item.path, profile);
+      const stream = compression.method === 0
+        ? new zipApi.ZipPassThrough(item.path)
+        : new zipApi.ZipDeflate(item.path, { level: compression.level });
       stream.mtime = zipMtime(item.file);
       archive.add(stream);
       for (let offset = 0; offset < item.size; offset += ZIP_PACK_LIMITS.chunkBytes) {
