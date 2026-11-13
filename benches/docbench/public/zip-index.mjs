@@ -112,11 +112,17 @@ export async function readZipIndex(blob) {
     }
     const flags = data.getUint16(offset + 8, true);
     const method = data.getUint16(offset + 10, true);
+    const crc32 = data.getUint32(offset + 16, true);
+    const versionMadeBy = data.getUint16(offset + 4, true);
     const compressedSize = data.getUint32(offset + 20, true);
     const originalSize = data.getUint32(offset + 24, true);
     const filenameLength = data.getUint16(offset + 28, true);
     const extraLength = data.getUint16(offset + 30, true);
     const commentLength = data.getUint16(offset + 32, true);
+    const diskStart = data.getUint16(offset + 34, true);
+    const externalAttributes = data.getUint32(offset + 38, true);
+    const localHeaderOffset = data.getUint32(offset + 42, true);
+    const unixMode = versionMadeBy >>> 8 === 3 ? externalAttributes >>> 16 : 0;
     const entryEnd = offset + 46 + filenameLength + extraLength + commentLength;
     if (entryEnd > central.length || !filenameLength) invalid("invalid entry fields");
 
@@ -131,12 +137,22 @@ export async function readZipIndex(blob) {
       encrypted: Boolean(flags & 1),
       utf8: Boolean(flags & 0x800),
       method,
+      flags,
+      crc32,
       compressedSize,
       originalSize,
-      zip64: compressedSize === 0xffffffff || originalSize === 0xffffffff,
+      localHeaderOffset,
+      diskStart,
+      unixMode,
+      symlink: (unixMode & 0xf000) === 0xa000,
+      nameBytesLength: rawName.length,
+      nameCrc32: nameChecksum(rawName),
+      zip64: compressedSize === 0xffffffff || originalSize === 0xffffffff
+        || localHeaderOffset === 0xffffffff || diskStart === 0xffff,
     });
     offset = entryEnd;
   }
   if (offset !== central.length) invalid("central directory length mismatch");
-  return { entries, count: entries.length, indexedBytes: tail.length + central.length };
+  return { entries, count: entries.length, indexedBytes: tail.length + central.length,
+    directoryOffset, directoryLength };
 }

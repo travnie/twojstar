@@ -25,6 +25,8 @@ test("ZIP index exposes nested folders without decompressing source data", () =>
   assert.equal(nested.parentPath, "deep");
   assert.deepEqual(nested.files.map((f) => f.name), ["one.txt", "two.txt"]);
   assert.equal(nested.files[1].encrypted, true);
+  assert.equal(nested.files[0].sourceIndex, 0);
+  assert.equal(nested.files[1].sourceIndex, 1);
   assert.equal(nested.files[0].originalSize, 12);
   assert.equal(tree.list("missing"), null);
 });

@@ -10,7 +10,7 @@ export function createZipTree(entries) {
   let skipped = 0;
   let indexedFiles = 0;
 
-  for (const entry of entries) {
+  for (const [sourceIndex, entry] of entries.entries()) {
     if (!entry?.safe || typeof entry.name !== "string" || !entry.name
       || entry.name.length > ZIP_TREE_LIMITS.maxPathChars) {
       skipped += 1;
@@ -53,6 +53,7 @@ export function createZipTree(entries) {
       continue;
     }
     current.files.set(key, Object.freeze({
+      sourceIndex,
       name: leaf, path: current.path ? current.path + "/" + leaf : leaf,
       originalSize: entry.originalSize, compressedSize: entry.compressedSize,
       method: entry.method, encrypted: Boolean(entry.encrypted),
