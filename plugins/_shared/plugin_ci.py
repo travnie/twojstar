@@ -49,6 +49,13 @@ COMMON_CHANGES = {
     "plugins/_shared/plugin_ci.py",
 }
 
+# Used only by the claude-marketplace job, never by package builds.
+CATALOG_ONLY = {
+    "plugins/_shared/claude_marketplace.py",
+    "plugins/_shared/validate_branding.py",
+    "plugins/_shared/test_validate_branding.py",
+}
+
 
 def changed_packages(paths: set[str]) -> list[str]:
     """Choose the smallest plugin subset affected by an actual diff."""
@@ -58,7 +65,7 @@ def changed_packages(paths: set[str]) -> list[str]:
     for name, (source, _) in PLUGINS.items():
         if any(path.startswith(source + "/") for path in paths):
             chosen.add(name)
-    if any(path.startswith("plugins/_shared/") for path in paths):
+    if any(path.startswith("plugins/_shared/") and path not in CATALOG_ONLY for path in paths):
         chosen.update(SHARED_PACKAGES)
     if "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py" in paths:
         chosen.update(SHARED_PACKAGES)
