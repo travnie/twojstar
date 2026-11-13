@@ -28,7 +28,7 @@
       "name": "docbench",
       "source": "./benches/docbench/plugin",
       "description": "Local-first document and PDF workflow guidance for Docbench.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "displayName": "Docbench",
       "category": "Productivity"
     },
