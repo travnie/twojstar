@@ -318,11 +318,81 @@ Current API reference:
 [WebMCP Community Group draft](https://webmachinelearning.github.io/webmcp/).
 Keep draft details isolated behind the shared registration helper.
 
+## Archive reliability and recovery data
+
+**Real recovery, not a checkbox.** Keep one archive-capability registry and distinguish
+verification (CRC-32/format integrity), hashing (SHA-256 manifest), parity creation
+(PAR2 recovery files) and repair (reconstruct damaged or missing data). A CRC or
+SHA-256 digest detects damage but cannot replace missing bytes. ZIP has no
+universal built-in recovery-record equivalent to RAR's recovery records. Use
+separate, interoperable
+[PAR2](https://parchive.github.io/doc/Parity%20Volume%20Set%20Specification%20v2.0.html)
+volumes, suitable for ZIP, TAR, 7z, RAR and arbitrary files. A sidecar hash
+manifest or duplicated ZIP copy is not PAR2.
+
+**Already shipped:** ZIP creation now offers Smart/Store/Fast/Balanced/Maximum
+compression profiles. These affect only newly created archives, never change
+an existing ZIP in place, and do not provide damage recovery. Later formats,
+encryption and dictionaries require separate codec capability gates.
+Compression remains independent of protection.
+
+**User-facing PAR2 target after the parity engine passes its gates:**
+
+- Recovery preset: Off, 5%, 10%, 20%, Custom; select bounded source block
+  size and display estimated parity size before generating. Preflight the
+  sum of ceil(fileBytes / blockBytes) over input files: PAR2 v2 permits at
+  most 32,768 source blocks. Also validate the recovery-block count and the
+  chosen engine's finite field/volume limits. Reject or adjust unsupported
+  size/redundancy combinations before writing any output. Percentage is
+  extra parity capacity, not guaranteed repair probability. Outcomes depend
+  on which source blocks fail and which recovery volumes survive.
+- Generate a standard main .par2 index and .volNN+MM.par2 parity files after
+  successful archive creation. Explicit save destination; source ZIP untouched.
+  Generate into a bounded, isolated temporary area (e.g. OPFS) first.
+  Validate all parity packet checksums and the complete volume set before
+  committing any output. Clean up staging on error or cancellation; never
+  publish a partial set as complete. If the browser cannot atomically publish
+  several separate files, offer one verified bundled export or explain the
+  partial-publication limitation. No incompatible pseudo-PAR records embedded
+  into the ZIP.
+- Verify: inspect the selected archive and matching PAR2 volumes, report
+  CRC/hash failures, damaged or missing source blocks, available recovery
+  blocks and whether repair is possible. Clearly report incomplete checks.
+- Repair: reconstruct into a new file or local temporary Blob, verify
+  restored content against PAR2 metadata and then offer export. Do not
+  overwrite a damaged original or publish partial results. Abort safely
+  on insufficient blocks, memory limits or user cancellation.
+
+**Engine gate:** investigate browser-compatible builds of
+[par2cmdline](https://github.com/Parchive/par2cmdline) / libpar2 (C++/WASM),
+or another maintained PAR2-spec conformant Reed-Solomon implementation with
+documented licensing. Compare generated volumes against the native CLI.
+Do not route user archives to Cloudflare for parity. Browser, portable, CSP,
+Web Worker cancellation and Android memory limits are release gates.
+If no vetted engine passes, leave the recovery control absent rather than
+shipping a nonworking option.
+
+**Cross-compatibility fixtures:** CLI PAR2 -> browser verify/repair; browser
+PAR2 -> CLI verify/repair. Include 0%, 5%, 10% and 20% redundancy profiles;
+intact, flipped, truncated, missing and renamed files; sparse versus clustered
+block corruption; absent and damaged parity volumes; Unicode names; empty
+and multi-file input; resource limits. Assert byte-exact repair, no overwrite,
+bounded memory and truthful cannot-repair outcomes. ZIP CRC checks alone are
+not recovery.
+
+**Other archive families:** tackle TAR index/extract and ZIP64/AES via
+separately vetted readers (zip.js against fflate). Split 7z/RAR/RAR5 read
+from write/encrypt/repair capabilities, mind codec licenses, solid archives
+and multi-volume constraints. ZIP directory corruption may require restoring
+the whole archive with PAR2 *before* the ZIP parser can read it. Never promise
+a generic magic Fix ZIP action or upload the archive without explicit consent.
+
 ## Candidate engines (evaluate, do not install all)
 
 | Job | Candidate | Why investigate / caveat |
 | --- | --- | --- |
 | Existing PDF split ZIP | [fflate](https://github.com/101arrowz/fflate) | Already used. Keep for its current task until benchmarks justify replacing it. |
+| PAR2 recovery sets | [Parchive/par2cmdline](https://github.com/Parchive/par2cmdline) / [PAR2 spec](https://parchive.github.io/doc/Parity%20Volume%20Set%20Specification%20v2.0.html) | Cross-compatible parity; browser/WASM performance, licensing, correctness and portable CSP not yet validated. |
 | General ZIP read/write | [zip.js](https://github.com/gildas-lormeau/zip.js) | Streaming, ZIP64, split archives, encryption, custom compression engines; compare output size, compatibility and cost against fflate. |
 | Broad archive reading | [exav-unpack](https://www.exav.org/unpack/) / [WASM API](https://www.exav.org/unpack/wasm/) | Rust, file/Blob streaming, archive and nested container inspection with explicit safety budgets; **beta**, verify real formats, memory and provenance. |
 | Broad archive alternative | [Filing](https://github.com/xlianghang/filing), [libarchivejs](https://github.com/nika-begiashvili/libarchivejs) | libarchive/WASM; benchmark actual entry-level access, passwords, streaming, release history and licensing. |
