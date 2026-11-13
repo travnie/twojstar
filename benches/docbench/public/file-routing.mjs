@@ -1,16 +1,37 @@
 // Shared file-type routing for the Files shell. No UI or file reads.
+/**
+ * @typedef {{
+ *   name: string,
+ *   format: string | null,
+ *   signature: string | null,
+ *   extensionHint: string | null,
+ *   declaredMime: string,
+ *   mismatch: boolean
+ * }} InspectedFile
+ */
+
+/** @typedef {{ mode: 'pdf' | 'document', event: string, label: string }} FileRoute */
 const MAX_EDIT_BYTES = 32 * 1024 * 1024;
 
+/**
+ * @param {InspectedFile | null | undefined} info
+ * @returns {boolean}
+ */
 export function isTextFile(info) {
   if (!info) return false;
   if (info.format === "svg") return true;
   if (info.signature) return false;
-  const documentFormats = globalThis.DocBenchTextFormats;
+  const documentFormats = /** @type {{ DocBenchTextFormats?: { formatHintFromFilename?: (name: string) => string | null } }} */ (globalThis).DocBenchTextFormats;
   return info.declaredMime.startsWith("text/")
     || Boolean(documentFormats?.formatHintFromFilename?.(info.name))
-    || ["txt", "json"].includes(info.format);
+    || (info.format !== null && ["txt", "json"].includes(info.format));
 }
 
+/**
+ * @param {InspectedFile | null | undefined} info
+ * @param {number} size
+ * @returns {FileRoute | null}
+ */
 export function resolveFileTool(info, size) {
   if (!info || !Number.isSafeInteger(size) || size < 0) return null;
   if (info.format === "pdf" && info.signature === "pdf") {
