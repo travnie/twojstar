@@ -27,7 +27,7 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(len([p for p in (skill / "references").rglob("*") if p.is_file()]), 10)
                 self.assertEqual(len([p for p in (skill / "scripts").iterdir() if p.is_file()]), 3)
                 root = json.loads((target / "plugin.json").read_text())
-                self.assertEqual(root["version"], "1.1.0")
+                self.assertEqual(root["version"], "1.1.1")
                 overlay = json.loads((target / ".codex-plugin/plugin.json").read_text())
                 if app_id:
                     self.assertEqual(root["extensions"]["com.openai"]["apps"], "./.app.json")

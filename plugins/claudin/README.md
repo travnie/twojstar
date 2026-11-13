@@ -50,7 +50,7 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.9.1.zip
+python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.9.2.zip
 ```
 
 Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).

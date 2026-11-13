@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import stat
+import struct
 import tempfile
 import zipfile
 from pathlib import Path
@@ -85,6 +86,15 @@ def validate(root: Path) -> tuple[dict, dict | None]:
         if not isinstance(value, str):
             raise ValueError(f"missing interface asset: {key}")
         safe_asset(root, value)
+    # Claude directory listing icon; Claude Code ignores it at load time.
+    if not isinstance(manifest.get("icon"), str):
+        raise ValueError("missing Claude icon")
+    icon_data = safe_asset(root, manifest["icon"]).read_bytes()
+    if len(icon_data) > 5 * 1024 * 1024 or icon_data[:16] != b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR":
+        raise ValueError("Claude icon must be a PNG under 5 MB")
+    icon_w, icon_h = struct.unpack(">II", icon_data[16:24])
+    if icon_w != icon_h or not 256 <= icon_w <= 4096:
+        raise ValueError("Claude icon must be square, 256-4096 px")
 
     # mcp.json is optional: a skills-only plugin has none (Agent Plugins 1.0).
     mcp_path = root / "mcp.json"
@@ -165,7 +175,7 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
             json.dumps({"apps": {alias: {"id": app_id.removeprefix("plugin_")}}}, indent=2) + "\n",
             encoding="utf-8",
         )
-    overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions"}}
+    overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions", "icon"}}
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/")
     if mcp is not None:

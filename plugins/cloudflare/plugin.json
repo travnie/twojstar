@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cloudflare",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cloudflare platform workflows paired with the token-efficient Cloudflare API MCP.",
   "author": {
     "name": "travnie",
@@ -10,6 +10,7 @@
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/cloudflare",
   "repository": "https://github.com/travnie/twojstar",
   "license": "Apache-2.0 AND ISC",
+  "icon": "./assets/icon.png",
   "keywords": [
     "cloudflare",
     "workers",

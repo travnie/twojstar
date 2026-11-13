@@ -21,5 +21,5 @@ From the repository root:
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/github-ops /tmp/github-ops-0.1.0.zip
+python plugins/_shared/package_plugin.py plugins/github-ops /tmp/github-ops-0.1.1.zip
 ```

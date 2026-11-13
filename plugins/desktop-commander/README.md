@@ -11,5 +11,5 @@ Package with the shared repository packager:
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/desktop-commander /tmp/desktop-commander-0.1.0.zip
+python plugins/_shared/package_plugin.py plugins/desktop-commander /tmp/desktop-commander-0.1.1.zip
 ```

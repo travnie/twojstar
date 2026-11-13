@@ -27,7 +27,7 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudesign /tmp/claudesign-1.0.2.zip
+python plugins/_shared/package_plugin.py plugins/claudesign /tmp/claudesign-1.0.3.zip
 ```
 
 Claude Code: `/plugin install claudesign@twojstar` (after `/plugin marketplace add travnie/twojstar`).

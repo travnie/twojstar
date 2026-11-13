@@ -7,6 +7,7 @@ import json
 import math
 import re
 import stat
+import struct
 import tempfile
 import zipfile
 from pathlib import Path
@@ -193,6 +194,12 @@ def validate(root: Path):
                 require_dot_prefix=True,
             )
         )
+    icon_data = safe_asset_path(root, manifest.get("icon"), require_dot_prefix=True).read_bytes()
+    if len(icon_data) > 5 * 1024 * 1024 or icon_data[:16] != b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR":
+        raise ValueError("Claude icon must be a PNG under 5 MB")
+    icon_w, icon_h = struct.unpack(">II", icon_data[16:24])
+    if icon_w != icon_h or not 256 <= icon_w <= 4096:
+        raise ValueError("Claude icon must be square, 256-4096 px")
 
     config = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
     actual = config.get("mcpServers", {})
@@ -340,7 +347,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
     overlay = {
         key: value
         for key, value in manifest.items()
-        if key not in {"$schema", "extensions"}
+        if key not in {"$schema", "extensions", "icon"}
     }
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")
