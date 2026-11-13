@@ -24,7 +24,8 @@ TS SDK v2 traps:
 
 - `zod` ^4.2.0 with `import * as z from "zod/v4"`: Zod 3 is unsupported, 4.0–4.1 fail type-checking.
 - `server.tool/resource/prompt` are removed: use `registerTool/registerResource/registerPrompt`.
-- Create a new `McpServer` per HTTP request from the factory, never one module-scope instance.
+- Stateless HTTP: a new `McpServer` and transport per request from the factory, never one module-scope instance. Stateful sessions keep one per session.
+- Node.js 20+ (v1 ran on 18).
 
 ## 2. Tools
 
