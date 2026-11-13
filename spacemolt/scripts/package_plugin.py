@@ -91,6 +91,10 @@ def validate(root: Path) -> tuple[dict, dict]:
         else:
             raise ValueError("expected SVG or PNG branding")
     validate_svg(asset(root, "./assets/icon.svg"))
+    if not isinstance(manifest.get("icon"), str):
+        raise ValueError("missing Claude icon")
+    if not asset(root, manifest["icon"]).read_bytes().startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Claude icon must be a PNG")
     servers = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
     if servers.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
         raise ValueError("expected portable MCP schema")

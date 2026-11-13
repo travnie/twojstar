@@ -193,6 +193,9 @@ def validate(root: Path):
                 require_dot_prefix=True,
             )
         )
+    icon = safe_asset_path(root, manifest.get("icon"), require_dot_prefix=True)
+    if not icon.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Claude icon must be a PNG")
 
     config = json.loads((root / "mcp.json").read_text(encoding="utf-8"))
     actual = config.get("mcpServers", {})

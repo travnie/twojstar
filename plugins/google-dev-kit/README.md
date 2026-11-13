@@ -36,7 +36,7 @@ Repeat `--app-binding` for other registered MCP aliases as required. Only the su
 
 ```sh
 python -m pip install -r plugins/google-dev-kit/requirements.txt
-python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-0.1.1.zip
+python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-0.1.2.zip
 ```
 
 Packaging validates Agent Plugins 1.0 manifests, MCP endpoints, skill metadata, assets, and `[CHAT, CODEX]` policy. It generates `.codex-plugin/plugin.json` and `.mcp.json` compatibility files.
