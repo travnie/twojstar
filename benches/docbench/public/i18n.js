@@ -24,6 +24,14 @@
   ["Cancel ZIP","Anuluj ZIP"],
   ["ZIP packing","Pakowanie ZIP"],
   ["ZIP packing progress","Postęp pakowania ZIP"],
+  ["Invalid ZIP selection.","Nieprawidłowy wybór plików ZIP."],
+  ["This browser supports ZIP downloads up to 56 MiB of source files.","Ta przeglądarka pozwala pobierać ZIP z maksymalnie 56 MiB plików źródłowych."],
+  ["Local ZIP compression is unavailable.","Lokalna kompresja ZIP jest niedostępna."],
+  ["Preparing ZIP…","Przygotowywanie ZIP…"],
+  ["ZIP export canceled.","Anulowano eksport ZIP."],
+  ["ZIP packing canceled.","Anulowano pakowanie ZIP."],
+  ["Select between 1 and 100 local files.","Wybierz od 1 do 100 plików lokalnych."],
+  ["Selected files exceed ZIP size limit.","Wybrane pliki przekraczają limit rozmiaru ZIP."]
   ["Convert DOCX to PDF","Konwertuj DOCX na PDF"],
   ["Add folder","Dodaj folder"],
   ["Open preview","Otwórz podgląd"],
@@ -223,6 +231,9 @@
 
   const patterns = {
   pl: [
+    [/^Packing ZIP · (\d+)\/(\d+) files · (.+) \/ (.+)$/u, (_match, done, total, bytes, all) => `Pakowanie ZIP · ${done}/${total} plików · ${bytes} / ${all}`],
+    [/^ZIP saved · (\d+) files · (.+)$/u, (_match, count, bytes) => `Zapisano ZIP · ${count} ${plPlural(count, "plik", "pliki", "plików")} · ${bytes}`],
+    [/^ZIP failed: (.+)$/u, "Błąd ZIP: $1"],
     [/^(\d+) proposed changes?\.$/u, (_match, count) => `${count} ${plPlural(count, "proponowana zmiana", "proponowane zmiany", "proponowanych zmian")}.`],
     [/^(\d+) · (\d+) selected$/, (_match, total, selected) => `${total} · ${selected} ${plPlural(selected, "zaznaczony", "zaznaczone", "zaznaczonych")}`],
     [/^Select (.+)$/, "Zaznacz $1"],

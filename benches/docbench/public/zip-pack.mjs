@@ -3,6 +3,7 @@ export const ZIP_PACK_LIMITS = Object.freeze({
   maxEntries: 100,
   maxSourceBytes: 512 * 1024 * 1024,
   maxMemoryBytes: 64 * 1024 * 1024,
+  maxMemorySourceBytes: 56 * 1024 * 1024,
   maxStreamBytes: 600 * 1024 * 1024,
   chunkBytes: 128 * 1024,
   maxPathBytes: 1024,

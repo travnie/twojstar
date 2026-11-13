@@ -45,11 +45,24 @@ test("ZIP streams multiple slices, respects sink backpressure", async () => {
   const items = [source("large.dat", bytes)];
   const chunks = [];
   let activeWrites = 0;
+  let sourceReads = 0;
+  const actualSlice = items[0].file.slice.bind(items[0].file);
+  items[0].file.slice = (start, end) => {
+    sourceReads += 1;
+    const blob = actualSlice(start, end);
+    return {
+      async arrayBuffer() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.equal(activeWrites, 0, "source read overlapped pending ZIP write");
+        return blob.arrayBuffer();
+      },
+    };
+  };
   const sink = {
     async write(chunk) {
       activeWrites += 1;
       assert.equal(activeWrites, 1);
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await new Promise((resolve) => setTimeout(resolve, 8));
       chunks.push(chunk.slice());
       activeWrites -= 1;
     },
@@ -59,6 +72,7 @@ test("ZIP streams multiple slices, respects sink backpressure", async () => {
   const result = await packZip(items, { zipApi, sink });
   const decoded = unzipSync(new Uint8Array(await result.output.arrayBuffer()));
   assert.deepEqual(decoded["large.dat"], bytes);
+  assert.ok(sourceReads >= 3);
 });
 
 test("ZIP rejects traversal, device paths, collisions with folders and oversized sources", () => {
@@ -72,6 +86,7 @@ test("ZIP rejects traversal, device paths, collisions with folders and oversized
   assert.throws(() => planZipEntries([source("big.bin", "12")], { maxSourceBytes: 1 }), /size limit/);
   assert.throws(() => planZipEntries([]), /Select between/);
   assert.equal(ZIP_PACK_LIMITS.maxEntries, 100);
+  assert.equal(ZIP_PACK_LIMITS.maxMemorySourceBytes, 56 * 1024 * 1024);
 });
 
 test("ZIP preserves source modified dates within classic DOS bounds", async () => {

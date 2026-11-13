@@ -531,23 +531,32 @@ function addFiles(input) {
   if (result.skipped) setStatus("Only " + result.ids.length + " files added. Queue limit: 100.", true);
 }
 
+let zipStatusSource = "";
+function setZipStatus(message) {
+  zipStatusSource = message;
+  zipStatus.textContent = globalThis.BenchI18n?.t(message) || message;
+}
+window.addEventListener("bench:languagechange", () => {
+  if (zipStatusSource) setZipStatus(zipStatusSource);
+});
+
 async function packSelectedZip() {
   if (zipController) return;
   let selected;
   try {
     selected = planZipEntries(store.selectedIds().map((id) => store.get(id)));
   } catch (error) {
-    zipStatus.textContent = error?.message || "Invalid ZIP selection.";
+    setZipStatus(error?.message || "Invalid ZIP selection.");
     return;
   }
   const nativeSave = globalThis.isSecureContext
     && typeof globalThis.showSaveFilePicker === "function";
-  if (!nativeSave && selected.totalBytes > ZIP_PACK_LIMITS.maxMemoryBytes) {
-    zipStatus.textContent = "This browser supports ZIP downloads up to 64 MiB of source files.";
+  if (!nativeSave && selected.totalBytes > ZIP_PACK_LIMITS.maxMemorySourceBytes) {
+    setZipStatus("This browser supports ZIP downloads up to 56 MiB of source files.");
     return;
   }
   if (!globalThis.fflate?.ZipDeflate) {
-    zipStatus.textContent = "Local ZIP compression is unavailable.";
+    setZipStatus("Local ZIP compression is unavailable.");
     return;
   }
 
@@ -556,7 +565,7 @@ async function packSelectedZip() {
   cancelZipButton.hidden = false;
   zipProgress.hidden = false;
   zipProgress.value = 0;
-  zipStatus.textContent = "Preparing ZIP…";
+  setZipStatus("Preparing ZIP…");
   renderList();
   try {
     let sink;
@@ -569,7 +578,7 @@ async function packSelectedZip() {
         });
       } catch (error) {
         if (error?.name === "AbortError") {
-          zipStatus.textContent = "ZIP export canceled.";
+          setZipStatus("ZIP export canceled.");
           return;
         }
         throw error;
@@ -586,11 +595,11 @@ async function packSelectedZip() {
     }
     const result = await packZip(selected.items, {
       zipApi: globalThis.fflate, sink, signal: controller.signal,
-      maxSourceBytes: nativeSave ? ZIP_PACK_LIMITS.maxSourceBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
+      maxSourceBytes: nativeSave ? ZIP_PACK_LIMITS.maxSourceBytes : ZIP_PACK_LIMITS.maxMemorySourceBytes,
       maxOutputBytes: nativeSave ? ZIP_PACK_LIMITS.maxStreamBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
       onProgress: ({ filesDone, filesTotal, bytesDone, bytesTotal }) => {
         zipProgress.value = Math.round(100 * (bytesTotal ? bytesDone / bytesTotal : filesDone / filesTotal));
-        zipStatus.textContent = `Packing ZIP · ${filesDone}/${filesTotal} files · ${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}`;
+        setZipStatus(`Packing ZIP · ${filesDone}/${filesTotal} files · ${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}`);
       },
     });
     if (!nativeSave) {
@@ -602,13 +611,14 @@ async function packSelectedZip() {
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
     }
     zipProgress.value = 100;
-    zipStatus.textContent = `ZIP saved · ${result.files} files · ${formatBytes(result.outputBytes)}`;
+    setZipStatus(`ZIP saved · ${result.files} files · ${formatBytes(result.outputBytes)}`);
   } catch (error) {
-    zipStatus.textContent = controller.signal.aborted || error?.name === "AbortError"
-      ? "ZIP packing canceled." : `ZIP failed: ${error?.message || String(error)}`;
+    setZipStatus(controller.signal.aborted || error?.name === "AbortError"
+      ? "ZIP packing canceled." : `ZIP failed: ${error?.message || String(error)}`);
   } finally {
     zipController = null;
     cancelZipButton.hidden = true;
+    zipProgress.hidden = true;
     renderList();
   }
 }
