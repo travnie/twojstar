@@ -391,6 +391,10 @@
 }
 
 .files-row-selected .files-item { background: rgb(224 68 56 / 15%); }
+.files-zip-job { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.files-zip-job progress { flex: 0 1 220px; max-width: 100%; accent-color: var(--accent); }
+.files-zip-job [role="status"] { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.files-zip-job [hidden] { display: none; }
 .files-audio-dock {
   position: sticky;
   bottom: 8px;
