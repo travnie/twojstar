@@ -11,7 +11,7 @@ export const ZIP_PACK_LIMITS = Object.freeze({
 
 function zipMtime(file) {
   const oldest = new Date(1980, 0, 1).getTime();
-  const newest = new Date(2107, 11, 31, 23, 59, 58).getTime();
+  const newest = new Date(2099, 11, 31, 23, 59, 58).getTime();
   const recorded = Number.isSafeInteger(file.lastModified) && file.lastModified > 0
     ? file.lastModified : oldest;
   return new Date(Math.max(oldest, Math.min(newest, recorded)));
@@ -172,6 +172,8 @@ export async function packZip(entries, {
     if (zipError) throw zipError;
     abortIfRequested(signal);
     if (!completed) throw new Error("ZIP writer did not finish.");
+    onProgress({ phase: "committing", filesDone: plan.items.length,
+      filesTotal: plan.items.length, bytesDone: readBytes, bytesTotal: plan.totalBytes });
     const output = await sink.close();
     return { output, outputBytes, sourceBytes: plan.totalBytes, files: plan.items.length };
   } catch (error) {

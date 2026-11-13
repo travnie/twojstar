@@ -123,7 +123,23 @@ test("ZIP preserves source modified dates within classic DOS bounds", async () =
       years.push(1980 + (boundedView.getUint16(i + 14, true) >>> 9));
     }
   }
-  assert.deepEqual(years, [1980, 2107]);
+  assert.deepEqual(years, [1980, 2099]);
+});
+
+test("ZIP signals the irreversible output commit phase", async () => {
+  const controller = new AbortController();
+  let publishing = false;
+  const result = await packZip([source("note.txt", "contents")], {
+    zipApi, sink: createMemoryZipSink(), signal: controller.signal,
+    onProgress: ({ phase }) => {
+      if (phase === "committing") {
+        publishing = true;
+        controller.abort();
+      }
+    },
+  });
+  assert.equal(publishing, true);
+  assert.ok(result.output.size > 0);
 });
 
 test("ZIP cancel aborts sink without publishing incomplete output", async () => {
