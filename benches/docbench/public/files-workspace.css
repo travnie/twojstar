@@ -266,6 +266,17 @@
 .files-zip-property { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px; }
 .files-zip-property dt { color: var(--muted); }
 .files-zip-property dd { margin: 0; overflow-wrap: anywhere; }
+.files-zip-actions,
+.files-zip-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.files-zip-actions { margin: 10px 0; }
+.files-zip-actions [hidden] { display: none; }
+.files-zip-status { color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
+.files-zip-checkbox { width: 18px; height: 18px; }
 .files-zip-name {
   overflow-wrap: anywhere;
   font-family: "Space Mono", ui-monospace, monospace;

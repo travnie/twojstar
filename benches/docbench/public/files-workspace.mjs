@@ -1,6 +1,8 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
 import { createZipTree } from "./zip-tree.mjs";
+import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
+  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";
 import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";
@@ -52,6 +54,7 @@ const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
 
 const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
+const zipJobs = new Map();
 let selectionRevision = 0;
 let viewMode = "list";
 let query = "";
@@ -99,6 +102,8 @@ function closeAudioDock() {
 }
 
 function releasePreview(target = preview) {
+  const job = zipJobs.get(target);
+  if (job && !job.committing) job.controller.abort();
   const media = target.querySelector("audio, video");
   if (media) {
     media.pause();
@@ -232,18 +237,155 @@ async function showZipContents(file, revision, target = preview) {
   const box = element("section", "files-zip");
   const title = element("h3", "", `ZIP contents · ${tree.total} entries`);
   const note = element("p", "files-note",
-    "Index only. Folder navigation does not decompress or extract files.");
+    "Read-only browser. Extraction is explicit, local, size-limited and CRC-verified.");
   const warning = tree.skipped
     ? element("p", "files-unsafe-label", `${tree.skipped} unsafe, ambiguous or unsupported entries hidden.`)
     : null;
   const breadcrumb = element("nav", "files-zip-breadcrumbs");
   breadcrumb.setAttribute("aria-label", "ZIP folder navigation");
+  const tools = element("div", "files-zip-actions");
+  tools.setAttribute("role", "group");
+  tools.setAttribute("aria-label", "ZIP archive actions");
+  const verifyChecked = element("button", "button compact", "Verify checked");
+  const extractChecked = element("button", "button compact", "Extract checked to folder");
+  const cancel = element("button", "button compact", "Cancel extraction");
+  const status = element("span", "files-zip-status");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  for (const button of [verifyChecked, extractChecked, cancel]) button.type = "button";
+  verifyChecked.disabled = true;
+  extractChecked.disabled = true;
+  extractChecked.hidden = typeof globalThis.showDirectoryPicker !== "function";
+  cancel.hidden = true;
+  tools.append(verifyChecked, extractChecked, cancel, status);
   const listNode = element("ol", "files-zip-list");
   const entryDetails = element("dl", "files-zip-entry-details");
   entryDetails.hidden = true;
-  if (warning) box.append(title, note, warning, breadcrumb, listNode, entryDetails);
-  else box.append(title, note, breadcrumb, listNode, entryDetails);
+  if (warning) box.append(title, note, warning, breadcrumb, tools, listNode, entryDetails);
+  else box.append(title, note, breadcrumb, tools, listNode, entryDetails);
   target.append(box);
+
+  const checked = new Set();
+  const eligible = (item) => !zipEntryEligibility(result.entries[item.sourceIndex]);
+  const selectedEntries = () => [...checked].map((id) => result.entries[id]);
+  function refreshActions() {
+    const running = zipJobs.has(target);
+    verifyChecked.disabled = !checked.size || running;
+    extractChecked.disabled = !checked.size || running;
+  }
+  function report(message) {
+    if (!isCurrentPreview(target, revision)) return;
+    status.textContent = globalThis.BenchI18n?.t(message) || message;
+  }
+  function beginJob(controller) {
+    zipJobs.set(target, { controller, committing: false });
+    cancel.hidden = false;
+    cancel.disabled = false;
+    refreshActions();
+  }
+  function finishJob(controller) {
+    if (zipJobs.get(target)?.controller !== controller) return;
+    zipJobs.delete(target);
+    cancel.hidden = true;
+    refreshActions();
+  }
+  cancel.addEventListener("click", () => {
+    const job = zipJobs.get(target);
+    if (job && !job.committing) job.controller.abort();
+  });
+
+  async function runEntries(items, mode) {
+    if (!isCurrentPreview(target, revision) || zipJobs.has(target)) return;
+    try {
+      planZipExtraction(items);
+    } catch (error) {
+      report(error.message || "Unsupported ZIP selection.");
+      return;
+    }
+    const controller = new AbortController();
+    beginJob(controller);
+    let finished = 0;
+    try {
+      let root = null;
+      if (mode === "folder") {
+        const destination = await globalThis.showDirectoryPicker({ mode: "readwrite" });
+        if (controller.signal.aborted) return;
+        const unique = globalThis.crypto?.randomUUID?.() || String(Date.now());
+        root = await destination.getDirectoryHandle("DocBench-extract-" + unique.slice(0, 12), { create: true });
+      }
+      for (const entry of items) {
+        if (controller.signal.aborted) throw new DOMException("Canceled.", "AbortError");
+        let sink;
+        if (mode === "verify") sink = createVerifySink();
+        else if (mode === "folder") {
+          const parts = entry.name.replaceAll("\\", "/").split("/");
+          let folder = root;
+          for (const part of parts.slice(0, -1)) {
+            folder = await folder.getDirectoryHandle(part, { create: true });
+          }
+          const handle = await folder.getFileHandle(parts.at(-1), { create: true });
+          const writable = await handle.createWritable();
+          sink = {
+            write: (bytes) => writable.write(bytes),
+            close: () => writable.close(),
+            abort: () => writable.abort(),
+          };
+        } else if (globalThis.isSecureContext
+          && typeof globalThis.showSaveFilePicker === "function") {
+          const handle = await globalThis.showSaveFilePicker({
+            suggestedName: entry.name.replaceAll("\\", "/").split("/").at(-1),
+          });
+          const writable = await handle.createWritable();
+          sink = {
+            write: (bytes) => writable.write(bytes),
+            close: () => writable.close(),
+            abort: () => writable.abort(),
+          };
+        } else if (entry.originalSize <= ZIP_EXTRACT_LIMITS.memoryBytes) {
+          sink = createMemoryExtractSink();
+        } else {
+          throw new Error("This browser requires native saving for large ZIP entries.");
+        }
+        const job = zipJobs.get(target);
+        if (job) job.committing = false;
+        const outcome = await extractZipEntry(file, entry, {
+          zipApi: globalThis.fflate, sink, signal: controller.signal,
+          directoryOffset: result.directoryOffset,
+          onProgress: ({ phase, outputBytes, outputTotal }) => {
+            const active = zipJobs.get(target);
+            if (phase === "committing" && active) {
+              active.committing = true;
+              cancel.disabled = true;
+              report("Finalizing extracted file…");
+            } else if (phase !== "committing") {
+              report(`Checking ZIP data · ${finished + 1}/${items.length} · ${formatBytes(outputBytes)} / ${formatBytes(outputTotal)}`);
+            }
+          },
+        });
+        if (mode === "download" && outcome.output) {
+          const url = URL.createObjectURL(outcome.output);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = entry.name.replaceAll("\\", "/").split("/").at(-1);
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 30_000);
+        }
+        finished += 1;
+        if (job) job.committing = false;
+        cancel.disabled = false;
+      }
+      report(`Verified ${finished} ZIP ${finished === 1 ? "entry" : "entries"} by CRC-32.`);
+    } catch (error) {
+      report(error?.name === "AbortError"
+        ? `ZIP operation canceled · ${finished} completed.`
+        : `ZIP operation failed · ${finished} completed · ${error?.message || error}`);
+    } finally {
+      finishJob(controller);
+    }
+  }
+
+  verifyChecked.addEventListener("click", () => void runEntries(selectedEntries(), "verify"));
+  extractChecked.addEventListener("click", () => void runEntries(selectedEntries(), "folder"));
 
   function navigate(path, moveFocus = false) {
     if (!isCurrentPreview(target, revision)) return;
@@ -289,39 +431,62 @@ async function showZipContents(file, revision, target = preview) {
       row.append(button);
       listNode.append(row);
     }
-    for (const entry of view.files) {
+    for (const item of view.files) {
+      const entry = result.entries[item.sourceIndex];
+      const reason = zipEntryEligibility(entry);
       const row = element("li", "files-zip-file");
-      const button = element("button", "files-zip-entry-button", entry.name);
-      button.type = "button";
-      button.dataset.i18nSkip = "";
-      button.addEventListener("click", () => {
+      const name = element("button", "files-zip-entry-button", item.name);
+      name.type = "button";
+      name.dataset.i18nSkip = "";
+      name.addEventListener("click", () => {
         if (!isCurrentPreview(target, revision)) return;
         entryDetails.replaceChildren();
         const properties = [
-          ["Path", entry.path],
-          ["Original size", entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.originalSize)],
-          ["Compressed size", entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.compressedSize)],
-          ["Method", String(entry.method)],
-          ["Encrypted", entry.encrypted ? "Yes" : "No"],
-          ["ZIP64", entry.zip64 ? "Unsupported" : "No"],
+          ["Path", item.path],
+          ["Original size", item.zip64 ? "ZIP64 size unsupported" : formatBytes(item.originalSize)],
+          ["Compressed size", item.zip64 ? "ZIP64 size unsupported" : formatBytes(item.compressedSize)],
+          ["Method", String(item.method)],
+          ["Encrypted", item.encrypted ? "Yes" : "No"],
+          ["ZIP64", item.zip64 ? "Unsupported" : "No"],
+          ["Extraction", reason || "Supported · CRC-32 checked"],
         ];
-        for (const [name, value] of properties) {
+        for (const [keyName, value] of properties) {
           const field = element("div", "files-zip-property");
-          const key = element("dt", "", name);
+          const key = element("dt", "", keyName);
           const data = element("dd", "", value);
-          if (name === "Path") data.dataset.i18nSkip = "";
+          if (keyName === "Path") data.dataset.i18nSkip = "";
           field.append(key, data);
           entryDetails.append(field);
         }
         entryDetails.hidden = false;
       });
-      const size = element("small", "", `${entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
-      row.append(button, size);
+      const size = element("small", "", reason
+        ? reason
+        : `${formatBytes(item.originalSize)} · method ${item.method}`);
+      row.append(name, size);
+      if (!reason) {
+        const actions = element("div", "files-zip-row-actions");
+        const checkbox = element("input", "files-zip-checkbox");
+        checkbox.type = "checkbox";
+        checkbox.checked = checked.has(item.sourceIndex);
+        checkbox.setAttribute("aria-label", "Select ZIP entry " + item.name);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) checked.add(item.sourceIndex);
+          else checked.delete(item.sourceIndex);
+          refreshActions();
+        });
+        const verify = element("button", "button compact", "Verify CRC");
+        const download = element("button", "button compact", "Extract file");
+        verify.type = download.type = "button";
+        verify.addEventListener("click", () => void runEntries([entry], "verify"));
+        download.addEventListener("click", () => void runEntries([entry], "download"));
+        actions.append(checkbox, verify, download);
+        row.append(actions);
+      }
       listNode.append(row);
     }
     if (!view.folders.length && !view.files.length) {
-      const row = element("li", "files-zip-empty", "No entries in this folder.");
-      listNode.append(row);
+      listNode.append(element("li", "files-zip-empty", "No entries in this folder."));
     }
     if (moveFocus) {
       (listNode.querySelector(".files-zip-entry-button")
@@ -330,6 +495,7 @@ async function showZipContents(file, revision, target = preview) {
   }
   navigate("");
 }
+
 
 const MEDIA_MIME = Object.freeze({
   jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
