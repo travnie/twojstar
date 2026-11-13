@@ -34,7 +34,12 @@
   ["Select between 1 and 100 local files.","Wybierz od 1 do 100 plików lokalnych."],
   ["Selected files exceed ZIP size limit.","Wybrane pliki przekraczają limit rozmiaru ZIP."],
   ["Archive root","Główny folder archiwum"],
-  ["Go up","W górę"],
+  ["↰ Go up","↰ W górę"],
+  ["Open ZIP folder","Otwórz folder ZIP"],
+  ["Index only. Folder navigation does not decompress or extract files.","Tylko indeks. Nawigacja po folderach nie dekompresuje ani nie wypakowuje plików."],
+  ["ZIP64 size unsupported","Rozmiar ZIP64 nieobsługiwany"],
+  ["Yes","Tak"],
+  ["No","Nie"],
   ["ZIP folder navigation","Nawigacja po ZIP"],
   ["No entries in this folder.","Brak wpisów w tym folderze."],
   ["Original size","Rozmiar oryginalny"],
@@ -241,6 +246,9 @@
 
   const patterns = {
   pl: [
+    [/^ZIP contents · (\d+) entries$/u, "Zawartość ZIP · $1 wpisów"],
+    [/^(\d+) unsafe, ambiguous or unsupported entries hidden\.$/u, "$1 niebezpiecznych, niejednoznacznych lub nieobsługiwanych wpisów ukryto."],
+    [/^Open ZIP folder (.+)$/u, "Otwórz folder ZIP $1"],
     [/^Packing ZIP · (\d+)\/(\d+) files · (.+) \/ (.+)$/u, (_match, done, total, bytes, all) => `Pakowanie ZIP · ${done}/${total} plików · ${bytes} / ${all}`],
     [/^ZIP saved · (\d+) files · (.+)$/u, (_match, count, bytes) => `Zapisano ZIP · ${count} ${plPlural(count, "plik", "pliki", "plików")} · ${bytes}`],
     [/^ZIP failed: (.+)$/u, "Błąd ZIP: $1"],
@@ -267,6 +275,9 @@
     [/^Inspect · (\d+\+?)$/, "Analiza · $1"]
   ],
   en: [
+    [/^Zawartość ZIP · (\d+) wpisów$/u, "ZIP contents · $1 entries"],
+    [/^(\d+) niebezpiecznych, niejednoznacznych lub nieobsługiwanych wpisów ukryto\.$/u, "$1 unsafe, ambiguous or unsupported entries hidden."],
+    [/^Otwórz folder ZIP (.+)$/u, "Open ZIP folder $1"],
     [/^Pakowanie ZIP · (\d+)\/(\d+) plików · (.+) \/ (.+)$/u, "Packing ZIP · $1/$2 files · $3 / $4"],
     [/^Zapisano ZIP · (\d+) (?:plik|pliki|plików) · (.+)$/u, "ZIP saved · $1 files · $2"],
     [/^Błąd ZIP: (.+)$/u, "ZIP failed: $1"],

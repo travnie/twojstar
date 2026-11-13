@@ -18,10 +18,11 @@ export function createZipTree(entries) {
     }
     const normalized = entry.name.replaceAll("\\", "/");
     const isDirectory = Boolean(entry.directory || normalized.endsWith("/"));
-    const value = isDirectory ? normalized.slice(0, -1) : normalized;
+    const value = normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
     const parts = value.split("/");
     if (parts.length > ZIP_TREE_LIMITS.maxDepth
-      || parts.some((part) => !part || part === "." || part === "..")) {
+      || parts.some((part) => !part || part === "." || part === ".."
+        || /[\p{Bidi_Control}\u200b-\u200d\u2060\ufeff]/u.test(part))) {
       skipped += 1;
       continue;
     }
