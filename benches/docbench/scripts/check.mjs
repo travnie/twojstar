@@ -164,7 +164,7 @@ if (!portableFiles.includes("function createVerifySink()")) {
 if (!filesWorkspaceSource.includes("createZipTree(result.entries)")
   || !filesWorkspaceSource.includes("tree.list(path)")
   || !filesWorkspaceSource.includes("if (index) link.dataset.i18nSkip")
-  || !filesWorkspaceSource.includes('entry.zip64 ? "ZIP64 size unsupported"')
+  || !filesWorkspaceSource.includes('item.zip64 ? "ZIP64 size unsupported"')
   || !filesWorkspaceSource.includes("isCurrentPreview(target, revision)")) {
   throw new Error("ZIP folder browsing must reuse bounded central-directory metadata.");
 }
