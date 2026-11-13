@@ -263,6 +263,7 @@ async function showZipContents(file, revision, target = preview) {
       if (index) breadcrumb.append(element("span", "files-zip-separator", "/"));
       const link = element("button", "files-zip-breadcrumb", step.label);
       link.type = "button";
+      if (index) link.dataset.i18nSkip = "";
       link.disabled = step.path === path;
       link.addEventListener("click", () => navigate(step.path));
       breadcrumb.append(link);
@@ -296,8 +297,8 @@ async function showZipContents(file, revision, target = preview) {
         entryDetails.replaceChildren();
         const properties = [
           ["Path", entry.path],
-          ["Original size", formatBytes(entry.originalSize)],
-          ["Compressed size", formatBytes(entry.compressedSize)],
+          ["Original size", entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.originalSize)],
+          ["Compressed size", entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.compressedSize)],
           ["Method", String(entry.method)],
           ["Encrypted", entry.encrypted ? "Yes" : "No"],
           ["ZIP64", entry.zip64 ? "Unsupported" : "No"],
@@ -312,7 +313,7 @@ async function showZipContents(file, revision, target = preview) {
         }
         entryDetails.hidden = false;
       });
-      const size = element("small", "", `${formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
+      const size = element("small", "", `${entry.zip64 ? "ZIP64 size unsupported" : formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
       row.append(button, size);
       listNode.append(row);
     }
