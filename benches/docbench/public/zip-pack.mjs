@@ -18,7 +18,7 @@ export const ZIP_PACK_PROFILES = Object.freeze({
   maximum: Object.freeze({ level: 9, label: "Maximum" }),
 });
 
-const ALREADY_COMPRESSED = /\.(?:7z|avi|avif|br|bz2|flac|gif|gz|heic|heif|jpe?g|m4a|mkv|mov|mp3|mp4|ogg|opus|pdf|png|rar|webm|webp|xz|zip|zst)$/iu;
+const ALREADY_COMPRESSED = /\.(?:7z|aab|apk|avi|avif|br|bz2|cbz|crx|docm|docx|epub|flac|gif|gz|heic|heif|ipa|jar|jpe?g|m4a|mkv|mov|mp3|mp4|odp|ods|odt|ogg|opus|pdf|pkpass|png|pptm|pptx|rar|vsix|webm|webp|xlsm|xlsx|xpi|xz|zip|zst)$/iu;
 
 export function zipCompressionFor(path, profile = "smart") {
   const selected = ZIP_PACK_PROFILES[profile];
@@ -143,7 +143,7 @@ export async function packZip(entries, {
 } = {}) {
   const plan = planZipEntries(entries, { maxSourceBytes });
   zipCompressionFor("", profile);
-  if (!zipApi?.Zip || !zipApi?.ZipDeflate || !zipApi?.ZipPassThrough) {
+  if (!zipApi?.Zip || !zipApi?.ZipDeflate) {
     throw new Error("ZIP compression engine unavailable.");
   }
   if (typeof sink?.write !== "function" || typeof sink.close !== "function"
@@ -178,6 +178,9 @@ export async function packZip(entries, {
     for (const [index, item] of plan.items.entries()) {
       abortIfRequested(signal);
       const compression = zipCompressionFor(item.path, profile);
+      if (compression.method === 0 && !zipApi.ZipPassThrough) {
+        throw new Error("ZIP store encoder unavailable.");
+      }
       const stream = compression.method === 0
         ? new zipApi.ZipPassThrough(item.path)
         : new zipApi.ZipDeflate(item.path, { level: compression.level });

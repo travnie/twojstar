@@ -61,6 +61,14 @@ test("ZIP compression profiles produce valid stored/DEFLATE output", async () =>
       "A long line of text that should compress. ".repeat(200));
   }
   assert.equal(zipCompressionFor("image.webp", "smart").method, 0);
+  for (const name of ["a.docx", "a.xlsx", "a.pptx", "book.epub", "app.apk"]) {
+    assert.equal(zipCompressionFor(name, "smart").method, 0, name);
+  }
+  const legacyZipApi = { Zip, ZipDeflate };
+  const legacyResult = await packZip([source("note.txt", "hello")], {
+    zipApi: legacyZipApi, sink: createMemoryZipSink(), profile: "balanced",
+  });
+  assert.equal((await readZipIndex(legacyResult.output)).entries[0].method, 8);
   assert.equal(zipCompressionFor("docs/data.json", "smart").level, 6);
   assert.throws(() => zipCompressionFor("x.txt", "__proto__"), /Unknown ZIP compression profile/);
   await assert.rejects(packZip(entries, {
