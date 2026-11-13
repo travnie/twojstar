@@ -34,6 +34,7 @@ const viewList = getNode("#files-view-list");
 const viewGrid = getNode("#files-view-grid");
 const selectVisible = getNode("#files-select-visible");
 const packZipButton = getNode("#files-pack-zip");
+const compressionSelect = getNode("#files-zip-compression");
 const cancelZipButton = getNode("#files-zip-cancel");
 const zipProgress = getNode("#files-zip-progress");
 const zipStatus = getNode("#files-zip-status");
@@ -215,6 +216,7 @@ function renderList() {
   previewButton.disabled = !store.activeId();
   selectVisible.disabled = !ids.length;
   packZipButton.disabled = selectedCount === 0 || Boolean(zipController);
+  compressionSelect.disabled = Boolean(zipController);
 
   const available = store.folders();
   const requested = folder;
@@ -807,7 +809,7 @@ async function packSelectedZip() {
     setZipStatus("This browser supports ZIP downloads up to 56 MiB of source files.");
     return;
   }
-  if (!globalThis.fflate?.ZipDeflate) {
+  if (!globalThis.fflate?.ZipDeflate || !globalThis.fflate?.ZipPassThrough) {
     setZipStatus("Local ZIP compression is unavailable.");
     return;
   }
@@ -847,6 +849,7 @@ async function packSelectedZip() {
     }
     const result = await packZip(selected.items, {
       zipApi: globalThis.fflate, sink, signal: controller.signal,
+      profile: compressionSelect.value,
       maxSourceBytes: nativeSave ? ZIP_PACK_LIMITS.maxSourceBytes : ZIP_PACK_LIMITS.maxMemorySourceBytes,
       maxOutputBytes: nativeSave ? ZIP_PACK_LIMITS.maxStreamBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
       onProgress: ({ phase, filesDone, filesTotal, bytesDone, bytesTotal }) => {

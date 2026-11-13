@@ -10,6 +10,22 @@
   gap: 8px;
 }
 
+.files-zip-profile {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.files-zip-profile select {
+  max-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface);
+}
 .files-hint,
 .files-note {
   color: var(--muted);

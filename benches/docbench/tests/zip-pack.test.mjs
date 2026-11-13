@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Zip, ZipDeflate, unzipSync } from "fflate";
+import { Zip, ZipDeflate, ZipPassThrough, unzipSync } from "fflate";
 import { readZipIndex } from "../public/zip-index.mjs";
-import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "../public/zip-pack.mjs";
+import { ZIP_PACK_LIMITS, ZIP_PACK_PROFILES, zipCompressionFor,
+  planZipEntries, createMemoryZipSink, packZip } from "../public/zip-pack.mjs";
 
-const zipApi = { Zip, ZipDeflate };
+const zipApi = { Zip, ZipDeflate, ZipPassThrough };
 const source = (path, content, id = path) => {
   const file = new Blob([content]);
   return { id, path, file, size: file.size };
@@ -37,6 +38,34 @@ test("ZIP packs selected local files with folder paths and collision-safe names"
   assert.equal(index.count, 5);
   assert.ok(index.entries.every((entry) => entry.safe && !entry.encrypted));
   assert.equal(updates.at(-1).filesDone, 5);
+});
+
+test("ZIP compression profiles produce valid stored/DEFLATE output", async () => {
+  const entries = [
+    source("photo.jpg", new Uint8Array([1, 2, 3, 4])),
+    source("note.txt", "A long line of text that should compress. ".repeat(200)),
+  ];
+  const choices = ["smart", "store", "fast", "balanced", "maximum"];
+  assert.deepEqual(Object.keys(ZIP_PACK_PROFILES), choices);
+  for (const profile of choices) {
+    const output = await packZip(entries, {
+      zipApi, sink: createMemoryZipSink(), profile,
+    });
+    const indexed = await readZipIndex(output.output);
+    assert.equal(indexed.count, 2);
+    assert.equal(indexed.entries[0].method, profile === "smart" || profile === "store" ? 0 : 8);
+    assert.equal(indexed.entries[1].method, profile === "store" ? 0 : 8);
+    const unpacked = unzipSync(new Uint8Array(await output.output.arrayBuffer()));
+    assert.deepEqual(unpacked["photo.jpg"], new Uint8Array([1, 2, 3, 4]));
+    assert.equal(new TextDecoder().decode(unpacked["note.txt"]),
+      "A long line of text that should compress. ".repeat(200));
+  }
+  assert.equal(zipCompressionFor("image.webp", "smart").method, 0);
+  assert.equal(zipCompressionFor("docs/data.json", "smart").level, 6);
+  assert.throws(() => zipCompressionFor("x.txt", "__proto__"), /Unknown ZIP compression profile/);
+  await assert.rejects(packZip(entries, {
+    zipApi, sink: createMemoryZipSink(), profile: "not-real",
+  }), /Unknown ZIP compression profile/);
 });
 
 test("ZIP streams multiple slices, respects sink backpressure", async () => {

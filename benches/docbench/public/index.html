@@ -294,6 +294,15 @@
           <button id="files-new-document" class="button compact" type="button">New document</button>
           <button id="files-preview-open" class="button compact" type="button" disabled>Open preview</button>
           <button id="files-pack-zip" class="button compact" type="button" disabled>Pack selected ZIP</button>
+          <label class="files-zip-profile">Compression
+            <select id="files-zip-compression" aria-label="ZIP compression profile">
+              <option value="smart" selected>Smart (automatic)</option>
+              <option value="store">Store (no compression)</option>
+              <option value="fast">Fast</option>
+              <option value="balanced">Balanced</option>
+              <option value="maximum">Maximum</option>
+            </select>
+          </label>
           <button id="files-remove" class="button compact" type="button" disabled>Remove selected</button>
           <button id="files-clear" class="button compact" type="button" disabled>Clear list</button>
           <input id="files-input" type="file" multiple hidden>
