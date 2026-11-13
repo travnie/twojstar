@@ -236,6 +236,36 @@
   border-radius: 7px;
 }
 
+.files-zip-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 12px;
+  overflow-wrap: anywhere;
+}
+.files-zip-breadcrumb,
+.files-zip-entry-button {
+  border: 0;
+  padding: 4px 6px;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.files-zip-breadcrumb:disabled { opacity: .7; cursor: default; }
+.files-zip-entry-button:hover,
+.files-zip-entry-button:focus-visible { color: var(--accent); text-decoration: underline; }
+.files-zip-entry-details {
+  margin: 10px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.files-zip-property { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px; }
+.files-zip-property dt { color: var(--muted); }
+.files-zip-property dd { margin: 0; overflow-wrap: anywhere; }
 .files-zip-name {
   overflow-wrap: anywhere;
   font-family: "Space Mono", ui-monospace, monospace;
