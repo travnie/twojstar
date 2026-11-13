@@ -6,6 +6,7 @@ export const ZIP_PACK_LIMITS = Object.freeze({
   maxMemorySourceBytes: 56 * 1024 * 1024,
   maxStreamBytes: 600 * 1024 * 1024,
   chunkBytes: 128 * 1024,
+  yieldEveryChunks: 16,
   maxPathBytes: 1024,
 });
 
@@ -71,8 +72,14 @@ export function planZipEntries(entries, { maxSourceBytes = ZIP_PACK_LIMITS.maxSo
     const ext = dot > 0 ? filename.slice(dot) : "";
     let candidate = parts.join("/");
     let suffix = 2;
-    while (used.has(candidate.toLowerCase()) || folders.has(candidate.toLowerCase())) {
+    if (folders.has(candidate.toLowerCase())) {
+      throw new Error("Conflicting ZIP file and folder path: " + candidate);
+    }
+    while (used.has(candidate.toLowerCase())) {
       candidate = (parent ? parent + "/" : "") + stem + " (" + suffix++ + ")" + ext;
+      if (folders.has(candidate.toLowerCase())) {
+        throw new Error("Conflicting ZIP file and folder path: " + candidate);
+      }
       if (new TextEncoder().encode(candidate).length > ZIP_PACK_LIMITS.maxPathBytes) {
         throw new Error("ZIP path exceeds length limit.");
       }
@@ -119,6 +126,7 @@ export async function packZip(entries, {
 
   let outputBytes = 0;
   let readBytes = 0;
+  let chunksRead = 0;
   let completed = false;
   let zipError = null;
   let writing = Promise.resolve();
@@ -159,7 +167,9 @@ export async function packZip(entries, {
         readBytes += bytes.length;
         onProgress({ filesDone: index, filesTotal: plan.items.length,
           bytesDone: readBytes, bytesTotal: plan.totalBytes, path: item.path });
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        if (++chunksRead % ZIP_PACK_LIMITS.yieldEveryChunks === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
       }
       stream.push(new Uint8Array(0), true);
       await writing;

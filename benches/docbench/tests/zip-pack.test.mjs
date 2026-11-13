@@ -87,6 +87,13 @@ test("ZIP rejects traversal, device paths, collisions with folders and oversized
   assert.throws(() => planZipEntries([]), /Select between/);
   assert.equal(ZIP_PACK_LIMITS.maxEntries, 100);
   assert.equal(ZIP_PACK_LIMITS.maxMemorySourceBytes, 56 * 1024 * 1024);
+  assert.equal(ZIP_PACK_LIMITS.yieldEveryChunks, 16);
+  assert.throws(() => planZipEntries([
+    source("folder/file.txt", "x"), source("folder", "y"),
+  ]), /Conflicting ZIP file and folder path/);
+  assert.throws(() => planZipEntries([
+    source("folder", "x"), source("folder/file.txt", "y"),
+  ]), /Conflicting ZIP folder path/);
 });
 
 test("ZIP preserves source modified dates within classic DOS bounds", async () => {
