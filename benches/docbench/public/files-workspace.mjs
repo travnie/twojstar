@@ -103,7 +103,7 @@ function closeAudioDock() {
 
 function releasePreview(target = preview) {
   const job = zipJobs.get(target);
-  if (job && !job.committing) job.controller.abort();
+  if (job) job.controller.abort();
   const media = target.querySelector("audio, video");
   if (media) {
     media.pause();
