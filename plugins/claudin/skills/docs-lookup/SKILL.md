@@ -10,7 +10,7 @@ These products change weekly; memory is months old. Any time a fact from their d
 
 ## Connectors first
 
-- A docs connector for the domain is in the tool list → use it. Don't WebFetch or web-search pages of the same site: the connector returns the current page as clean text, searches the whole site and costs fewer calls.
+- A docs connector for the domain is in the tool list → use it. Don't WebFetch or web-search pages of the same site when the connector can return the full page. A search-only connector (snippets, no page read) finds the page; then read that official page via WebFetch before relying on it.
 - Fall back to WebFetch only when no connector covers it, or the connector errors or times out (say so in one line).
 - Web search is for things outside official docs (issues, release chatter), never to find a page a connector can search.
 
@@ -28,7 +28,7 @@ Bundled with this plugin, public and authless:
 | `openai-docs` — developers.openai.com | OpenAI API, Codex, ChatGPT apps/plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — docs.x.ai | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API. Tools: `search_docs`, `get_doc_page` (slug), `list_doc_pages` |
 
-Not bundled but often connected — use when present: GitHub docs (GitHub MCP `github_support_docs_search`), Google Developer Knowledge (Android, Chrome, Firebase, Gemini CLI), Microsoft Learn (Azure, .NET, M365), Cloudflare docs, Context7 (library and framework docs). Hosts without any connector (Antigravity, Copilot CLI pages): official URLs in `plugin-dev` `references/hosts.md`, via WebFetch. Claude plans, usage limits and pricing: `product-self-knowledge` too. Claude API model IDs and renamed params: `plugin-dev` `references/claude-api.md` drift table.
+Not bundled but often connected — use when present: GitHub docs (GitHub MCP `github_support_docs_search`), Google Developer Knowledge (Android, Chrome, Firebase, Gemini CLI), Microsoft Learn (Azure, .NET, M365), Cloudflare docs, Context7 (library and framework docs). No matching connector in the session: official URLs in `plugin-dev` `references/hosts.md`, via WebFetch. Claude plans, usage limits and pricing: `product-self-knowledge` too. Claude API model IDs and renamed params: `plugin-dev` `references/claude-api.md` drift table.
 
 ## How
 
