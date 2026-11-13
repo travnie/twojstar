@@ -88,7 +88,8 @@ def validate(root: Path) -> tuple[dict, dict | None]:
     # Claude directory listing icon; Claude Code ignores it at load time.
     if not isinstance(manifest.get("icon"), str):
         raise ValueError("missing Claude icon")
-    safe_asset(root, manifest["icon"])
+    if not safe_asset(root, manifest["icon"]).read_bytes().startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Claude icon must be a PNG")
 
     # mcp.json is optional: a skills-only plugin has none (Agent Plugins 1.0).
     mcp_path = root / "mcp.json"
