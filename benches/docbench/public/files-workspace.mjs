@@ -66,6 +66,7 @@ let dialogId = null;
 let dialogRevision = 0;
 let dialogFocusReturn = null;
 let zipController = null;
+let zipFinalizing = false;
 
 function isCurrentPreview(target, revision) {
   return target === dialogBody
@@ -597,7 +598,13 @@ async function packSelectedZip() {
       zipApi: globalThis.fflate, sink, signal: controller.signal,
       maxSourceBytes: nativeSave ? ZIP_PACK_LIMITS.maxSourceBytes : ZIP_PACK_LIMITS.maxMemorySourceBytes,
       maxOutputBytes: nativeSave ? ZIP_PACK_LIMITS.maxStreamBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
-      onProgress: ({ filesDone, filesTotal, bytesDone, bytesTotal }) => {
+      onProgress: ({ phase, filesDone, filesTotal, bytesDone, bytesTotal }) => {
+        if (phase === "committing") {
+          zipFinalizing = true;
+          cancelZipButton.hidden = true;
+          setZipStatus("Finalizing ZIP…");
+          return;
+        }
         zipProgress.value = Math.round(100 * (bytesTotal ? bytesDone / bytesTotal : filesDone / filesTotal));
         setZipStatus(`Packing ZIP · ${filesDone}/${filesTotal} files · ${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}`);
       },
@@ -617,6 +624,7 @@ async function packSelectedZip() {
       ? "ZIP packing canceled." : `ZIP failed: ${error?.message || String(error)}`);
   } finally {
     zipController = null;
+    zipFinalizing = false;
     cancelZipButton.hidden = true;
     zipProgress.hidden = true;
     renderList();
@@ -624,7 +632,9 @@ async function packSelectedZip() {
 }
 
 packZipButton.addEventListener("click", () => void packSelectedZip());
-cancelZipButton.addEventListener("click", () => zipController?.abort());
+cancelZipButton.addEventListener("click", () => {
+  if (!zipFinalizing) zipController?.abort();
+});
 toolButton.addEventListener("click", openInTool);
 audioOpenButton.addEventListener("click", playAudioDock);
 getNode("#files-audio-close").addEventListener("click", closeAudioDock);
@@ -704,11 +714,11 @@ store.subscribe(() => {
 const filesPanel = getNode("#files-workspace");
 new MutationObserver(() => {
   if (filesPanel.hidden && audioDockId) closeAudioDock();
-  if (filesPanel.hidden) zipController?.abort();
+  if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
-  zipController?.abort();
+  if (!zipFinalizing) zipController?.abort();
   closeAudioDock();
   releasePreview();
   releasePreview(dialogBody);

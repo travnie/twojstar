@@ -30,6 +30,7 @@
   ["Preparing ZIP…","Przygotowywanie ZIP…"],
   ["ZIP export canceled.","Anulowano eksport ZIP."],
   ["ZIP packing canceled.","Anulowano pakowanie ZIP."],
+  ["Finalizing ZIP…","Kończenie zapisu ZIP…"],
   ["Select between 1 and 100 local files.","Wybierz od 1 do 100 plików lokalnych."],
   ["Selected files exceed ZIP size limit.","Wybrane pliki przekraczają limit rozmiaru ZIP."]
   ["Convert DOCX to PDF","Konwertuj DOCX na PDF"],
@@ -257,6 +258,9 @@
     [/^Inspect · (\d+\+?)$/, "Analiza · $1"]
   ],
   en: [
+    [/^Pakowanie ZIP · (\d+)\/(\d+) plików · (.+) \/ (.+)$/u, "Packing ZIP · $1/$2 files · $3 / $4"],
+    [/^Zapisano ZIP · (\d+) (?:plik|pliki|plików) · (.+)$/u, "ZIP saved · $1 files · $2"],
+    [/^Błąd ZIP: (.+)$/u, "ZIP failed: $1"],
     [/^(\d+) (?:proponowana zmiana|proponowane zmiany|proponowanych zmian)\.$/u, (_match, count) => `${count} proposed ${enPlural(count, "change", "changes")}.`],
     [/^(\d+) · (\d+) (?:zaznaczony|zaznaczone|zaznaczonych)$/, "$1 · $2 selected"],
     [/^Zaznacz (.+)$/, "Select $1"],
