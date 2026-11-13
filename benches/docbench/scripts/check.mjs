@@ -120,6 +120,7 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || portableFiles.includes('href="/files-workspace.css"')
   || portableFiles.includes('from "./file-signatures.mjs"')
   || portableFiles.includes('from "./zip-index.mjs"')
+  || portableFiles.includes('from "./zip-tree.mjs"')
   || !portableFiles.includes("async function inspectLocalFile(file)")
   || !portableFiles.includes("async function readZipIndex(blob)")
   || !portableFiles.includes("function createZipTree(entries)")

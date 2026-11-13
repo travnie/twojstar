@@ -245,7 +245,7 @@ async function showZipContents(file, revision, target = preview) {
   else box.append(title, note, breadcrumb, listNode, entryDetails);
   target.append(box);
 
-  function navigate(path) {
+  function navigate(path, moveFocus = false) {
     if (!isCurrentPreview(target, revision)) return;
     const view = tree.list(path);
     if (!view) return;
@@ -265,7 +265,7 @@ async function showZipContents(file, revision, target = preview) {
       link.type = "button";
       if (index) link.dataset.i18nSkip = "";
       link.disabled = step.path === path;
-      link.addEventListener("click", () => navigate(step.path));
+      link.addEventListener("click", () => navigate(step.path, true));
       breadcrumb.append(link);
     }
     listNode.replaceChildren();
@@ -273,17 +273,19 @@ async function showZipContents(file, revision, target = preview) {
       const row = element("li", "files-zip-folder");
       const up = element("button", "files-zip-entry-button", "↰ Go up");
       up.type = "button";
-      up.addEventListener("click", () => navigate(view.parentPath));
+      up.addEventListener("click", () => navigate(view.parentPath, true));
       row.append(up);
       listNode.append(row);
     }
     for (const folder of view.folders) {
       const row = element("li", "files-zip-folder");
-      const button = element("button", "files-zip-entry-button", "▣ " + folder.name + "/");
+      const button = element("button", "files-zip-entry-button");
       button.type = "button";
-      button.dataset.i18nSkip = "";
+      const label = element("span", "files-zip-name", folder.name + "/");
+      label.dataset.i18nSkip = "";
+      button.append(element("span", "files-zip-icon", "▣ "), label);
       button.setAttribute("aria-label", "Open ZIP folder " + folder.name);
-      button.addEventListener("click", () => navigate(folder.path));
+      button.addEventListener("click", () => navigate(folder.path, true));
       row.append(button);
       listNode.append(row);
     }
@@ -307,7 +309,7 @@ async function showZipContents(file, revision, target = preview) {
           const field = element("div", "files-zip-property");
           const key = element("dt", "", name);
           const data = element("dd", "", value);
-          data.dataset.i18nSkip = "";
+          if (name === "Path") data.dataset.i18nSkip = "";
           field.append(key, data);
           entryDetails.append(field);
         }
@@ -320,6 +322,10 @@ async function showZipContents(file, revision, target = preview) {
     if (!view.folders.length && !view.files.length) {
       const row = element("li", "files-zip-empty", "No entries in this folder.");
       listNode.append(row);
+    }
+    if (moveFocus) {
+      (listNode.querySelector(".files-zip-entry-button")
+        || breadcrumb.querySelector(".files-zip-breadcrumb:not(:disabled)"))?.focus();
     }
   }
   navigate("");
