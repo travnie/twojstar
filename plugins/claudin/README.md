@@ -6,7 +6,7 @@ Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the A
 
 ## Just want answers
 
-Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. Nothing to build or configure.
+Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. The builder skills use the same route, so doc facts come from connectors (these seven, plus GitHub, Google Developer, Microsoft Learn, Cloudflare or Context7 when connected) instead of WebFetch of the same sites.
 
 | Docs MCP (public, authless) | Covers |
 |---|---|
@@ -50,7 +50,7 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.8.0.zip
+python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.9.0.zip
 ```
 
 Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).
