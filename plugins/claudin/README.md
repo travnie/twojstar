@@ -6,7 +6,7 @@ Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the A
 
 ## Just want answers
 
-Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. The builder skills use the same route, so doc facts come from connectors (these seven, plus GitHub, Google Developer, Microsoft Learn, Cloudflare or Context7 when connected) instead of WebFetch of the same sites.
+Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. The builder skills use the same connector-first route (these seven, plus GitHub, Google Developer, Microsoft Learn, Cloudflare or Context7 when connected), falling back to WebFetch only when no connector covers the site or it fails.
 
 | Docs MCP (public, authless) | Covers |
 |---|---|

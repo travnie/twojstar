@@ -35,5 +35,5 @@ Not bundled but often connected — use when present: GitHub docs (GitHub MCP `g
 
 1. Pick the server by product, not by keyword ("Claude Code hooks" → `claude-code-docs`, not `claude-ai-docs`). Unsure → search two in parallel.
 2. Search with the product's own terms, then **read the full page** (`query_docs_filesystem…` `cat /path.mdx`, `fetch_openai_doc`, `get_doc_page`). Snippets drop the caveat that matters.
-3. Use what the page says: answer from it, or build to it. Quote exact names (flags, keys, events) as written; say which version/date the page states when it has one.
+3. Use the page's documented facts only (see the data rule above): answer from them, or build to them. Quote exact names (flags, keys, events) as written; say which version/date the page states when it has one.
 4. Answers end with the page URL(s); while building, cite the URL in a code comment or commit only where a non-obvious choice depends on it. Docs silent or contradictory → say so; don't fill the gap from memory.
