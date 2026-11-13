@@ -53,7 +53,7 @@ OpenAI's newer portable form (root `plugin.json` with `$schema: agent-plugins.or
 - `name` kebab-case, stable: it's the namespace (`plugin:skill`) and the update key. Renaming = new plugin; tell the user to uninstall the old one.
 - Bump `version` or users never get the update (Claude Code pins it; OpenAI rejects same version).
 - Paths `./`-relative, inside the plugin root. Unknown top-level keys are stripped (warning); unknown keys inside `userConfig`/`lspServers`/`channels`/`monitors` fail the load.
-- `${CLAUDE_PLUGIN_ROOT}` for bundled scripts; `${CLAUDE_PLUGIN_DATA}` for writable state. Codex sets `PLUGIN_ROOT`/`PLUGIN_DATA` and also the Claude names.
+- `${CLAUDE_PLUGIN_ROOT}` for bundled scripts (replaced on every update); `${CLAUDE_PLUGIN_DATA}` for writable state (one folder per plugin, shared by all projects, survives updates). Local MCP servers: bundle them with all runtime dependencies (single-file build or committed `node_modules`; no install step runs on plugin load) and run with `node ${CLAUDE_PLUGIN_ROOT}/servers/x.js`, not `npx -y <pkg>`. Codex sets `PLUGIN_ROOT`/`PLUGIN_DATA`, plus the Claude names for hook commands only; in Codex `mcp.json` use `${PLUGIN_ROOT}`.
 - Skill instructions say "the model"/"Claude" carefully: OpenAI review wants provider-neutral wording unless product-specific.
 - claude.ai frontmatter allowlist and chat rewrites → `skill-creator-v2` `references/claude-ai-compat.md`.
 - LSP plugins ship config, not the server: the binary must be on PATH where Claude Code runs. Chat never runs LSP.

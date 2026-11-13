@@ -10,6 +10,8 @@ search/fetch standard, MCP Apps archetypes, stateful-widget patterns and the val
 
 `references/evals.md` condenses Anthropic `mcp-builder` `reference/evaluation.md`; `scripts/eval/` is its harness (Apache-2.0, `anthropics/skills@683bc88`) with twojstar's local fixes, and the stale default model replaced by a required `-m`.
 
+SDK v2 traps (codemod, Zod ^4.2, `register*`, per-request server) checked against Anthropic `mcp-builder` (`anthropics/skills@ca45fc4`, Apache-2.0) on 2026-11-13; WebMCP bridge from ext-apps v2.1.0 (MIT).
+
 ## `plugin-dev`
 
 Condensed from Anthropic **plugin-dev** (Apache-2.0) and re-verified 2026-11 against code.claude.com/docs, claude.com/docs (platform support matrix) and developers.openai.com/plugins (Agent Plugins, Codex overlay, submission rules). Stale enumerations (hook events, manifest fields) replaced by routing to the live docs MCPs. Rewritten, not verbatim.

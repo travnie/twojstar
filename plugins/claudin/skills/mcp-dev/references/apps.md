@@ -4,7 +4,7 @@ One standard for both hosts: ChatGPT is fully MCP Apps-compatible since 2026-02;
 
 ## Setup that bites
 
-- ext-apps 2.x needs the split SDK v2 packages: `npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/client @modelcontextprotocol/server @modelcontextprotocol/node @modelcontextprotocol/express zod` (`client` is a required peer even for views that call nothing; zod must be 4.x). Never add the v1 `@modelcontextprotocol/sdk` next to them.
+- ext-apps 2.x needs the split SDK v2 packages: `npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/client @modelcontextprotocol/server @modelcontextprotocol/node @modelcontextprotocol/express zod` (`client` is a required peer even for views that call nothing; zod ^4.2.0). Never add the v1 `@modelcontextprotocol/sdk` next to them.
 - Bundle the view into one HTML file: `vite` + `vite-plugin-singlefile`. Dev deps: `npm install -D vite vite-plugin-singlefile tsx typescript`. Run TS servers with `tsx` (SDK examples use `bun`).
 - Working code beats memory: clone the SDK at the installed version, `git clone --depth 1 --branch "v$(npm view @modelcontextprotocol/ext-apps version)" https://github.com/modelcontextprotocol/ext-apps`, then read `examples/basic-server-{vanillajs,react,vue,svelte}` `docs/migrate_from_openai_apps.md` (OpenAI Apps SDK → MCP Apps) and `docs/migrate-to-2.md` (ext-apps 1.x → 2.x).
 - Official step-by-step skills (Claude Code): the `mcp-apps` plugin in that repo (`create-mcp-app`, `add-app-to-server`, `convert-web-app`, `migrate-oai-app`). It's not part of this plugin, so don't assume it's installed.
@@ -60,6 +60,7 @@ Existing SPA that must keep working standalone: pick the mode from an explicit s
 - Links: through `ui/open-link`; declared HTTPS origins open without a prompt in Claude (allowed link URIs at submission).
 - Theme: use host CSS variables / transparent background; test light + dark.
 - Payload: keep tool results small; fetch heavy data from the view via `tools/call` (app-only tool) instead of stuffing the first result.
+- View-registered tools (`app.registerTool`): since ext-apps 2.1 they are mirrored to WebMCP (`document.modelContext`) and WebMCP-registered page tools are served over `tools/list`; `webMcpBridge: false` turns the bridge off.
 - Abuse: rate-limit app-only tools, validate inputs like any public endpoint.
 
 ## Pick one archetype, say which
