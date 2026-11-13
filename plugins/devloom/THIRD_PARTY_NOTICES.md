@@ -23,3 +23,5 @@ Condensed from Anthropic **plugin-dev** (Apache-2.0) and re-verified 2026-11 aga
 ## Remote MCP servers
 
 Referenced by URL in `mcp.json`, not redistributed: `claude-code-docs` (https://code.claude.com/docs/mcp), `claude-ai-docs` (https://claude.com/docs/mcp), `claude-platform-docs` (https://platform.claude.com/docs/mcp), `mcp-docs` (https://modelcontextprotocol.io/mcp), `openai-docs` (https://developers.openai.com/mcp), `xai-docs` (https://docs.x.ai/api/mcp).
+
+OpenAI Dev Kit (Apache-2.0 and ISC): unique builder scripts and references preserved under `skills/plugin-dev/` and `skills/docs-lookup/references/`. Legacy standalone packaging replaced with the shared canonical packager.

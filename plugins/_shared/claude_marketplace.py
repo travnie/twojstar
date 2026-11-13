@@ -19,7 +19,7 @@ TARGET = ROOT / ".claude-plugin/marketplace.json"
 # Claude Code disallows names beginning with "claude-". Preserve the display name.
 CLAUDE_NAMES: dict[str, str] = {}
 # Append-only history of Claude plugin ids, so existing installs migrate instead of breaking.
-RENAMES = {"devkit-claude": "claudin"}
+RENAMES = {"devkit-claude": "devloom", "claudin": "devloom", "openai-dev-kit": "devloom"}
 
 
 def catalog() -> dict:

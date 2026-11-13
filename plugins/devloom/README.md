@@ -1,6 +1,6 @@
-# Claudin
+# Devloom
 
-<img src="assets/icon.svg" width="96" alt="Claudin">
+<img src="assets/icon.svg" width="96" alt="Devloom">
 
 Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the Agent Client Protocol, OpenAI/Codex and xAI/Grok — looked up, not remembered. Plus builder skills for plugins, MCP servers and skills. Replaces Anthropic's `plugin-dev` and `mcp-server-dev` and the MCP `mcp-apps` plugin (their pins had gone stale: hook list, manifest fields, ext-apps 1.x, pre-2026 spec).
 
@@ -42,7 +42,7 @@ Related, not duplicated: `skill-creator-v2` (SKILL.md authoring, packaging, clau
 
 Sources and licenses: each skill's `NOTICE.md` / `LICENSE.txt`.
 
-Also folded in (Nov 2026): the private `openai-dev-kit` (travnie/twojstar) — search/fetch standard, `.app.json` registration flow, MCP Apps archetypes and state-sync patterns, validation ladder, shortDescription ≤30 rule.
+Consolidated from `claudin` and `openai-dev-kit` (Nov 2026). In addition to previously merged OpenAI guidance, unique OpenAI scaffolding and validation tools live in `skills/plugin-dev/scripts/`, MCP Apps patterns and build references in `skills/plugin-dev/references/openai-kit/`, and API/Codex workflows in `skills/docs-lookup/references/`. All seven official docs MCP endpoints are unchanged.
 
 ## twojstar package
 
@@ -50,7 +50,13 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.9.2.zip
+python plugins/_shared/package_plugin.py plugins/devloom /tmp/devloom-2.0.0.zip
 ```
 
 Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).
+
+## Migration
+
+`devkit-claude`, `claudin`, and `openai-dev-kit` now map to `devloom` in the Claude marketplace rename history. Installed ChatGPT/Codex packages may require manual removal and reinstallation: changing the repository package does not silently update a registered connection.
+
+The existing skills keep stable names. Focused OpenAI-only builder/docs workflows are integrated into `plugin-dev` and `docs-lookup`, not duplicated. For additional OpenAI-specific validation run `python plugins/devloom/skills/plugin-dev/scripts/validate_plugin.py plugins/devloom`.

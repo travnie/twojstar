@@ -1,13 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "claudin",
-  "version": "1.9.2",
-  "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
+  "name": "devloom",
+  "version": "2.0.0",
+  "description": "Live official docs for Claude, OpenAI/Codex, xAI/Grok, MCP and ACP across seven public docs MCPs, plus cross-platform plugin, MCP App and skill development, testing and packaging.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
   },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/claudin",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/devloom",
   "repository": "https://github.com/travnie/twojstar",
   "license": "Apache-2.0 AND ISC",
   "icon": "./assets/icon.png",
@@ -31,9 +31,9 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Claudin",
-        "shortDescription": "Live docs, plugins & MCP",
-        "longDescription": "Ask about Claude Code, claude.ai, the Claude API, MCP, the Agent Client Protocol, OpenAI/Codex or xAI/Grok and docs-lookup answers from the live official docs, with links: seven bundled docs MCP servers, no setup. For builders: plugin-dev packages skills, MCP servers and Claude Code extras into plugins for Claude chat, Cowork, Claude Code, Codex/ChatGPT, Grok Build, GitHub Copilot CLI, Google Antigravity and Gemini CLI; mcp-dev designs, tests and ships MCP servers and MCP Apps (deployment, tool design, OAuth, MCPB, directory review, the stateless 2026-07-28 spec, a stdlib probe script); skill-creator-v2 runs the skill lifecycle. Personal toolkit maintained by travnie; not an official Anthropic, OpenAI or xAI plugin.",
+        "displayName": "Devloom",
+        "shortDescription": "Live docs & agent dev tools",
+        "longDescription": "Cross-platform development toolkit for Claude, ChatGPT/Codex, xAI/Grok and MCP/ACP. Seven official documentation MCP servers, with skills for docs lookup, plugin design, MCP servers and apps, plus skill creation/evaluation. Includes OpenAI-specific scaffolding, validation, and MCP Apps references migrated from OpenAI Dev Kit. Personal toolkit from travnie, not an official provider plugin.",
         "developerName": "travnie",
         "category": "Developer Tools",
         "capabilities": [
@@ -42,9 +42,9 @@
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/claudin",
         "defaultPrompt": [
-          "How do Claude Code hooks block a tool call?",
-          "Port this Claude plugin so it also installs in Codex",
-          "Design a remote MCP server for this REST API"
+          "Build a cross-platform agent plugin and validate its portable package.",
+          "Review this ChatGPT MCP App against current docs and scaffold a safe fix.",
+          "Find the latest MCP protocol guidance and test my server."
         ],
         "brandColor": "#D97757",
         "composerIcon": "./assets/icon.svg",

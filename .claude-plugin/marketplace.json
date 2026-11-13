@@ -33,20 +33,6 @@
       "category": "Productivity"
     },
     {
-      "name": "openai-dev-kit",
-      "source": "./plugins/openai-dev-kit",
-      "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
-      "version": "1.1.1",
-      "displayName": "OpenAI Dev Kit",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "openaiDeveloperDocs": {
-          "type": "http",
-          "url": "https://developers.openai.com/mcp"
-        }
-      }
-    },
-    {
       "name": "google-dev-kit",
       "source": "./plugins/google-dev-kit",
       "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
@@ -111,11 +97,11 @@
       }
     },
     {
-      "name": "claudin",
-      "source": "./plugins/claudin",
-      "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
-      "version": "1.9.2",
-      "displayName": "Claudin",
+      "name": "devloom",
+      "source": "./plugins/devloom",
+      "description": "Live official docs for Claude, OpenAI/Codex, xAI/Grok, MCP and ACP across seven public docs MCPs, plus cross-platform plugin, MCP App and skill development, testing and packaging.",
+      "version": "2.0.0",
+      "displayName": "Devloom",
       "category": "Developer Tools",
       "mcpServers": {
         "claude-code-docs": {
@@ -200,6 +186,8 @@
     }
   ],
   "renames": {
-    "devkit-claude": "claudin"
+    "devkit-claude": "devloom",
+    "claudin": "devloom",
+    "openai-dev-kit": "devloom"
   }
 }
