@@ -1,6 +1,6 @@
 # Claude API — pointers, not a copy
 
-Building against the Claude API / Anthropic SDKs. Source of truth: `claude-platform-docs` MCP (`search_docs`, `sdk_language` param); WebFetch `https://platform.claude.com/docs/en/<path>.md` only when that connector is unavailable (see `docs-lookup`). Full offline reference (8 SDK languages, Managed Agents, evals, migration and prompt-audit flows): Anthropic's upstream `claude-api` skill, `github.com/anthropics/skills/tree/main/skills/claude-api` — install it only if API work becomes regular.
+Building against the Claude API / Anthropic SDKs. Source of truth: `claude-platform-docs` MCP (`search_docs`, `sdk_language` param); WebFetch `https://platform.claude.com/docs/en/<path>.md` only when that connector is unavailable, errors or times out (see `docs-lookup`). Full offline reference (8 SDK languages, Managed Agents, evals, migration and prompt-audit flows): Anthropic's upstream `claude-api` skill, `github.com/anthropics/skills/tree/main/skills/claude-api` — install it only if API work becomes regular.
 
 ## Rules that save rework
 
