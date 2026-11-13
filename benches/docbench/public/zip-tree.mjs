@@ -32,7 +32,7 @@ export function createZipTree(entries) {
     const count = isDirectory ? parts.length : parts.length - 1;
     for (let i = 0; i < count; i += 1) {
       const segment = parts[i];
-      const key = segment.toLowerCase();
+      const key = segment.normalize("NFC").toLowerCase();
       if (current.files.has(key)) { conflict = true; break; }
       let child = current.folders.get(key);
       if (child && child.name !== segment) { conflict = true; break; }
@@ -47,7 +47,7 @@ export function createZipTree(entries) {
     if (conflict) { skipped += 1; continue; }
     if (isDirectory) continue;
     const leaf = parts.at(-1);
-    const key = leaf.toLowerCase();
+    const key = leaf.normalize("NFC").toLowerCase();
     if (current.folders.has(key) || current.files.has(key)) {
       skipped += 1;
       continue;
