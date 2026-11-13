@@ -330,18 +330,31 @@ separate, interoperable
 volumes, suitable for ZIP, TAR, 7z, RAR and arbitrary files. A sidecar hash
 manifest or duplicated ZIP copy is not PAR2.
 
-**User-facing target after the parity engine passes its gates:**
+**Already shipped:** ZIP creation now offers Smart/Store/Fast/Balanced/Maximum
+compression profiles. These affect only newly created archives, never change
+an existing ZIP in place, and do not provide damage recovery. Later formats,
+encryption and dictionaries require separate codec capability gates.
+Compression remains independent of protection.
 
-- Archive preset: Smart/Store/Fast/Balanced/Maximum for existing ZIP; later
-  format, codec, encryption and dictionary parameters only if supported by
-  the chosen engine. Compression independent of protection.
+**User-facing PAR2 target after the parity engine passes its gates:**
+
 - Recovery preset: Off, 5%, 10%, 20%, Custom; select bounded source block
-  size and display estimated parity size before generating. Percentage is
+  size and display estimated parity size before generating. Preflight the
+  sum of ceil(fileBytes / blockBytes) over input files: PAR2 v2 permits at
+  most 32,768 source blocks. Also validate the recovery-block count and the
+  chosen engine's finite field/volume limits. Reject or adjust unsupported
+  size/redundancy combinations before writing any output. Percentage is
   extra parity capacity, not guaranteed repair probability. Outcomes depend
   on which source blocks fail and which recovery volumes survive.
 - Generate a standard main .par2 index and .volNN+MM.par2 parity files after
   successful archive creation. Explicit save destination; source ZIP untouched.
-  No incompatible pseudo-PAR records embedded into the ZIP.
+  Generate into a bounded, isolated temporary area (e.g. OPFS) first.
+  Validate all parity packet checksums and the complete volume set before
+  committing any output. Clean up staging on error or cancellation; never
+  publish a partial set as complete. If the browser cannot atomically publish
+  several separate files, offer one verified bundled export or explain the
+  partial-publication limitation. No incompatible pseudo-PAR records embedded
+  into the ZIP.
 - Verify: inspect the selected archive and matching PAR2 volumes, report
   CRC/hash failures, damaged or missing source blocks, available recovery
   blocks and whether repair is possible. Clearly report incomplete checks.
