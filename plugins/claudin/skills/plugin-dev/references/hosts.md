@@ -44,7 +44,7 @@ Three MCP files, one server list: change them together (`url` / `httpUrl` / `ser
 - **Skill locations everyone reads:** `.agents/skills/` (project) and `~/.agents/skills/` (personal) — Copilot, Antigravity, Grok, Codex. `.claude/skills/` is also read by Copilot CLI, Visual Studio and Grok.
 - **`allowed-tools` means different things:** Claude Code pre-approves; Copilot auto-allows (pre-approving `shell` is a real risk); Grok ignores it. Don't rely on it for safety or for permissions.
 - **Names:** Antigravity rejects `name`/`displayName` starting with "Claude", "Gemini", "Antigravity", "Cursor" in its marketplace; Agent Plugins names allow `.` but not `--`/`..`. Keep plain kebab-case.
-- **Env vars:** `${CLAUDE_PLUGIN_ROOT}` is aliased by Copilot (agent `mcp-servers`) and Codex; Antigravity wants relative `./scripts/…` in hooks instead; Gemini uses `${extensionPath}`; Grok sets `GROK_PLUGIN_ROOT`. Hook scripts that must run everywhere: resolve their own path (`$(dirname "$0")`).
+- **Env vars:** `${CLAUDE_PLUGIN_ROOT}` is aliased by Copilot (agent `mcp-servers`) and by Codex in hook commands only (Codex `mcp.json` needs `${PLUGIN_ROOT}`); Antigravity wants relative `./scripts/…` in hooks instead; Gemini uses `${extensionPath}`; Grok sets `GROK_PLUGIN_ROOT`. Hook scripts that must run everywhere: resolve their own path (`$(dirname "$0")`).
 - **MCP precedence differs:** Copilot = last loaded wins (a plugin overrides your same-named server); Gemini = `settings.json` wins over extensions; Grok = `config.toml` wins over `.mcp.json`/Claude configs. Use distinctive server names.
 - **Remote MCP placeholders:** Copilot passes remote URLs/headers literally (no `${VAR}`); Grok and Gemini expand env vars. No secrets in URLs either way.
 
