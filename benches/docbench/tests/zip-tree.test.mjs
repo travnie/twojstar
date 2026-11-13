@@ -64,6 +64,17 @@ test("ZIP tree rejects invisible format and bidi controls", () => {
   assert.equal(tree.indexedFiles, 1);
 });
 
+test("ZIP tree treats canonically equivalent Unicode names as collisions", () => {
+  const tree = createZipTree([
+    file("café.txt"), file("cafe\u0301.txt"),
+    file("café/readme.txt"), file("cafe\u0301/other.txt"),
+  ]);
+  assert.equal(tree.indexedFiles, 2);
+  assert.equal(tree.skipped, 2);
+  assert.deepEqual(tree.list("").files.map((x) => x.name), ["café.txt"]);
+  assert.equal(tree.list("café"), null);
+});
+
 test("ZIP tree rejects excessive depth and entry count", () => {
   const deep = "x/".repeat(ZIP_TREE_LIMITS.maxDepth) + "payload.dat";
   const tree = createZipTree([file(deep), file("normal.txt")]);
