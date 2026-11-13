@@ -2,6 +2,7 @@ import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
 import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
+import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
 const { formatBytes, bindFileDrop } = globalThis.BenchLocalFiles;
@@ -29,6 +30,10 @@ const sort = getNode("#files-sort");
 const viewList = getNode("#files-view-list");
 const viewGrid = getNode("#files-view-grid");
 const selectVisible = getNode("#files-select-visible");
+const packZipButton = getNode("#files-pack-zip");
+const cancelZipButton = getNode("#files-zip-cancel");
+const zipProgress = getNode("#files-zip-progress");
+const zipStatus = getNode("#files-zip-status");
 const dialog = getNode("#files-preview-dialog");
 const dialogBody = getNode("#files-dialog-body");
 const dialogHeading = getNode("#files-dialog-name");
@@ -60,6 +65,7 @@ let dialogIds = [];
 let dialogId = null;
 let dialogRevision = 0;
 let dialogFocusReturn = null;
+let zipController = null;
 
 function isCurrentPreview(target, revision) {
   return target === dialogBody
@@ -201,6 +207,7 @@ function renderList() {
   removeButton.disabled = selectedCount === 0;
   previewButton.disabled = !store.activeId();
   selectVisible.disabled = !ids.length;
+  packZipButton.disabled = selectedCount === 0 || Boolean(zipController);
 
   const available = store.folders();
   const requested = folder;
@@ -524,6 +531,90 @@ function addFiles(input) {
   if (result.skipped) setStatus("Only " + result.ids.length + " files added. Queue limit: 100.", true);
 }
 
+async function packSelectedZip() {
+  if (zipController) return;
+  let selected;
+  try {
+    selected = planZipEntries(store.selectedIds().map((id) => store.get(id)));
+  } catch (error) {
+    zipStatus.textContent = error?.message || "Invalid ZIP selection.";
+    return;
+  }
+  const nativeSave = globalThis.isSecureContext
+    && typeof globalThis.showSaveFilePicker === "function";
+  if (!nativeSave && selected.totalBytes > ZIP_PACK_LIMITS.maxMemoryBytes) {
+    zipStatus.textContent = "This browser supports ZIP downloads up to 64 MiB of source files.";
+    return;
+  }
+  if (!globalThis.fflate?.ZipDeflate) {
+    zipStatus.textContent = "Local ZIP compression is unavailable.";
+    return;
+  }
+
+  const controller = new AbortController();
+  zipController = controller;
+  cancelZipButton.hidden = false;
+  zipProgress.hidden = false;
+  zipProgress.value = 0;
+  zipStatus.textContent = "Preparing ZIP…";
+  renderList();
+  try {
+    let sink;
+    if (nativeSave) {
+      let handle;
+      try {
+        handle = await globalThis.showSaveFilePicker({
+          suggestedName: "docbench-files.zip",
+          types: [{ description: "ZIP archive", accept: { "application/zip": [".zip"] } }],
+        });
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          zipStatus.textContent = "ZIP export canceled.";
+          return;
+        }
+        throw error;
+      }
+      if (controller.signal.aborted) return;
+      const writable = await handle.createWritable();
+      sink = {
+        write: (bytes) => writable.write(bytes),
+        close: () => writable.close(),
+        abort: () => writable.abort(),
+      };
+    } else {
+      sink = createMemoryZipSink();
+    }
+    const result = await packZip(selected.items, {
+      zipApi: globalThis.fflate, sink, signal: controller.signal,
+      maxSourceBytes: nativeSave ? ZIP_PACK_LIMITS.maxSourceBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
+      maxOutputBytes: nativeSave ? ZIP_PACK_LIMITS.maxStreamBytes : ZIP_PACK_LIMITS.maxMemoryBytes,
+      onProgress: ({ filesDone, filesTotal, bytesDone, bytesTotal }) => {
+        zipProgress.value = Math.round(100 * (bytesTotal ? bytesDone / bytesTotal : filesDone / filesTotal));
+        zipStatus.textContent = `Packing ZIP · ${filesDone}/${filesTotal} files · ${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}`;
+      },
+    });
+    if (!nativeSave) {
+      const url = URL.createObjectURL(result.output);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "docbench-files.zip";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    }
+    zipProgress.value = 100;
+    zipStatus.textContent = `ZIP saved · ${result.files} files · ${formatBytes(result.outputBytes)}`;
+  } catch (error) {
+    zipStatus.textContent = controller.signal.aborted || error?.name === "AbortError"
+      ? "ZIP packing canceled." : `ZIP failed: ${error?.message || String(error)}`;
+  } finally {
+    zipController = null;
+    cancelZipButton.hidden = true;
+    renderList();
+  }
+}
+
+packZipButton.addEventListener("click", () => void packSelectedZip());
+cancelZipButton.addEventListener("click", () => zipController?.abort());
 toolButton.addEventListener("click", openInTool);
 audioOpenButton.addEventListener("click", playAudioDock);
 getNode("#files-audio-close").addEventListener("click", closeAudioDock);
@@ -603,9 +694,11 @@ store.subscribe(() => {
 const filesPanel = getNode("#files-workspace");
 new MutationObserver(() => {
   if (filesPanel.hidden && audioDockId) closeAudioDock();
+  if (filesPanel.hidden) zipController?.abort();
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
+  zipController?.abort();
   closeAudioDock();
   releasePreview();
   releasePreview(dialogBody);
