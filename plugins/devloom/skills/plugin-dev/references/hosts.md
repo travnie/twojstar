@@ -24,10 +24,10 @@ Only `xai-docs` ships in this plugin. For the rest, **don't assume a connector e
 | Gemini CLI | Skills yes; plugin no | `gemini-extension.json` (`name` = dir name, `version`, `description`, `mcpServers`, `contextFileName`, `settings[]` for env vars); skills in `skills/`, hooks `hooks/hooks.json`, agents `agents/` (preview), commands as TOML |
 | M365 Copilot Cowork | Treats the Claude layout as the superset | convert with `atk import openplugin --path ./plugin --privacy-url … --terms-url …` (or `wiqd plugin import`) for the M365 store |
 
-## Seven-host package (worked example: the account build of `claudin`)
+## Seven-host package (worked example: the account build of `devloom`)
 
 ```
-claudin/
+devloom/
 ├── .claude-plugin/plugin.json        # Claude; also read by Copilot CLI, Grok
 ├── .codex-plugin/plugin.json         # Codex/ChatGPT overlay
 ├── .antigravity-plugin/plugin.json   # Antigravity overlay (displayName, logo, suggestedPrompts)
