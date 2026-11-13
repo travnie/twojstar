@@ -42,6 +42,16 @@
   ["No","Nie"],
   ["ZIP folder navigation","Nawigacja po ZIP"],
   ["No entries in this folder.","Brak wpisów w tym folderze."],
+  ["ZIP archive actions","Operacje na ZIP"],
+  ["Verify checked","Sprawdź zaznaczone"],
+  ["Extract checked to folder","Wypakuj zaznaczone do folderu"],
+  ["Verify CRC","Sprawdź CRC"],
+  ["Extract file","Wypakuj plik"],
+  ["Cancel extraction","Anuluj wypakowywanie"],
+  ["Finalizing extracted file…","Kończenie zapisu wypakowanego pliku…"],
+  ["Extraction","Wypakowywanie"],
+  ["Supported · CRC-32 checked","Obsługiwane · weryfikacja CRC-32"],
+  ["Read-only browser. Extraction is explicit, local, size-limited and CRC-verified.","Przegląd tylko do odczytu. Wypakowywanie wymaga decyzji, działa lokalnie, z limitami i CRC."],
   ["Original size","Rozmiar oryginalny"],
   ["Compressed size","Rozmiar po kompresji"],
   ["Method","Metoda"],
@@ -246,6 +256,10 @@
 
   const patterns = {
   pl: [
+    [/^Checking ZIP data · (\d+)\/(\d+) · (.+) \/ (.+)$/u, "Sprawdzanie ZIP · $1/$2 · $3 / $4"],
+    [/^Verified (\d+) ZIP (?:entry|entries) by CRC-32\.$/u, "Sprawdzono $1 wpisów ZIP przez CRC-32."],
+    [/^ZIP operation canceled · (\d+) completed\.$/u, "Operacja ZIP anulowana · ukończono: $1."],
+    [/^ZIP operation failed · (\d+) completed · (.+)$/u, "Operacja ZIP nieudana · ukończono: $1 · $2"],
     [/^ZIP contents · (\d+) entries$/u, "Zawartość ZIP · $1 wpisów"],
     [/^(\d+) unsafe, ambiguous or unsupported entries hidden\.$/u, "$1 niebezpiecznych, niejednoznacznych lub nieobsługiwanych wpisów ukryto."],
     [/^Open ZIP folder (.+)$/u, "Otwórz folder ZIP $1"],
@@ -275,6 +289,10 @@
     [/^Inspect · (\d+\+?)$/, "Analiza · $1"]
   ],
   en: [
+    [/^Sprawdzanie ZIP · (\d+)\/(\d+) · (.+) \/ (.+)$/u, "Checking ZIP data · $1/$2 · $3 / $4"],
+    [/^Sprawdzono (\d+) wpisów ZIP przez CRC-32\.$/u, "Verified $1 ZIP entries by CRC-32."],
+    [/^Operacja ZIP anulowana · ukończono: (\d+)\.$/u, "ZIP operation canceled · $1 completed."],
+    [/^Operacja ZIP nieudana · ukończono: (\d+) · (.+)$/u, "ZIP operation failed · $1 completed · $2"],
     [/^Zawartość ZIP · (\d+) wpisów$/u, "ZIP contents · $1 entries"],
     [/^(\d+) niebezpiecznych, niejednoznacznych lub nieobsługiwanych wpisów ukryto\.$/u, "$1 unsafe, ambiguous or unsupported entries hidden."],
     [/^Otwórz folder ZIP (.+)$/u, "Open ZIP folder $1"],

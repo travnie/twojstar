@@ -12,6 +12,7 @@ for (const path of [
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
   "public/zip-tree.mjs",
+  "public/zip-extract.mjs",
   "public/zip-pack.mjs",
   "public/file-store.mjs",
   "public/file-routing.mjs",
@@ -121,9 +122,11 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || portableFiles.includes('from "./file-signatures.mjs"')
   || portableFiles.includes('from "./zip-index.mjs"')
   || portableFiles.includes('from "./zip-tree.mjs"')
+  || portableFiles.includes('from "./zip-extract.mjs"')
   || !portableFiles.includes("async function inspectLocalFile(file)")
   || !portableFiles.includes("async function readZipIndex(blob)")
   || !portableFiles.includes("function createZipTree(entries)")
+  || !portableFiles.includes("async function extractZipEntry(blob, entry, {")
   || !portableFiles.includes("function createFileStore(")
   || !portableFiles.includes("function importLocalFile(")
   || !portableFiles.includes("function createFileIngress(")
@@ -150,6 +153,14 @@ if (!index.includes('id="files-tab" class="mode-tab active"')
 }
 
 const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
+for (const marker of ['zipEntryEligibility(entry)', 'planZipExtraction(items)',
+  'extractZipEntry(file, entry,', 'createVerifySink()', 'showDirectoryPicker',
+  'getDirectoryHandle("DocBench-extract-"', 'ZIP_EXTRACT_LIMITS.memoryBytes']) {
+  if (!filesWorkspaceSource.includes(marker)) throw new Error("Safe ZIP extraction missing: " + marker);
+}
+if (!portableFiles.includes("function createVerifySink()")) {
+  throw new Error("ZIP extraction engine missing in portable build.");
+}
 if (!filesWorkspaceSource.includes("createZipTree(result.entries)")
   || !filesWorkspaceSource.includes("tree.list(path)")
   || !filesWorkspaceSource.includes("if (index) link.dataset.i18nSkip")
