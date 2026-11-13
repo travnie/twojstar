@@ -38,4 +38,4 @@
 *.zip -text
 
 # Pinned third-party skill snapshots; keep upstream content byte-for-byte where practical.
-plugins/claudin/skills/mcp-dev/scripts/eval/** linguist-vendored
+plugins/devloom/skills/mcp-dev/scripts/eval/** linguist-vendored

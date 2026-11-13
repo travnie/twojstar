@@ -10,7 +10,7 @@ In the Claude Code terminal:
 ```sh
 claude plugin marketplace add travnie/twojstar
 claude plugin install cloudflare@twojstar
-claude plugin install claudin@twojstar
+claude plugin install devloom@twojstar
 claude plugin install spacemolt@twojstar
 ```
 
@@ -18,10 +18,9 @@ Or use `/plugin` and choose the `twojstar` marketplace to browse the ten availab
 
 - `spacemolt` (game and docs MCPs, three skills)
 - `docbench` (skills only)
-- `openai-dev-kit`
 - `google-dev-kit` (ten declared remote MCP endpoints, many requiring separate credentials)
 - `google` (shown as **Android & Chrome**; Android/Compose and Chrome/web skills, Google Developer Knowledge MCP)
-- `claudin` (docs-lookup, skill-creator-v2, plugin-dev, mcp-dev; seven docs MCPs; replaces `devkit-claude`, migrated via the generated `renames` map)
+- `devloom` (docs-lookup, skill-creator-v2, plugin-dev, mcp-dev; seven docs MCPs; consolidates `claudin`, `openai-dev-kit` and `devkit-claude` via the generated `renames` map)
 - `desktop-commander`
 - `cloudflare`
 - `github-ops`

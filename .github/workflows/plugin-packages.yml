@@ -30,13 +30,12 @@ on:
         options:
           - all
           - claudesign
-          - claudin
+          - devloom
           - cloudflare
           - desktop-commander
           - github-ops
           - google
           - google-dev-kit
-          - openai-dev-kit
           - spacemolt
 
 concurrency:

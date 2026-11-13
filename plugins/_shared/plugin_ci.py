@@ -20,29 +20,27 @@ ROOT = Path(__file__).resolve().parents[2]
 # Package source, existing package command, and optional tests.
 PLUGINS = {
     "claudesign": ("plugins/claudesign", "shared"),
-    "claudin": ("plugins/claudin", "shared"),
+    "devloom": ("plugins/devloom", "shared"),
     "cloudflare": ("plugins/cloudflare", "shared"),
     "desktop-commander": ("plugins/desktop-commander", "shared"),
     "github-ops": ("plugins/github-ops", "shared"),
     "google": ("plugins/google", "shared"),
     "google-dev-kit": ("plugins/google-dev-kit", "google"),
-    "openai-dev-kit": ("plugins/openai-dev-kit", "openai"),
     "spacemolt": ("plugins/spacemolt", "spacemolt"),
 }
 
 # Hardcoded allowlist of packaging scripts by plugin.
 PACKAGE_SCRIPTS = {
     "claudesign": "plugins/_shared/package_plugin.py",
-    "claudin": "plugins/_shared/package_plugin.py",
+    "devloom": "plugins/_shared/package_plugin.py",
     "cloudflare": "plugins/_shared/package_plugin.py",
     "desktop-commander": "plugins/_shared/package_plugin.py",
     "github-ops": "plugins/_shared/package_plugin.py",
     "google": "plugins/_shared/package_plugin.py",
     "google-dev-kit": "plugins/google-dev-kit/scripts/package_plugin.py",
-    "openai-dev-kit": "plugins/openai-dev-kit/scripts/package_plugin.py",
     "spacemolt": "spacemolt/scripts/package_plugin.py",
 }
-SHARED_PACKAGES = {"claudesign", "claudin", "cloudflare", "desktop-commander", "github-ops", "google"}
+SHARED_PACKAGES = {"claudesign", "devloom", "cloudflare", "desktop-commander", "github-ops", "google"}
 COMMON_CHANGES = {
     ".github/workflows/plugin-packages.yml",
     ".agents/plugins/marketplace.json",
@@ -67,7 +65,7 @@ def changed_packages(paths: set[str]) -> list[str]:
             chosen.add(name)
     if any(path.startswith("plugins/_shared/") and path not in CATALOG_ONLY for path in paths):
         chosen.update(SHARED_PACKAGES)
-    if "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py" in paths:
+    if "plugins/devloom/skills/plugin-dev/scripts/validate_plugin.py" in paths:
         chosen.update(SHARED_PACKAGES)
     if paths & {"spacemolt/scripts/package_plugin.py", "spacemolt/scripts/test_plugin_package.py"}:
         chosen.add("spacemolt")
@@ -157,20 +155,18 @@ def build(plugin: str, upload_root: Path) -> None:
     requirements = {
         "shared": "plugins/_shared/requirements.txt",
         "google": "plugins/google-dev-kit/requirements.txt",
-        "openai": "plugins/openai-dev-kit/requirements.txt",
     }.get(kind)
     if requirements:
         run(sys.executable, "-m", "pip", "install", "-r", requirements)
     if kind == "shared":
-        run(sys.executable, "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py", source)
+        run(sys.executable, "plugins/devloom/skills/plugin-dev/scripts/validate_plugin.py", source)
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/_shared", "-p", "test_app_bindings.py", "-v")
+    if plugin == "devloom":
+        run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/devloom/tests", "-v")
     if kind == "google":
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/google-dev-kit/tests", "-v")
     if kind == "spacemolt":
         run(sys.executable, "-m", "unittest", "discover", "-s", "spacemolt/scripts", "-p", "test_plugin_package.py", "-v")
-    if kind == "openai":
-        run(sys.executable, "plugins/openai-dev-kit/skills/chatgpt-plugin-builder/scripts/validate_plugin.py", source)
-        run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/openai-dev-kit/tests", "-v")
 
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / (plugin + ".zip")
