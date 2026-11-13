@@ -14,7 +14,7 @@ claude plugin install devloom@twojstar
 claude plugin install spacemolt@twojstar
 ```
 
-Or use `/plugin` and choose the `twojstar` marketplace to browse the ten available plugins:
+Or use `/plugin` and choose the `twojstar` marketplace to browse the nine available plugins:
 
 - `spacemolt` (game and docs MCPs, three skills)
 - `docbench` (skills only)
