@@ -1,5 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
+import { createZipTree } from "./zip-tree.mjs";
 import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";
@@ -227,23 +228,100 @@ function renderList() {
 async function showZipContents(file, revision, target = preview) {
   const result = await readZipIndex(file);
   if (!isCurrentPreview(target, revision)) return;
+  const tree = createZipTree(result.entries);
   const box = element("section", "files-zip");
-  box.append(element("h3", "", `ZIP contents · ${result.count} entries`));
-  box.append(element("p", "files-note", "Index only. No decompression or automatic extraction."));
+  const title = element("h3", "", `ZIP contents · ${tree.total} entries`);
+  const note = element("p", "files-note",
+    "Index only. Folder navigation does not decompress or extract files.");
+  const warning = tree.skipped
+    ? element("p", "files-unsafe-label", `${tree.skipped} unsafe, ambiguous or unsupported entries hidden.`)
+    : null;
+  const breadcrumb = element("nav", "files-zip-breadcrumbs");
+  breadcrumb.setAttribute("aria-label", "ZIP folder navigation");
   const listNode = element("ol", "files-zip-list");
-  for (const entry of result.entries) {
-    const row = element("li", entry.safe ? "" : "files-unsafe");
-    const name = element("span", "files-zip-name", entry.name);
-    name.dataset.i18nSkip = "";
-    const detail = element("small", "", entry.zip64 ? "ZIP64 sizes · unsupported"
-      : entry.directory ? "Directory"
-        : `${formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
-    row.append(name, detail);
-    if (!entry.safe) row.append(element("strong", "files-unsafe-label", "Unsafe path"));
-    listNode.append(row);
-  }
-  box.append(listNode);
+  const entryDetails = element("dl", "files-zip-entry-details");
+  entryDetails.hidden = true;
+  if (warning) box.append(title, note, warning, breadcrumb, listNode, entryDetails);
+  else box.append(title, note, breadcrumb, listNode, entryDetails);
   target.append(box);
+
+  function navigate(path) {
+    if (!isCurrentPreview(target, revision)) return;
+    const view = tree.list(path);
+    if (!view) return;
+    entryDetails.hidden = true;
+    entryDetails.replaceChildren();
+    breadcrumb.replaceChildren();
+    const trail = [{ label: "Archive root", path: "" }];
+    if (path) {
+      const parts = path.split("/");
+      for (let i = 0; i < parts.length; i += 1) {
+        trail.push({ label: parts[i], path: parts.slice(0, i + 1).join("/") });
+      }
+    }
+    for (const [index, step] of trail.entries()) {
+      if (index) breadcrumb.append(element("span", "files-zip-separator", "/"));
+      const link = element("button", "files-zip-breadcrumb", step.label);
+      link.type = "button";
+      link.disabled = step.path === path;
+      link.addEventListener("click", () => navigate(step.path));
+      breadcrumb.append(link);
+    }
+    listNode.replaceChildren();
+    if (view.parentPath !== null) {
+      const row = element("li", "files-zip-folder");
+      const up = element("button", "files-zip-entry-button", "↰ Go up");
+      up.type = "button";
+      up.addEventListener("click", () => navigate(view.parentPath));
+      row.append(up);
+      listNode.append(row);
+    }
+    for (const folder of view.folders) {
+      const row = element("li", "files-zip-folder");
+      const button = element("button", "files-zip-entry-button", "▣ " + folder.name + "/");
+      button.type = "button";
+      button.dataset.i18nSkip = "";
+      button.setAttribute("aria-label", "Open ZIP folder " + folder.name);
+      button.addEventListener("click", () => navigate(folder.path));
+      row.append(button);
+      listNode.append(row);
+    }
+    for (const entry of view.files) {
+      const row = element("li", "files-zip-file");
+      const button = element("button", "files-zip-entry-button", entry.name);
+      button.type = "button";
+      button.dataset.i18nSkip = "";
+      button.addEventListener("click", () => {
+        if (!isCurrentPreview(target, revision)) return;
+        entryDetails.replaceChildren();
+        const properties = [
+          ["Path", entry.path],
+          ["Original size", formatBytes(entry.originalSize)],
+          ["Compressed size", formatBytes(entry.compressedSize)],
+          ["Method", String(entry.method)],
+          ["Encrypted", entry.encrypted ? "Yes" : "No"],
+          ["ZIP64", entry.zip64 ? "Unsupported" : "No"],
+        ];
+        for (const [name, value] of properties) {
+          const field = element("div", "files-zip-property");
+          const key = element("dt", "", name);
+          const data = element("dd", "", value);
+          data.dataset.i18nSkip = "";
+          field.append(key, data);
+          entryDetails.append(field);
+        }
+        entryDetails.hidden = false;
+      });
+      const size = element("small", "", `${formatBytes(entry.originalSize)} · method ${entry.method}${entry.encrypted ? " · encrypted" : ""}`);
+      row.append(button, size);
+      listNode.append(row);
+    }
+    if (!view.folders.length && !view.files.length) {
+      const row = element("li", "files-zip-empty", "No entries in this folder.");
+      listNode.append(row);
+    }
+  }
+  navigate("");
 }
 
 const MEDIA_MIME = Object.freeze({

@@ -11,6 +11,7 @@ for (const path of [
   "public/local-files.js",
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
+  "public/zip-tree.mjs",
   "public/zip-pack.mjs",
   "public/file-store.mjs",
   "public/file-routing.mjs",
@@ -121,6 +122,7 @@ if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('s
   || portableFiles.includes('from "./zip-index.mjs"')
   || !portableFiles.includes("async function inspectLocalFile(file)")
   || !portableFiles.includes("async function readZipIndex(blob)")
+  || !portableFiles.includes("function createZipTree(entries)")
   || !portableFiles.includes("function createFileStore(")
   || !portableFiles.includes("function importLocalFile(")
   || !portableFiles.includes("function createFileIngress(")
@@ -147,6 +149,11 @@ if (!index.includes('id="files-tab" class="mode-tab active"')
 }
 
 const filesWorkspaceSource = await readFile("public/files-workspace.mjs", "utf8");
+if (!filesWorkspaceSource.includes("createZipTree(result.entries)")
+  || !filesWorkspaceSource.includes("tree.list(path)")
+  || !filesWorkspaceSource.includes("isCurrentPreview(target, revision)")) {
+  throw new Error("ZIP folder browsing must reuse bounded central-directory metadata.");
+}
 for (const id of ["files-pack-zip", "files-zip-progress", "files-zip-status", "files-zip-cancel"]) {
   if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
     throw new Error("ZIP packing controls missing in hosted or portable build: " + id);
