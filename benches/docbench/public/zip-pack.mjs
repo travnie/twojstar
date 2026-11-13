@@ -8,6 +8,14 @@ export const ZIP_PACK_LIMITS = Object.freeze({
   maxPathBytes: 1024,
 });
 
+function zipMtime(file) {
+  const oldest = new Date(1980, 0, 1).getTime();
+  const newest = new Date(2107, 11, 31, 23, 59, 58).getTime();
+  const recorded = Number.isSafeInteger(file.lastModified) && file.lastModified > 0
+    ? file.lastModified : oldest;
+  return new Date(Math.max(oldest, Math.min(newest, recorded)));
+}
+
 function abortIfRequested(signal) {
   if (signal?.aborted) throw new DOMException("ZIP packing canceled.", "AbortError");
 }
@@ -136,6 +144,7 @@ export async function packZip(entries, {
     for (const [index, item] of plan.items.entries()) {
       abortIfRequested(signal);
       const stream = new zipApi.ZipDeflate(item.path, { level: 3 });
+      stream.mtime = zipMtime(item.file);
       archive.add(stream);
       for (let offset = 0; offset < item.size; offset += ZIP_PACK_LIMITS.chunkBytes) {
         abortIfRequested(signal);

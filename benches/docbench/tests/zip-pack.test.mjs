@@ -74,6 +74,43 @@ test("ZIP rejects traversal, device paths, collisions with folders and oversized
   assert.equal(ZIP_PACK_LIMITS.maxEntries, 100);
 });
 
+test("ZIP preserves source modified dates within classic DOS bounds", async () => {
+  const lastModified = new Date(2023, 4, 6, 12, 34, 56).getTime();
+  const dated = source("dated.txt", "date");
+  dated.file.lastModified = lastModified;
+  const result = await packZip([dated], { zipApi, sink: createMemoryZipSink() });
+  const bytes = new Uint8Array(await result.output.arrayBuffer());
+  const view = new DataView(bytes.buffer);
+  let central = -1;
+  for (let i = 0; i + 46 <= bytes.length; i += 1) {
+    if (view.getUint32(i, true) === 0x02014b50) { central = i; break; }
+  }
+  assert.ok(central >= 0);
+  const dosTime = view.getUint16(central + 12, true);
+  const dosDate = view.getUint16(central + 14, true);
+  assert.equal(1980 + (dosDate >>> 9), 2023);
+  assert.equal((dosDate >>> 5) & 15, 5);
+  assert.equal(dosDate & 31, 6);
+  assert.equal(dosTime >>> 11, 12);
+  assert.equal((dosTime >>> 5) & 63, 34);
+  assert.equal((dosTime & 31) * 2, 56);
+
+  const older = source("before.txt", "old");
+  older.file.lastModified = new Date(1970, 0, 1).getTime();
+  const newer = source("after.txt", "future");
+  newer.file.lastModified = new Date(2200, 0, 1).getTime();
+  const bounded = await packZip([older, newer], { zipApi, sink: createMemoryZipSink() });
+  const boundedBytes = new Uint8Array(await bounded.output.arrayBuffer());
+  const boundedView = new DataView(boundedBytes.buffer);
+  const years = [];
+  for (let i = 0; i + 46 <= boundedBytes.length; i += 1) {
+    if (boundedView.getUint32(i, true) === 0x02014b50) {
+      years.push(1980 + (boundedView.getUint16(i + 14, true) >>> 9));
+    }
+  }
+  assert.deepEqual(years, [1980, 2107]);
+});
+
 test("ZIP cancel aborts sink without publishing incomplete output", async () => {
   const cancel = new AbortController();
   let aborted = false;
