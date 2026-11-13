@@ -59,6 +59,10 @@ OpenAI's newer portable form (root `plugin.json` with `$schema: agent-plugins.or
 - claude.ai frontmatter allowlist and chat rewrites → `skill-creator-v2` `references/claude-ai-compat.md`.
 - LSP plugins ship config, not the server: the binary must be on PATH where Claude Code runs. Chat never runs LSP.
 
+## OpenAI-specific tooling
+
+For ChatGPT/Codex plugin work, load `references/openai-kit/plugin-building.md` and its focused MCP Apps references. Original OpenAI Dev Kit tools are retained as `scripts/scaffold_plugin.py`, `scripts/scaffold_node_ext_apps.mjs`, and `scripts/validate_plugin.py`. Verify current requirements via the live `openai-docs` MCP before scaffolding. This is one cross-provider plugin development skill, not a second OpenAI-only skill.
+
 ## Verify
 
 1. JSON parses; every referenced path exists; skill `quick_validate` (skill-creator-v2).

@@ -15,14 +15,14 @@ UI is optional. Do not create a widget merely because the platform supports one.
 
 Before changing plugin architecture or metadata:
 
-1. Use the bundled `openaiDeveloperDocs` MCP search/fetch tools to retrieve current official OpenAI Plugins docs. If unavailable, browse the official docs directly; do not block an answer on installation.
-2. Use this kit's own scaffolding, package format, and validation workflow by default. If an additional plugin-management tool is actually available and relevant to an account action, it can be used as an optional host capability. Never require, install, or assume another plugin.
+1. Use the bundled `openai-docs` MCP search/fetch tools to retrieve current official OpenAI Plugins docs. If unavailable, browse the official docs directly; do not block an answer on installation.
+2. Use the bundled OpenAI scaffolding, package format, and validation workflow by default. If an additional plugin-management tool is actually available and relevant to an account action, it can be used as an optional host capability. Never require, install, or assume another plugin.
 3. Treat `/plugins/...` as the canonical documentation surface.
 4. Treat old `/apps-sdk/...` links and “Apps SDK app” language as legacy compatibility terminology.
 5. For detailed MCP Apps UI/server implementation, follow current official docs and bundled app references. Use another verified, available development tool only when useful, never as a prerequisite.
 6. Use bundled references for stable design patterns, never as a substitute for current product rules, schemas, or submission requirements.
 
-Read `references/plugin-docs-workflow.md` for page routing.
+Read `references/openai-kit/plugin-docs-workflow.md` for page routing.
 
 ## Plugin workflow
 
@@ -63,8 +63,8 @@ Manifest paths must:
 - stay inside the plugin root,
 - point only to components that exist.
 
-Use `scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP starting structure.
-Use `scripts/validate_plugin.py` before packaging or publication.
+Use `skills/plugin-dev/scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP starting structure.
+Use `skills/plugin-dev/scripts/validate_plugin.py` before packaging or publication.
 
 ### 4. Build skills
 
@@ -95,12 +95,12 @@ For MCP server and optional widget implementation:
 
 Read retained app references only when relevant:
 
-- `references/app-archetypes.md`
-- `references/interactive-state-sync-patterns.md`
-- `references/window-openai-patterns.md`
-- `references/search-fetch-standard.md`
-- `references/repo-contract-and-validation.md`
-- `references/upstream-example-workflow.md`
+- `references/openai-kit/app-archetypes.md`
+- `references/openai-kit/interactive-state-sync-patterns.md`
+- `references/openai-kit/window-openai-patterns.md`
+- `references/openai-kit/search-fetch-standard.md`
+- `references/openai-kit/repo-contract-and-validation.md`
+- `references/openai-kit/upstream-example-workflow.md`
 
 ### 6. Validate in layers
 
@@ -138,7 +138,7 @@ When reviewing an older app package:
 6. Keep root `mcp.json` for portable MCP configuration; generate `.mcp.json` only for older clients.
 7. Do not remove compatibility metadata blindly. Verify the current plugin UI reference first.
 
-Read `references/legacy-apps-sdk-migration.md`.
+Read `references/openai-kit/legacy-apps-sdk-migration.md`.
 
 ## Output
 
