@@ -51,6 +51,9 @@ def catalog() -> dict:
         skills = root / "skills"
         if not skills.is_dir() or not list(skills.glob("*/SKILL.md")):
             raise ValueError(f"missing skills for: {slug}")
+        if len(portable["description"]) > MAX_DESCRIPTION:
+            # claude.ai rejects the upload above this length.
+            raise ValueError(f"description over {MAX_DESCRIPTION} chars: {slug}")
         interface = portable["extensions"]["com.openai"]["interface"]
         item = {
             "name": slug,
@@ -82,6 +85,9 @@ def catalog() -> dict:
             raise ValueError(f"rename target missing: {old} -> {new}")
     result["renames"] = RENAMES
     return result
+
+
+MAX_DESCRIPTION = 500
 
 
 def main() -> int:

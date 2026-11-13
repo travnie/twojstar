@@ -113,8 +113,8 @@
     {
       "name": "claudin",
       "source": "./plugins/claudin",
-      "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, Agent Client Protocol (ACP), OpenAI/Codex and xAI/Grok: seven authless docs MCP servers plus docs-lookup (cited answers, nothing to build). For builders: plugin-dev (plugins across chat, Cowork, Claude Code, Codex/ChatGPT, Grok Build, Copilot CLI, Antigravity and Gemini CLI), mcp-dev (MCP servers, MCP Apps, OAuth, MCPB, directory review, spec 2026-07-28) and skill-creator-v2 (skill lifecycle: create, eval, benchmark, package, claude.ai compat).",
-      "version": "1.8.0",
+      "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
+      "version": "1.9.0",
       "displayName": "Claudin",
       "category": "Developer Tools",
       "mcpServers": {

@@ -1,6 +1,6 @@
 interface:
   display_name: "Docs Lookup"
-  short_description: "Answers from live Claude, MCP, ACP, OpenAI and xAI docs, with links"
+  short_description: "Live docs via connectors, for answers and builds"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
   brand_color: "#D97757"
