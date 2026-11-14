@@ -42,7 +42,7 @@ Related, not duplicated: `skill-creator-v2` (SKILL.md authoring, packaging, clau
 
 Sources and licenses: each skill's `NOTICE.md` / `LICENSE.txt`.
 
-OpenAI Dev Kit consolidation (Nov 2026): focused API/Codex workflows in `docs-lookup/references/`; OpenAI scaffolds and validator in `plugin-dev/scripts/`; build and MCP Apps reference notes in `plugin-dev/references/openai-kit/`. Existing four skill IDs and seven endpoints stay unchanged. The standalone OpenAI Dev Kit remains temporarily available for installed clients; further integration changes belong here.
+OpenAI Dev Kit consolidation (Nov 2026): focused API/Codex workflows in `docs-lookup/references/`; OpenAI scaffolds and validator in `plugin-dev/scripts/`; build and MCP Apps reference notes in `plugin-dev/references/openai-kit/`. Existing four skill IDs and seven endpoints stay unchanged. Claudin is authoritative for fixes and new features. The standalone OpenAI Dev Kit is a frozen compatibility package pending retirement; do not duplicate changes there.
 
 ## twojstar package
 

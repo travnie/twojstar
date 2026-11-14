@@ -73,7 +73,7 @@ Load this reference when a task needs ChatGPT-only widget features, when transla
 
 ## React Helper Extraction
 
-- The repo's `src/use-openai-global.ts` is a good baseline for subscribing to host global changes without scattering direct `window.openai` reads through components.
-- The repo's `src/use-widget-state.ts` is a good baseline for mirroring React state into `window.openai.setWidgetState(...)`.
-- The repo's `src/use-widget-props.ts` is a good baseline for reading typed `toolOutput` with a local fallback.
+- A host-global subscription hook keeps direct reads out of components.
+- A widget-state hook mirrors React state into `window.openai.setWidgetState(...)`.
+- A typed props hook reads `toolOutput` with a local fallback.
 - Keep these helpers optional. Do not force a React abstraction when a simple vanilla widget is enough.

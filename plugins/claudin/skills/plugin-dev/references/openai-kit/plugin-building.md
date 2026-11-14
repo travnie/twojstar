@@ -51,7 +51,7 @@ For each use case, identify:
 
 ### 3. Create the manifest
 
-Use root `plugin.json` with the Agent Plugins 1.0 schema. Put OpenAI-specific settings under
+For a portable OpenAI plugin, use root `plugin.json` with the Agent Plugins 1.0 schema. Copilot CLI treats this as strict mode; see `references/hosts.md` before changing an existing cross-host package. Put OpenAI-specific settings under
 `extensions.com.openai`. Portable clients discover `skills/` and `mcp.json` at fixed paths.
 Keep `.codex-plugin/plugin.json` only as an optional compatibility overlay; when the inline
 OpenAI extension exists, it replaces that entire overlay instead of merging with it.
@@ -150,3 +150,5 @@ Return:
 - validation level reached,
 - unresolved hosting, auth, marketplace, or submission requirements,
 - packaged artifact when requested.
+
+The scaffolds target general ChatGPT/Codex plugin contracts, not the stricter `twojstar` catalog packager. Dotted names and local stdio are supported by the generic scaffold; the repository catalog requires kebab-case names and remote HTTPS MCPs. `--command` takes a bare executable path/name; repeat `--command-arg` for arguments. Public ChatGPT packages require remote MCP servers.

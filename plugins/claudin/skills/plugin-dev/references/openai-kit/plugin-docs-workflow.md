@@ -14,11 +14,11 @@ Fetch current official OpenAI pages before implementation.
 
 ## Conditional
 
-Fetch these only when relevant:
+Search the live `openai-docs` connector (via `docs-lookup`) or the official [plugin docs index](https://developers.openai.com/plugins/) for these topics; fetch only the matching page. Do not guess volatile paths.
 
 - authentication,
 - connect and test,
-- submission and publishing,
+- [submission and publishing](https://developers.openai.com/plugins/deploy/submission),
 - UI guidelines,
 - metadata optimization,
 - security and privacy,
