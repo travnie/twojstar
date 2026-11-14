@@ -16,7 +16,7 @@ VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 def require_name(value: str) -> str:
     if not NAME_RE.fullmatch(value):
-        raise argparse.ArgumentTypeError("expected a lowercase plugin name (dots and hyphens allowed)")
+        raise argparse.ArgumentTypeError("name must contain 1–64 lowercase ASCII letters, digits, dots or hyphens; start and end with a letter or digit; no consecutive dots or consecutive hyphens")
     return value
 
 
@@ -59,9 +59,9 @@ def main() -> int:
     if args.command_arg and not args.command:
         parser.error("--command-arg requires --command")
     if args.bundled_mcp_name:
-        if bool(args.command) == bool(args.mcp_url):
+        if (args.command is not None) == (args.mcp_url is not None):
             parser.error("provide exactly one of --command or --mcp-url with --bundled-mcp-name")
-        if args.mcp_url:
+        if args.mcp_url is not None:
             try:
                 parsed = urlsplit(args.mcp_url)
                 valid_url = (parsed.scheme == "https" and bool(parsed.hostname)

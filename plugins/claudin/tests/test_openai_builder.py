@@ -65,6 +65,9 @@ class OpenAIBuildToolsTests(unittest.TestCase):
                           ["--command", "node"],
                           ["--registered-app-id", "asdk_app_" + "a" * 32],
                           ["--bundled-mcp-name", "docs", "--mcp-url", "https://"],
+                          ["--bundled-mcp-name", "docs", "--mcp-url", ""],
+                          ["--bundled-mcp-name", "docs", "--command", "node", "--mcp-url", ""],
+                          ["--bundled-mcp-name", "docs", "--command", "", "--mcp-url", "https://example.com"],
                           ["--bundled-mcp-name", "docs", "--mcp-url", "https://example.com",
                            "--registered-app-id", "invalid"]):
                 with self.subTest(extra=extra):
@@ -113,8 +116,11 @@ class OpenAIBuildToolsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             dest = Path(temp) / "app"
             command = ["node", str(TOOLS / "scaffold_node_ext_apps.mjs")]
-            help_result = subprocess.run([*command, "--help"], capture_output=True, text=True, check=False)
-            self.assertIn("\nUsage:\n", help_result.stdout)
+            for flag in ("--help", "-h"):
+                help_result = subprocess.run([*command, flag], cwd=temp, capture_output=True, text=True, check=False)
+                self.assertEqual(help_result.returncode, 0, help_result.stderr)
+                self.assertIn("\nUsage:\n", help_result.stdout)
+                self.assertFalse((Path(temp) / flag).exists())
             for extra in (["--port", "65536"], ["--tool-name", "--force"],
                           ["--app-name"], ["--port", "0"]):
                 result = subprocess.run([*command, str(dest), *extra], capture_output=True, text=True, check=False)
@@ -136,7 +142,13 @@ class OpenAIBuildToolsTests(unittest.TestCase):
             deps = json.loads((dest / "package.json").read_text())["dependencies"]
             self.assertNotIn("@modelcontextprotocol/sdk", deps)
             self.assertEqual(deps["@modelcontextprotocol/server"], "^2.0.0")
-            self.assertIn("NodeStreamableHTTPServerTransport", (dest / "src/server.ts").read_text())
+            server = (dest / "src/server.ts").read_text()
+            self.assertIn("NodeStreamableHTTPServerTransport", server)
+            self.assertIn('const HOST = "127.0.0.1"', server)
+            self.assertIn(".listen(port, HOST,", server)
+            self.assertIn("allowedHosts.has", server)
+            self.assertIn("allowedOrigins.has", server)
+            self.assertNotIn('"Access-Control-Allow-Origin", "*"', server)
             original = (dest / "package.json").read_text()
             result = subprocess.run(args, capture_output=True, text=True, check=False)
             self.assertNotEqual(result.returncode, 0)
