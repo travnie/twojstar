@@ -1,10 +1,10 @@
 ---
 name: "plugin-dev"
-description: "Build, fix or port Claude plugins (skills, agents, hooks, .mcp.json, LSP, marketplaces) for claude.ai, Cowork, Claude Code, Codex, Grok Build, Copilot CLI, Antigravity and Gemini CLI."
+description: "Build, fix, validate or port AI agent plugins for Claude, ChatGPT/Codex, Grok Build, Copilot CLI, Antigravity and Gemini CLI. Covers manifests, skills, MCP packaging, hooks, marketplaces, OpenAI scaffolds and submission workflows."
 license: Apache-2.0
 ---
 
-# Plugins + Claude internals
+# Agent plugins
 
 Plugin and Claude-product facts change weekly (hook events, manifest keys, CLI flags). **Look up, don't recall.** This skill = where to look + what bites across surfaces. SKILL.md content and packaging → `skill-creator-v2`. Mods (chat panels, status lines, hook modules) → `plugin-authoring`. MCP servers, MCP Apps and skills served over MCP (SEP-2640) → `mcp-dev`.
 
@@ -58,6 +58,10 @@ OpenAI's newer portable form (root `plugin.json` with `$schema: agent-plugins.or
 - Skill instructions say "the model"/"Claude" carefully: OpenAI review wants provider-neutral wording unless product-specific.
 - claude.ai frontmatter allowlist and chat rewrites → `skill-creator-v2` `references/claude-ai-compat.md`.
 - LSP plugins ship config, not the server: the binary must be on PATH where Claude Code runs. Chat never runs LSP.
+
+## OpenAI-specific tooling
+
+For ChatGPT/Codex plugin work, load `references/openai-kit/plugin-building.md` and its focused MCP Apps references. Original OpenAI Dev Kit tools are retained as `scripts/scaffold_plugin.py`, `scripts/scaffold_node_ext_apps.mjs`, and `scripts/validate_plugin.py`. Verify current requirements with `docs-lookup` (`openai-docs`, falling back to official pages if unavailable) before scaffolding. This is one cross-provider plugin development skill, not a second OpenAI-only skill.
 
 ## Verify
 

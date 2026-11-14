@@ -20,6 +20,11 @@ Condensed from Anthropic **plugin-dev** (Apache-2.0) and re-verified 2026-11 aga
 
 `references/claude-api.md` is a pointer sheet distilled from Anthropic's `claude-api` skill (`anthropics/skills@683bc88`, Apache-2.0) `SKILL.md` drift table and `shared/live-sources.md`.
 
+## OpenAI Dev Kit (`plugin-dev`, `docs-lookup`)
+
+OpenAI Dev Kit builder scripts and reference material (Apache-2.0) retained under existing skills. Licenses: `skills/plugin-dev/LICENSE.txt`, `skills/plugin-dev/NOTICE.md`, `skills/plugin-dev/references/openai-kit/LICENSE.txt`, `skills/plugin-dev/references/openai-kit/THIRD_PARTY_NOTICES.md`, and `skills/docs-lookup/references/openai-dev/LICENSE.txt`.
+
 ## Remote MCP servers
 
 Referenced by URL in `mcp.json`, not redistributed: `claude-code-docs` (https://code.claude.com/docs/mcp), `claude-ai-docs` (https://claude.com/docs/mcp), `claude-platform-docs` (https://platform.claude.com/docs/mcp), `mcp-docs` (https://modelcontextprotocol.io/mcp), `openai-docs` (https://developers.openai.com/mcp), `xai-docs` (https://docs.x.ai/api/mcp).
+

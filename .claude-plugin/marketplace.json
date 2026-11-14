@@ -50,7 +50,7 @@
       "name": "claudin",
       "source": "./plugins/claudin",
       "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
-      "version": "1.9.3",
+      "version": "1.10.0",
       "displayName": "Claudin",
       "category": "Developer Tools"
     },
