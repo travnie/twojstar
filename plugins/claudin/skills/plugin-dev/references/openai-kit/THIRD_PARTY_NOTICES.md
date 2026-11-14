@@ -1,13 +1,11 @@
 # Third-party notices
 
-This skill was remixed from the user-supplied `chatgpt-apps` package under
-its Apache License 2.0.
+The imported OpenAI Dev Kit material was remixed from the user-supplied
+`chatgpt-apps` package under Apache License 2.0.
 
 Retained reference material covers app archetypes, state synchronization,
 MCP Apps UI, standard search/fetch tools, upstream examples, and repo
-validation. The duplicate app-building instructions and frozen local Node
-scaffold were replaced with current plugin packaging, migration, and
-validation guidance.
+validation. Use current upstream examples and live docs before generating an app.
+The original local Node scaffold is retained as a fallback.
 
-The icon uses Font Awesome Free under CC BY 4.0. Attribution is included in
-`assets/ICON-LICENSE.txt`.
+The original OpenAI Dev Kit icon is not included in Claudin.
