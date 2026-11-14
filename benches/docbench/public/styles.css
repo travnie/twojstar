@@ -302,6 +302,12 @@ select {
   margin-left: auto;
 }
 
+.json-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 20px; border-bottom:1px solid var(--line); background:rgb(224 68 56 / 5%); }
+.json-tools strong { margin-right:4px; font-size:.8rem; color:var(--text-soft); }
+.json-tools label { display:flex; align-items:center; gap:6px; font-size:.75rem; color:var(--muted); }
+.json-tools select { padding:7px 30px 7px 9px; }
+.json-convert-note { flex-basis:100%; color:var(--muted); font-size:.72rem; }
+
 .pdf-toolbar {
   flex-wrap: wrap;
 }

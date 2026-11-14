@@ -1,4 +1,5 @@
 import { parseTree } from "./vendor/jsonc-parser/impl/parser.js";
+import { convertJsonDocument } from "./document-json-convert.mjs";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -20,6 +21,9 @@ const printButton = $("#print-button");
 const formatButton = $("#format-button");
 const minifyButton = $("#minify-button");
 const repairButton = $("#repair-button");
+const jsonTools = $("#json-tools");
+const jsonTarget = $("#json-convert-target");
+const jsonConvert = $("#json-convert-button");
 const validateButton = $("#validate-button");
 const dropZone = $("#drop-zone");
 const documentWorkspace = $("#document-workspace");
@@ -218,6 +222,13 @@ function updateFormatButton() {
   const format = formatSelect.value;
   const enabled = ["json", "jsonc", "json5", "jsonl", "yaml", "xml"].includes(format);
   const jsonFamily = ["json", "jsonc", "json5", "jsonl"].includes(format);
+  jsonTools.hidden = !jsonFamily;
+  if (jsonFamily) {
+    for (const option of jsonTarget.options) option.disabled = option.value === format;
+    if (jsonTarget.value === format) {
+      jsonTarget.value = [...jsonTarget.options].find((option) => !option.disabled).value;
+    }
+  }
   formatButton.disabled = !enabled;
   formatButton.title = enabled
     ? "Normalize indentation and layout"
@@ -1673,6 +1684,31 @@ formatButton.addEventListener("click", (event) => {
     renderJsonTransformError(error);
   }
 }, true);
+
+jsonConvert.addEventListener("click", () => {
+  try {
+    const target = jsonTarget.value;
+    const result = convertJsonDocument(editor.value, formatSelect.value, target, {
+      json5: globalThis.JSON5,
+      repair: globalThis.JSONRepair?.jsonrepair,
+    });
+    const output = target === "jsonl" ? (result.text ? `${result.text}\n` : "") : rewriteJsonWhitespace(result.text);
+    state.handle = null;
+    state.filename = `${(state.filename || "document").replace(/\.(?:jsonc|json5|jsonl|ndjson|json)$/i, "")}.${target}`;
+    filenameLabel.textContent = state.filename;
+    formatSelect.value = target;
+    editor.value = output;
+    state.documentRevision += 1;
+    state.mixedEol = false;
+    updateFormatButton();
+    updateSaveButton();
+    globalThis.DocBenchDocumentHistory?.record();
+    renderEnhancedPreview();
+    setStatus("good", result.commentsRemoved ? `Converted to ${target.toUpperCase()} · comments removed` : `Converted to ${target.toUpperCase()}`);
+  } catch (error) {
+    renderJsonTransformError(error);
+  }
+});
 
 minifyButton.addEventListener("click", () => {
   try {

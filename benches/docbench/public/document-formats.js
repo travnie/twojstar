@@ -7,7 +7,7 @@
     json: Object.freeze({ label: "JSON", preferredExtension: "json", mime: "application/json;charset=utf-8", raw: false }),
     jsonc: Object.freeze({ label: "JSONC", preferredExtension: "jsonc", mime: "application/json;charset=utf-8", raw: false }),
     json5: Object.freeze({ label: "JSON5", preferredExtension: "json5", mime: "application/json5;charset=utf-8", raw: false }),
-    jsonl: Object.freeze({ label: "JSONL / NDJSON", preferredExtension: "jsonl", mime: "application/x-ndjson;charset=utf-8", raw: false }),
+    jsonl: Object.freeze({ label: "JSONL", preferredExtension: "jsonl", mime: "application/x-ndjson;charset=utf-8", raw: false }),
     yaml: Object.freeze({ label: "YAML", preferredExtension: "yaml", mime: "application/yaml;charset=utf-8", raw: false }),
     xml: Object.freeze({ label: "XML", preferredExtension: "xml", mime: "application/xml;charset=utf-8", raw: false }),
     ini: Object.freeze({ label: "INI / config", preferredExtension: "ini", mime: "text/plain;charset=utf-8", raw: true }),
