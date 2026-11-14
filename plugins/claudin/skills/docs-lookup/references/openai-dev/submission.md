@@ -5,7 +5,10 @@ Verify the live
 at execution time. Portal requirements and any import JSON schema may change; do
 not treat a bundled sample as authoritative.
 
-1. Inspect the actual MCP tool handlers and called helpers, not only names. For every tool, check schemas, `readOnlyHint`, `openWorldHint`, `destructiveHint`, outputs, side effects, authentication, and any advertised `outputSchema`. Record whether a tool writes, sends, deletes, or publishes.
+1. Inspect the actual MCP tool handlers and called helpers, not only names. For
+   every tool, check schemas, `readOnlyHint`, `openWorldHint`,
+   `destructiveHint`, outputs, side effects, authentication, and any advertised
+   `outputSchema`. Record whether a tool writes, sends, deletes, or publishes.
 2. Review widget CSP/resource domains against actual network requests. Flag
    sensitive input fields, exposed secrets/PII, weak domain scopes, misleading
    descriptions, and tool annotations that do not match code. Fix source
@@ -17,7 +20,13 @@ not treat a bundled sample as authoritative.
    positive and three negative cases; verify this before submission. Do not
    fabricate verified publisher identity, reviewer accounts, or server
    availability.
-4. When specifically asked for a `chatgpt-app-submission.json`, fetch the **current** schema/form contract and generate only supported fields. The older uploaded draft used `$schema: https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json`; verify that endpoint before retaining it. If no current import format can be verified, provide review materials in a human-readable document instead of asserting an uploadable JSON is valid.
+4. When specifically asked for a `chatgpt-app-submission.json`, fetch the
+   **current** schema/form contract and generate only supported fields. The
+   older uploaded draft used
+   `$schema: https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json`;
+   verify that endpoint before retaining it. If no current import format can be
+   verified, provide review materials in a human-readable document instead of
+   asserting an uploadable JSON is valid.
 5. Distinguish local tests, connection in developer mode, portal draft, review
    submission, approval, and publication. Public MCP submission needs the
    correct production HTTPS server and publisher setup; a packaged skill alone

@@ -6,7 +6,8 @@ should read host globals safely.
 
 ## Core Rule
 
-- Build baseline widget behavior on the MCP Apps bridge: `ui/*` notifications, `tools/call`, `ui/message`, and `ui/update-model-context`.
+- Build baseline widget behavior on the MCP Apps bridge: `ui/*` notifications,
+  `tools/call`, `ui/message`, and `ui/update-model-context`.
 - Use `window.openai` only when the task specifically benefits from ChatGPT-only
   runtime conveniences.
 - Treat `window.openai` as additive. The app should still have a coherent
@@ -20,21 +21,28 @@ should read host globals safely.
 - `window.openai.toolOutput`: current `structuredContent`
 - `window.openai.toolResponseMetadata`: current `_meta` payload (widget-only)
 - `window.openai.widgetState`: persisted widget-local snapshot
-- `window.openai.setWidgetState(state)`: persist widget-local snapshot after meaningful UI changes
+- `window.openai.setWidgetState(state)`: persist widget-local snapshot after
+  meaningful UI changes
 
 ### Runtime APIs
 
 - `window.openai.callTool(name, args)`: call another MCP tool from the widget
-- `window.openai.sendFollowUpMessage({ prompt, scrollToBottom? })`: ask ChatGPT to post a widget-authored follow-up message
-- `window.openai.openExternal({ href, redirectUrl? })`: open an external URL through ChatGPT's vetted flow
-- `window.openai.requestDisplayMode({ mode })`: request `inline`, `pip`, or `fullscreen`
+- `window.openai.sendFollowUpMessage({ prompt, scrollToBottom? })`: ask ChatGPT
+  to post a widget-authored follow-up message
+- `window.openai.openExternal({ href, redirectUrl? })`: open an external URL
+  through ChatGPT's vetted flow
+- `window.openai.requestDisplayMode({ mode })`: request `inline`, `pip`, or
+  `fullscreen`
 - `window.openai.requestModal({ params, template? })`: open a host-owned modal
 - `window.openai.requestClose()`: ask ChatGPT to close the widget
 - `window.openai.uploadFile(file, options?)`: upload a file from the widget
-- `window.openai.selectFiles()`: open ChatGPT's file library picker and return app-authorized files
-- `window.openai.getFileDownloadUrl({ fileId })`: resolve a temporary download URL
+- `window.openai.selectFiles()`: open ChatGPT's file library picker and return
+  app-authorized files
+- `window.openai.getFileDownloadUrl({ fileId })`: resolve a temporary download
+  URL
 - `window.openai.notifyIntrinsicHeight(...)`: report dynamic height changes
-- `window.openai.setOpenInAppUrl({ href })`: override the fullscreen punch-out target
+- `window.openai.setOpenInAppUrl({ href })`: override the fullscreen punch-out
+  target
 
 ### Context Signals
 
@@ -65,7 +73,8 @@ should read host globals safely.
 - `app.requestDisplayMode({ mode })`:
   Use `window.openai.requestDisplayMode({ mode })`.
 - `app.getHostContext()`:
-  Read the documented globals directly (`theme`, `displayMode`, `locale`, `maxHeight`, `safeArea`, `userAgent`).
+  Read the documented globals directly (`theme`, `displayMode`, `locale`,
+  `maxHeight`, `safeArea`, `userAgent`).
 - `app.getHostCapabilities()` / `app.getHostVersion()`:
   These are wrapper-level convenience APIs.
   Prefer feature detection (`if (window.openai?.requestModal)`) and the
@@ -88,7 +97,8 @@ should read host globals safely.
 ## React Helper Extraction
 
 - A host-global subscription hook keeps direct reads out of components.
-- A widget-state hook mirrors React state into `window.openai.setWidgetState(...)`.
+- A widget-state hook mirrors React state into
+  `window.openai.setWidgetState(...)`.
 - A typed props hook reads `toolOutput` with a local fallback.
 - Keep these helpers optional. Do not force a React abstraction when a simple
   vanilla widget is enough.

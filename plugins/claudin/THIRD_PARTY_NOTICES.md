@@ -22,7 +22,12 @@ Condensed from Anthropic **plugin-dev** (Apache-2.0) and re-verified 2026-11 aga
 
 ## OpenAI Dev Kit (`plugin-dev`, `docs-lookup`)
 
-OpenAI Dev Kit builder scripts and reference material (Apache-2.0) retained under existing skills. Licenses: `skills/plugin-dev/LICENSE.txt`, `skills/plugin-dev/NOTICE.md`, `skills/plugin-dev/references/openai-kit/LICENSE.txt`, `skills/plugin-dev/references/openai-kit/THIRD_PARTY_NOTICES.md`, and `skills/docs-lookup/references/openai-dev/LICENSE.txt`.
+OpenAI Dev Kit builder scripts and reference material (Apache-2.0) retained
+under existing skills. Licenses: `skills/plugin-dev/LICENSE.txt`,
+`skills/plugin-dev/NOTICE.md`,
+`skills/plugin-dev/references/openai-kit/LICENSE.txt`,
+`skills/plugin-dev/references/openai-kit/THIRD_PARTY_NOTICES.md`, and
+`skills/docs-lookup/references/openai-dev/LICENSE.txt`.
 
 ## Remote MCP servers
 

@@ -137,6 +137,7 @@ Validation emphasis:
   `search` and `fetch` tools unless the user clearly needs a widget.
 - If the prompt asks for a simple demo or starter, choose `vanilla-widget`.
 - If the prompt asks for a polished UI or React, choose `react-widget`.
-- If the prompt implies long-lived client state or repeated interaction, choose `interactive-decoupled`.
+- If the prompt implies long-lived client state or repeated interaction, choose
+  `interactive-decoupled`.
 - Only choose `submission-ready` when the user explicitly asks for launch or
   review-readiness work.
