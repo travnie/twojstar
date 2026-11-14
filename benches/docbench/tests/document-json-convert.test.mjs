@@ -10,6 +10,8 @@ assert.equal(convert(`{"id":${big}}\n{"v":"x"}\n`, "jsonl", "json", libs).text, 
 assert.equal(convert(`{/*note*/"id":${big},}`, "jsonc", "json", libs).text, `{"id":${big}}`);
 assert.equal(convert(`{id:${big}, name:'demo'}`, "json5", "json", libs).text, `{"id":${big},"name":"demo"}`);
 assert.equal(convert("{hex:0x10}", "json5", "json", libs).text, '{"hex":16}');
+assert.throws(() => convert("{id:1,id:0x10}", "json5", "json", libs), /duplicate keys/);
+assert.throws(() => convert("{id:+1}", "json5", "json", libs), /cannot be converted safely/);
 assert.throws(() => convert("{bad:Infinity}", "json5", "json", libs), /Infinity and NaN/);
 assert.throws(() => convert('{"x":1}', "json", "jsonl", libs), /array/);
 assert.throws(() => convert('{"x":1}\nnope', "jsonl", "json", libs), /line 2/);
