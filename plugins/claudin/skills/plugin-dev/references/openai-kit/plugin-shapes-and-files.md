@@ -6,14 +6,19 @@ discover
 fields
 (`skills`, `mcpServers`, `apps`, `interface`) to the portable manifest.
 
-- **Skills:** `skills/<name>/SKILL.md`; optional metadata in `agents/openai.yaml`.
-- **Portable MCP:** root `mcp.json`, MCP schema, named `mcpServers`, explicit transport `type`.
-- **Private registered MCP:** `.app.json`, with `extensions.com.openai.apps: "./.app.json"`.
+- **Skills:** `skills/<name>/SKILL.md`; optional metadata in
+  `agents/openai.yaml`.
+- **Portable MCP:** root `mcp.json`, MCP schema, named `mcpServers`, explicit
+  transport `type`.
+- **Private registered MCP:** `.app.json`, with
+  `extensions.com.openai.apps: "./.app.json"`.
   Use verified underlying App IDs. A connection page ID `plugin_asdk_app_<id>`
   maps to
-  `asdk_app_<id>`; never invent the ID or assume an endpoint auto-registers during import.
+  `asdk_app_<id>`; never invent the ID or assume an endpoint auto-registers
+  during import.
 - **Assets:** root `assets/`; interface asset paths relative to the plugin root.
-- **Compatibility:** only `plugin.json` inside `.codex-plugin/`. Generate `.mcp.json`
+- **Compatibility:** only `plugin.json` inside `.codex-plugin/`. Generate
+  `.mcp.json`
   and `skills`/`mcpServers` declarations for older clients when needed.
 
 When `extensions.com.openai` exists, it replaces the whole compatibility

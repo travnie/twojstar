@@ -5,7 +5,8 @@ meant to work well with company knowledge or deep research.
 
 ## Default Rule
 
-If the app is primarily a read-only knowledge source, do not invent custom equivalents to `search` and `fetch`.
+If the app is primarily a read-only knowledge source, do not invent custom
+equivalents to `search` and `fetch`.
 
 Default to implementing the standard `search` and `fetch` tools exactly, then
 add other tools only if the use case clearly needs them.

@@ -56,7 +56,8 @@ For each use case, identify:
 
 - Put repeatable instructions and bundled resources in `skills/`.
 - Put registered MCP connection mappings in `.app.json`.
-- Put portable MCP server definitions in root `mcp.json`, with the MCP schema and transport `type`.
+- Put portable MCP server definitions in root `mcp.json`, with the MCP schema
+  and transport `type`.
 - Put lifecycle hooks in `hooks/` only when event-driven behavior is required.
 - Put icons, logos, and screenshots in `assets/`.
 - Put only `plugin.json` inside `.codex-plugin/`.
@@ -66,7 +67,8 @@ For each use case, identify:
 For a portable OpenAI plugin, use root `plugin.json` with the Agent Plugins 1.0
 schema. Copilot CLI treats this as strict mode; see `references/hosts.md` before
 changing an existing cross-host package. Put OpenAI-specific settings under
-`extensions.com.openai`. Portable clients discover `skills/` and `mcp.json` at fixed paths.
+`extensions.com.openai`. Portable clients discover `skills/` and `mcp.json` at
+fixed paths.
 Keep `.codex-plugin/plugin.json` only as an optional compatibility overlay; when
 the inline
 OpenAI extension exists, it replaces that entire overlay instead of merging with
@@ -150,7 +152,8 @@ When reviewing an older app package:
 2. Move the mental model from “app equals widget-backed MCP server” to
    “plugin may contain skills, MCP, hooks, and optional UI.”
 3. Replace stale canonical docs links with `/plugins/...`.
-4. Add portable root `plugin.json`; retain a synchronized `.codex-plugin/plugin.json` when an older client needs it.
+4. Add portable root `plugin.json`; retain a synchronized
+   `.codex-plugin/plugin.json` when an older client needs it.
 5. Keep `.app.json` only for registered MCP connection mappings.
 6. Keep root `mcp.json` for portable MCP configuration; generate `.mcp.json`
    only for older clients.

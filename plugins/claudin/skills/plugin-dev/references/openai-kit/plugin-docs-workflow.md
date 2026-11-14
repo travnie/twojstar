@@ -14,7 +14,9 @@ Fetch current official OpenAI pages before implementation.
 
 ## Conditional
 
-Search the live `openai-docs` connector (via `docs-lookup`) or the official [plugin docs index](https://developers.openai.com/plugins/) for these topics; fetch only the matching page. Do not guess volatile paths.
+Search the live `openai-docs` connector (via `docs-lookup`) or the official
+[plugin docs index](https://developers.openai.com/plugins/) for these topics;
+fetch only the matching page. Do not guess volatile paths.
 
 - authentication,
 - connect and test,
