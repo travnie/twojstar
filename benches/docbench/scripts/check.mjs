@@ -482,7 +482,7 @@ if (wrangler.assets?.not_found_handling !== "404-page") {
 if (!workerSource.includes('type="text/plain"')) {
   throw new Error("Doc Bench HTTP llms.txt alternate discovery header is missing.");
 }
-if (!workerSource.includes('if (asset.ok && headers.get("content-type")?.includes("text/html"))')) {
+if (!workerSource.includes('const isHtml = asset.ok && headers.get("content-type")?.includes("text/html")')) {
   throw new Error("Discovery headers must be limited to successful HTML assets.");
 }
 
