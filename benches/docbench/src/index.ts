@@ -26,9 +26,13 @@ export default {
       headers.set(name, value);
     }
 
+    const pathname = new URL(request.url).pathname;
     const isHtml = asset.ok && headers.get("content-type")?.includes("text/html");
-    const isQpdfWorker = asset.ok && new URL(request.url).pathname === "/vendor/qpdf-run/worker.js";
-    if (isHtml || isQpdfWorker) {
+    const isCachedHtml = asset.status === 304 && (
+      headers.get("content-type")?.includes("text/html") || pathname === "/" || pathname === "/index.html"
+    );
+    const isQpdfWorker = (asset.ok || asset.status === 304) && pathname === "/vendor/qpdf-run/worker.js";
+    if (isHtml || isCachedHtml || isQpdfWorker) {
       headers.set("content-security-policy", SECURITY_HEADERS["content-security-policy"].replace(
         "script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
       ));
