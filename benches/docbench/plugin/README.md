@@ -17,4 +17,4 @@ folder for local authoring and testing.
 ## Install
 
 - **Claude Code:** `/plugin install docbench --marketplace travnie/twojstar`
-- **claude.ai, ChatGPT, Codex:** upload the `docbench` package built from this folder (see *Package*), or install it from the directory listing once published.
+- **claude.ai, ChatGPT, Codex:** install it from the directory listing once published, or zip this folder and upload it as a custom plugin.

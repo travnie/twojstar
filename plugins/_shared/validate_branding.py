@@ -11,6 +11,7 @@ import json
 import re
 import struct
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / ".agents/plugins/marketplace.json"
@@ -81,7 +82,7 @@ def listing_icon(root: Path, value: str, name: str) -> None:
             raise ValueError(f"listing icon must be square, 48-4096 px: {name}")
     elif path.suffix == ".svg":
         box = re.search(r'viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"', data.decode("utf-8"))
-        if not box or box[1] != box[2] or float(box[1]) < 48:
+        if not box or box[1] != box[2] or not 48 <= float(box[1]) <= 4096:
             raise ValueError(f"SVG listing icon needs a square viewBox of at least 48: {name}")
     else:
         raise ValueError(f"listing icon must be PNG or SVG: {name}")
@@ -93,14 +94,17 @@ def check_listing(root: Path, manifest: dict, name: str) -> None:
         if not interface.get(field) or len(interface[field]) > limit:
             raise ValueError(f"{field} missing or over {limit} chars: {name}")
     for field in LISTING_URLS:
-        if not str(interface.get(field, "")).startswith("https://"):
+        url = urlparse(str(interface.get(field, "")))
+        if url.scheme != "https" or not url.hostname or url.username or url.password:
             raise ValueError(f"listing {field} must be an https URL: {name}")
     prompts = interface.get("defaultPrompt", [])
     prompts = [prompts] if isinstance(prompts, str) else prompts
-    if len(prompts) > 3 or len(set(prompts)) != len(prompts) or any(len(p) > 128 for p in prompts):
+    if not isinstance(prompts, list) or any(not isinstance(p, str) for p in prompts) or len(prompts) > 3 or len(set(prompts)) != len(prompts) or any(len(p) > 128 for p in prompts):
         raise ValueError(f"defaultPrompt: at most 3 unique prompts of 128 chars: {name}")
     capabilities = interface.get("capabilities", [])
-    if len(capabilities) > 20 or any(len(c) > 120 for c in capabilities):
+    if not isinstance(capabilities, list) or len(capabilities) > 20 or any(
+        not isinstance(c, str) or len(c) > 120 for c in capabilities
+    ):
         raise ValueError(f"capabilities over limits: {name}")
     for field, background in (("brandColor", "#FFFFFF"), ("brandColorDark", "#212121")):
         color = interface.get(field)
