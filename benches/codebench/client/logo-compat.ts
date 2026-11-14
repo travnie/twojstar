@@ -79,9 +79,16 @@
   };
 
   let remoteLogoData = null;
+  let siteIconHost = null;
   let presetMode = "auto";
   let requestGeneration = 0;
 
+  const siteField = document.createElement("div");
+  siteField.innerHTML = '<button type="button" class="btn ghost" id="qSiteIcon">Use website icon</button>'
+    + '<p class="hint" id="qSiteIconStatus">For URL codes. Sends only the domain to Icon Horse.</p>';
+  fileInput.insertAdjacentElement("beforebegin", siteField);
+  const siteButton = siteField.querySelector("#qSiteIcon");
+  const siteStatus = siteField.querySelector("#qSiteIconStatus");
   const presetField = document.createElement("div");
   presetField.className = "f";
   presetField.style.marginTop = "12px";
@@ -153,6 +160,8 @@
   function clearRemote(clearInput = true) {
     requestGeneration += 1;
     remoteLogoData = null;
+    siteIconHost = null;
+    siteButton.disabled = false;
     loadButton.disabled = false;
     if (clearInput) urlInput.value = "";
     setStatus(defaultStatus);
@@ -215,8 +224,8 @@
     return blob.slice(0, blob.size, mime);
   }
 
-  async function loadRemoteLogo() {
-    const value = urlInput.value.trim();
+  async function loadRemoteLogo(siteHost = null) {
+    const value = siteHost ? `https://icon.horse/icon/${encodeURIComponent(siteHost)}/128?fallback=404` : urlInput.value.trim();
     if (!value) {
       clearRemote(false);
       originalRenderQR();
@@ -239,7 +248,9 @@
     clearUploadedLogo();
     const generation = ++requestGeneration;
     loadButton.disabled = true;
+    siteButton.disabled = true;
     setStatus("Loading image…");
+    if (siteHost) siteStatus.textContent = "Loading website icon…";
 
     try {
       const response = await fetch(url.href, {
@@ -252,6 +263,12 @@
       const dataUrl = await blobToDataUrl(blob);
       if (generation !== requestGeneration) return;
       remoteLogoData = dataUrl;
+      siteIconHost = siteHost;
+      if (siteHost) {
+        document.querySelector("#qLogoSize").value = "0.2";
+        document.querySelector("#qEc").value = "H";
+        siteStatus.textContent = `Icon loaded for ${siteHost}. Scan the QR to check it.`;
+      }
       if (removeButton) removeButton.style.display = "";
       setStatus("Remote logo loaded.");
       originalRenderQR();
@@ -260,9 +277,10 @@
       remoteLogoData = null;
       if (removeButton) removeButton.style.display = "none";
       setStatus(`${error.message || "Couldn't load the image."} Remote images must allow CORS.`, true);
+      if (siteHost) siteStatus.textContent = "Icon unavailable. Try again or upload a logo.";
       originalRenderQR();
     } finally {
-      if (generation === requestGeneration) loadButton.disabled = false;
+      if (generation === requestGeneration) { loadButton.disabled = false; siteButton.disabled = false; }
     }
   }
 
@@ -292,7 +310,31 @@
     return options;
   };
 
-  loadButton.addEventListener("click", loadRemoteLogo);
+  siteButton.addEventListener("click", () => {
+    try {
+      const value = document.querySelector("#f_url")?.value || "";
+      const url = new URL(value);
+      const host = url.hostname;
+      if (currentTemplate() !== "url" || !["http:", "https:"].includes(url.protocol)
+        || url.username || url.password || !host.includes(".") || host.endsWith(".local") || /^[\d.]+$/.test(host)) throw new Error();
+      void loadRemoteLogo(host);
+    } catch { siteStatus.textContent = "Enter a public HTTP or HTTPS website URL first."; }
+  });
+  document.addEventListener("input", (event) => {
+    if (event.target?.id !== "f_url" || currentTemplate() !== "url") return;
+    let host = "";
+    try { host = new URL(event.target.value).hostname; } catch {}
+    if ((siteIconHost && siteIconHost !== host) || siteButton.disabled) {
+      clearRemote();
+      siteStatus.textContent = "URL changed. Load the new website icon.";
+      originalRenderQR();
+    }
+  });
+  document.querySelector("#qrChips").addEventListener("click", () => {
+    siteField.hidden = currentTemplate() !== "url";
+    if (siteIconHost || siteButton.disabled) { clearRemote(); originalRenderQR(); }
+  });
+  loadButton.addEventListener("click", () => loadRemoteLogo());
   urlInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();

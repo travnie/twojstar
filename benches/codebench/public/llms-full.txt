@@ -36,3 +36,5 @@ On browser hosts that implement WebMCP, the application exposes `read_code_state
 - [Application](https://codebench.travny.workers.dev/)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/codebench)
 - [TRAVNY hub](https://travny.pages.dev/)
+
+Website icons: optional Icon Horse lookup; only the domain is shared.
