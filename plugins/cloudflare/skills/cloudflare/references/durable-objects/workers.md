@@ -159,6 +159,8 @@ async function handleRooms(request: Request, env: Env): Promise<Response> {
 
 ## Request Validation
 
+Variant that takes the room in the JSON body instead of the `room` query parameter:
+
 ```typescript
 import { z } from "zod";
 

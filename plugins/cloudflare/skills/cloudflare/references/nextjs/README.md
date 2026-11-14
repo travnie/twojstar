@@ -18,5 +18,6 @@ vinext maintains its own agent skills in [`.agents/skills`](https://github.com/c
 Then by case:
 
 - **New project:** vinext's [new-project setup](https://github.com/cloudflare/vinext#starting-a-new-vinext-project) via `create-vinext-app` with the Cloudflare target. The migration skill needs an existing Next.js project — don't run it on an empty directory.
-- **Existing Next.js project the user wants on vinext:** the upstream [`migrate-to-vinext`](https://github.com/cloudflare/vinext/blob/main/.agents/skills/migrate-to-vinext/SKILL.md) skill, including its compatibility check; pick Cloudflare as the deployment target.
+- **Existing Next.js project, no stated choice:** keep its current setup (OpenNext or other) during unrelated work; offer the vinext migration, don't run it unasked.
+- **Existing Next.js project, user wants vinext:** the upstream [`migrate-to-vinext`](https://github.com/cloudflare/vinext/blob/main/.agents/skills/migrate-to-vinext/SKILL.md) skill, including its compatibility check; pick Cloudflare as the deployment target.
 - **Dev and deploy:** the current [Workers integration docs](https://github.com/cloudflare/vinext#cloudflare-workers). CLI choice still follows `SKILL.md` → *Choose the CLI*.
