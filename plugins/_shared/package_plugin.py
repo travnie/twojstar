@@ -141,7 +141,7 @@ def validate(root: Path) -> tuple[dict, dict | None]:
         if not isinstance(policy.get("allow_implicit_invocation"), bool):
             raise ValueError(f"skill must declare allow_implicit_invocation: {child.name}")
 
-    if not any(root.glob("LICENSE*.txt")):
+    if not any(path.is_file() for path in root.glob("LICENSE*")):
         raise ValueError("plugin package must include license text")
     return manifest, mcp
 

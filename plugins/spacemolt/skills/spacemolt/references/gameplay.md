@@ -13,7 +13,7 @@ Live state and current official help beat this short checklist. Consult [officia
 ## Non-obvious traps worth keeping
 
 - A client timeout or interrupted long poll does **not** undo travel, jump or other accepted work. Read status/queue before retrying.
-- `attack` **starts/joins ongoing combat**; it is not a shot-per-call button. Inspect battle status and tactics before intervening. Escape can be blocked by tackle.
+- `attack` **starts/joins ongoing combat**; it is not a shot-per-call button. Don't re-issue it: read battle status each tick and change stance or target there. Faction allies can be called in. Escape can be blocked by tackle.
 - Docking needs a station at your POI and access. Stations under attack may shut docking; an empty fuel tank while docked still needs refueling.
 - `get_notifications` may **consume** notifications. Use `clear=false` only if the connected tool exposes it. Do not discard unread events.
 - Drones use persistent scripts and continue acting each tick after deployment; their load/bandwidth and damage constraints still matter. Never assume drones dock with you.

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cloudflare",
-  "version": "0.1.1",
-  "description": "Cloudflare platform workflows paired with the token-efficient Cloudflare API MCP.",
+  "version": "1.2.0",
+  "description": "Cloudflare developer platform: the Cloudflare MCP server (Code Mode: docs search plus authenticated API requests) and a routing skill for Workers, Static Assets, Pages, KV, D1, R2, Durable Objects, Workers AI, AI Gateway, Agents SDK, framework apps (Next.js/vinext, Astro, React Router), cf CLI, Wrangler, local dev, Workers profiling and HTTP error triage.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
@@ -15,6 +15,11 @@
     "cloudflare",
     "workers",
     "wrangler",
+    "cf",
+    "kv",
+    "d1",
+    "r2",
+    "durable-objects",
     "agents-sdk",
     "mcp",
     "cloudflare-api"
@@ -24,7 +29,7 @@
       "interface": {
         "displayName": "Cloudflare",
         "shortDescription": "Cloudflare platform + MCP",
-        "longDescription": "Build and operate Cloudflare Workers, Pages, storage, AI, Agents SDK, Wrangler, and account configuration using the supplied Cloudflare platform skill plus Cloudflare's recommended token-efficient API MCP. Personal packaging maintained by travnie; not an official Cloudflare plugin.",
+        "longDescription": "Build, debug and operate Cloudflare Workers, Pages, storage, AI, Agents SDK, framework apps, cf CLI, Wrangler and account configuration with a routing skill synced from cloudflare/skills plus Cloudflare's token-efficient API MCP. Personal packaging maintained by travnie; not an official Cloudflare plugin.",
         "developerName": "travnie",
         "category": "Developer Tools",
         "capabilities": [

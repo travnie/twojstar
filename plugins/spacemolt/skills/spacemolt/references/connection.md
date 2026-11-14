@@ -9,4 +9,4 @@ For exact auth/session/envelope/WS fields, call the read-only [docs MCP](https:/
 - Prefer the live browser/device authorization flow **only if exposed**. Never guess `login_link`, `login_link_poll`, registration codes or arguments.
 - Passwords only to the official game login endpoint or official-client flow; never to docs, repositories, logs or third parties. Isolate profile/session files per captain.
 - Read `structuredContent` for typed data. Mutation results are often partial state deltas; `details` has action-specific output. Re-read status if a full snapshot is needed.
-- One game mutation per tick (normally 10 seconds). Use live `retry_after`, queue/status and WS pushes, not fixed retry loops. Long-poll cancellation is not action cancellation.
+- Up to 4 connections per account; a 5th evicts the oldest (`session_replaced`). One game mutation per tick (normally 10 seconds) **per player**, across all connections. Use live `retry_after`, queue/status and WS pushes, not fixed retry loops. Long-poll cancellation is not action cancellation.
