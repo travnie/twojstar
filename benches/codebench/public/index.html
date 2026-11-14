@@ -687,6 +687,7 @@ const templates={
 };
 
 function pickTemplate(t,shouldRender=true){
+  if(shouldRender&&t===qrType&&$("#qrFields").children.length)return;
   qrType=t;
   $$("#qrChips .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.t===t));
   const host=$("#qrFields");host.innerHTML="";
