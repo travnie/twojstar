@@ -83,10 +83,11 @@
   let pendingSiteHost = null;
   let presetMode = "auto";
   let requestGeneration = 0;
+  let loadController = null;
 
   const siteField = document.createElement("div");
   siteField.innerHTML = '<button type="button" class="btn ghost" id="qSiteIcon">Use website icon</button>'
-    + '<p class="hint" id="qSiteIconStatus">For URL codes. Sends only the domain to Icon Horse.</p>';
+    + '<p class="hint" id="qSiteIconStatus">Loads /favicon.ico directly from the website. CORS required.</p>';
   fileInput.insertAdjacentElement("beforebegin", siteField);
   const siteButton = siteField.querySelector("#qSiteIcon");
   const siteStatus = siteField.querySelector("#qSiteIconStatus");
@@ -160,6 +161,9 @@
 
   function clearRemote(clearInput = true) {
     requestGeneration += 1;
+    loadController?.abort();
+    loadController = null;
+    siteStatus.textContent = "Loads /favicon.ico directly from the website. CORS required.";
     remoteLogoData = null;
     siteIconHost = null;
     pendingSiteHost = null;
@@ -214,6 +218,7 @@
     if (blob.type.startsWith("image/")) return blob;
     const extension = new URL(url).pathname.split(".").pop()?.toLowerCase();
     const mime = {
+      ico: "image/x-icon",
       svg: "image/svg+xml",
       png: "image/png",
       jpg: "image/jpeg",
@@ -226,8 +231,8 @@
     return blob.slice(0, blob.size, mime);
   }
 
-  async function loadRemoteLogo(siteHost = null) {
-    const value = siteHost ? `https://icon.horse/icon/${encodeURIComponent(siteHost)}/128?fallback=404` : urlInput.value.trim();
+  async function loadRemoteLogo(siteHost = null, siteOrigin = null) {
+    const value = siteHost ? new URL("/favicon.ico", siteOrigin).href : urlInput.value.trim();
     if (!value) {
       clearRemote(false);
       originalRenderQR();
@@ -244,11 +249,10 @@
       return;
     }
 
-    presetMode = "none";
-    syncPresetButtons();
-    remoteLogoData = null;
-    clearUploadedLogo();
     const generation = ++requestGeneration;
+    const controller = new AbortController();
+    loadController = controller;
+    const timeout = setTimeout(() => controller.abort(), 15000);
     pendingSiteHost = siteHost;
     loadButton.disabled = true;
     siteButton.disabled = true;
@@ -260,6 +264,7 @@
         mode: "cors",
         credentials: "omit",
         referrerPolicy: "no-referrer",
+        signal: controller.signal,
       });
       if (!response.ok) throw new Error(`Image server returned ${response.status}.`);
       const blob = normalizeImageBlob(await response.blob(), url.href);
@@ -271,11 +276,12 @@
         originalRenderQR();
         return;
       }
+      presetMode = "none";
+      syncPresetButtons();
+      clearUploadedLogo();
       remoteLogoData = dataUrl;
       siteIconHost = siteHost;
       if (siteHost) {
-        document.querySelector("#qLogoSize").value = "0.2";
-        document.querySelector("#qEc").value = "H";
         siteStatus.textContent = `Icon loaded for ${siteHost}. Scan the QR to check it.`;
       }
       if (removeButton) removeButton.style.display = "";
@@ -283,13 +289,12 @@
       originalRenderQR();
     } catch (error) {
       if (generation !== requestGeneration) return;
-      remoteLogoData = null;
-      if (removeButton) removeButton.style.display = "none";
-      setStatus(`${error.message || "Couldn't load the image."} Remote images must allow CORS.`, true);
-      if (siteHost) siteStatus.textContent = "Icon unavailable. Try again or upload a logo.";
+      setStatus(`${error.name === "AbortError" ? "Request timed out." : error.message || "Couldn't load the image."} Remote images must allow CORS.`, true);
+      if (siteHost) siteStatus.textContent = "Icon unavailable or blocked by CORS. Upload a logo instead.";
       originalRenderQR();
     } finally {
-      if (generation === requestGeneration) { pendingSiteHost = null; loadButton.disabled = false; siteButton.disabled = false; }
+      clearTimeout(timeout);
+      if (generation === requestGeneration) { loadController = null; pendingSiteHost = null; loadButton.disabled = false; siteButton.disabled = false; }
     }
   }
 
@@ -335,10 +340,10 @@
       const value = document.querySelector("#f_url")?.value || "";
       const url = new URL(value);
       const host = url.hostname;
-      if (currentTemplate() !== "url" || !["http:", "https:"].includes(url.protocol)
+      if (currentTemplate() !== "url" || url.protocol !== "https:"
         || url.username || url.password || !host.includes(".") || host.endsWith(".local") || /^[\d.]+$/.test(host)) throw new Error();
-      void loadRemoteLogo(host);
-    } catch { siteStatus.textContent = "Enter a public HTTP or HTTPS website URL first."; }
+      void loadRemoteLogo(host, url.origin);
+    } catch { siteStatus.textContent = "Enter an HTTPS website URL first."; }
   });
   document.addEventListener("input", (event) => {
     if (event.target?.id !== "f_url" || currentTemplate() !== "url") return;

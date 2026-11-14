@@ -28,4 +28,4 @@ On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `s
 - [Doc Bench](https://docbench.travny.workers.dev/): local-first document and PDF studio.
 - [Weather](https://weather.travny.workers.dev/): local weather ensemble.
 
-Website icons: optional Icon Horse lookup; only the domain is shared.
+Website icons: optional direct /favicon.ico lookup; CORS required.
