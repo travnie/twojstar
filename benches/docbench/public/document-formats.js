@@ -3,6 +3,8 @@
 
   const definitions = Object.freeze({
     txt: Object.freeze({ label: "Plain text", preferredExtension: "txt", mime: "text/plain;charset=utf-8", raw: true }),
+    csv: Object.freeze({ label: "CSV", preferredExtension: "csv", mime: "text/csv;charset=utf-8", raw: true }),
+    html: Object.freeze({ label: "HTML source", preferredExtension: "html", mime: "text/html;charset=utf-8", raw: true }),
     md: Object.freeze({ label: "Markdown", preferredExtension: "md", mime: "text/markdown;charset=utf-8", raw: false }),
     json: Object.freeze({ label: "JSON", preferredExtension: "json", mime: "application/json;charset=utf-8", raw: false }),
     jsonc: Object.freeze({ label: "JSONC", preferredExtension: "jsonc", mime: "application/json;charset=utf-8", raw: false }),
@@ -21,7 +23,7 @@
 
   const extensionToFormat = Object.freeze({
     txt: "txt", text: "txt", log: "txt", out: "txt",
-    csv: "txt", tsv: "txt", css: "txt", js: "txt", ts: "txt", html: "txt", htm: "txt",
+    csv: "csv", html: "html", htm: "html", tsv: "txt", css: "txt", js: "txt", ts: "txt",
     py: "txt", rs: "txt", kt: "txt", java: "txt",
     md: "md", markdown: "md",
     json: "json", jsonc: "jsonc", json5: "json5", jsonl: "jsonl", ndjson: "jsonl",

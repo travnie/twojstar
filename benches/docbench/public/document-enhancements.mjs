@@ -1526,6 +1526,71 @@ openButton.addEventListener("click", (event) => {
   })();
 }, true);
 
+const urlToggle = $("#open-url-toggle");
+const urlForm = $("#open-url-form");
+const urlInput = $("#open-url-input");
+const urlFeedback = $("#open-url-feedback");
+const urlSubmit = $("#open-url-submit");
+const MAX_REMOTE_BYTES = 5 * 1024 * 1024;
+urlToggle.addEventListener("click", () => {
+  urlForm.hidden = !urlForm.hidden;
+  urlToggle.setAttribute("aria-expanded", String(!urlForm.hidden));
+  if (!urlForm.hidden) urlInput.focus();
+});
+urlForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  let url;
+  try {
+    url = new URL(urlInput.value.trim());
+    if (url.protocol !== "https:" || url.username || url.password) throw new Error();
+  } catch {
+    urlFeedback.textContent = "Enter an HTTPS URL without embedded credentials.";
+    return;
+  }
+  const revision = state.documentRevision;
+  urlSubmit.disabled = true;
+  urlFeedback.textContent = "Loading…";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", signal: controller.signal });
+    if (!response.ok) throw new Error(`Server returned HTTP ${response.status}.`);
+    if (Number(response.headers.get("content-length")) > MAX_REMOTE_BYTES) throw new Error("Document exceeds 5 MB.");
+    if (!response.body) throw new Error("The response has no readable body.");
+    const reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_REMOTE_BYTES) {
+        await reader.cancel();
+        throw new Error("Document exceeds 5 MB.");
+      }
+      chunks.push(value);
+    }
+    if (state.documentRevision !== revision) throw new Error("The document changed while loading; try again.");
+    let filename = new URL(response.url || url).pathname.split("/").pop() || "document.txt";
+    try { filename = decodeURIComponent(filename); } catch { /* Keep original name. */ }
+    filename = filename.replace(/[\\/:*?"<>|\x00-\x1f]/g, "-") || "document.txt";
+    const file = new File(chunks, filename, { type: response.headers.get("content-type") || "text/plain" });
+    if (!confirmDocumentReplacement()) {
+      urlFeedback.textContent = "Opening cancelled.";
+      return;
+    }
+    const result = await syncFallbackFile(file, state.documentRevision += 1);
+    urlFeedback.textContent = result.ok ? `Opened ${filename}. Save downloads a local copy.` : `Open failed: ${result.error}`;
+  } catch (error) {
+    urlFeedback.textContent = error.name === "AbortError" ? "Request timed out." : error instanceof TypeError
+      ? "Could not load. The site may block browser access (CORS), or the URL may be unavailable."
+      : error.message || "Could not load the document.";
+  } finally {
+    clearTimeout(timer);
+    urlSubmit.disabled = false;
+  }
+});
+
 saveButton.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopImmediatePropagation();

@@ -57,3 +57,5 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.
 
 - JSON tools appear for JSON, JSONC, JSON5 and JSONL. Convert locally between them; JSONL maps records to an array. Conversion removes comments and preserves JSON numeric text.
+
+Open URL: HTTPS UTF-8 text up to 5 MiB; browser CORS applies. CSV and HTML open as plain source.

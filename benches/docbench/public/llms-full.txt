@@ -35,3 +35,5 @@ JSON and JSONC files can be merged locally. Object roots are merged recursively;
 ## JSON conversion
 
 JSON tools are part of the text editor and appear for JSON, JSONC, JSON5 and JSONL. Conversion maps JSONL records to an array and requires an array for JSONL output. Comments are removed. JSON numeric lexemes are preserved; unsupported JSON5 numeric conversions are rejected rather than silently losing precision. Undo restores the previous document.
+
+Open URL: HTTPS UTF-8 text up to 5 MiB; browser CORS applies. CSV and HTML open as plain source.
