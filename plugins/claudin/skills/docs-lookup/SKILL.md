@@ -31,6 +31,8 @@ Bundled with this plugin, public and authless:
 
 Not bundled but often connected — use when present: GitHub docs (GitHub MCP `github_support_docs_search`), Google Developer Knowledge (Android, Chrome, Firebase, Gemini CLI), Microsoft Learn (Azure, .NET, M365), Cloudflare docs, Context7 (library and framework docs). No matching connector in the session: official URLs in `plugin-dev` `references/hosts.md`, via WebFetch. Claude plans, usage limits and pricing: `product-self-knowledge` too. Claude API model IDs and renamed params: `plugin-dev` `references/claude-api.md` drift table.
 
+OpenAI-specific routes, model migration checklists and API/Codex workflows: `references/openai-workflows.md` and `references/openai-dev/`. Live official documentation supersedes bundled snapshots for volatile requirements.
+
 ## How
 
 1. Pick the server by product, not by keyword ("Claude Code hooks" → `claude-code-docs`, not `claude-ai-docs`). Unsure → search two in parallel.
