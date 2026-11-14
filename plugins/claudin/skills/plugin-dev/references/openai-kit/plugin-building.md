@@ -81,9 +81,9 @@ Manifest paths must:
 - stay inside the plugin root,
 - point only to components that exist.
 
-Use `scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP
+Use `python3 scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP
 starting structure.
-Use `scripts/validate_plugin.py` before packaging or publication.
+Use `python3 scripts/validate_plugin.py` before packaging or publication.
 
 ### 4. Build skills
 

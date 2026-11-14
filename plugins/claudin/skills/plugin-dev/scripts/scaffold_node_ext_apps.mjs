@@ -2,6 +2,7 @@
 
 import { mkdirSync, writeFileSync, existsSync, readdirSync, lstatSync } from "node:fs";
 import path from "node:path";
+import { parseArgs as parseCliArgs } from "node:util";
 
 function toSlug(value) {
   const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -538,67 +539,41 @@ function usage() {
 }
 
 function parseArgs(argv) {
-  const args = {
-    outputDir: null,
-    appName: "example-chatgpt-app",
-    toolName: null,
-    port: 8787,
-    force: false,
+  const { values, positionals } = parseCliArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      "app-name": { type: "string", default: "example-chatgpt-app" },
+      "tool-name": { type: "string" },
+      port: { type: "string", default: "8787" },
+      force: { type: "boolean", default: false },
+      help: { type: "boolean", short: "h", default: false },
+    },
+  });
+  if (values.help) {
+    console.log(usage());
+    return null;
+  }
+  if (positionals.length !== 1 || !positionals[0].trim()) {
+    throw new Error(usage());
+  }
+  for (const name of ["app-name", "tool-name"]) {
+    const value = values[name];
+    if (value !== undefined && (!value.trim() || value.startsWith("-"))) {
+      throw new Error("Invalid value for --" + name);
+    }
+  }
+  const port = Number(values.port);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("Expected a port between 1 and 65535");
+  }
+  return {
+    outputDir: positionals[0],
+    appName: values["app-name"],
+    toolName: values["tool-name"],
+    port,
+    force: values.force,
   };
-
-  const tokens = [...argv];
-  function readValue(flag) {
-    const value = tokens.shift();
-    if (!value || !value.trim() || value.startsWith("-")) {
-      throw new Error(`Missing value after ${flag}`);
-    }
-    return value;
-  }
-  while (tokens.length > 0) {
-    const token = tokens.shift();
-
-    if (!args.outputDir && !token.startsWith("-")) {
-      args.outputDir = token;
-      continue;
-    }
-
-    if (token === "--app-name") {
-      args.appName = readValue(token);
-      continue;
-    }
-
-    if (token === "--tool-name") {
-      args.toolName = readValue(token);
-      continue;
-    }
-
-    if (token === "--port") {
-      const value = Number(readValue(token));
-      if (!Number.isInteger(value) || value < 1 || value > 65535) {
-        throw new Error("Expected a port between 1 and 65535");
-      }
-      args.port = value;
-      continue;
-    }
-
-    if (token === "--force") {
-      args.force = true;
-      continue;
-    }
-
-    if (token === "--help" || token === "-h") {
-      console.log(usage());
-      return null;
-    }
-
-    throw new Error(`Unknown argument: ${token}`);
-  }
-
-  if (!args.outputDir) {
-    throw new Error(`Missing required output directory.\n\n${usage()}`);
-  }
-
-  return args;
 }
 
 function main() {

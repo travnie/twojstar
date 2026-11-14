@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate a ChatGPT/Codex plugin folder and manifest paths."""
 
 from __future__ import annotations
@@ -193,7 +192,11 @@ def main() -> int:
                     errors.append(f"{skill_file.relative_to(root)} lacks YAML frontmatter")
                     continue
                 try:
-                    metadata = yaml.load(header.group(1), Loader=UniqueSkillLoader)
+                    loader = UniqueSkillLoader(header.group(1))
+                    try:
+                        metadata = loader.get_single_data()
+                    finally:
+                        loader.dispose()
                 except (yaml.YAMLError, ValueError) as exc:
                     errors.append(f"{skill_file.relative_to(root)} invalid YAML frontmatter: {exc}")
                     continue
