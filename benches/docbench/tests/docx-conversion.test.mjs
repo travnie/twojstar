@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { convertToPdf } from "docx-to-pdf-wasm";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import { readPdfOutline } from "../public/pdf-core.mjs";
+import { closePdfDocument, readPdfOutline } from "../public/pdf-core.mjs";
 import { convertPdfStateToDocx } from "../public/pdf-to-docx.mjs";
 
 const xml = String.raw;
@@ -118,10 +118,12 @@ try {
       children: ["Section A"],
     }]);
   } finally {
-    await regeneratedPdf.destroy?.();
+    await closePdfDocument(regeneratedPdf);
+    assert.equal(regeneratedPdf.loadingTask.destroyed, true);
   }
 } finally {
-  await pdf.destroy?.();
+  await closePdfDocument(pdf);
+  assert.equal(pdf.loadingTask.destroyed, true);
 }
 
 const fakePdf = {
