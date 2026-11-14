@@ -7,6 +7,7 @@ Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY
 ## Files (default workspace)
 
 - Add local files or folders; inspect signatures, MIME hints, metadata and previews without uploading content.
+- Open HTTPS UTF-8 text URLs up to 5 MiB when CORS permits; edit CSV and HTML as plain source.
 - Open supported text and PDFs in existing specialist tools, or convert DOCX locally; unsupported formats remain inspectable.
 - Selection and active preview are independent. ZIP listing is read-only; extraction and packing are future work.
 
@@ -57,5 +58,3 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.
 
 - JSON tools appear for JSON, JSONC, JSON5 and JSONL. Convert locally between them; JSONL maps records to an array. Conversion removes comments and preserves JSON numeric text.
-
-Open URL: HTTPS UTF-8 text up to 5 MiB; browser CORS applies. CSV and HTML open as plain source.

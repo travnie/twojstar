@@ -28,7 +28,7 @@ for (const response of [otherScript, cachedOtherScript, missing]) {
 for (const response of [html, cachedHtml, cachedHtmlWithoutType]) {
   assert.match(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
 }
-for (const response of [qpdfWorker, otherScript, missing]) {
+for (const response of [qpdfWorker, cachedQpdfWorker, otherScript, cachedOtherScript, missing]) {
   assert.doesNotMatch(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
 }
 assert.match(html.headers.get("link"), /llms\.txt/);

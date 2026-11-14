@@ -38,6 +38,7 @@ export default {
       ));
     }
 
+    // URL opening needs HTTPS; script injection could also use this connection policy.
     if (isHtml || isCachedHtml) {
       const policy = headers.get("content-security-policy") || "";
       headers.set("content-security-policy", policy.replace("connect-src 'self'", "connect-src 'self' https:"));
