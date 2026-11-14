@@ -18,7 +18,7 @@ APIs move every Chrome release (4 weeks). Everything below is a trap list, not a
 | `npx -y modern-web-guidance@latest search "<task>"` → `retrieve <id>` | Google's curated web-platform guides (dialogs, popovers, anchor positioning, view transitions, forms/autofill, passkeys, INP/LCP, built-in AI) with Baseline fallbacks. Claude Code / any shell with network and approval. Chat default stays the MCP |
 | MDN / caniuse (WebFetch) | Per-browser compat when the user targets Safari/Firefox too |
 
-Unsure after 1-2 searches → say "not in official docs", don't invent. Cite the doc page.
+Use `google-developer-knowledge` for retrieval failures, auth/REST fallback, and upstream discovery. Cite retrieved pages. If no source is reachable, mark API details unverified; do not invent signatures. Failed lookup is not evidence of API absence.
 
 ## Extensions: hard rules
 
@@ -39,7 +39,7 @@ Before writing extension code read `references/extensions.md` (≈20 runtime tra
 ## Verify
 
 1. **Static:** `python3 scripts/check_mv3.py <ext-dir>` — MV3 keys, missing files, icon sizes, MV2 leftovers, inline scripts, broad hosts, risky permissions. Not proof of runtime.
-2. **Runtime:** Playwright bundled Chromium loads unpacked extensions headless (preinstalled in the cloud sandbox; works from chat and Code). Branded Chrome dropped `--load-extension`.
+2. **Runtime:** Playwright bundled Chromium loads unpacked extensions headless when available in the current environment. Branded Chrome dropped `--load-extension`.
 
 ```js
 const { chromium } = require('playwright');

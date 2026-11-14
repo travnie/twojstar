@@ -16,6 +16,10 @@
     "chrome-web": {
       "iconSmall": "./skills/chrome-web/assets/icon.svg",
       "iconLarge": "./skills/chrome-web/assets/icon.svg"
+    },
+    "google-developer-knowledge": {
+      "iconSmall": "./skills/google-developer-knowledge/assets/icon.svg",
+      "iconLarge": "./skills/google-developer-knowledge/assets/icon.svg"
     }
   }
 }
