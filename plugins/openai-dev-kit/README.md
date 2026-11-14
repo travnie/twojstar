@@ -10,13 +10,18 @@ Two focused OpenAI Dev Kit skills plus the official read-only OpenAI documentati
 Personal toolkit maintained by travnie. Not an official OpenAI plugin. The MCP
 reads documentation; it does not run API requests, deploy servers, or submit apps.
 
+## Install
+
+- **Claude Code:** `/plugin install openai-dev-kit --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `openai-dev-kit` package built from this folder (see *Package*), or install it from the directory listing once published.
+
 ## Package
 
 From the repository root:
 
 ```sh
 python -m pip install -r plugins/openai-dev-kit/requirements.txt
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.1.1.zip
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit.zip
 ```
 
 The source contains portable Agent Plugins 1.0 manifests. Packaging generates
@@ -30,7 +35,7 @@ connectable app. Register the official endpoint through developer mode, then
 copy its verified connection page or underlying App ID:
 
 ```sh
-python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-1.1.1-private.zip \
+python plugins/openai-dev-kit/scripts/package_plugin.py /tmp/openai-dev-kit-private.zip \
   --docs-app-id VERIFIED_ID_FROM_CHATGPT
 ```
 

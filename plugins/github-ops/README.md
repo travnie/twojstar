@@ -2,6 +2,11 @@
 
 Portable Agent Plugins 1.0 package combining the supplied `github-ops` skill with GitHub's hosted full-toolset MCP endpoint, `https://api.githubcopilot.com/mcp/x/all`.
 
+## Install
+
+- **Claude Code:** `/plugin install github-ops --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `github-ops` package built from this folder (see *Package*), or install it from the directory listing once published.
+
 ## Components
 
 - `skills/github-ops/` — the supplied environment-first GitHub workflow and merge-gate reference, with narrow review-driven portability and safety fixes.
@@ -21,5 +26,5 @@ From the repository root:
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/github-ops /tmp/github-ops-0.1.1.zip
+python plugins/_shared/package_plugin.py plugins/github-ops /tmp/github-ops.zip
 ```

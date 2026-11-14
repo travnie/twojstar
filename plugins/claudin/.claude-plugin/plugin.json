@@ -1,0 +1,64 @@
+{
+  "name": "claudin",
+  "version": "1.9.3",
+  "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/claudin",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "documentation",
+    "claude",
+    "plugins",
+    "skills",
+    "hooks",
+    "mcp",
+    "acp",
+    "mcp-apps",
+    "mcpb",
+    "codex",
+    "docs",
+    "grok",
+    "copilot",
+    "antigravity",
+    "gemini-cli"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/claudin",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "claude-code-docs": {
+      "type": "http",
+      "url": "https://code.claude.com/docs/mcp"
+    },
+    "claude-ai-docs": {
+      "type": "http",
+      "url": "https://claude.com/docs/mcp"
+    },
+    "claude-platform-docs": {
+      "type": "http",
+      "url": "https://platform.claude.com/docs/mcp"
+    },
+    "mcp-docs": {
+      "type": "http",
+      "url": "https://modelcontextprotocol.io/mcp"
+    },
+    "openai-docs": {
+      "type": "http",
+      "url": "https://developers.openai.com/mcp"
+    },
+    "xai-docs": {
+      "type": "http",
+      "url": "https://docs.x.ai/api/mcp"
+    },
+    "acp-docs": {
+      "type": "http",
+      "url": "https://agentclientprotocol.com/mcp"
+    }
+  }
+}

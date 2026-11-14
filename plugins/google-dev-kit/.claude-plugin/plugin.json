@@ -1,0 +1,68 @@
+{
+  "name": "google-dev-kit",
+  "version": "0.1.3",
+  "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/google-dev-kit",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "google-cloud",
+    "gemini",
+    "gcloud",
+    "cloud-run",
+    "cloud-storage",
+    "mcp",
+    "developer-docs"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/google-dev-kit",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "googleDeveloperKnowledge": {
+      "type": "http",
+      "url": "https://developerknowledge.googleapis.com/mcp"
+    },
+    "googleCloudCli": {
+      "type": "http",
+      "url": "https://cloudcli.googleapis.com/mcp"
+    },
+    "googleCloudStorage": {
+      "type": "http",
+      "url": "https://storage.googleapis.com/storage/mcp"
+    },
+    "googleApplicationDesignCenter": {
+      "type": "http",
+      "url": "https://designcenter.googleapis.com/mcp"
+    },
+    "googleAndroidManagement": {
+      "type": "http",
+      "url": "https://androidmanagement.googleapis.com/mcp"
+    },
+    "googleCloudRun": {
+      "type": "http",
+      "url": "https://run.googleapis.com/mcp"
+    },
+    "googleApiKeys": {
+      "type": "http",
+      "url": "https://apikeys.googleapis.com/mcp"
+    },
+    "googleCloudAssist": {
+      "type": "http",
+      "url": "https://geminicloudassist.googleapis.com/mcp"
+    },
+    "googleIam": {
+      "type": "http",
+      "url": "https://iam.googleapis.com/mcp"
+    },
+    "geminiApiDocs": {
+      "type": "http",
+      "url": "https://gemini-api-docs-mcp.dev"
+    }
+  }
+}

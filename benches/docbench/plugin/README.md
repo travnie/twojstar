@@ -13,3 +13,8 @@ surface rather than creating a parallel wrapper.
 
 The repository marketplace at `.agents/plugins/marketplace.json` exposes this
 folder for local authoring and testing.
+
+## Install
+
+- **Claude Code:** `/plugin install docbench --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `docbench` package built from this folder (see *Package*), or install it from the directory listing once published.

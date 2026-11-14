@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "spacemolt",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
   "author": {
     "name": "twojstar",
@@ -31,6 +31,9 @@
           "Write"
         ],
         "websiteURL": "https://spacemolt.com",
+        "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
         "defaultPrompt": [
           "Use SpaceMolt to check my ship and continue playing.",
           "Use the SpaceMolt docs to help build a game client."

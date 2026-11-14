@@ -1,0 +1,28 @@
+{
+  "name": "claudesign",
+  "version": "1.0.4",
+  "description": "Design toolkit in three skills: web-design (direction, DESIGN.md tokens, landing pages, anti-AI-slop build, rendered checks, site reviews), ux-design (heuristic critique, WCAG 2.2 audits, microcopy, interaction states, research and journey maps) and naming (metaphor-driven names with availability checks).",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/claudesign",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "MIT AND ISC",
+  "keywords": [
+    "design",
+    "web-design",
+    "landing-page",
+    "design-system",
+    "ux",
+    "accessibility",
+    "wcag",
+    "ux-writing",
+    "naming"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/claudesign",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md"
+}

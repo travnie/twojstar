@@ -1,0 +1,31 @@
+{
+  "name": "desktop-commander",
+  "version": "0.1.2",
+  "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "MIT AND ISC",
+  "keywords": [
+    "desktop-commander",
+    "remote-mcp",
+    "files",
+    "terminal",
+    "computer",
+    "mcp"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/desktop-commander",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "desktopCommander": {
+      "type": "http",
+      "url": "https://mcp.desktopcommander.app/mcp"
+    }
+  }
+}

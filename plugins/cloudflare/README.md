@@ -4,6 +4,11 @@
 
 Cloudflare developer platform for Claude and ChatGPT/Codex: hosted MCP server + routing skill. Portable Agent Plugins 1.0 source; the packager emits Claude and Codex layouts.
 
+## Install
+
+- **Claude Code:** `/plugin install cloudflare --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `cloudflare` package built from this folder (see *Package*), or install it from the directory listing once published.
+
 ## Components
 
 | Component | What it does |

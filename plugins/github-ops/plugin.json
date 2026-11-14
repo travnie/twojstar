@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "github-ops",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
   "author": {
     "name": "travnie",
@@ -32,6 +32,9 @@
           "Write"
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+        "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
         "defaultPrompt": [
           "Use GitHub Ops to inspect this repository, make the requested change, and verify the resulting PR or checks.",
           "Use the GitHub merge gate to decide whether this pull request is actually safe to merge."

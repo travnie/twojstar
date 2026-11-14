@@ -203,7 +203,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
     overlay.update(skills="./skills/", mcpServers="./.mcp.json")
     (target / ".codex-plugin").mkdir()
     (target / ".codex-plugin/plugin.json").write_text(json.dumps(overlay, indent=2) + "\n", encoding="utf-8")
-    legacy = {"mcpServers": {name: {"url": value["url"]} for name, value in servers["mcpServers"].items()}}
+    legacy = {"mcpServers": {name: {"type": "http", "url": value["url"]} for name, value in servers["mcpServers"].items()}}
     (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
