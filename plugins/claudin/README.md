@@ -54,3 +54,13 @@ python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin-1.9.2.zip
 ```
 
 Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).
+
+
+## Links
+
+https://claude.com/docs
+https://code.claude.com/docs
+https://learn.chatgpt.com
+https://developers.openai.com
+https://help.openai.com
+
