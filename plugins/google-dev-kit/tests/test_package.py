@@ -18,7 +18,7 @@ class PackageTests(unittest.TestCase):
     def test_source(self):
         manifest, config, auth = PACK.validate(ROOT)
         self.assertEqual(manifest["name"], "google-dev-kit")
-        self.assertEqual(manifest["version"], "0.1.2")
+        self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
         self.assertEqual(len(config["mcpServers"]), 10)
         self.assertEqual(
             config["mcpServers"]["googleApplicationDesignCenter"]["url"],

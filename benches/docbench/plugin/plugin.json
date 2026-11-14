@@ -1,12 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "docbench",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first document and PDF workflow guidance for Docbench.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
   },
+  "license": "ISC",
   "homepage": "https://github.com/travnie/twojstar/tree/main/benches/docbench/plugin",
   "repository": "https://github.com/travnie/twojstar",
   "keywords": [
@@ -27,6 +28,9 @@
           "Document workflows"
         ],
         "websiteURL": "https://docbench.travny.workers.dev",
+        "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
         "defaultPrompt": [
           "Help me work with this document using Docbench's local-first rules.",
           "Check this file workflow for fidelity risks before I edit or convert it."

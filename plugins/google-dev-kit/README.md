@@ -2,6 +2,11 @@
 
 Personal Google Cloud and Gemini developer plugin for ChatGPT/Codex. Seven compact workflow skills sit on top of ten remote MCP endpoints. The source skills are adapted from Google's public `google/skills` repository and deduplicated so volatile commands, model names, and API details come from live documentation instead of bloating every skill.
 
+## Install
+
+- **Claude Code:** `/plugin install google-dev-kit --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `google-dev-kit` package built from this folder (see *Package*), or install it from the directory listing once published.
+
 ## Included skills
 
 - `google-dev` — official documentation retrieval, product routing, and MCP catalog.
@@ -36,7 +41,7 @@ Repeat `--app-binding` for other registered MCP aliases as required. Only the su
 
 ```sh
 python -m pip install -r plugins/google-dev-kit/requirements.txt
-python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit-0.1.2.zip
+python plugins/google-dev-kit/scripts/package_plugin.py /tmp/google-dev-kit.zip
 ```
 
 Packaging validates Agent Plugins 1.0 manifests, MCP endpoints, skill metadata, assets, and `[CHAT, CODEX]` policy. It generates `.codex-plugin/plugin.json` and `.mcp.json` compatibility files.

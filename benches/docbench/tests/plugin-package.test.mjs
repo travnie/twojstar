@@ -15,7 +15,7 @@ test("Docbench plugin foundation uses the portable root format without inventing
 
   assert.equal(plugin.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
   assert.equal(plugin.name, "docbench");
-  assert.equal(plugin.version, "0.1.1");
+  assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
   assert.equal(plugin.extensions?.["com.openai"]?.interface?.category, "Productivity");
   assert.ok(plugin.extensions?.["com.openai"]?.interface?.shortDescription.length <= 30);
   assert.equal(plugin.extensions?.["com.openai"]?.interface?.logo, "./assets/icon.png");

@@ -358,7 +358,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
     )
     legacy = {
         "mcpServers": {
-            name: {"url": item["url"]}
+            name: {"type": "http", "url": item["url"]}
             for name, item in config["mcpServers"].items()
         }
     }

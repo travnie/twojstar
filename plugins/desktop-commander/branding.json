@@ -1,11 +1,11 @@
 {
   "plugin": {
-    "logo": "./assets/icon.svg",
-    "composerIcon": "./assets/icon.svg"
+    "logo": "./assets/icon.png",
+    "composerIcon": "./assets/icon.png"
   },
   "mcpServers": {
     "desktopCommander": {
-      "logo": "./assets/icon.svg"
+      "logo": "./assets/icon.png"
     }
   },
   "skills": {

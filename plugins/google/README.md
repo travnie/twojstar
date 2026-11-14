@@ -29,7 +29,7 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/google /tmp/google-2.1.1.zip
+python plugins/_shared/package_plugin.py plugins/google /tmp/google.zip
 ```
 
 Claude Code: `/plugin install google@twojstar` (after `/plugin marketplace add travnie/twojstar`).

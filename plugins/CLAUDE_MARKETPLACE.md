@@ -27,7 +27,7 @@ Or use `/plugin` and choose the `twojstar` marketplace to browse the ten availab
 - `github-ops`
 - `claudesign` (skills only: web-design, ux-design, naming)
 
-Plugin MCPs are declared under the plugin's marketplace entry and should appear as `plugin:<plugin-name>:<server>` in Claude Code's `/mcp` view. Authenticate there as needed. **Installing a plugin does not sign in to its third-party servers or replace an existing Claude.ai connector.**
+Plugin MCPs are declared in each plugin's generated `.claude-plugin/plugin.json` and should appear as `plugin:<plugin-name>:<server>` in Claude Code's `/mcp` view. Authenticate there as needed. **Installing a plugin does not sign in to its third-party servers or replace an existing Claude.ai connector.**
 
 This is a **Claude Code plugin marketplace**, not the Claude.ai connector directory or the Claude.ai website's Marketplace.
 
@@ -38,7 +38,8 @@ This is a **Claude Code plugin marketplace**, not the Claude.ai connector direct
 - `*/mcp.json`: remote MCP endpoint URLs
 - `*/skills/`: original bundled skills
 - `*/branding.json`: explicit plugin/MCP/skill image slots; checked against native icon fields
-- `.claude-plugin/marketplace.json`: **generated Claude Code adapter**, do not edit
+- `.claude-plugin/marketplace.json` and `*/.claude-plugin/plugin.json`: **generated Claude adapters**, do not edit. The per-plugin manifest carries the icon, listing URLs and inline MCP servers that Anthropic's directory reads.
+- `docs/plugins/{SUPPORT,PRIVACY,TERMS}.md`: listing pages linked from every manifest
 
 To refresh after changing a canonical manifest:
 
@@ -47,10 +48,11 @@ python plugins/_shared/claude_marketplace.py --write
 python plugins/_shared/claude_marketplace.py --check
 ```
 
-The shared `Plugin Packages` workflow checks catalog freshness. Claude uses
-marketplace-level MCP definitions because these plugin directories intentionally
-have no `.claude-plugin/plugin.json` overrides. This allows one source manifest
-and no duplicated `.mcp.json` endpoint list in Git.
+The shared `Plugin Packages` workflow checks that the generated files are fresh,
+and `validate_branding.py --check` enforces both directories' listing rules. Claude
+ignores marketplace-entry MCPs once a plugin manifest exists, so the generator
+writes them into the manifest; portable `mcp.json` stays the only edited URL list.
+Packages also get a Codex `.mcp.json` with `type: "http"`, which Claude reads too.
 
 ChatGPT can display several Apps, MCP servers and skills **inside one installed
 plugin entry**. Private/local packages bind eligible existing App IDs via

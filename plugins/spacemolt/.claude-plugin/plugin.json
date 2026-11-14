@@ -1,0 +1,34 @@
+{
+  "name": "spacemolt",
+  "version": "2.2.1",
+  "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
+  "author": {
+    "name": "twojstar",
+    "url": "https://github.com/travnie/twojstar"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "ISC",
+  "keywords": [
+    "spacemolt",
+    "game",
+    "mmo",
+    "space",
+    "mcp"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/spacemolt",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "game": {
+      "type": "http",
+      "url": "https://game.spacemolt.com/mcp/v2?preset=full"
+    },
+    "docs": {
+      "type": "http",
+      "url": "https://game.spacemolt.com/mcp/docs"
+    }
+  }
+}

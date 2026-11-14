@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generate the Claude Code marketplace from canonical portable plugin sources.
+"""Generate Claude adapters from canonical portable plugin sources.
 
 Codex marketplace entries define plugin paths. Portable plugin.json and mcp.json
-define descriptions, versions and MCP endpoints. Do not edit the generated
-.claude-plugin/marketplace.json manually.
+define descriptions, versions, listing URLs and MCP endpoints. This script writes
+.claude-plugin/marketplace.json and each plugin's .claude-plugin/plugin.json, the
+manifest Anthropic's directory reads. Do not edit either by hand.
 """
 from __future__ import annotations
 
@@ -22,7 +23,33 @@ CLAUDE_NAMES: dict[str, str] = {}
 RENAMES = {"devkit-claude": "claudin"}
 
 
-def catalog() -> dict:
+LISTING_URLS = {
+    "supportUrl": "supportURL",
+    "privacyPolicyUrl": "privacyPolicyURL",
+    "termsOfServiceUrl": "termsOfServiceURL",
+}
+
+
+def claude_manifest(portable: dict, slug: str, servers: dict[str, dict[str, str]]) -> dict:
+    """Claude-native manifest: listing fields for the directory, MCPs inline.
+
+    Inline servers replace same-named entries of the Codex .mcp.json in packages.
+    """
+    interface = portable["extensions"]["com.openai"]["interface"]
+    manifest = {"name": slug}
+    for key in ("version", "description", "author", "homepage", "repository", "license", "keywords", "icon"):
+        if key in portable:
+            manifest[key] = portable[key]
+    if "homepage" in portable:
+        manifest["documentationUrl"] = portable["homepage"]
+    for claude_key, openai_key in LISTING_URLS.items():
+        manifest[claude_key] = interface[openai_key]
+    if servers:
+        manifest["mcpServers"] = servers
+    return manifest
+
+
+def catalog() -> tuple[dict, dict[Path, dict]]:
     codex = json.loads(SOURCE.read_text(encoding="utf-8"))
     result = {
         "name": codex["name"],
@@ -31,16 +58,13 @@ def catalog() -> dict:
         "plugins": [],
     }
     names: set[str] = set()
+    manifests: dict[Path, dict] = {}
     for entry in codex["plugins"]:
         rel = entry["source"]["path"]
         if not rel.startswith("./") or ".." in Path(rel).parts:
             raise ValueError(f"unsafe plugin source: {rel}")
         root = (ROOT / rel).resolve()
         root.relative_to(ROOT.resolve())
-        # Claude ignores marketplace-level MCPs when a Claude plugin manifest exists.
-        # Keep portable manifests canonical, with this marketplace as their adapter.
-        if (root / ".claude-plugin/plugin.json").exists():
-            raise ValueError(f"Claude manifest would override marketplace MCPs: {rel}")
         portable = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
         if portable["name"] != entry["name"]:
             raise ValueError(f"plugin identity differs from marketplace: {rel}")
@@ -63,10 +87,10 @@ def catalog() -> dict:
             "displayName": interface["displayName"],
             "category": entry.get("category", "Productivity"),
         }
+        servers: dict[str, dict[str, str]] = {}
         config_path = root / "mcp.json"
         if config_path.is_file():
             config = json.loads(config_path.read_text(encoding="utf-8"))
-            servers: dict[str, dict[str, str]] = {}
             for key, server in config["mcpServers"].items():
                 if server.get("type") != "streamable-http":
                     raise ValueError(f"unsupported Claude MCP transport: {slug}/{key}")
@@ -75,16 +99,15 @@ def catalog() -> dict:
                 if parsed.scheme != "https" or not parsed.netloc:
                     raise ValueError(f"MCP endpoint must be HTTPS: {slug}/{key}")
                 servers[key] = {"type": "http", "url": url}
-            if servers:
-                # Claude Code marketplace entry supplies MCPs as plugin components.
-                # The same portable mcp.json is the only edited URL source.
-                item["mcpServers"] = servers
+        # With a plugin manifest present, Claude ignores marketplace-entry MCPs,
+        # so the servers live in the generated manifest only.
+        manifests[root / ".claude-plugin/plugin.json"] = claude_manifest(portable, slug, servers)
         result["plugins"].append(item)
     for old, new in RENAMES.items():
         if new is not None and new not in names:
             raise ValueError(f"rename target missing: {old} -> {new}")
     result["renames"] = RENAMES
-    return result
+    return result, manifests
 
 
 MAX_DESCRIPTION = 500
@@ -96,16 +119,23 @@ def main() -> int:
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--write", action="store_true")
     args = parser.parse_args()
-    output = json.dumps(catalog(), indent=2, ensure_ascii=False) + "\n"
+    marketplace, manifests = catalog()
+    outputs = {TARGET: marketplace, **manifests}
+    rendered = {path: json.dumps(data, indent=2, ensure_ascii=False) + "\n" for path, data in outputs.items()}
     if args.check:
-        if not TARGET.is_file() or TARGET.read_text(encoding="utf-8") != output:
-            print("Claude marketplace is stale. Run: python plugins/_shared/claude_marketplace.py --write")
+        stale = [path for path, text in rendered.items()
+                 if not path.is_file() or path.read_text(encoding="utf-8") != text]
+        if stale:
+            for path in stale:
+                print(f"stale: {path.relative_to(ROOT)}")
+            print("Run: python plugins/_shared/claude_marketplace.py --write")
             return 1
-        print("Claude marketplace matches canonical portable plugin sources")
+        print("Claude marketplace and plugin manifests match canonical portable sources")
         return 0
-    TARGET.parent.mkdir(parents=True, exist_ok=True)
-    TARGET.write_text(output, encoding="utf-8")
-    print(f"Updated {TARGET.relative_to(ROOT)}")
+    for path, text in rendered.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        print(f"Updated {path.relative_to(ROOT)}")
     return 0
 
 

@@ -13,7 +13,7 @@ PACK = runpy.run_path(str(Path(__file__).resolve().with_name("package_plugin.py"
 
 class SpaceMoltPackageTests(unittest.TestCase):
     def test_only_intended_sources_are_allowed(self):
-        for file in ("plugin.json", "mcp.json", "assets/icon.svg", "skills/spacemolt/SKILL.md",
+        for file in ("plugin.json", "mcp.json", ".claude-plugin/plugin.json", "assets/icon.svg", "skills/spacemolt/SKILL.md",
                      "skills/spacemolt/references/gameplay.md",
                      "skills/spacemolt/references/connection.md"):
             self.assertTrue(PACK["allowed_plugin_member"](Path(file)), file)
@@ -40,6 +40,7 @@ class SpaceMoltPackageTests(unittest.TestCase):
                 legacy = json.loads((dest / ".mcp.json").read_text())
                 self.assertEqual(legacy["mcpServers"]["game"]["url"], "https://game.spacemolt.com/mcp/v2?preset=full")
                 self.assertEqual(legacy["mcpServers"]["docs"]["url"], "https://game.spacemolt.com/mcp/docs")
+                self.assertEqual(legacy["mcpServers"]["game"]["type"], "http")
                 if apps:
                     actual = json.loads((dest / ".app.json").read_text())["apps"]
                     self.assertEqual(actual, {

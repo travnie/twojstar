@@ -17,6 +17,11 @@ The icon is a static vector recreation of the graphic supplied by the user. `ass
 
 The repo marketplace entry at `.agents/plugins/marketplace.json` makes the plugin available to compatible local installs. The downloadable package declares both official endpoints without credentials. Uploading it as a private ChatGPT plugin does **not** register connectable applications: the plugin may display only its skills until registered MCP app bindings are supplied.
 
+## Install
+
+- **Claude Code:** `/plugin install spacemolt --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `spacemolt` package built from this folder (see *Package*), or install it from the directory listing once published.
+
 ## Connect applications in ChatGPT
 
 For a personal/private plugin, follow the [official MCP registration instructions](https://developers.openai.com/plugins/build/plugins#create-and-test-a-plugin-locally-with-an-mcp-server):

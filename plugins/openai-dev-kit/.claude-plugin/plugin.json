@@ -1,0 +1,31 @@
+{
+  "name": "openai-dev-kit",
+  "version": "1.1.2",
+  "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/openai-dev-kit",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "openai",
+    "developer-docs",
+    "chatgpt",
+    "codex",
+    "plugin-builder",
+    "mcp"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/openai-dev-kit",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "openaiDeveloperDocs": {
+      "type": "http",
+      "url": "https://developers.openai.com/mcp"
+    }
+  }
+}

@@ -183,7 +183,7 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
     (target / ".codex-plugin").mkdir(exist_ok=True)
     (target / ".codex-plugin/plugin.json").write_text(json.dumps(overlay, indent=2) + "\n", encoding="utf-8")
     if mcp is not None:
-        legacy = {"mcpServers": {name: {"url": server["url"]} for name, server in mcp["mcpServers"].items()}}
+        legacy = {"mcpServers": {name: {"type": "http", "url": server["url"]} for name, server in mcp["mcpServers"].items()}}
         (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 

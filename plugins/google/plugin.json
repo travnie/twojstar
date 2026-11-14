@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "google",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
   "author": {
     "name": "travnie",
@@ -35,6 +35,9 @@
           "Read"
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/google",
+        "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
         "defaultPrompt": [
           "Review this Compose screen for recomposition cost",
           "Build a Chrome extension with a side panel that summarizes the page",

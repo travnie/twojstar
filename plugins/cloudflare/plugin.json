@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cloudflare",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Cloudflare developer platform: the Cloudflare MCP server (Code Mode: docs search plus authenticated API requests) and a routing skill for Workers, Static Assets, Pages, KV, D1, R2, Durable Objects, Workers AI, AI Gateway, Agents SDK, framework apps (Next.js/vinext, Astro, React Router), cf CLI, Wrangler, local dev, Workers profiling and HTTP error triage.",
   "author": {
     "name": "travnie",
@@ -37,6 +37,9 @@
           "Write"
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/cloudflare",
+        "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
         "defaultPrompt": [
           "Use Cloudflare to design or implement this Workers or platform task against current docs.",
           "Use the Cloudflare MCP to inspect or change the requested account resource with the narrowest permissions needed."

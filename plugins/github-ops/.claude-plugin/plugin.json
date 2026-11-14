@@ -1,0 +1,31 @@
+{
+  "name": "github-ops",
+  "version": "0.1.2",
+  "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "ISC AND CC-BY-SA-4.0",
+  "keywords": [
+    "github",
+    "pull-requests",
+    "actions",
+    "dependabot",
+    "mcp",
+    "git"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/x/all"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "docbench",
+  "version": "0.1.2",
+  "description": "Local-first document and PDF workflow guidance for Docbench.",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/benches/docbench/plugin",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "ISC",
+  "keywords": [
+    "docbench",
+    "documents",
+    "pdf",
+    "local-first"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/benches/docbench/plugin",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md"
+}

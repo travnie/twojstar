@@ -11,5 +11,10 @@ Package with the shared repository packager:
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/desktop-commander /tmp/desktop-commander-0.1.1.zip
+python plugins/_shared/package_plugin.py plugins/desktop-commander /tmp/desktop-commander.zip
 ```
+
+## Install
+
+- **Claude Code:** `/plugin install desktop-commander --marketplace travnie/twojstar`
+- **claude.ai, ChatGPT, Codex:** upload the `desktop-commander` package built from this folder (see *Package*), or install it from the directory listing once published.

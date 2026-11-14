@@ -1,0 +1,34 @@
+{
+  "name": "google",
+  "version": "2.1.2",
+  "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
+  "author": {
+    "name": "travnie",
+    "url": "https://github.com/travnie"
+  },
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/google",
+  "repository": "https://github.com/travnie/twojstar",
+  "license": "Apache-2.0 AND ISC",
+  "keywords": [
+    "android",
+    "kotlin",
+    "jetpack-compose",
+    "gradle",
+    "chrome-extensions",
+    "manifest-v3",
+    "web-platform",
+    "baseline",
+    "mcp"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/google",
+  "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
+  "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",
+  "mcpServers": {
+    "google-developer": {
+      "type": "http",
+      "url": "https://developerknowledge.googleapis.com/mcp"
+    }
+  }
+}

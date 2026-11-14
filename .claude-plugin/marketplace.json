@@ -10,25 +10,15 @@
       "name": "spacemolt",
       "source": "./plugins/spacemolt",
       "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "displayName": "SpaceMolt",
-      "category": "Entertainment",
-      "mcpServers": {
-        "game": {
-          "type": "http",
-          "url": "https://game.spacemolt.com/mcp/v2?preset=full"
-        },
-        "docs": {
-          "type": "http",
-          "url": "https://game.spacemolt.com/mcp/docs"
-        }
-      }
+      "category": "Entertainment"
     },
     {
       "name": "docbench",
       "source": "./benches/docbench/plugin",
       "description": "Local-first document and PDF workflow guidance for Docbench.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "displayName": "Docbench",
       "category": "Productivity"
     },
@@ -36,165 +26,63 @@
       "name": "openai-dev-kit",
       "source": "./plugins/openai-dev-kit",
       "description": "OpenAI developer and ChatGPT plugin workflows paired with the official read-only documentation MCP.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "displayName": "OpenAI Dev Kit",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "openaiDeveloperDocs": {
-          "type": "http",
-          "url": "https://developers.openai.com/mcp"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "google-dev-kit",
       "source": "./plugins/google-dev-kit",
       "description": "Google Cloud and Gemini developer workflows paired with official Google MCP servers and live documentation.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "displayName": "Google Dev Kit",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "googleDeveloperKnowledge": {
-          "type": "http",
-          "url": "https://developerknowledge.googleapis.com/mcp"
-        },
-        "googleCloudCli": {
-          "type": "http",
-          "url": "https://cloudcli.googleapis.com/mcp"
-        },
-        "googleCloudStorage": {
-          "type": "http",
-          "url": "https://storage.googleapis.com/storage/mcp"
-        },
-        "googleApplicationDesignCenter": {
-          "type": "http",
-          "url": "https://designcenter.googleapis.com/mcp"
-        },
-        "googleAndroidManagement": {
-          "type": "http",
-          "url": "https://androidmanagement.googleapis.com/mcp"
-        },
-        "googleCloudRun": {
-          "type": "http",
-          "url": "https://run.googleapis.com/mcp"
-        },
-        "googleApiKeys": {
-          "type": "http",
-          "url": "https://apikeys.googleapis.com/mcp"
-        },
-        "googleCloudAssist": {
-          "type": "http",
-          "url": "https://geminicloudassist.googleapis.com/mcp"
-        },
-        "googleIam": {
-          "type": "http",
-          "url": "https://iam.googleapis.com/mcp"
-        },
-        "geminiApiDocs": {
-          "type": "http",
-          "url": "https://gemini-api-docs-mcp.dev"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "google",
       "source": "./plugins/google",
       "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "displayName": "Android & Chrome",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "google-developer": {
-          "type": "http",
-          "url": "https://developerknowledge.googleapis.com/mcp"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "claudin",
       "source": "./plugins/claudin",
       "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
-      "version": "1.9.2",
+      "version": "1.9.3",
       "displayName": "Claudin",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "claude-code-docs": {
-          "type": "http",
-          "url": "https://code.claude.com/docs/mcp"
-        },
-        "claude-ai-docs": {
-          "type": "http",
-          "url": "https://claude.com/docs/mcp"
-        },
-        "claude-platform-docs": {
-          "type": "http",
-          "url": "https://platform.claude.com/docs/mcp"
-        },
-        "mcp-docs": {
-          "type": "http",
-          "url": "https://modelcontextprotocol.io/mcp"
-        },
-        "openai-docs": {
-          "type": "http",
-          "url": "https://developers.openai.com/mcp"
-        },
-        "xai-docs": {
-          "type": "http",
-          "url": "https://docs.x.ai/api/mcp"
-        },
-        "acp-docs": {
-          "type": "http",
-          "url": "https://agentclientprotocol.com/mcp"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "desktop-commander",
       "source": "./plugins/desktop-commander",
       "description": "Desktop Commander workflows paired with the hosted Remote Desktop Commander MCP.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "displayName": "Desktop Commander",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "desktopCommander": {
-          "type": "http",
-          "url": "https://mcp.desktopcommander.app/mcp"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "cloudflare",
       "source": "./plugins/cloudflare",
       "description": "Cloudflare developer platform: the Cloudflare MCP server (Code Mode: docs search plus authenticated API requests) and a routing skill for Workers, Static Assets, Pages, KV, D1, R2, Durable Objects, Workers AI, AI Gateway, Agents SDK, framework apps (Next.js/vinext, Astro, React Router), cf CLI, Wrangler, local dev, Workers profiling and HTTP error triage.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "displayName": "Cloudflare",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "cloudflareApi": {
-          "type": "http",
-          "url": "https://mcp.cloudflare.com/mcp"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "github-ops",
       "source": "./plugins/github-ops",
       "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "displayName": "GitHub Ops",
-      "category": "Developer Tools",
-      "mcpServers": {
-        "github": {
-          "type": "http",
-          "url": "https://api.githubcopilot.com/mcp/x/all"
-        }
-      }
+      "category": "Developer Tools"
     },
     {
       "name": "claudesign",
       "source": "./plugins/claudesign",
       "description": "Design toolkit in three skills: web-design (direction, DESIGN.md tokens, landing pages, anti-AI-slop build, rendered checks, site reviews), ux-design (heuristic critique, WCAG 2.2 audits, microcopy, interaction states, research and journey maps) and naming (metaphor-driven names with availability checks).",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "displayName": "Claudesign",
       "category": "Design"
     }
