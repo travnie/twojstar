@@ -531,10 +531,10 @@ function usage() {
     "Prefer upstream examples first; use this scaffold as the fallback.",
     "",
     "Usage:",
-    "  ./scripts/scaffold_node_ext_apps.mjs <output_dir> [--app-name <name>] [--tool-name <name>] [--port <number>] [--force]",
+    "  ./scripts/scaffold_node_ext_apps.mjs <output_dir> [--app-name <name>] [--tool-name <name>] [--port <number>] [--force] [--help | -h]",
     "",
     "If the executable bit is unavailable, run:",
-    "  node scripts/scaffold_node_ext_apps.mjs <output_dir> [--app-name <name>] [--tool-name <name>] [--port <number>] [--force]",
+    "  node scripts/scaffold_node_ext_apps.mjs <output_dir> [--app-name <name>] [--tool-name <name>] [--port <number>] [--force] [--help | -h]",
   ].join("\n");
 }
 
