@@ -31,3 +31,7 @@ On browser hosts implementing WebMCP, Doc Bench exposes `read_document`, `set_do
 ## Smart JSON merge
 
 JSON and JSONC files can be merged locally. Object roots are merged recursively; array roots are concatenated. Equal scalar values are retained once. Conflicting scalars or incompatible nested types use the later file and are reported by JSON path. Source scalar lexemes are serialized without routing numbers through JavaScript Number, preserving large integer text. JSONC comments are not retained because output is strict JSON. JSONL/NDJSON files are validated line-by-line and concatenated. JSON5 is not part of smart merge yet.
+
+## JSON conversion
+
+JSON tools are part of the text editor and appear for JSON, JSONC, JSON5 and JSONL. Conversion maps JSONL records to an array and requires an array for JSONL output. Comments are removed. JSON numeric lexemes are preserved; unsupported JSON5 numeric conversions are rejected rather than silently losing precision. Undo restores the previous document.

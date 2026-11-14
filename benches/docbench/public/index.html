@@ -75,10 +75,12 @@
             <select id="format-select">
               <option value="txt">TXT</option>
               <option value="md">Markdown</option>
-              <option value="json">JSON</option>
-              <option value="jsonc">JSONC</option>
-              <option value="json5">JSON5</option>
-              <option value="jsonl">JSONL / NDJSON</option>
+              <optgroup label="JSON family">
+                <option value="json">JSON</option>
+                <option value="jsonc">JSONC</option>
+                <option value="json5">JSON5</option>
+                <option value="jsonl">JSONL</option>
+              </optgroup>
               <option value="yaml">YAML</option>
               <option value="xml">XML</option>
               <option value="ini">INI / config</option>
@@ -102,14 +104,28 @@
           <button id="validate-button" class="button compact" type="button">Validate</button>
           <button id="inspect-button" class="button compact" type="button">Inspect</button>
           <button id="format-button" class="button compact" type="button">Auto-format</button>
-          <button id="minify-button" class="button compact" type="button" disabled>Minify</button>
-          <button id="repair-button" class="button compact" type="button" disabled>Repair → JSON</button>
           <button id="copy-button" class="button compact" type="button">Copy</button>
           <button id="save-button" class="button compact primary" type="button" aria-keyshortcuts="Control+S Meta+S">Save</button>
           <button id="download-button" class="button compact" type="button">Download</button>
           <button id="print-button" class="button compact" type="button">Print</button>
         </div>
       </div>
+
+      <section id="json-tools" class="json-tools" aria-label="JSON tools" hidden>
+        <strong>JSON tools</strong>
+        <button id="minify-button" class="button compact" type="button">Minify</button>
+        <button id="repair-button" class="button compact" type="button">Repair → JSON</button>
+        <label>Convert to
+          <select id="json-convert-target" aria-label="Convert to JSON format">
+            <option value="json">JSON</option>
+            <option value="jsonc">JSONC</option>
+            <option value="json5">JSON5</option>
+            <option value="jsonl">JSONL</option>
+          </select>
+        </label>
+        <button id="json-convert-button" class="button compact" type="button">Convert</button>
+        <span class="json-convert-note">JSONL requires an array; conversion removes comments.</span>
+      </section>
 
       <div id="drop-zone" class="editor-grid">
         <section class="panel editor-panel" aria-label="Editor">

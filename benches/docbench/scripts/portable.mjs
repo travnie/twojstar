@@ -19,6 +19,7 @@ const [
   historyCore,
   historyUi,
   documentMerge,
+  documentJsonConvert,
   documentEnhancements,
   inspectorCore,
   repairCore,
@@ -66,6 +67,7 @@ const [
   readFile("public/document-history-core.js", "utf8"),
   readFile("public/document-history.js", "utf8"),
   readFile("public/document-merge.mjs", "utf8"),
+  readFile("public/document-json-convert.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
   readFile("public/text-inspector-core.js", "utf8"),
   readFile("public/text-repair-core.js", "utf8"),
@@ -168,10 +170,14 @@ const portableApp = app.replace(
   '"./document-merge.mjs"',
   JSON.stringify(documentMergeUrl),
 );
-const documentEnhancementsPortable = documentEnhancements.replace(
+const documentJsonConvertPortable = documentJsonConvert.replace(
   'from "./vendor/jsonc-parser/impl/parser.js";',
   `from ${JSON.stringify(jsonParserUrl)};`,
 );
+const documentJsonConvertUrl = dataUrl("text/javascript", documentJsonConvertPortable);
+const documentEnhancementsPortable = documentEnhancements
+  .replace('from "./vendor/jsonc-parser/impl/parser.js";', `from ${JSON.stringify(jsonParserUrl)};`)
+  .replace('from "./document-json-convert.mjs";', `from ${JSON.stringify(documentJsonConvertUrl)};`);
 
 const tiktokenBase64Url = dataUrl("text/javascript", tiktokenBase64);
 const tiktokenChunkPortable = tiktokenChunk
