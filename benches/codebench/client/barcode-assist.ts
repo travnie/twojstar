@@ -43,6 +43,7 @@
     pdf417: ["Arbitrary text or bytes; high-capacity stacked 2D code.", "Hello PDF417"],
     pdf417compact: ["Arbitrary text; compact PDF417 row indicators.", "Compact PDF417"],
     micropdf417: ["Arbitrary short payloads; compact stacked 2D code.", "MicroPDF417"],
+    qrcode: ["Arbitrary text. Use the QR Code tab for styling.", "https://example.com"],
     microqrcode: ["Short payloads only; capacity depends strongly on version and error correction.", "micro"],
     rectangularmicroqrcode: ["Short payloads; rectangular Micro QR (rMQR).", "rMQR"],
     maxicode: ["Fixed-size MaxiCode. Plain text is supported; structured carrier modes have additional rules.", "MaxiCode"],
@@ -272,4 +273,5 @@
 
   rebuildPayloadFields();
   updateRequirement();
+  hint.hidden = true;
 })();
