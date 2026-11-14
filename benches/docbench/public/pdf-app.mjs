@@ -3,6 +3,7 @@ import {
   buildQpdfFinalizeRequest,
   buildQpdfPageRequest,
   clonePdfOutline,
+  closePdfDocument,
   formatPdfSize,
   mergePdfAttachmentSets,
   mergePdfAttachmentSourceSets,
@@ -189,7 +190,7 @@ async function makeSource(file) {
 
 async function closeSources() {
   const oldSources = state.sources.splice(0);
-  await Promise.allSettled(oldSources.map((source) => source.pdf?.destroy?.()));
+  await Promise.allSettled(oldSources.map((source) => closePdfDocument(source.pdf)));
 }
 
 function freshCombinedOutline() {
@@ -237,7 +238,7 @@ async function openFilesSerial(selected, append) {
   try {
     for (const file of selected) newSources.push(await makeSource(file));
   } catch (error) {
-    await Promise.allSettled(newSources.map((source) => source.pdf?.destroy?.()));
+    await Promise.allSettled(newSources.map((source) => closePdfDocument(source.pdf)));
     throw error;
   }
 
@@ -903,7 +904,7 @@ async function verifyOutput(bytes, expectedPages, expectedOutline, expectedMetad
     await verifyPdfMetadata(bytes, expectedMetadata, metadataChanges);
     await verifyPdfAttachments(bytes, expectedAttachments);
   } finally {
-    await pdf.destroy();
+    await closePdfDocument(pdf);
   }
 }
 

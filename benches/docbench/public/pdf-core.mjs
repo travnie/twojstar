@@ -1,3 +1,7 @@
+export function closePdfDocument(pdf) {
+  return pdf.loadingTask.destroy();
+}
+
 const DESTINATION_TYPES = new Set([
   "XYZ",
   "Fit",
