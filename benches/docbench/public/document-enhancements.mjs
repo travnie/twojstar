@@ -1571,10 +1571,13 @@ urlForm.addEventListener("submit", async (event) => {
       chunks.push(value);
     }
     if (state.documentRevision !== revision) throw new Error("The document changed while loading; try again.");
-    let filename = new URL(response.url || url).pathname.split("/").pop() || "document.txt";
+    let filename = new URL(response.url || url).pathname.split("/").pop() || "document";
     try { filename = decodeURIComponent(filename); } catch { /* Keep original name. */ }
     filename = filename.replace(/[\\/:*?"<>|\x00-\x1f]/g, "-") || "document.txt";
-    const file = new File(chunks, filename, { type: response.headers.get("content-type") || "text/plain" });
+    const mime = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    const mimeExtension = { "text/csv": "csv", "text/html": "html", "text/markdown": "md", "text/plain": "txt" }[mime];
+    if (!filename.includes(".")) filename += `.${mimeExtension || "txt"}`;
+    const file = new File(chunks, filename, { type: mime || "text/plain" });
     if (!confirmDocumentReplacement()) {
       urlFeedback.textContent = "Opening cancelled.";
       return;
