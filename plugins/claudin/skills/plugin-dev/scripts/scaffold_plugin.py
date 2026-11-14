@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 NAME_RE = re.compile(r"^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?$")
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -46,12 +47,42 @@ def main() -> int:
     parser.add_argument("--registered-app-id")
     parser.add_argument("--bundled-mcp-name", type=require_skill_name)
     parser.add_argument("--mcp-url")
-    parser.add_argument("--command")
+    parser.add_argument("--command", help="Bare executable name or path, not a shell command")
+    parser.add_argument("--command-arg", action="append", default=[], help="Repeat for each argument; use --command-arg=value for flags")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
+    if not args.description.strip():
+        parser.error("--description must not be blank")
+    if not args.bundled_mcp_name and (args.command is not None or args.mcp_url is not None or args.registered_app_id is not None):
+        parser.error("MCP and App binding flags require --bundled-mcp-name")
+    if args.command_arg and not args.command:
+        parser.error("--command-arg requires --command")
+    if args.bundled_mcp_name:
+        if bool(args.command) == bool(args.mcp_url):
+            parser.error("provide exactly one of --command or --mcp-url with --bundled-mcp-name")
+        if args.mcp_url:
+            try:
+                parsed = urlsplit(args.mcp_url)
+                valid_url = (parsed.scheme == "https" and bool(parsed.hostname)
+                             and not parsed.username and not parsed.password
+                             and not any(c.isspace() for c in args.mcp_url))
+            except ValueError:
+                valid_url = False
+            if not valid_url:
+                parser.error("--mcp-url must be an HTTPS URL with a hostname and no credentials")
+        if args.command is not None and not args.command.strip():
+            parser.error("--command must not be blank")
+    app_id = None
+    if args.registered_app_id is not None:
+        if not args.mcp_url:
+            parser.error("--registered-app-id requires a remote MCP endpoint")
+        app_id = args.registered_app_id.removeprefix("plugin_")
+        if not re.fullmatch(r"(?:asdk_app_|connector_|templated_apps_)[A-Za-z0-9][A-Za-z0-9_-]*", app_id):
+            parser.error("--registered-app-id should come from the supported ChatGPT registration flow")
+
     root = (args.output_dir / args.name).resolve()
-    if root.exists() and any(root.iterdir()) and not args.force:
+    if root.exists() and (not root.is_dir() or (any(root.iterdir()) and not args.force)):
         parser.error(f"refusing to overwrite non-empty directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
 
@@ -81,10 +112,7 @@ def main() -> int:
                 ),
             )
 
-    if args.registered_app_id:
-        app_id = args.registered_app_id.removeprefix("plugin_")
-        if not re.fullmatch(r"(?:asdk_app_|connector_|templated_apps_)[A-Za-z0-9][A-Za-z0-9_-]*", app_id):
-            parser.error("--registered-app-id should come from the supported ChatGPT registration flow")
+    if app_id:
         manifest["apps"] = "./.app.json"
         write(
             root / ".app.json",
@@ -95,22 +123,19 @@ def main() -> int:
         )
 
     if args.bundled_mcp_name:
-        if bool(args.command) == bool(args.mcp_url):
-            parser.error("provide exactly one of --command or --mcp-url with --bundled-mcp-name")
-        if args.mcp_url and not args.mcp_url.startswith("https://"):
-            parser.error("--mcp-url must use HTTPS")
         portable_server = (
             {"type": "streamable-http", "url": args.mcp_url}
-            if args.mcp_url else {"type": "stdio", "command": args.command, "args": []}
+            if args.mcp_url else {"type": "stdio", "command": args.command, "args": args.command_arg}
         )
         manifest["mcpServers"] = "./.mcp.json"
         write(
             root / ".mcp.json",
             json.dumps(
                 {
-                    "mcpServers": {args.bundled_mcp_name: {
-                        key: value for key, value in portable_server.items() if key != "type"
-                    }}
+                    "mcpServers": {args.bundled_mcp_name: (
+                        {"type": "http", "url": args.mcp_url}
+                        if args.mcp_url else {"command": args.command, "args": args.command_arg}
+                    )}
                 },
                 indent=2,
             ) + "\n",

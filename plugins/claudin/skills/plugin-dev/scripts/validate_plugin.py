@@ -85,14 +85,18 @@ def main() -> int:
     if not manifest_path.is_file():
         errors.append("missing plugin.json or .codex-plugin/plugin.json")
 
-    manifest: dict[str, Any] = {}
+    manifest: dict[str, Any] | None = None
     if manifest_path.is_file():
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except Exception as exc:
+            loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(loaded, dict):
+                errors.append("plugin manifest must be an object")
+            else:
+                manifest = loaded
+        except (OSError, ValueError) as exc:
             errors.append(f"invalid plugin.json: {exc}")
 
-    if manifest:
+    if manifest is not None:
         portable = manifest_path == portable_path
         if portable:
             if manifest.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
@@ -107,7 +111,11 @@ def main() -> int:
                 extension = extensions.get("com.openai")
             if extension is None:
                 overlay = root / ".codex-plugin/plugin.json"
-                extension = json.loads(overlay.read_text(encoding="utf-8")) if overlay.is_file() else {}
+                try:
+                    extension = json.loads(overlay.read_text(encoding="utf-8")) if overlay.is_file() else {}
+                except (OSError, ValueError) as exc:
+                    errors.append(f"invalid compatibility manifest: {exc}")
+                    extension = {}
             if not isinstance(extension, dict):
                 errors.append("OpenAI extension must be an object")
                 extension = {}
@@ -136,7 +144,7 @@ def main() -> int:
         description = manifest.get("description")
 
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
-            errors.append("name must be lowercase kebab-case")
+            errors.append("name must be lowercase with optional dots and hyphens")
         elif root.name != name:
             warnings.append(f"root folder {root.name!r} differs from manifest name {name!r}")
 
