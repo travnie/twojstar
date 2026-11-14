@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
+import subprocess  # nosec B404 - local CLI regression tests only
 import sys
 import tempfile
 import unittest
@@ -13,9 +13,21 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / "skills/plugin-dev/scripts"
 
 
-def invoke(name: str, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run([sys.executable, str(TOOLS / name), *map(str, args)],
-                          capture_output=True, text=True, check=False)
+def invoke(name: str, *args: str, cwd=None) -> subprocess.CompletedProcess:
+    # Fixed local scripts and test-owned arguments; no shell or external input.
+    if name in {"scaffold_plugin.py", "validate_plugin.py"}:
+        interpreter = sys.executable
+    elif name == "scaffold_node_ext_apps.mjs":
+        interpreter = shutil.which("node")
+        if interpreter is None:
+            raise RuntimeError("Node.js not available")
+    else:
+        raise ValueError(f"Unexpected test script: {name}")
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use
+    return subprocess.run(  # nosec B603 - fixed script allowlist
+        [interpreter, str(TOOLS / name), *map(str, args)],
+        cwd=cwd, capture_output=True, text=True, check=False, timeout=30,
+    )
 
 
 class OpenAIBuildToolsTests(unittest.TestCase):
@@ -58,6 +70,15 @@ class OpenAIBuildToolsTests(unittest.TestCase):
                 text = (dest / "skills" / name / "SKILL.md").read_text()
                 self.assertIn(f'name: "{name}"', text)
             self.assertEqual(invoke("validate_plugin.py", dest).returncode, 0)
+            skill = dest / "skills/on/SKILL.md"
+            for header in (
+                'name: "on"\nname: "on"\ndescription: test',
+                'name: "on"\ndescription: !!python/object/apply:builtins.str [test]',
+            ):
+                skill.write_text("---\n" + header + "\n---\n")
+                result = invoke("validate_plugin.py", dest)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(json.loads(result.stdout)["ok"])
 
     def test_invalid_scaffold_leaves_no_files(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -115,15 +136,15 @@ class OpenAIBuildToolsTests(unittest.TestCase):
     def test_node_invalid_arguments_and_help(self):
         with tempfile.TemporaryDirectory() as temp:
             dest = Path(temp) / "app"
-            command = ["node", str(TOOLS / "scaffold_node_ext_apps.mjs")]
             for flag in ("--help", "-h"):
-                help_result = subprocess.run([*command, flag], cwd=temp, capture_output=True, text=True, check=False)
+                help_result = invoke("scaffold_node_ext_apps.mjs", flag, cwd=temp)
                 self.assertEqual(help_result.returncode, 0, help_result.stderr)
                 self.assertIn("\nUsage:\n", help_result.stdout)
                 self.assertFalse((Path(temp) / flag).exists())
             for extra in (["--port", "65536"], ["--tool-name", "--force"],
-                          ["--app-name"], ["--port", "0"]):
-                result = subprocess.run([*command, str(dest), *extra], capture_output=True, text=True, check=False)
+                          ["--app-name"], ["--port", "0"], ["--tool-name", ""],
+                          ["extra"]):
+                result = invoke("scaffold_node_ext_apps.mjs", str(dest), *extra)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(dest.exists())
 
@@ -131,9 +152,9 @@ class OpenAIBuildToolsTests(unittest.TestCase):
     def test_node_scaffold_and_overwrite_guard(self):
         with tempfile.TemporaryDirectory() as temp:
             dest = Path(temp) / "app"
-            args = ["node", str(TOOLS / "scaffold_node_ext_apps.mjs"), str(dest),
+            args = [str(dest),
                     "--app-name", "Demo App", "--tool-name", "Show Demo"]
-            result = subprocess.run(args, capture_output=True, text=True, check=False)
+            result = invoke("scaffold_node_ext_apps.mjs", *args)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(json.loads((dest / "package.json").read_text())["name"], "demo-app")
             for path in ("src/server.ts", "public/widget.html", "tsconfig.json"):
@@ -153,7 +174,7 @@ class OpenAIBuildToolsTests(unittest.TestCase):
             )
             self.assertIn('res.setHeader("Access-Control-Allow-Origin", origin)', server)
             original = (dest / "package.json").read_text()
-            result = subprocess.run(args, capture_output=True, text=True, check=False)
+            result = invoke("scaffold_node_ext_apps.mjs", *args)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((dest / "package.json").read_text(), original)
 

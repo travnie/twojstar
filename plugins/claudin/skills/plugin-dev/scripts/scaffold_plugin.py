@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Scaffold a minimal ChatGPT/Codex plugin folder."""
 
 from __future__ import annotations
