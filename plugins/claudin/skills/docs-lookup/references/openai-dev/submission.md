@@ -1,6 +1,6 @@
 # Plugin submission and review
 
-Verify the live [submission guide](https://developers.openai.com/plugins/deploy/submission) and [review requirements](https://developers.openai.com/plugins/deploy/submission) at execution time. Portal requirements and any import JSON schema may change; do not treat a bundled sample as authoritative.
+Verify the live [submission and review guide](https://developers.openai.com/plugins/deploy/submission) at execution time. Portal requirements and any import JSON schema may change; do not treat a bundled sample as authoritative.
 
 1. Inspect the actual MCP tool handlers and called helpers, not only names. For every tool, check schemas, `readOnlyHint`, `openWorldHint`, `destructiveHint`, outputs, side effects, authentication, and any advertised `outputSchema`. Record whether a tool writes, sends, deletes, or publishes.
 2. Review widget CSP/resource domains against actual network requests. Flag sensitive input fields, exposed secrets/PII, weak domain scopes, misleading descriptions, and tool annotations that do not match code. Fix source mismatches as part of the user's requested preparation when authorized; do not create review copy that claims otherwise.

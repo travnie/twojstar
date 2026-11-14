@@ -2,7 +2,7 @@
 
 For a specific API question, search the official docs for the named feature, fetch the most relevant page, then inspect the API reference/OpenAPI specification for required fields, enum values, and response shapes. Distinguish an API key from ChatGPT or connector authorization.
 
-For broad Codex setup or behavior, consult the current Codex manual first; use narrower docs to resolve gaps. A statement from the current session's callable tools can establish what this environment supports even when a general docs page is behind.
+For broad Codex setup or behavior, consult the current [Codex manual](https://developers.openai.com/codex) first when available; use narrower docs to resolve gaps. A statement from the current session's callable tools can establish what this environment supports even when a general docs page is behind.
 
 For a model choice or migration:
 

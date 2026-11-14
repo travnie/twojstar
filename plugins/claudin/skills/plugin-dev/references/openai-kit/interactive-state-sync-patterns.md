@@ -53,7 +53,7 @@ Partition payloads intentionally:
 
 - `structuredContent`: concise model-visible state the widget also uses
 - `content`: short narration/status text
-- `_meta`: large maps, caches, or sensitive widget-only hydration data
+- `_meta`: authorized, widget-only hydration data such as large maps or caches. Hidden from the model, not from the client; never send secrets or unauthorized personal data. Keep sensitive data server-side unless strictly necessary and authorized.
 
 Keep `structuredContent` small enough for follow-up reasoning and chaining.
 
