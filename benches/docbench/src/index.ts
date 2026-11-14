@@ -38,6 +38,11 @@ export default {
       ));
     }
 
+    if (isHtml || isCachedHtml) {
+      const policy = headers.get("content-security-policy") || "";
+      headers.set("content-security-policy", policy.replace("connect-src 'self'", "connect-src 'self' https:"));
+    }
+
     if (isHtml) {
       headers.set("cache-control", "no-cache");
       headers.set(

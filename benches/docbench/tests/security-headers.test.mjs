@@ -25,6 +25,12 @@ for (const response of [html, qpdfWorker, cachedHtml, cachedHtmlWithoutType, cac
 for (const response of [otherScript, cachedOtherScript, missing]) {
   assert.doesNotMatch(response.headers.get("content-security-policy"), /'wasm-unsafe-eval'/);
 }
+for (const response of [html, cachedHtml, cachedHtmlWithoutType]) {
+  assert.match(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
+}
+for (const response of [qpdfWorker, otherScript, missing]) {
+  assert.doesNotMatch(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
+}
 assert.match(html.headers.get("link"), /llms\.txt/);
 assert.equal(otherScript.headers.get("link"), null);
 console.log("Docbench security header checks passed.");

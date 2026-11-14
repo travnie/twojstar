@@ -54,3 +54,5 @@ Older portable builds do not expose this method. Native clients may retain a
 legacy picker fallback until their pinned offline Bench is updated. Update the
 Kanarek staging commit and all three portable hashes together only after
 cross-app import/export checks pass.
+
+Open URL: HTTPS UTF-8 text up to 5 MiB; browser CORS applies. CSV and HTML open as plain source.
