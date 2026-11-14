@@ -33,17 +33,33 @@ function safeIntegers(value) {
   return true;
 }
 
+function hasDuplicateKeys(node) {
+  if (node.type === "object") {
+    const seen = new Set();
+    for (const property of node.children || []) {
+      const [key, value] = property.children || [];
+      if (seen.has(key?.value)) return true;
+      seen.add(key?.value);
+      if (value && hasDuplicateKeys(value)) return true;
+    }
+  } else if (node.type === "array") {
+    return (node.children || []).some(hasDuplicateKeys);
+  }
+  return false;
+}
+
 function json5Source(source, json5, repair) {
   if (!json5?.parse || typeof repair !== "function") throw new Error("JSON5 conversion is unavailable.");
   const original = json5.parse(source);
   if (!finite(original)) throw new Error("Infinity and NaN cannot be represented in JSON. Edit these values first.");
+  let candidate;
   try {
-    const candidate = repair(source);
+    candidate = repair(source);
     const parsed = JSON.parse(candidate);
     if (JSON.stringify(parsed) === JSON.stringify(original)) return candidate;
-  } catch { /* Try safe numeric conversion below. */ }
-  if (!safeIntegers(original)) {
-    throw new Error("This JSON5 syntax cannot be converted without risking numeric precision. Edit it first.");
+  } catch { /* Unsupported JSON5 syntax. */ }
+  if (!candidate || hasDuplicateKeys(tree(candidate)) || !safeIntegers(original)) {
+    throw new Error("This JSON5 syntax cannot be converted safely without changing values or duplicate keys. Edit it first.");
   }
   return JSON.stringify(original);
 }
