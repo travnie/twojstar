@@ -18,7 +18,7 @@ Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork 
 | `openai-docs` — `https://developers.openai.com/mcp` | OpenAI API, Codex/ChatGPT plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — `https://docs.x.ai/api/mcp` | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API |
 
-`openai-docs` matches an existing connector URL, so installing reuses it.
+`openai-docs` uses the same official endpoint as OpenAI Dev Kit. Verify connection reuse or registered App bindings in the target host.
 
 ## Building something
 
@@ -42,7 +42,7 @@ Related, not duplicated: `skill-creator-v2` (SKILL.md authoring, packaging, clau
 
 Sources and licenses: each skill's `NOTICE.md` / `LICENSE.txt`.
 
-Also folded in (Nov 2026): the private `openai-dev-kit` (travnie/twojstar) — search/fetch standard, `.app.json` registration flow, MCP Apps archetypes and state-sync patterns, validation ladder, shortDescription ≤30 rule.
+OpenAI Dev Kit consolidation (Nov 2026): focused API/Codex workflows in `docs-lookup/references/`; OpenAI scaffolds and validator in `plugin-dev/scripts/`; build and MCP Apps reference notes in `plugin-dev/references/openai-kit/`. Existing four skill IDs and seven endpoints stay unchanged. The standalone OpenAI Dev Kit remains temporarily available for installed clients; further integration changes belong here.
 
 ## twojstar package
 
