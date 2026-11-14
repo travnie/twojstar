@@ -82,7 +82,7 @@ def listing_icon(root: Path, value: str, name: str) -> None:
             raise ValueError(f"listing icon must be square, 48-4096 px: {name}")
     elif path.suffix == ".svg":
         box = re.search(r'viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"', data.decode("utf-8"))
-        if not box or box[1] != box[2] or not 48 <= float(box[1]) <= 4096:
+        if not box or float(box[1]) != float(box[2]) or not 48 <= float(box[1]) <= 4096:
             raise ValueError(f"SVG listing icon needs a square viewBox of at least 48: {name}")
     else:
         raise ValueError(f"listing icon must be PNG or SVG: {name}")

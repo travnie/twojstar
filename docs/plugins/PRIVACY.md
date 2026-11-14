@@ -18,7 +18,7 @@ Each plugin is a package of instructions (skills), icons and connection settings
 | github-ops | `api.githubcopilot.com` | [GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) |
 | google, google-dev-kit | `*.googleapis.com`, `gemini-api-docs-mcp.dev` | [Google](https://policies.google.com/privacy) |
 | openai-dev-kit | `developers.openai.com` | [OpenAI](https://openai.com/policies/privacy-policy/) |
-| claudin | Documentation search: `code.claude.com`, `claude.com`, `platform.claude.com`, `developers.openai.com`, `docs.x.ai`, `modelcontextprotocol.io`, `agentclientprotocol.com` | [Anthropic](https://www.anthropic.com/legal/privacy), [OpenAI](https://openai.com/policies/privacy-policy/), [xAI](https://x.ai/legal/privacy-policy). The MCP and ACP sites are public, sign-in-free documentation; the plugin sends them only search queries, under each site's own terms. |
+| claudin | Documentation search and page retrieval: `code.claude.com`, `claude.com`, `platform.claude.com`, `developers.openai.com`, `docs.x.ai`, `modelcontextprotocol.io`, `agentclientprotocol.com` | [Anthropic](https://www.anthropic.com/legal/privacy), [OpenAI](https://openai.com/policies/privacy-policy/), [xAI](https://x.ai/legal/privacy-policy). The MCP and ACP sites are public, sign-in-free documentation; the plugin sends them only search queries and page requests, under each site's own terms. |
 | desktop-commander | `mcp.desktopcommander.app` | [Desktop Commander](https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/main/PRIVACY.md) |
 | claudesign, docbench | None | — |
 
