@@ -1,0 +1,21 @@
+interface:
+  display_name: "Google Developer Knowledge"
+  short_description: "Live Google docs, skill discovery and MCP connection diagnosis"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#4285F4"
+  default_prompt: "Use $google-developer-knowledge to verify current official Google documentation."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "google-developer"
+      description: "Google Developer Knowledge — search and fetch official developer docs"
+      transport: "streamable_http"
+      url: "https://developerknowledge.googleapis.com/mcp"

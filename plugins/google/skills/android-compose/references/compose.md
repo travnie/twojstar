@@ -10,7 +10,7 @@ Baseline compact/medium/expanded windows, rotation, font scale, keyboard and poi
 
 - Preserve navigation visibility behavior while using compatible `NavigationSuiteScaffold` APIs to switch bar/rail. Keep each top-level destination's scroll/app-bar state independent.
 - In Navigation 3 apps, prefer Material adaptive `SceneStrategy` for list-detail/supporting-pane relationships. Supply pane metadata and detail placeholders, avoid a redundant back arrow in a visible detail pane, and restore fullscreen behavior on compact windows. Do not force list-detail onto media that needs the space.
-- Use adaptive lazy-grid cells for large lazy collections. Evaluate non-lazy Grid, FlexBox and MediaQuery only when supported by the project's dependency versions and stability policy. The reviewed upstream introduces them in Compose 1.11 beta; verify current status and signatures. Do not introduce alpha/beta dependencies solely to satisfy a generic adaptive request.
+- Use adaptive lazy-grid cells for large lazy collections. Evaluate non-lazy Grid, FlexBox and MediaQuery only when supported by the project's dependency versions and stability policy. Check current [adaptive recipes](https://github.com/android/skills/tree/main/jetpack-compose/adaptive) rather than copying their version pins. Do not introduce alpha/beta dependencies solely to satisfy a generic adaptive request.
 - Preserve existing Navigation 2/Views architecture unless migration is in scope. Existing adaptive APIs remain possible; Navigation 3 is not a universal prerequisite.
 - Run relevant previews/screenshots and behavioral checks. Inspect screenshot diffs before updating baselines; never overwrite them just to get green tests.
 

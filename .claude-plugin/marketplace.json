@@ -41,8 +41,8 @@
     {
       "name": "google",
       "source": "./plugins/google",
-      "description": "Google developer platforms with live docs: the Google Developer Knowledge MCP (developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud) plus two skills — android-compose (Android/Kotlin/Compose, Gradle/AGP 9, Nav 3, testing, performance, widgets, Media3) and chrome-web (MV3 extensions, Web Store publishing, Baseline web platform APIs).",
-      "version": "2.1.2",
+      "description": "Android, Chrome and web development with Google Developer Knowledge MCP: android-compose (Kotlin, Compose, Gradle, navigation, performance, testing), chrome-web (MV3, Web Store, Baseline) and google-developer-knowledge (live docs, skill discovery and auth troubleshooting).",
+      "version": "2.2.0",
       "displayName": "Android & Chrome",
       "category": "Developer Tools"
     },
