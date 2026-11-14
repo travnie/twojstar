@@ -303,14 +303,23 @@
     try { return new URL(document.querySelector("#f_url")?.value || "").hostname; } catch { return ""; }
   }
 
+  function clearStaleWebsiteIcon() {
+    const host = currentUrlHost();
+    if (!(siteIconHost && siteIconHost !== host) && !(pendingSiteHost && pendingSiteHost !== host)) return false;
+    if (loadController && !pendingSiteHost) {
+      remoteLogoData = null;
+      siteIconHost = null;
+    } else {
+      clearRemote();
+    }
+    siteStatus.textContent = "URL changed. Load the new website icon.";
+    return true;
+  }
+
   window.qrOptions = function logoQrOptions(...args) {
     const options = originalQrOptions(...args);
     siteField.hidden = currentTemplate() !== "url";
-    if ((siteIconHost && siteIconHost !== currentUrlHost())
-      || (pendingSiteHost && pendingSiteHost !== currentUrlHost())) {
-      clearRemote();
-      siteStatus.textContent = "URL changed. Load the new website icon.";
-    }
+    clearStaleWebsiteIcon();
     const preset = activePreset();
     if (preset) {
       options.image = iconDataUrl(preset);
@@ -346,19 +355,11 @@
     } catch { siteStatus.textContent = "Enter an HTTPS website URL first."; }
   });
   document.addEventListener("input", (event) => {
-    if (event.target?.id !== "f_url" || currentTemplate() !== "url") return;
-    let host = "";
-    try { host = new URL(event.target.value).hostname; } catch {}
-    if ((siteIconHost && siteIconHost !== host) || (pendingSiteHost && pendingSiteHost !== host)) {
-      clearRemote();
-      siteStatus.textContent = "URL changed. Load the new website icon.";
-      originalRenderQR();
-    }
+    if (event.target?.id === "f_url" && clearStaleWebsiteIcon()) originalRenderQR();
   });
   document.querySelector("#qrChips").addEventListener("click", () => {
     siteField.hidden = currentTemplate() !== "url";
-    if ((siteIconHost && siteIconHost !== currentUrlHost())
-      || (pendingSiteHost && pendingSiteHost !== currentUrlHost())) { clearRemote(); originalRenderQR(); }
+    if (clearStaleWebsiteIcon()) originalRenderQR();
   });
   loadButton.addEventListener("click", () => loadRemoteLogo());
   urlInput.addEventListener("keydown", (event) => {
