@@ -80,6 +80,7 @@
 
   let remoteLogoData = null;
   let siteIconHost = null;
+  let pendingSiteHost = null;
   let presetMode = "auto";
   let requestGeneration = 0;
 
@@ -161,6 +162,7 @@
     requestGeneration += 1;
     remoteLogoData = null;
     siteIconHost = null;
+    pendingSiteHost = null;
     siteButton.disabled = false;
     loadButton.disabled = false;
     if (clearInput) urlInput.value = "";
@@ -247,6 +249,7 @@
     remoteLogoData = null;
     clearUploadedLogo();
     const generation = ++requestGeneration;
+    pendingSiteHost = siteHost;
     loadButton.disabled = true;
     siteButton.disabled = true;
     setStatus("Loading image…");
@@ -262,6 +265,12 @@
       const blob = normalizeImageBlob(await response.blob(), url.href);
       const dataUrl = await blobToDataUrl(blob);
       if (generation !== requestGeneration) return;
+      if (siteHost && currentUrlHost() !== siteHost) {
+        clearRemote();
+        siteStatus.textContent = "URL changed. Load the new website icon.";
+        originalRenderQR();
+        return;
+      }
       remoteLogoData = dataUrl;
       siteIconHost = siteHost;
       if (siteHost) {
@@ -280,12 +289,23 @@
       if (siteHost) siteStatus.textContent = "Icon unavailable. Try again or upload a logo.";
       originalRenderQR();
     } finally {
-      if (generation === requestGeneration) { loadButton.disabled = false; siteButton.disabled = false; }
+      if (generation === requestGeneration) { pendingSiteHost = null; loadButton.disabled = false; siteButton.disabled = false; }
     }
+  }
+
+  function currentUrlHost() {
+    if (currentTemplate() !== "url") return "";
+    try { return new URL(document.querySelector("#f_url")?.value || "").hostname; } catch { return ""; }
   }
 
   window.qrOptions = function logoQrOptions(...args) {
     const options = originalQrOptions(...args);
+    siteField.hidden = currentTemplate() !== "url";
+    if ((siteIconHost && siteIconHost !== currentUrlHost())
+      || (pendingSiteHost && pendingSiteHost !== currentUrlHost())) {
+      clearRemote();
+      siteStatus.textContent = "URL changed. Load the new website icon.";
+    }
     const preset = activePreset();
     if (preset) {
       options.image = iconDataUrl(preset);
@@ -324,7 +344,7 @@
     if (event.target?.id !== "f_url" || currentTemplate() !== "url") return;
     let host = "";
     try { host = new URL(event.target.value).hostname; } catch {}
-    if ((siteIconHost && siteIconHost !== host) || siteButton.disabled) {
+    if ((siteIconHost && siteIconHost !== host) || (pendingSiteHost && pendingSiteHost !== host)) {
       clearRemote();
       siteStatus.textContent = "URL changed. Load the new website icon.";
       originalRenderQR();
@@ -332,7 +352,8 @@
   });
   document.querySelector("#qrChips").addEventListener("click", () => {
     siteField.hidden = currentTemplate() !== "url";
-    if (siteIconHost || siteButton.disabled) { clearRemote(); originalRenderQR(); }
+    if ((siteIconHost && siteIconHost !== currentUrlHost())
+      || (pendingSiteHost && pendingSiteHost !== currentUrlHost())) { clearRemote(); originalRenderQR(); }
   });
   loadButton.addEventListener("click", () => loadRemoteLogo());
   urlInput.addEventListener("keydown", (event) => {
