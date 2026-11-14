@@ -91,7 +91,16 @@
   function updateReaderSupportHint() {
     const type = $("#bType")?.value;
     const hint = $("#bHint");
+    const readerHint = $("#bReaderSupport");
     if (!type || !hint) return;
+    if (readerHint) {
+      readerHint.textContent = GENERATION_ONLY.has(type)
+        ? "Reader: generation only."
+        : type === "maxicode"
+          ? "Reader: needs a monochrome, unrotated symbol with a white border."
+          : "";
+      return;
+    }
     hint.textContent = hint.textContent
       .replace(/\s+Reader: generation only\.$/, "")
       .replace(/\s+Reader: needs a monochrome, unrotated symbol with a white border\.$/, "");

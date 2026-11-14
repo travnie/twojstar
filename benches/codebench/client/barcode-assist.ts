@@ -102,10 +102,12 @@
   requirement.id = "bRequirement";
   requirement.className = "barcode-requirement";
   const requirementBody = document.createElement("div");
+  const readerHint = document.createElement("div");
+  readerHint.id = "bReaderSupport";
   const encoderError = document.createElement("div");
   encoderError.className = "encoder-error";
   encoderError.hidden = true;
-  requirement.append(requirementBody, encoderError);
+  requirement.append(requirementBody, readerHint, encoderError);
   hint.insertAdjacentElement("afterend", requirement);
 
   const payloadType = $("#bPayloadType");
