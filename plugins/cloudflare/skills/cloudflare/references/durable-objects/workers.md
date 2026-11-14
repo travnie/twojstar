@@ -159,7 +159,7 @@ async function handleRooms(request: Request, env: Env): Promise<Response> {
 
 ## Request Validation
 
-Variant that takes the room in the JSON body instead of the `room` query parameter:
+Sketch that validates a JSON body carrying the room, instead of the `room` query parameter. Route it from `fetch` for POST only, and catch `request.json()` failures to return 400:
 
 ```typescript
 import { z } from "zod";
