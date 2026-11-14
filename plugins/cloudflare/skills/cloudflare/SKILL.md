@@ -5,7 +5,7 @@ description: "Cloudflare platform: Workers, Pages, KV/D1/R2, cron, Durable Objec
 
 # Cloudflare Platform Skill
 
-Synced with `github.com/cloudflare/skills` (2026-11-14, upstream `cbf893b`): the `cloudflare` router's references for the products below, plus the upstream `cf-cli`, `wrangler`, `workers-best-practices`, `workers-profiling`, `workers-development`, `agents-sdk`, `durable-objects`, `nextjs-on-cloudflare`, `frameworks-on-cloudflare` and `cloudflare-app-bootstrap` skills folded in as references. Start from the user's goal, pick the product, then read that reference's README and follow its links.
+Synced with `github.com/cloudflare/skills` at `cbf893b` (2026-11-10): the `cloudflare` router's references for the products below, plus the upstream `cf-cli`, `wrangler`, `workers-best-practices`, `workers-profiling`, `workers-development`, `agents-sdk`, `durable-objects`, `nextjs-on-cloudflare`, `frameworks-on-cloudflare` and `cloudflare-app-bootstrap` skills folded in as references. Start from the user's goal, pick the product, then read that reference's README and follow its links.
 
 Your knowledge of Cloudflare APIs, types, limits and pricing may be outdated. **Prefer retrieval over pre-training.** The references are task routes into the docs, not copies of them: they deliberately avoid restating commands, signatures and numeric limits. When a reference and the docs disagree, **trust the docs**.
 
@@ -21,8 +21,9 @@ Your knowledge of Cloudflare APIs, types, limits and pricing may be outdated. **
 
 Upstream default is now the `cf` CLI (beta) unless the project already uses Wrangler:
 
-- `wrangler.jsonc` / `wrangler.json` / `wrangler.toml` and no `cloudflare.config.ts` → Wrangler for dev, build, deploy (`references/wrangler/`). `cf` resource commands (DNS, zones, storage) are fine alongside. `cf migrate` only when asked. Every existing trvny/travnie Worker is in this bucket.
+- `wrangler.jsonc` / `wrangler.json` / `wrangler.toml` and no `cloudflare.config.ts` → Wrangler for dev, build, deploy (`references/wrangler/`). `cf` resource commands (DNS, zones, storage) are fine alongside. `cf migrate` only when asked.
 - `cloudflare.config.ts`, a new project, or no Cloudflare config → `cf` (`references/cf-cli/`). Don't install Wrangler or create a Wrangler config.
+- Exceptions, checked first: the user explicitly asks for Wrangler → Wrangler. A new **framework** project is created with C3 per `references/frameworks/` and then has Wrangler config, so the first bullet applies.
 
 Many docs pages show only Wrangler commands and config; in a `cf` project don't run them or add a Wrangler config. One CLI per project, apart from the `npx wrangler` commands `references/cf-cli/` lists as not yet supported by `cf`. Where a reference or doc names a Wrangler command, find the `cf` equivalent with `cf cli search "<task>"` or the [Wrangler to cf reference](https://developers.cloudflare.com/cf/wrangler/reference/index.md) — never translate from memory.
 
@@ -63,7 +64,7 @@ When products could overlap, decide on the deciding requirement: data shape, con
 
 - Read the reference README, then only the linked sub-file the task needs (configuration / api / patterns / gotchas). Don't load whole trees.
 - Writing or reviewing Worker code → `references/workers/README.md` first; it routes to `configuration.md`, `runtime-patterns.md` (streaming, `waitUntil`, no floating promises, no request-scoped global state, Web Crypto) and `platform-apis.md` (binding access, serialization boundaries).
-- After touching config or bindings in TypeScript, regenerate types with `wrangler types` — never hand-edit generated declarations.
+- After touching config or bindings in TypeScript, regenerate types (`wrangler types` in Wrangler projects, `cf workers types` in `cf` projects) — never hand-edit generated declarations.
 - Treat `wrangler secret put/delete` as a deploy. Rollbacks don't roll back data in bound resources.
 - Report what changed, the target environment, checks actually run, and remaining gaps; link the docs the answer depended on.
 

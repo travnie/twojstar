@@ -1,6 +1,6 @@
 # Wrangler CLI
 
-Use this reference only when the project has `wrangler.jsonc`, `wrangler.json`, or `wrangler.toml` and no `cloudflare.config.ts`, or when the user asks for Wrangler. For a new project, a project with `cloudflare.config.ts`, or a project with no Cloudflare configuration, use the Cloudflare CLI (`cf`) instead: read `../cf-cli/README.md`, or follow [Use cf with coding agents](https://developers.cloudflare.com/cf/agents/index.md). Do not add Wrangler to those projects.
+Use this reference when the user explicitly asks for Wrangler, or when the project has `wrangler.jsonc`, `wrangler.json`, or `wrangler.toml` and no `cloudflare.config.ts` (including framework projects scaffolded with C3). Otherwise — a new non-framework project, a project with `cloudflare.config.ts`, or no Cloudflare configuration — use the Cloudflare CLI (`cf`): read `../cf-cli/README.md`, or follow [Use cf with coding agents](https://developers.cloudflare.com/cf/agents/index.md), and don't add Wrangler unless the user asks.
 
 Use the project's Wrangler version and retrieve the relevant documentation before writing commands or configuration. CLI flags and configuration fields change; do not rely on memorized examples.
 

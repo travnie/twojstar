@@ -26,7 +26,6 @@ Sign in to Cloudflare when the connector asks (OAuth). No tokens, cookies or app
 From the repository root:
 
 ```sh
-python -m pip install -r plugins/_shared/requirements.txt
 python plugins/_shared/plugin_ci.py build cloudflare /tmp/cloudflare
 ```
 

@@ -71,6 +71,8 @@ ENVIRONMENT = "production"
 
 ### Environment Interface
 
+Generate `Env` from your config (`wrangler types` or `cf workers types`) instead of hand-writing it; the shape below shows what the generated declaration contains.
+
 ```typescript
 // src/types.ts
 import { ChatRoom } from "./durable-objects/chat-room";
@@ -120,10 +122,7 @@ export default {
     try {
       // Route to appropriate handler
       if (url.pathname.startsWith("/api/rooms")) {
-        return handleRooms(request, env);
-      }
-      if (url.pathname.startsWith("/api/users")) {
-        return handleUsers(request, env);
+        return await handleRooms(request, env);
       }
 
       return new Response("Not Found", { status: 404 });
@@ -150,8 +149,11 @@ async function handleRooms(request: Request, env: Env): Promise<Response> {
     return Response.json(result);
   }
 
-  const messages = await stub.getMessages();
-  return Response.json(messages);
+  if (request.method === "GET") {
+    return Response.json(await stub.getMessages());
+  }
+
+  return new Response("Method Not Allowed", { status: 405, headers: { Allow: "GET, POST" } });
 }
 ```
 
@@ -161,6 +163,7 @@ async function handleRooms(request: Request, env: Env): Promise<Response> {
 import { z } from "zod";
 
 const SendMessageSchema = z.object({
+  roomId: z.string().min(1),
   userId: z.string().min(1),
   message: z.string().min(1).max(1000),
 });
@@ -176,7 +179,7 @@ async function handleSendMessage(request: Request, env: Env): Promise<Response> 
     );
   }
 
-  const stub = env.CHAT_ROOM.getByName(result.data.userId);
+  const stub = env.CHAT_ROOM.getByName(result.data.roomId);
   const message = await stub.sendMessage(result.data.userId, result.data.message);
   return Response.json(message);
 }
@@ -210,7 +213,7 @@ Non-I/O spans can report `0 ms` even when the operation takes longer. See [trace
 ### Graceful DO Errors
 
 ```typescript
-async function callDO(stub: DurableObjectStub<ChatRoom>, method: string): Promise<Response> {
+async function getMessagesSafely(stub: DurableObjectStub<ChatRoom>): Promise<Response> {
   try {
     const result = await stub.getMessages();
     return Response.json(result);
@@ -304,6 +307,4 @@ wrangler deploy
 # Tail logs
 wrangler tail
 
-# List DOs
-wrangler d1 execute DB --command "SELECT * FROM _cf_DO"
 ```

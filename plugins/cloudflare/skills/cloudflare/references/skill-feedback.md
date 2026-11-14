@@ -16,10 +16,11 @@ GitHub issues are public. Never post until the user has seen the exact title and
 Strip before drafting: credentials, tokens, secrets; account/zone/resource IDs; personal data (names, emails, IPs); internal hostnames and URLs (`*.travny.workers.dev` included); private code, config and logs. Describe the problem in general terms instead.
 
 1. **Ask** whether the user wants to send feedback to the maintainers. No → move on.
-2. **Draft** from the conversation using the table below. Name the **upstream** skill and file the text came from (e.g. `workers-best-practices` → `references/runtime-patterns.md` > "Be aware of platform limits"), not this fork's path.
-3. **Review** — show the exact title and body, then ask a yes/no like "Post this as a public issue on cloudflare/skills?" Agreeing in step 1 is not approval of the text. Apply requested changes and ask again.
-4. **Submit** only after a yes — GitHub MCP `issue_write` (or `gh issue create --repo cloudflare/skills`). Title: `skill-feedback: <upstream-skill>: <summary>`.
-5. **Share** the issue URL. On failure, give the approved title and body plus <https://github.com/cloudflare/skills/issues/new>.
+2. **Check duplicates**: search open issues on `cloudflare/skills` for the same problem. If one exists, offer to comment there instead.
+3. **Draft** from the conversation using the table below. Name the **upstream** skill and file the text came from (e.g. `workers-best-practices` → `references/runtime-patterns.md` > "Be aware of platform limits"), not this fork's path.
+4. **Review** — show the exact title and body, then ask a yes/no like "Post this as a public issue on cloudflare/skills?" Agreeing in step 1 is not approval of the text. Apply requested changes and ask again.
+5. **Submit** only after a yes — GitHub MCP `issue_write` (or `gh issue create --repo cloudflare/skills`). Title: `skill-feedback: <upstream-skill>: <summary>`.
+6. **Share** the issue URL. On failure, give the approved title and body plus <https://github.com/cloudflare/skills/issues/new>.
 
 | Field | Value |
 |-------|-------|
