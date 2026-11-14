@@ -4,10 +4,13 @@ Build the smallest plugin shape that satisfies the use case.
 
 ## First decision: choose the plugin shape
 
-1. **Skills only**: instructions, references, templates, or deterministic scripts are enough.
-2. **MCP server only**: live data or controlled actions are needed, but extra workflow instructions are not.
+1. **Skills only**: instructions, references, templates, or deterministic
+   scripts are enough.
+2. **MCP server only**: live data or controlled actions are needed, but extra
+   workflow instructions are not.
 3. **Skills + MCP server**: skills guide repeatable workflows through MCP tools.
-4. **MCP server + UI**: visual interaction materially improves an MCP-backed workflow.
+4. **MCP server + UI**: visual interaction materially improves an MCP-backed
+   workflow.
 
 UI is optional. Do not create a widget merely because the platform supports one.
 
@@ -15,12 +18,21 @@ UI is optional. Do not create a widget merely because the platform supports one.
 
 Before changing plugin architecture or metadata:
 
-1. Use the bundled `openai-docs` MCP search/fetch tools to retrieve current official OpenAI Plugins docs. If unavailable, browse the official docs directly; do not block an answer on installation.
-2. Use the bundled OpenAI scaffolding, package format, and validation workflow by default. If an additional plugin-management tool is actually available and relevant to an account action, it can be used as an optional host capability. Never require, install, or assume another plugin.
+1. Use the bundled `openai-docs` MCP search/fetch tools to retrieve current
+   official OpenAI Plugins docs. If unavailable, browse the official docs
+   directly; do not block an answer on installation.
+2. Use the bundled OpenAI scaffolding, package format, and validation workflow
+   by default. If an additional plugin-management tool is actually available and
+   relevant to an account action, it can be used as an optional host capability.
+   Never require, install, or assume another plugin.
 3. Treat `/plugins/...` as the canonical documentation surface.
-4. Treat old `/apps-sdk/...` links and “Apps SDK app” language as legacy compatibility terminology.
-5. For detailed MCP Apps UI/server implementation, follow current official docs and bundled app references. Use another verified, available development tool only when useful, never as a prerequisite.
-6. Use bundled references for stable design patterns, never as a substitute for current product rules, schemas, or submission requirements.
+4. Treat old `/apps-sdk/...` links and “Apps SDK app” language as legacy
+   compatibility terminology.
+5. For detailed MCP Apps UI/server implementation, follow current official docs
+   and bundled app references. Use another verified, available development tool
+   only when useful, never as a prerequisite.
+6. Use bundled references for stable design patterns, never as a substitute for
+   current product rules, schemas, or submission requirements.
 
 Read `references/openai-kit/plugin-docs-workflow.md` for page routing.
 
@@ -51,10 +63,14 @@ For each use case, identify:
 
 ### 3. Create the manifest
 
-For a portable OpenAI plugin, use root `plugin.json` with the Agent Plugins 1.0 schema. Copilot CLI treats this as strict mode; see `references/hosts.md` before changing an existing cross-host package. Put OpenAI-specific settings under
+For a portable OpenAI plugin, use root `plugin.json` with the Agent Plugins 1.0
+schema. Copilot CLI treats this as strict mode; see `references/hosts.md` before
+changing an existing cross-host package. Put OpenAI-specific settings under
 `extensions.com.openai`. Portable clients discover `skills/` and `mcp.json` at fixed paths.
-Keep `.codex-plugin/plugin.json` only as an optional compatibility overlay; when the inline
-OpenAI extension exists, it replaces that entire overlay instead of merging with it.
+Keep `.codex-plugin/plugin.json` only as an optional compatibility overlay; when
+the inline
+OpenAI extension exists, it replaces that entire overlay instead of merging with
+it.
 
 Manifest paths must:
 
@@ -63,7 +79,8 @@ Manifest paths must:
 - stay inside the plugin root,
 - point only to components that exist.
 
-Use `scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP starting structure.
+Use `scripts/scaffold_plugin.py` for a small skills-only or skills-plus-MCP
+starting structure.
 Use `scripts/validate_plugin.py` before packaging or publication.
 
 ### 4. Build skills
@@ -135,8 +152,10 @@ When reviewing an older app package:
 3. Replace stale canonical docs links with `/plugins/...`.
 4. Add portable root `plugin.json`; retain a synchronized `.codex-plugin/plugin.json` when an older client needs it.
 5. Keep `.app.json` only for registered MCP connection mappings.
-6. Keep root `mcp.json` for portable MCP configuration; generate `.mcp.json` only for older clients.
-7. Do not remove compatibility metadata blindly. Verify the current plugin UI reference first.
+6. Keep root `mcp.json` for portable MCP configuration; generate `.mcp.json`
+   only for older clients.
+7. Do not remove compatibility metadata blindly. Verify the current plugin UI
+   reference first.
 
 Read `references/openai-kit/legacy-apps-sdk-migration.md`.
 
@@ -151,4 +170,9 @@ Return:
 - unresolved hosting, auth, marketplace, or submission requirements,
 - packaged artifact when requested.
 
-The scaffolds target general ChatGPT/Codex plugin contracts, not the stricter `twojstar` catalog packager. Dotted names and local stdio are supported by the generic scaffold; the repository catalog requires kebab-case names and remote HTTPS MCPs. `--command` takes a bare executable path/name; repeat `--command-arg` for arguments. Public ChatGPT packages require remote MCP servers.
+The scaffolds target general ChatGPT/Codex plugin contracts, not the stricter
+`twojstar` catalog packager. Dotted names and local stdio are supported by the
+generic scaffold; the repository catalog requires kebab-case names and remote
+HTTPS MCPs. `--command` takes a bare executable path/name; repeat
+`--command-arg` for arguments. Public ChatGPT packages require remote MCP
+servers.

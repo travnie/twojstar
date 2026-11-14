@@ -148,7 +148,10 @@ class OpenAIBuildToolsTests(unittest.TestCase):
             self.assertIn(".listen(port, HOST,", server)
             self.assertIn("allowedHosts.has", server)
             self.assertIn("allowedOrigins.has", server)
-            self.assertNotIn('"Access-Control-Allow-Origin", "*"', server)
+            self.assertNotRegex(
+                server, r"""['"]Access-Control-Allow-Origin['"]\s*[:,]\s*['"]\*['"]"""
+            )
+            self.assertIn('res.setHeader("Access-Control-Allow-Origin", origin)', server)
             original = (dest / "package.json").read_text()
             result = subprocess.run(args, capture_output=True, text=True, check=False)
             self.assertNotEqual(result.returncode, 0)

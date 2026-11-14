@@ -2,7 +2,8 @@
 
 Load this reference when scaffolding or reviewing a generated ChatGPT app repo.
 
-The goal is not “files were created.” The goal is “the repo is plausibly runnable and follows a stable working-app contract.”
+The goal is not “files were created.” The goal is “the repo is plausibly
+runnable and follows a stable working-app contract.”
 
 ## Minimum Working Repo Contract
 
@@ -11,14 +12,16 @@ Every generated repo should satisfy the relevant parts of this contract.
 ### 1. Shape
 
 - The repo shape matches the chosen archetype.
-- The repo structure is simple enough that a user can identify where the server and widget live.
+- The repo structure is simple enough that a user can identify where the server
+  and widget live.
 
 ### 2. Server
 
 - There is a clear MCP server entry point.
 - The server exposes `/mcp`.
 - The server registers tools intentionally.
-- If a UI exists, the server registers a resource/template with the MCP Apps UI MIME type.
+- If a UI exists, the server registers a resource/template with the MCP Apps UI
+  MIME type.
 
 ### 3. Tools
 
@@ -26,8 +29,11 @@ Every generated repo should satisfy the relevant parts of this contract.
 - Descriptions help the model choose the tool.
 - Required annotations are present and accurate.
 - UI-linked tools use `_meta.ui.resourceUri`.
-- `_meta["openai/outputTemplate"]` is treated as optional compatibility, not the primary contract.
-- When the app is connector-like, data-only, sync-oriented, or intended for company knowledge or deep research, it implements standard `search` and `fetch` tools instead of custom substitutes.
+- `_meta["openai/outputTemplate"]` is treated as optional compatibility, not the
+  primary contract.
+- When the app is connector-like, data-only, sync-oriented, or intended for
+  company knowledge or deep research, it implements standard `search` and
+  `fetch` tools instead of custom substitutes.
 
 ### 4. Widget
 
@@ -42,7 +48,8 @@ Every generated repo should satisfy the relevant parts of this contract.
 
 - There is a clear way to start the app locally.
 - There is at least one low-cost check command when the stack supports it.
-- The response explains how to connect the app in ChatGPT Developer Mode when relevant.
+- The response explains how to connect the app in ChatGPT Developer Mode when
+  relevant.
 
 ## Validation Ladder
 
@@ -56,7 +63,8 @@ Check for:
 - repo shape matches archetype
 - `/mcp` route is present
 - tool/resource/widget responsibilities are coherent
-- if the app is connector-like or sync-oriented, `search` and `fetch` are present with the expected standard shape
+- if the app is connector-like or sync-oriented, `search` and `fetch` are
+  present with the expected standard shape
 
 ### Level 1: Syntax or compile checks
 
