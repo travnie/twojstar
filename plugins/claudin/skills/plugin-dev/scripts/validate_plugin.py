@@ -144,7 +144,7 @@ def main() -> int:
         description = manifest.get("description")
 
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
-            errors.append("name must be lowercase with optional dots and hyphens")
+            errors.append("name must contain 1–64 lowercase ASCII letters, digits, dots or hyphens; start and end with a letter or digit; no consecutive dots or consecutive hyphens")
         elif root.name != name:
             warnings.append(f"root folder {root.name!r} differs from manifest name {name!r}")
 

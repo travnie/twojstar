@@ -425,11 +425,28 @@ function createAppServer(): McpServer {
 
 const port = Number(process.env.PORT ?? "__PORT__");
 const MCP_PATH = "/mcp";
+const HOST = "127.0.0.1";
+const allowedHosts = new Set([HOST + ":" + port, "localhost:" + port]);
+const allowedOrigins = new Set([...allowedHosts].map((host) => "http://" + host));
+
+// Local starter only. Public deployments need explicit host/origin policy and authentication.
 
 createServer(async (req, res) => {
   if (!req.url) {
     res.writeHead(400).end("Missing URL");
     return;
+  }
+
+  const host = req.headers.host;
+  const origin = req.headers.origin;
+  if (!host || !allowedHosts.has(host.toLowerCase()) ||
+      (origin !== undefined && !allowedOrigins.has(origin))) {
+    res.writeHead(403).end("Forbidden host or origin");
+    return;
+  }
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
   }
 
   let url: URL;
@@ -443,7 +460,6 @@ createServer(async (req, res) => {
 
   if (req.method === "OPTIONS" && isMcpRoute) {
     res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "content-type, mcp-session-id",
       "Access-Control-Expose-Headers": "Mcp-Session-Id",
@@ -459,7 +475,6 @@ createServer(async (req, res) => {
 
   const transportMethods = new Set(["GET", "POST", "DELETE"]);
   if (isMcpRoute && req.method && transportMethods.has(req.method)) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
     const server = createAppServer();
@@ -486,8 +501,8 @@ createServer(async (req, res) => {
   }
 
   res.writeHead(404).end("Not Found");
-}).listen(port, () => {
-  console.log("__APP_TITLE__ MCP server listening on http://localhost:" + port + MCP_PATH);
+}).listen(port, HOST, () => {
+  console.log("__APP_TITLE__ MCP server listening on http://" + HOST + ":" + port + MCP_PATH);
 });
 `;
 
@@ -542,7 +557,7 @@ function parseArgs(argv) {
   while (tokens.length > 0) {
     const token = tokens.shift();
 
-    if (!args.outputDir && !token.startsWith("--")) {
+    if (!args.outputDir && !token.startsWith("-")) {
       args.outputDir = token;
       continue;
     }
