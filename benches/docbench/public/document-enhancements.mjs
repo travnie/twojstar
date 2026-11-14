@@ -1589,6 +1589,7 @@ urlForm.addEventListener("submit", async (event) => {
       ? "Could not load. The site may block browser access (CORS), or the URL may be unavailable."
       : error.message || "Could not load the document.";
   } finally {
+    controller.abort();
     clearTimeout(timer);
     urlSubmit.disabled = false;
   }
