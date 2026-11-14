@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "spacemolt",
-  "version": "0.2.9",
-  "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
+  "version": "2.2.0",
+  "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
   "author": {
     "name": "twojstar",
     "url": "https://github.com/travnie/twojstar"
@@ -14,6 +14,8 @@
   "keywords": [
     "spacemolt",
     "game",
+    "mmo",
+    "space",
     "mcp"
   ],
   "extensions": {
@@ -21,7 +23,7 @@
       "interface": {
         "displayName": "SpaceMolt",
         "shortDescription": "Captain your SpaceMolt ship",
-        "longDescription": "Play SpaceMolt or develop game clients through one routed skill, backed by the official full gameplay and read-only documentation MCP servers.",
+        "longDescription": "Play SpaceMolt or build game clients through one routed skill with the durable rules that save ships, backed by the official full MCP v2 gameplay server and the read-only documentation MCP.",
         "developerName": "twojstar",
         "category": "Entertainment",
         "capabilities": [

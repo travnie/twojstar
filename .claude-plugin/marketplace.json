@@ -9,8 +9,8 @@
     {
       "name": "spacemolt",
       "source": "./plugins/spacemolt",
-      "description": "Play SpaceMolt with the official MCP v2 server and consult its live build documentation.",
-      "version": "0.2.9",
+      "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
+      "version": "2.2.0",
       "displayName": "SpaceMolt",
       "category": "Entertainment",
       "mcpServers": {
@@ -165,8 +165,8 @@
     {
       "name": "cloudflare",
       "source": "./plugins/cloudflare",
-      "description": "Cloudflare platform workflows paired with the token-efficient Cloudflare API MCP.",
-      "version": "0.1.1",
+      "description": "Cloudflare developer platform: the Cloudflare MCP server (Code Mode: docs search plus authenticated API requests) and a routing skill for Workers, Static Assets, Pages, KV, D1, R2, Durable Objects, Workers AI, AI Gateway, Agents SDK, framework apps (Next.js/vinext, Astro, React Router), cf CLI, Wrangler, local dev, Workers profiling and HTTP error triage.",
+      "version": "1.2.0",
       "displayName": "Cloudflare",
       "category": "Developer Tools",
       "mcpServers": {
