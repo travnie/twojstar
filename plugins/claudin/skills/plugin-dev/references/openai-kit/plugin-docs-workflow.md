@@ -29,7 +29,10 @@ Search the live `openai-docs` connector (via `docs-lookup`) or the official [plu
 ## Routing rules
 
 - Use `/plugins/...` as canonical.
-- Old `/apps-sdk/...` pages may redirect, but do not generate new documentation links to the legacy path.
-- Fetch the current plugin UI reference before deciding whether an OpenAI compatibility alias should remain.
-- Fetch package and submission docs again before public release because fields and review requirements can change.
+- Old `/apps-sdk/...` pages may redirect, but do not generate new documentation
+  links to the legacy path.
+- Fetch the current plugin UI reference before deciding whether an OpenAI
+  compatibility alias should remain.
+- Fetch package and submission docs again before public release because fields
+  and review requirements can change.
 - Prefer official examples over a frozen local server scaffold.

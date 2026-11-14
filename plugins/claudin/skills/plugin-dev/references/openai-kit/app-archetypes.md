@@ -1,12 +1,15 @@
 # App Archetypes
 
-Load this reference before choosing a starting point for a new ChatGPT app. The goal is to keep the skill inside a small number of supported app shapes instead of inventing a custom structure for every prompt.
+Load this reference before choosing a starting point for a new ChatGPT app. The
+goal is to keep the skill inside a small number of supported app shapes instead
+of inventing a custom structure for every prompt.
 
 ## Rule
 
 Choose one primary archetype per request and state it.
 
-Do not combine several archetypes unless the user explicitly asks for a hybrid app and the extra complexity is necessary.
+Do not combine several archetypes unless the user explicitly asks for a hybrid
+app and the extra complexity is necessary.
 
 ## Archetypes
 
@@ -30,7 +33,8 @@ Validation emphasis:
 - `/mcp` route works
 - tool schemas and annotations are correct
 - no unnecessary UI resource is registered
-- if the app is connector-like or sync-oriented, `search` and `fetch` should be the default read-only tools
+- if the app is connector-like or sync-oriented, `search` and `fetch` should be
+  the default read-only tools
 
 ### `vanilla-widget`
 
@@ -47,7 +51,8 @@ Default shape:
 Best starting point:
 
 - Current OpenAI Plugins quickstart/examples first
-- Use the local plugin-package scaffold only when the MCP/UI runtime already exists
+- Use the local plugin-package scaffold only when the MCP/UI runtime already
+  exists
 
 Validation emphasis:
 
@@ -61,7 +66,8 @@ Use when:
 
 - The user wants a polished UI
 - The UI is clearly component-based
-- The user mentions React, TypeScript frontend tooling, or richer design requirements
+- The user mentions React, TypeScript frontend tooling, or richer design
+  requirements
 
 Default shape:
 
@@ -92,7 +98,8 @@ Default shape:
 
 Best starting point:
 
-- Official OpenAI examples plus `references/openai-kit/interactive-state-sync-patterns.md`
+- Official OpenAI examples plus
+  `references/openai-kit/interactive-state-sync-patterns.md`
 
 Validation emphasis:
 
@@ -125,8 +132,11 @@ Validation emphasis:
 ## Selection Heuristic
 
 - If the prompt does not mention a UI, choose `tool-only`.
-- If the prompt is about a knowledge source, sync app, connector-like integration, or deep research, strongly prefer `tool-only` plus the standard `search` and `fetch` tools unless the user clearly needs a widget.
+- If the prompt is about a knowledge source, sync app, connector-like
+  integration, or deep research, strongly prefer `tool-only` plus the standard
+  `search` and `fetch` tools unless the user clearly needs a widget.
 - If the prompt asks for a simple demo or starter, choose `vanilla-widget`.
 - If the prompt asks for a polished UI or React, choose `react-widget`.
 - If the prompt implies long-lived client state or repeated interaction, choose `interactive-decoupled`.
-- Only choose `submission-ready` when the user explicitly asks for launch or review-readiness work.
+- Only choose `submission-ready` when the user explicitly asks for launch or
+  review-readiness work.

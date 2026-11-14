@@ -1,8 +1,11 @@
 # Interactive State Sync Patterns
 
-Use this reference when building ChatGPT apps with long-lived widget state, repeated interactions, or component-initiated tool calls (for example: games, boards, maps, dashboards, editors, or realtime-ish UIs).
+Use this reference when building ChatGPT apps with long-lived widget state,
+repeated interactions, or component-initiated tool calls (for example: games,
+boards, maps, dashboards, editors, or realtime-ish UIs).
 
-Do not load this file for simple read-only render apps unless state sync behavior is part of the task.
+Do not load this file for simple read-only render apps unless state sync
+behavior is part of the task.
 
 ## When This Reference Helps
 
@@ -18,7 +21,8 @@ Read this file when the app needs one or more of these patterns:
 
 ### 1. Snapshot + Event Token
 
-Return a stable state snapshot in `structuredContent` and add a monotonic event token for repeated actions that may not change other fields.
+Return a stable state snapshot in `structuredContent` and add a monotonic event
+token for repeated actions that may not change other fields.
 
 Examples:
 
@@ -31,7 +35,8 @@ Use this when the widget must detect "same shape, new event" updates reliably.
 
 ### 2. Intent-Focused Tool Surface
 
-Prefer small, explicit tools that map to user-visible actions or data operations.
+Prefer small, explicit tools that map to user-visible actions or data
+operations.
 
 - Keep names action-oriented
 - Use enums and bounded schemas where possible
@@ -41,10 +46,12 @@ This improves model tool selection and reduces malformed calls.
 
 ### 3. Idempotent Handlers (or Explicitly Non-Idempotent)
 
-Design handlers to tolerate retries. If a tool is not idempotent, make the side effect explicit and confirm intent in the flow.
+Design handlers to tolerate retries. If a tool is not idempotent, make the side
+effect explicit and confirm intent in the flow.
 
 - Reads and pure transforms should usually be idempotent
-- Writes should include clear impact hints and current-turn confirmation where needed
+- Writes should include clear impact hints and current-turn confirmation where
+  needed
 - Repeated calls with the same input should not corrupt widget state
 
 ### 4. `structuredContent` / `_meta` Partitioning
@@ -64,11 +71,14 @@ For new scaffolds:
 - Prefer MCP Apps bridge notifications and `tools/call` (portable across hosts)
 - Use `window.openai` as a compatibility layer plus optional ChatGPT extensions
 
-This keeps the app portable while still enabling ChatGPT-specific capabilities when helpful.
+This keeps the app portable while still enabling ChatGPT-specific capabilities
+when helpful.
 
 ### 6. Component-Initiated Tool Calls Without Remounting
 
-For interactive widgets, allow the UI to call data/action tools directly and update the existing widget state instead of forcing a full re-render/remount every time.
+For interactive widgets, allow the UI to call data/action tools directly and
+update the existing widget state instead of forcing a full re-render/remount
+every time.
 
 This is especially useful for:
 
@@ -85,16 +95,19 @@ When feasible, make the widget usable without ChatGPT during development:
 - If host APIs are unavailable, apply local state directly
 - Preserve basic interactions in a normal browser
 
-This speeds up front-end iteration and reduces dependence on connector setup for every UI tweak.
+This speeds up front-end iteration and reduces dependence on connector setup for
+every UI tweak.
 
 ### 8. Decouple Data Tools from Render Tools (When Complexity Grows)
 
-Use separate data and render tools when the app has multi-step reasoning or frequent updates.
+Use separate data and render tools when the app has multi-step reasoning or
+frequent updates.
 
 - Data tools fetch/compute/mutate and return reusable `structuredContent`
 - Render tools attach the widget template and focus on presentation
 
-This reduces unnecessary remounts and gives the model a chance to refine data before rendering.
+This reduces unnecessary remounts and gives the model a chance to refine data
+before rendering.
 
 ## Common Anti-Patterns
 

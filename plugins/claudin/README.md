@@ -18,7 +18,8 @@ Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork 
 | `openai-docs` — `https://developers.openai.com/mcp` | OpenAI API, Codex/ChatGPT plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — `https://docs.x.ai/api/mcp` | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API |
 
-`openai-docs` uses the same official endpoint as OpenAI Dev Kit. Verify connection reuse or registered App bindings in the target host.
+`openai-docs` uses the same official endpoint as OpenAI Dev Kit. Verify
+connection reuse or registered App bindings in the target host.
 
 ## Building something
 
