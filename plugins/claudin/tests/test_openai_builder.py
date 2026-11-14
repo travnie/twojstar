@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,6 +58,23 @@ class OpenAIBuildToolsTests(unittest.TestCase):
                 text = (dest / "skills" / name / "SKILL.md").read_text()
                 self.assertIn(f'name: "{name}"', text)
             self.assertEqual(invoke("validate_plugin.py", dest).returncode, 0)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js not available")
+    def test_node_scaffold_and_overwrite_guard(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "app"
+            args = ["node", str(TOOLS / "scaffold_node_ext_apps.mjs"), str(dest),
+                    "--app-name", "Demo App", "--tool-name", "Show Demo"]
+            result = subprocess.run(args, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(json.loads((dest / "package.json").read_text())["name"], "demo-app")
+            for path in ("src/server.ts", "public/widget.html", "tsconfig.json"):
+                self.assertTrue((dest / path).is_file(), path)
+            self.assertIn("show_demo", (dest / "src/server.ts").read_text())
+            original = (dest / "package.json").read_text()
+            result = subprocess.run(args, capture_output=True, text=True, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((dest / "package.json").read_text(), original)
 
 
 if __name__ == "__main__":

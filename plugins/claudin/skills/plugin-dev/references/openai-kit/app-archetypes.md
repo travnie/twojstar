@@ -92,7 +92,7 @@ Default shape:
 
 Best starting point:
 
-- Official OpenAI examples plus `references/interactive-state-sync-patterns.md`
+- Official OpenAI examples plus `references/openai-kit/interactive-state-sync-patterns.md`
 
 Validation emphasis:
 
