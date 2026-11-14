@@ -51,15 +51,18 @@ function buildPackageJson(appSlug) {
     name: appSlug,
     private: true,
     type: "module",
+    engines: { node: ">=20" },
     scripts: {
       dev: "tsx watch src/server.ts",
       start: "tsx src/server.ts",
       check: "tsc --noEmit",
     },
     dependencies: {
-      "@modelcontextprotocol/ext-apps": "^1.0.1",
-      "@modelcontextprotocol/sdk": "^1.20.2",
-      zod: "^3.25.76",
+      "@modelcontextprotocol/ext-apps": "^2.1.0",
+      "@modelcontextprotocol/client": "^2.0.0",
+      "@modelcontextprotocol/server": "^2.0.0",
+      "@modelcontextprotocol/node": "^2.0.0",
+      zod: "^4.2.0",
     },
     devDependencies: {
       "@types/node": "^24.3.0",
@@ -321,8 +324,8 @@ import {
   registerAppTool,
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { z } from "zod";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -373,12 +376,12 @@ function createAppServer(): McpServer {
       title: "__APP_TITLE__",
       description:
         "Use this when the user wants to render the __APP_TITLE__ starter widget or inspect a minimal Apps SDK tool result.",
-      inputSchema: {
+      inputSchema: z.object({
         message: z
           .string()
           .optional()
           .describe("Optional message to show inside the widget."),
-      },
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -429,7 +432,13 @@ createServer(async (req, res) => {
     return;
   }
 
-  const url = new URL(req.url, "http://" + (req.headers.host ?? "localhost"));
+  let url: URL;
+  try {
+    url = new URL(req.url, "http://" + (req.headers.host ?? "localhost"));
+  } catch {
+    res.writeHead(400).end("Invalid request URL");
+    return;
+  }
   const isMcpRoute = url.pathname === MCP_PATH || url.pathname.startsWith(MCP_PATH + "/");
 
   if (req.method === "OPTIONS" && isMcpRoute) {
@@ -454,14 +463,14 @@ createServer(async (req, res) => {
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
     const server = createAppServer();
-    const transport = new StreamableHTTPServerTransport({
+    const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
 
     res.on("close", () => {
-      transport.close();
-      server.close();
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
     });
 
     try {
@@ -510,7 +519,7 @@ function usage() {
     "",
     "If the executable bit is unavailable, run:",
     "  node scripts/scaffold_node_ext_apps.mjs <output_dir> [--app-name <name>] [--tool-name <name>] [--port <number>] [--force]",
-  ].join("\\n");
+  ].join("\n");
 }
 
 function parseArgs(argv) {
@@ -523,6 +532,13 @@ function parseArgs(argv) {
   };
 
   const tokens = [...argv];
+  function readValue(flag) {
+    const value = tokens.shift();
+    if (!value || !value.trim() || value.startsWith("-")) {
+      throw new Error(`Missing value after ${flag}`);
+    }
+    return value;
+  }
   while (tokens.length > 0) {
     const token = tokens.shift();
 
@@ -532,19 +548,19 @@ function parseArgs(argv) {
     }
 
     if (token === "--app-name") {
-      args.appName = tokens.shift() ?? "";
+      args.appName = readValue(token);
       continue;
     }
 
     if (token === "--tool-name") {
-      args.toolName = tokens.shift() ?? "";
+      args.toolName = readValue(token);
       continue;
     }
 
     if (token === "--port") {
-      const value = Number(tokens.shift());
-      if (!Number.isInteger(value) || value <= 0) {
-        throw new Error("Expected a positive integer after --port");
+      const value = Number(readValue(token));
+      if (!Number.isInteger(value) || value < 1 || value > 65535) {
+        throw new Error("Expected a port between 1 and 65535");
       }
       args.port = value;
       continue;
@@ -564,7 +580,7 @@ function parseArgs(argv) {
   }
 
   if (!args.outputDir) {
-    throw new Error(`Missing required output directory.\\n\\n${usage()}`);
+    throw new Error(`Missing required output directory.\n\n${usage()}`);
   }
 
   return args;

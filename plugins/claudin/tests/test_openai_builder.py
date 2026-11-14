@@ -59,6 +59,68 @@ class OpenAIBuildToolsTests(unittest.TestCase):
                 self.assertIn(f'name: "{name}"', text)
             self.assertEqual(invoke("validate_plugin.py", dest).returncode, 0)
 
+    def test_invalid_scaffold_leaves_no_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            for extra in (["--mcp-url", "https://example.com"],
+                          ["--command", "node"],
+                          ["--registered-app-id", "asdk_app_" + "a" * 32],
+                          ["--bundled-mcp-name", "docs", "--mcp-url", "https://"],
+                          ["--bundled-mcp-name", "docs", "--mcp-url", "https://example.com",
+                           "--registered-app-id", "invalid"]):
+                with self.subTest(extra=extra):
+                    result = invoke("scaffold_plugin.py", temp, "--name", "bad-plugin",
+                                    "--description", "Example", "--skill", "demo", *extra)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse((Path(temp) / "bad-plugin").exists())
+
+    def test_remote_and_local_compatibility_transport(self):
+        with tempfile.TemporaryDirectory() as temp:
+            for name, args, expected in (
+                ("remote", ["--mcp-url", "https://example.com/mcp"],
+                 {"type": "http", "url": "https://example.com/mcp"}),
+                ("local", ["--command", "node", "--command-arg", "server.js", "--command-arg=--stdio"],
+                 {"command": "node", "args": ["server.js", "--stdio"]}),
+            ):
+                result = invoke("scaffold_plugin.py", temp, "--name", name,
+                                "--description", "Example", "--bundled-mcp-name", "demo", *args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                dest = Path(temp) / name
+                self.assertEqual(json.loads((dest / ".mcp.json").read_text())["mcpServers"]["demo"], expected)
+                self.assertEqual(invoke("validate_plugin.py", dest).returncode, 0)
+
+    def test_invalid_manifest_reports_json(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp)
+            manifest = dest / "plugin.json"
+            for value in ("{}", "[]", "null", "[1]"):
+                manifest.write_text(value)
+                result = invoke("validate_plugin.py", dest)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(json.loads(result.stdout)["ok"])
+            manifest.write_text(json.dumps({
+                "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+                "name": "demo", "version": "0.1.0", "description": "Demo",
+            }))
+            overlay = dest / ".codex-plugin/plugin.json"
+            overlay.parent.mkdir()
+            overlay.write_text("{")
+            result = invoke("validate_plugin.py", dest)
+            self.assertFalse(json.loads(result.stdout)["ok"])
+            self.assertNotEqual(result.returncode, 0)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js not available")
+    def test_node_invalid_arguments_and_help(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "app"
+            command = ["node", str(TOOLS / "scaffold_node_ext_apps.mjs")]
+            help_result = subprocess.run([*command, "--help"], capture_output=True, text=True, check=False)
+            self.assertIn("\nUsage:\n", help_result.stdout)
+            for extra in (["--port", "65536"], ["--tool-name", "--force"],
+                          ["--app-name"], ["--port", "0"]):
+                result = subprocess.run([*command, str(dest), *extra], capture_output=True, text=True, check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(dest.exists())
+
     @unittest.skipUnless(shutil.which("node"), "Node.js not available")
     def test_node_scaffold_and_overwrite_guard(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -71,6 +133,10 @@ class OpenAIBuildToolsTests(unittest.TestCase):
             for path in ("src/server.ts", "public/widget.html", "tsconfig.json"):
                 self.assertTrue((dest / path).is_file(), path)
             self.assertIn("show_demo", (dest / "src/server.ts").read_text())
+            deps = json.loads((dest / "package.json").read_text())["dependencies"]
+            self.assertNotIn("@modelcontextprotocol/sdk", deps)
+            self.assertEqual(deps["@modelcontextprotocol/server"], "^2.0.0")
+            self.assertIn("NodeStreamableHTTPServerTransport", (dest / "src/server.ts").read_text())
             original = (dest / "package.json").read_text()
             result = subprocess.run(args, capture_output=True, text=True, check=False)
             self.assertNotEqual(result.returncode, 0)
