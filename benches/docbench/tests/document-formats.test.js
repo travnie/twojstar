@@ -93,3 +93,5 @@ assert.equal(formats.xmlPreviewSource(xml), xml);
 assert.equal(formats.xmlPreviewSource('<!DOCTYPE tv SYSTEM "xmltv.dtd"><tv/>'), "<tv/>");
 assert.equal(formats.xmlPreviewSource('<!-- <!DOCTYPE root> --><root/>'), '<!-- <!DOCTYPE root> --><root/>');
 assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root [<!ENTITY unsafe "data">]><root>&unsafe;</root>'), /DTD subsets/);
+
+assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root><!-- x --><!DOCTYPE root [<!ENTITY unsafe "data">]><root/>'), /Duplicate XML DOCTYPE/);

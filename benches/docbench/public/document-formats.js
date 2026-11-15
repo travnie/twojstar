@@ -115,18 +115,23 @@
   function xmlPreviewSource(text) {
     // Keep XML syntax intact. Strip only a simple prolog DTD; do not expand entities.
     const prolog = /(?:\s+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->)/y;
-    let offset = 0;
-    while (offset < text.length) {
-      prolog.lastIndex = offset;
-      const match = prolog.exec(text);
-      if (!match) break;
-      offset = prolog.lastIndex;
+    function skipProlog(start) {
+      let offset = start;
+      while (offset < text.length) {
+        prolog.lastIndex = offset;
+        if (!prolog.exec(text)) break;
+        offset = prolog.lastIndex;
+      }
+      return offset;
     }
+    const offset = skipProlog(0);
     if (!text.startsWith("<!DOCTYPE", offset)) return text;
     const simpleDoctype = /<!DOCTYPE\s+[^\s<>\[\]"']+(?:\s+(?:SYSTEM\s+(?:"[^"]*"|'[^']*')|PUBLIC\s+(?:"[^"]*"|'[^']*')\s+(?:"[^"]*"|'[^']*')))?\s*>/y;
     simpleDoctype.lastIndex = offset;
     if (!simpleDoctype.exec(text)) throw new Error("XML DTD subsets are not supported in preview.");
-    return text.slice(0, offset) + text.slice(simpleDoctype.lastIndex);
+    const end = simpleDoctype.lastIndex;
+    if (text.startsWith("<!DOCTYPE", skipProlog(end))) throw new Error("Duplicate XML DOCTYPE.");
+    return text.slice(0, offset) + text.slice(end);
   }
 
   function detectXmlContent(trimmed) {
