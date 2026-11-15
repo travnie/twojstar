@@ -4,6 +4,7 @@
   python3 mcp_probe.py URL                      # identify, list tools, lint annotations
   python3 mcp_probe.py URL --call NAME '{...}'  # call one tool
   python3 mcp_probe.py URL --header 'Authorization: Bearer X'
+  python3 mcp_probe.py http://localhost:8787/mcp --allow-loopback
 
 Tries the 2026-07-28 stateless era first (server/discover), falls back to the
 initialize handshake (2025-xx). Lint covers the Claude directory rules that can
@@ -28,8 +29,19 @@ INSTRUCTY = re.compile(
 )
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Never forward probe credentials or switch targets implicitly.
+        return None
+
+
 class Probe:
-    def __init__(self, url, headers):
+    def __init__(self, url, headers, allow_loopback=False):
+        validate_target_url(url, allow_loopback=allow_loopback)
+        handlers = [NoRedirect()]
+        if allow_loopback:
+            handlers.append(urllib.request.ProxyHandler({}))
+        self.opener = urllib.request.build_opener(*handlers)
         self.url, self.extra, self.session, self.version, self.stateless, self.n = (
             url,
             headers,
@@ -73,7 +85,7 @@ class Probe:
         )
         try:
             # Scheme is restricted to http(s) in main() before any request.
-            with urllib.request.urlopen(req, timeout=30) as r:  # skipcq: BAN-B310
+            with self.opener.open(req, timeout=30) as r:
                 self.session = r.headers.get("mcp-session-id") or self.session
                 raw = r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
@@ -149,7 +161,7 @@ def lint(tools):
 
 def _is_public_ip(ip_str):
     ip = ipaddress.ip_address(ip_str)
-    return not (
+    return ip.is_global and not (
         ip.is_private
         or ip.is_loopback
         or ip.is_link_local
@@ -159,18 +171,30 @@ def _is_public_ip(ip_str):
     )
 
 
-def validate_target_url(url):
+def validate_target_url(url, *, allow_loopback=False):
     parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in {"https", "http"}:
+        sys.exit("URL must be http(s)")
+    if parts.username is not None or parts.password is not None:
+        sys.exit("Use --header for authentication, not URL credentials")
     host = parts.hostname
     if not host:
         sys.exit("URL must include a hostname")
     try:
         infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
-    except socket.gaierror:
+    except (socket.gaierror, ValueError):
         sys.exit("URL host could not be resolved")
     addrs = {info[4][0] for info in infos}
     if not addrs:
         sys.exit("URL host could not be resolved")
+    if allow_loopback:
+        try:
+            explicit_loopback = ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            explicit_loopback = host.lower() == "localhost"
+        if not explicit_loopback or not all(ipaddress.ip_address(addr).is_loopback for addr in addrs):
+            sys.exit("--allow-loopback requires localhost or a loopback IP")
+        return
     if any(not _is_public_ip(addr) for addr in addrs):
         sys.exit("URL resolves to a non-public address; refusing request")
 
@@ -180,9 +204,7 @@ def main():
     if not a or a[0].startswith("-"):
         sys.exit(__doc__)
     url, headers, call = a[0], {}, None
-    if urllib.parse.urlsplit(url).scheme not in {"https", "http"}:
-        sys.exit("URL must be http(s)")
-    validate_target_url(url)
+    allow_loopback = False
     i = 1
     while i < len(a):
         if a[i] == "--header":
@@ -192,9 +214,12 @@ def main():
         elif a[i] == "--call":
             call = (a[i + 1], json.loads(a[i + 2]) if i + 2 < len(a) else {})
             i += 3
-        else:
+        elif a[i] == "--allow-loopback":
+            allow_loopback = True
             i += 1
-    p = Probe(url, headers)
+        else:
+            sys.exit(f"Unknown option: {a[i]}")
+    p = Probe(url, headers, allow_loopback=allow_loopback)
     era, info = p.connect()
     si = (
         info.get("serverInfo")

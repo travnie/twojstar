@@ -37,7 +37,7 @@ Prefer: none → OAuth with CIMD (AS metadata advertises `client_id_metadata_doc
 
 ## 4. Test
 
-1. `python3 scripts/mcp_probe.py <url>` — detects spec era (`server/discover` vs `initialize`), lists tools with annotations, flags directory-rule violations; `--call name '{json}'` runs one tool. Works from the chat sandbox for public URLs.
+1. `python3 scripts/mcp_probe.py <url>` — detects spec era (`server/discover` vs `initialize`), lists tools with annotations, flags directory-rule violations; `--call name '{json}'` runs one tool. Works from the chat sandbox for public URLs. Local HTTP development: explicitly use `--allow-loopback` with `localhost` or a loopback IP; redirects are refused. CLI for operator-selected URLs, not an SSRF boundary for untrusted input.
 2. MCP Inspector (`npx @modelcontextprotocol/inspector`) in Claude Code.
 3. Real host: claude.ai Settings → Connectors → custom connector (Claude sends `clientInfo.name: "claude-ai"`); ChatGPT Plugins → Add custom MCP server; Grok Build `grok mcp add --transport http <n> <url>` + `grok mcp doctor <n>`. Local servers via tunnel.
 4. Exercise every tool with valid and invalid input; check response size.
