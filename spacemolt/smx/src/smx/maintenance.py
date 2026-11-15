@@ -15,7 +15,13 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import __version__
-from .paths import ensure_private_state_dir, managed_backend_path, resolve_backend, state_dir
+from .paths import (
+    _is_safe_backend_executable,
+    ensure_private_state_dir,
+    managed_backend_path,
+    resolve_backend,
+    state_dir,
+)
 from .profiles import default_profile, list_profiles
 
 RELEASES_API = "https://api.github.com/repos/SpaceMolt/client-v2/releases"
@@ -141,8 +147,12 @@ def parse_backend_version(output: str) -> str | None:
 
 
 def backend_version(binary: str | Path) -> str:
+    binary_str = str(binary)
+    if not _is_safe_backend_executable(binary_str):
+        raise RuntimeError(f"refusing to execute unsafe backend path: {binary_str!r}")
+
     proc = subprocess.run(
-        [str(binary), "--version"],
+        [binary_str, "--version"],
         capture_output=True,
         text=True,
         check=False,
