@@ -17,6 +17,8 @@ import sys
 import urllib.request
 import urllib.error
 import urllib.parse
+import ipaddress
+import socket
 
 CLIENT = {"name": "mcp-probe", "version": "1.0"}
 OLD = "2025-06-18"
@@ -145,6 +147,34 @@ def lint(tools):
     return issues
 
 
+def _is_public_ip(ip_str):
+    ip = ipaddress.ip_address(ip_str)
+    return not (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+def validate_target_url(url):
+    parts = urllib.parse.urlsplit(url)
+    host = parts.hostname
+    if not host:
+        sys.exit("URL must include a hostname")
+    try:
+        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
+    except socket.gaierror:
+        sys.exit("URL host could not be resolved")
+    addrs = {info[4][0] for info in infos}
+    if not addrs:
+        sys.exit("URL host could not be resolved")
+    if any(not _is_public_ip(addr) for addr in addrs):
+        sys.exit("URL resolves to a non-public address; refusing request")
+
+
 def main():
     a = sys.argv[1:]
     if not a or a[0].startswith("-"):
@@ -152,6 +182,7 @@ def main():
     url, headers, call = a[0], {}, None
     if urllib.parse.urlsplit(url).scheme not in {"https", "http"}:
         sys.exit("URL must be http(s)")
+    validate_target_url(url)
     i = 1
     while i < len(a):
         if a[i] == "--header":
