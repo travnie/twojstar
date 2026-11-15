@@ -9,10 +9,15 @@ public sealed class FeedStore
     private readonly string _path;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public FeedStore(string? path = null)
+    public FeedStore() : this(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Feedboard", "feeds.json"))
     {
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Feedboard");
-        _path = ResolveStorePath(root, path);
+    }
+
+    // Explicit paths are for trusted in-process callers, not feed or CLI input.
+    internal FeedStore(string path)
+    {
+        _path = Path.GetFullPath(path);
     }
 
     public async Task<IReadOnlyList<FeedSource>> LoadAsync(CancellationToken cancellationToken = default)
@@ -246,21 +251,4 @@ public sealed class FeedStore
         return string.IsNullOrWhiteSpace(directory) ? Directory.GetCurrentDirectory() : directory;
     }
 
-    private static string ResolveStorePath(string root, string? path)
-    {
-        var fullRoot = Path.GetFullPath(root);
-        var candidate = string.IsNullOrWhiteSpace(path)
-            ? Path.Combine(fullRoot, "feeds.json")
-            : path;
-
-        var fullCandidate = Path.GetFullPath(candidate, fullRoot);
-        var rootPrefix = fullRoot.EndsWith(Path.DirectorySeparatorChar)
-            ? fullRoot
-            : fullRoot + Path.DirectorySeparatorChar;
-
-        if (!fullCandidate.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Store path must be within the Feedboard application data directory.", nameof(path));
-
-        return fullCandidate;
-    }
 }
