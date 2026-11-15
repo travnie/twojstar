@@ -1,6 +1,6 @@
 {
   "name": "google",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Android, Chrome and web development with Google Developer Knowledge MCP: android-compose (Kotlin, Compose, Gradle, navigation, performance, testing), chrome-web (MV3, Web Store, Baseline) and google-developer-knowledge (live docs, skill discovery and auth troubleshooting).",
   "author": {
     "name": "travnie",
@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/google",
   "repository": "https://github.com/travnie/twojstar",
-  "license": "Apache-2.0 AND ISC",
+  "license": "Apache-2.0",
   "keywords": [
     "android",
     "kotlin",

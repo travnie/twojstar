@@ -312,6 +312,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
         if (
             path.is_dir()
             or "tests" in rel.parts
+            or rel.parts[0] == "scripts"  # repo packaging tool, not plugin content
             or any(
                 part in {"__pycache__", ".git", "node_modules"}
                 for part in rel.parts

@@ -50,4 +50,4 @@ Private ChatGPT installation can still require registering remote MCP endpoints 
 
 ## Provenance
 
-Adapted from `google/skills` at commit `1d77046ad3670d62227f50a8f53286f6c6cde08b`. See `THIRD_PARTY_NOTICES.md`. Google-derived skill material remains Apache-2.0; repository packaging code is ISC. This is a personal toolkit maintained by travnie, not an official Google plugin.
+Adapted from `google/skills` at commit `1d77046ad3670d62227f50a8f53286f6c6cde08b`. See `THIRD_PARTY_NOTICES.md`. The plugin is Apache-2.0, like its Google sources; the repository's packaging script isn't shipped in the package. This is a personal toolkit maintained by travnie, not an official Google plugin.

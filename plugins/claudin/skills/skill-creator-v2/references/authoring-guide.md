@@ -48,12 +48,12 @@ your-skill-name/
 
 | Chapter | Covers |
 |---|---|
-| [01 Fundamentals](references/01-fundamentals.md) | What a skill is; the folder; progressive disclosure / composability / portability; skills + MCP (the kitchen analogy) |
-| [02 Planning and design](references/02-planning-and-design.md) | Use cases; the 3 use-case categories; success criteria; **technical requirements**; **frontmatter field rules**; writing descriptions (good/bad); instruction best practices |
-| [03 Testing and iteration](references/03-testing-and-iteration.md) | Triggering / functional / performance tests; example test suites; using `skill-creator`; iterating on under/over-trigger signals |
-| [04 Distribution and sharing](references/04-distribution-and-sharing.md) | Distribution model; Agent Skills open standard; **Skills API** (`/v1/skills`, `container.skills`); GitHub hosting; positioning |
-| [05 Patterns and troubleshooting](references/05-patterns-and-troubleshooting.md) | Problem- vs tool-first; the **5 patterns**; the full **troubleshooting** set |
-| [06 Resources and references](references/06-resources-and-references.md) | Official docs/blogs; support; **Reference A** quick checklist; **Reference B** full YAML frontmatter; **Reference C** example skills |
+| [01 Fundamentals](01-fundamentals.md) | What a skill is; the folder; progressive disclosure / composability / portability; skills + MCP (the kitchen analogy) |
+| [02 Planning and design](02-planning-and-design.md) | Use cases; the 3 use-case categories; success criteria; **technical requirements**; **frontmatter field rules**; writing descriptions (good/bad); instruction best practices |
+| [03 Testing and iteration](03-testing-and-iteration.md) | Triggering / functional / performance tests; example test suites; using `skill-creator`; iterating on under/over-trigger signals |
+| [04 Distribution and sharing](04-distribution-and-sharing.md) | Distribution model; Agent Skills open standard; **Skills API** (`/v1/skills`, `container.skills`); GitHub hosting; positioning |
+| [05 Patterns and troubleshooting](05-patterns-and-troubleshooting.md) | Problem- vs tool-first; the **5 patterns**; the full **troubleshooting** set |
+| [06 Resources and references](06-resources-and-references.md) | Official docs/blogs; support; **Reference A** quick checklist; **Reference B** full YAML frontmatter; **Reference C** example skills |
 
 ## The five workflow patterns (→ chapter 05)
 
@@ -67,12 +67,12 @@ your-skill-name/
 
 | Question | Go to |
 |---|---|
-| What can/can't go in frontmatter? Char limits? | Quick lookup above; [02](references/02-planning-and-design.md); [Reference B in 06](references/06-resources-and-references.md) |
-| How do I write a description that triggers? | [02 “The description field”](references/02-planning-and-design.md) |
-| Why won't my skill trigger / why does it over-trigger? | [05 Troubleshooting](references/05-patterns-and-troubleshooting.md); [03 iteration signals](references/03-testing-and-iteration.md) |
-| Skill loads but Claude ignores the instructions | [05 “Instructions not followed”](references/05-patterns-and-troubleshooting.md) |
-| How do I test triggering / output / performance? | [03](references/03-testing-and-iteration.md) |
-| How do I ship it (Claude.ai, Claude Code, API)? | [04](references/04-distribution-and-sharing.md) |
-| What metrics say it's working? | [02 “Define success criteria”](references/02-planning-and-design.md) |
-| Pre/post-upload checklist | [Reference A in 06](references/06-resources-and-references.md) |
-| It's slow / responses degraded | [05 “Large context issues”](references/05-patterns-and-troubleshooting.md) |
+| What can/can't go in frontmatter? Char limits? | Quick lookup above; [02](02-planning-and-design.md); [Reference B in 06](06-resources-and-references.md) |
+| How do I write a description that triggers? | [02 “The description field”](02-planning-and-design.md) |
+| Why won't my skill trigger / why does it over-trigger? | [05 Troubleshooting](05-patterns-and-troubleshooting.md); [03 iteration signals](03-testing-and-iteration.md) |
+| Skill loads but Claude ignores the instructions | [05 “Instructions not followed”](05-patterns-and-troubleshooting.md) |
+| How do I test triggering / output / performance? | [03](03-testing-and-iteration.md) |
+| How do I ship it (Claude.ai, Claude Code, API)? | [04](04-distribution-and-sharing.md) |
+| What metrics say it's working? | [02 “Define success criteria”](02-planning-and-design.md) |
+| Pre/post-upload checklist | [Reference A in 06](06-resources-and-references.md) |
+| It's slow / responses degraded | [05 “Large context issues”](05-patterns-and-troubleshooting.md) |

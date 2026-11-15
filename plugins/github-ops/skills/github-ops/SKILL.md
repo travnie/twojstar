@@ -1,11 +1,15 @@
 ---
 name: "github-ops"
-description: "Any GitHub work beyond a one-line read: git/gh vs GitHub MCP by environment, commits, PRs, Actions, releases, the pre-merge gate (threads, rulesets, BLOCKED merges) and Dependabot config and PRs."
+description: "Any GitHub work beyond a one-line read: git/gh (local or through a session proxy) vs GitHub MCP, commits and identity, PRs, Actions, releases, the pre-merge gate (threads, rulesets, BLOCKED merges) and Dependabot config and PRs."
 ---
 
 # GitHub Ops
 
 Two ways to act on a repo. Pick by **environment first**, then by task — they have different auth, different strengths, and different failure modes.
+
+## CI first
+
+If an Actions workflow already covers the job (build, lint, tests, generators, deploy), use it: push the branch, or `gh workflow run NAME --ref BRANCH` / MCP `actions_run_trigger` for dispatch-only jobs, then read the run. Don't download toolchains to rebuild locally what CI builds. Run locally only what no workflow covers, or a quick probe while writing code. On failure, read the log (`gh run view ID --log-failed`, MCP `get_job_logs`) before trying to reproduce.
 
 ## Environment first (decide before anything else)
 
@@ -16,6 +20,15 @@ Two ways to act on a repo. Pick by **environment first**, then by task — they 
 - **Never `push_files` / `create_or_update_file` into the repo you have checked out.** It bypasses git and the attribution settings, and the remote moves ahead of the working tree — the next `git push` gets rejected or clobbers it.
 - MCP `github:*` tools stay fine for **other** repos you have not cloned (reading a file elsewhere, searching code across the org) and for things `gh` cannot do.
 - **Cloud sessions specifics:** git and `gh` go through Anthropic's GitHub proxy, which injects credentials — no `gh auth login`, `GH_TOKEN` reads `proxy-injected` (a script that reads the token directly gets the placeholder, not a usable token). `git push` works only for the session's working branch. The proxy only serves a pinned set of GraphQL operations for PR workflows; on a 403 `This GraphQL query is not enabled for this session`, use REST: `gh api repos/{owner}/{repo}/...`. API requests reach only repositories attached to the session.
+
+**claude.ai chat sandbox** (`CLAUDE_CODE_REMOTE=true` with `CLAUDE_CODE_SESSION_ORIGIN=claude_ai_chat`): a cloud container whose preinstalled `git` and `gh` go through a GitHub proxy that injects the connected account's credentials. Verified behaviour:
+
+- **Auth check:** `gh api user -q .login`. Ignore `gh auth status`; it can report an invalid token while every call works. Never read or print the injected credentials.
+- **Repo scope:** only repositories attached to the session (an `add_repo`-style tool; request write/push access for API writes). Unattached → 403 `GitHub access to this repository is not enabled for this session`. Public repos still clone without attaching. Dot-named repos (`owner/.github`) may not attach; use the MCP connector for those.
+- **Clone:** `git clone --depth 1 https://github.com/OWNER/REPO`, one at a time, with a long timeout. Concurrent git operations per repo are capped: on 429 wait and retry once. Before pushing from a shallow clone, `git fetch origin main`, or the push can fail with 413.
+- **GraphQL is blocked**, so `gh pr view/create/edit/merge/list/checks`, `gh repo list` and `gh release list` fail with 403. Use REST: `gh api repos/OWNER/REPO/...`. Proxy-only REST routes replace the GraphQL-only parts: `GET .../pulls/N/ccr/review_threads`, `POST .../pulls/N/ccr/comments/ID/resolve` (`/unresolve`), `PUT|DELETE .../pulls/N/ccr/auto_merge`, `POST .../pulls/N/ccr/ready_for_review`, `POST .../pulls/N/ccr/convert_to_draft`.
+- **Also blocked:** search endpoints (use MCP `search_*`), Actions secrets (the user sets them in the UI), branch deletion (ask the user; so don't push scratch branches).
+- **Works:** `git push` to any new branch, `gh run list/view --log-failed`, REST reads of pulls, reviews, comments, check runs and `rules/branches/BASE`, `POST .../pulls` to open a PR, `PUT .../pulls/N/merge`.
 
 **No checkout** — claude.ai chat, or a repo you are not going to clone: use the MCP tools as described below; reach for `gh` only if a token actually exists (`gh auth status`).
 
@@ -59,6 +72,9 @@ Other MCP tools: `create_branch`, `delete_file`, `merge_pull_request`, `pull_req
 
 ## Commit & PR conventions
 
+- **Commit identity:** keep the session's default git identity and signing setup; a signed default identity shows as Verified. Don't override `--author` or `user.name`/`user.email`: a different author shows two people, and a committer without the signing key shows as unverified. Add a co-author trailer when the project asks for one.
+- **Comments and review replies:** if the session has a dedicated bot MCP for comments, reactions, reviews and thread resolution, use it for those instead of posting as the account owner.
+- **Bot reviews are advisory** (Codex, CodeRabbit, cubic…): verify each finding against the code, apply valid ones yourself, answer and resolve the rest with the reason. Don't ask a review bot to implement or push.
 - **Match the repo's existing style.** Before composing a message, glance at recent history (`list_commits`) and mirror it: prefix style (`chore:`, `fix:`, `feat:`), tense, scope. Don't impose conventional-commits on a repo that doesn't use them, and do follow it on one that does.
 - **Atomic commits.** One logical change per commit; files that must move together go in one commit (one `git commit` in a checkout, one `push_files` call in chat).
 - **Direct-to-`main` vs PR.** Small fix on a solo/low-stakes repo → committing straight to `main` is fine. Larger, risky, or collaborative → `create_branch` + `create_pull_request`. If a push to a protected branch is rejected, fall back to branch + PR rather than forcing it.
@@ -81,11 +97,13 @@ Both tools take the **whole file as a literal string** and commit whatever you h
 - **Large files, lockfiles, and binaries:** in a checkout, commit them with git. In connector-only chat, use a write tool only when its live schema explicitly supports the exact bytes you need; otherwise switch to a checkout or ask the user to upload through a supported UI. Do not invent host-specific helpers that are not present.
 - **Multi-file commits including existing repo files** (`feeds.yaml`, `README.md`): fetch each file's real content from the target ref first; a file left as a placeholder overwrites the real one. Pushing *only* the new/changed file is safe; including an existing file with a stub is destructive.
 - **Verify every push against the returned commit SHA.** In connector-only chat, re-read the written paths through the GitHub MCP. In a checkout, compare the committed tree to the local files and run the relevant parser/compiler checks.
+- **Hash-check uploads you can't diff:** `curl -fsSL https://raw.githubusercontent.com/O/R/<COMMIT-SHA>/<path> | sha256sum` against the local file. Use the commit SHA, not a branch name, which can serve a cached copy.
+- **Binaries (`.skill`, PNG, ICO):** never through the connector's string-content tools; they corrupt. Use git, or hand the file to the user for a UI upload.
 - **Watch encoding and escaping.** If a literal glyph or byte sequence matters, verify it from the committed object rather than trusting a reconstructed string.
 
 ## Merging a PR
 
-Don't just call `gh pr merge`/`merge_pull_request`. Run the gate first: threads resolved, `reviewDecision APPROVED`, `mergeStateStatus CLEAN`, every check green, no CI annotations, rulesets satisfied, commits signed if required. The trap that bites: `gh pr view` exits 0 regardless of what it reports, and `CLEAN` does **not** imply threads are resolved — so query the gate, *read* it, then merge as a separate command; never `gate && merge`. A `BLOCKED` with empty `reviewDecision` and all checks green is usually a repository **ruleset** (invisible to `gh pr view` and classic branch protection). In connector-only chat using `/mcp/x/all`, paginate `pull_request_read(method=get_review_comments)` and inspect each thread's resolution state; still say when rulesets or check-run annotations cannot be verified from the live MCP schema. Full recipes, signed-rebase ff-only merge, and `--force-with-lease` "stale info" recovery: `references/pr-merge-gate.md`.
+Don't just call `gh pr merge`/`merge_pull_request`. Run the gate first: threads resolved, `reviewDecision APPROVED`, `mergeStateStatus CLEAN`, every check green, no CI annotations, rulesets satisfied, commits signed if required. The trap that bites: `gh pr view` exits 0 regardless of what it reports, and `CLEAN` does **not** imply threads are resolved — so query the gate, *read* it, then merge as a separate command; never `gate && merge`. A `BLOCKED` with empty `reviewDecision` and all checks green is usually a repository **ruleset** (invisible to `gh pr view` and classic branch protection). In the chat sandbox the gate is REST-only (`references/pr-merge-gate.md` → REST gate); say which items you couldn't verify. In connector-only chat using `/mcp/x/all`, paginate `pull_request_read(method=get_review_comments)` and inspect each thread's resolution state; still say when rulesets or check-run annotations cannot be verified from the live MCP schema. Full recipes, signed-rebase ff-only merge, and `--force-with-lease` "stale info" recovery: `references/pr-merge-gate.md`.
 
 ## Dependabot
 
@@ -114,6 +132,8 @@ The parts that are non-obvious or that bite:
 ### Dependabot PRs
 
 **Merge/close/reopen `@dependabot` comment commands were deprecated in January 2026.** Merge with `gh pr merge` / auto-merge / MCP `merge_pull_request` like any other PR. Still live: `@dependabot rebase`, `recreate`, `ignore this dependency`, `ignore this major|minor|patch version`, and in grouped PRs `@dependabot ignore|unignore DEPENDENCY_NAME`.
+
+Dependabot may ignore commands posted by bot accounts; if one gets no response, ask the user to post it.
 
 To vet a bump before merging, MCP `check_dependency_vulnerabilities` takes a dependency list and returns advisories with fixed versions — pair it with `list_commits`/the PR diff rather than trusting the changelog link.
 

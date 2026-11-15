@@ -6,7 +6,24 @@ Discipline for driving a PR to merge *safely* — what must be true before mergi
 
 - **Connector-only chat:** use `pull_request_read` with `method=get_review_comments`, paginate with `perPage` and `after`, and inspect each returned thread's resolution state before merging. Use the other pull-request read methods for PR state/checks. Do **not** claim rulesets or CI annotations are verified unless the live MCP tool schema actually exposes them.
 - **Authed `gh` (sandbox with `GH_TOKEN`, or Claude Code):** the full gate below runs. Check `gh auth status` first. In Claude Code cloud sessions `gh` is authed via the GitHub proxy, which only allows a pinned set of GraphQL operations: if a `--json` field or `gh api graphql` query gets a 403 `This GraphQL query is not enabled for this session`, use the REST equivalents (`gh api repos/{owner}/{repo}/pulls/N`, `.../pulls/N/reviews`, `.../commits/SHA/check-runs`, `.../rules/branches/BASE`) and say which gate items you could not verify.
+- **claude.ai chat sandbox (GraphQL blocked):** every `gh pr …` command 403s. Use the REST gate below; threads come from the proxy route `.../pulls/N/ccr/review_threads`.
 - Plain-git bits (ff-only merge, force-with-lease, rebase ordering) run anywhere with a checkout.
+
+### REST gate (proxy sessions without GraphQL)
+
+```bash
+R=repos/OWNER/REPO; N=123
+gh api $R/pulls/$N --jq '{state, mergeable, mergeable_state, head: .head.sha, base: .base.ref, draft}'
+gh api $R/pulls/$N/reviews --jq '[.[] | {user: .user.login, state, commit_id}]'
+gh api $R/pulls/$N/ccr/review_threads            # proxy route: every thread resolved?
+SHA=$(gh api $R/pulls/$N --jq .head.sha)
+gh api "$R/commits/$SHA/check-runs" --paginate --jq '.check_runs[] | {name, status, conclusion, ann: .output.annotations_count}'
+gh api $R/rules/branches/BASE --jq 'map(.type)'
+# read all of it, then, as a separate command:
+gh api -X PUT $R/pulls/$N/merge -f merge_method=squash -f sha=$SHA
+```
+
+`mergeable_state`: `clean`, `blocked`, `behind`, `dirty`, `unstable`, or `unknown` (still computing; re-read). Resolve a thread with `POST $R/pulls/$N/ccr/comments/COMMENT_ID/resolve`, or with the session's comment-bot MCP when one is configured. Use a merge method the repository allows.
 
 ## The gate
 

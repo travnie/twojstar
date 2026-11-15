@@ -7,7 +7,7 @@
 - Package and skill PNG branding copied from the supplied Plugin Builder assets.
   The artwork contains the OpenAI mark; trademark rights remain with OpenAI.
   This personal toolkit does not claim OpenAI authorship or endorsement.
-- Packaging code adapted from `spacemolt/scripts/package_plugin.py`, ISC.
+- Repository packaging script (`scripts/`, adapted from the SpaceMolt packager) is not shipped in the package.
 
 Local adaptations: portable manifest guidance and validation; normalized private
 connection IDs; corrected skill prompt; explicit docs dependency; shared supplied

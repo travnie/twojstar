@@ -46,6 +46,22 @@ class AppBindingTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     PACK["stage"](source, dest, ident)
 
+    def test_extra_mcp_only_in_private_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "github-ops"
+            dest.mkdir()
+            PACK["stage"](ROOT / "plugins/github-ops", dest, None, {"claudiusz": "https://example.com/mcp"})
+            for rel in (".mcp.json", ".claude-plugin/plugin.json", "mcp.json"):
+                servers = json.loads((dest / rel).read_text())["mcpServers"]
+                self.assertEqual(set(servers), {"github", "claudiusz"}, rel)
+            source = json.loads((ROOT / "plugins/github-ops/mcp.json").read_text())["mcpServers"]
+            self.assertEqual(set(source), {"github"})
+            for bad in ({"github": "https://example.com/mcp"}, {"x": "http://example.com"}):
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    again = Path(tmp) / "again"
+                    again.mkdir(exist_ok=True)
+                    PACK["stage"](ROOT / "plugins/github-ops", again, None, bad)
+
     def test_skills_only_plugin_has_no_mcp_overlay(self):
         for name in SKILLS_ONLY:
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:

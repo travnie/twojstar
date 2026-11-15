@@ -1,6 +1,6 @@
 # Third-party notices
 
-The plugin wrapper and repository integration are ISC-licensed (`LICENSE.txt`). Each skill keeps its own license and attribution below.
+Every skill is Apache-2.0, following its Google sources; each keeps its own `LICENSE.txt` and attribution below.
 
 ## `android-compose`
 

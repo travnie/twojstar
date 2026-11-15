@@ -64,6 +64,6 @@ python -m unittest discover -s plugins/openai-dev-kit/tests -v
 ```
 
 Both upstream workflows retain their substance and Apache-2.0 licensing. Developer references live in `openai-docs`; build references and the unique scaffold live in `chatgpt-plugin-builder`.
-Packaging code: ISC, adapted from this repository's SpaceMolt packager.
+The plugin is Apache-2.0, like its sources; the repository's packaging script isn't shipped in the package.
 Original supplied archives remain the provenance source. Local validation does
 not prove account installation or live MCP discovery; verify those in ChatGPT.
