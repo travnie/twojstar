@@ -37,5 +37,11 @@ class ProbeTargetTests(unittest.TestCase):
                 probe.validate_target_url("http://localhost:8787/mcp", allow_loopback=True)
 
     def test_redirect_refused(self):
-        handler = probe.NoRedirect()
+        with patch.object(probe.socket, "getaddrinfo", return_value=self.addresses("8.8.8.8")):
+            opener = probe.Probe("https://example.test/mcp", {}).opener
+        handler = next(h for h in opener.handlers if isinstance(h, probe.NoRedirect))
         self.assertIsNone(handler.redirect_request(None, None, 302, "", {}, "http://localhost/"))
+
+
+if __name__ == "__main__":
+    unittest.main()
