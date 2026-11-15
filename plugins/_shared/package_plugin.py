@@ -12,7 +12,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.parse import urlparse
 
 import yaml
 

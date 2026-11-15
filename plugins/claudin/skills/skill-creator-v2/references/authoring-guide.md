@@ -34,7 +34,7 @@ description: What it does. Use when user asks to [specific phrases].
 
 ## File structure
 
-```
+```text
 your-skill-name/
 ├── SKILL.md         # Required
 ├── scripts/         # Optional - executable code

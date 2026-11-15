@@ -9,7 +9,7 @@ Discipline for driving a PR to merge *safely* — what must be true before mergi
 - **claude.ai chat sandbox (GraphQL blocked):** every `gh pr …` command 403s. Use the REST gate below; threads come from the proxy route `.../pulls/N/ccr/review_threads`.
 - Plain-git bits (ff-only merge, force-with-lease, rebase ordering) run anywhere with a checkout.
 
-### REST gate (proxy sessions without GraphQL)
+## REST gate (proxy sessions without GraphQL)
 
 ```bash
 R=repos/OWNER/REPO; N=123
