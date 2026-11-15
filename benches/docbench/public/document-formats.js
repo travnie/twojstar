@@ -112,6 +112,23 @@
     return null;
   }
 
+  function xmlPreviewSource(text) {
+    // Keep XML syntax intact. Strip only a simple prolog DTD; do not expand entities.
+    const prolog = /(?:\s+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->)/y;
+    let offset = 0;
+    while (offset < text.length) {
+      prolog.lastIndex = offset;
+      const match = prolog.exec(text);
+      if (!match) break;
+      offset = prolog.lastIndex;
+    }
+    if (!text.startsWith("<!DOCTYPE", offset)) return text;
+    const simpleDoctype = /<!DOCTYPE\s+[^\s<>\[\]"']+(?:\s+(?:SYSTEM\s+(?:"[^"]*"|'[^']*')|PUBLIC\s+(?:"[^"]*"|'[^']*')\s+(?:"[^"]*"|'[^']*')))?\s*>/y;
+    simpleDoctype.lastIndex = offset;
+    if (!simpleDoctype.exec(text)) throw new Error("XML DTD subsets are not supported in preview.");
+    return text.slice(0, offset) + text.slice(simpleDoctype.lastIndex);
+  }
+
   function detectXmlContent(trimmed) {
     return /^<\?xml\b/iu.test(trimmed) || /^<(?:rss|feed|tv|playlist)\b/iu.test(trimmed)
       ? "xml"
@@ -245,6 +262,7 @@
     formatFromFilename,
     formatHintFromFilename,
     formatFromContent,
+    xmlPreviewSource,
     detectFormat,
     preferredExtension,
     labelFor,

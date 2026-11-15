@@ -87,3 +87,9 @@ console.log("Doc Bench document format tests passed.");
 assert.equal(formats.detectFormat("sheet.csv", "a,b\n1,2"), "csv");
 assert.equal(formats.detectFormat("page.htm", "<script>alert(1)</script>"), "html");
 assert.equal(formats.isRaw("html"), true);
+
+const xml = '<?xml version="1.0"?><root attr="&quot;">&amp;<![CDATA[<script>]]><!-- <?keep?> --><?keep value?></root>';
+assert.equal(formats.xmlPreviewSource(xml), xml);
+assert.equal(formats.xmlPreviewSource('<!DOCTYPE tv SYSTEM "xmltv.dtd"><tv/>'), "<tv/>");
+assert.equal(formats.xmlPreviewSource('<!-- <!DOCTYPE root> --><root/>'), '<!-- <!DOCTYPE root> --><root/>');
+assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root [<!ENTITY unsafe "data">]><root>&unsafe;</root>'), /DTD subsets/);
