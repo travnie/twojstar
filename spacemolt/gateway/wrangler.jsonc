@@ -6,9 +6,6 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
-  "ai": {
-    "binding": "AI"
-  },
   "kv_namespaces": [
     {
       "binding": "STATE",
