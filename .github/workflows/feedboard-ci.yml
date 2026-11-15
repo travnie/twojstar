@@ -41,6 +41,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Check core storage in an isolated temp directory
+        run: dotnet run --project feedboard/tests/Feedboard.Core.Tests --configuration Release
+
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
 
