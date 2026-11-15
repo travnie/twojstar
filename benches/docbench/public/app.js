@@ -164,7 +164,12 @@
   }
 
   function xmlError(text) {
-    const doc = new DOMParser().parseFromString(text, "application/xml");
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(textFormats.xmlPreviewSource(text), "application/xml");
+    } catch (error) {
+      return { message: error.message, position: null };
+    }
     const root = doc.documentElement;
     const parserNamespaces = new Set([
       "http://www.mozilla.org/newlayout/xml/parsererror.xml",
@@ -173,7 +178,10 @@
     const error = root?.localName === "parsererror" && parserNamespaces.has(root.namespaceURI)
       ? root
       : null;
-    if (!error) return null;
+    if (!error) {
+      return textFormats.xmlDoctypeMatchesRoot(doc)
+        ? null : { message: "XML DOCTYPE does not match the root element.", position: null };
+    }
     const rawMessage = error.textContent.trim().replace(/\s+/g, " ");
     const lineMatch = rawMessage.match(/line(?: number)?\s*[: ]\s*(\d+).*?column(?: number)?\s*[: ]\s*(\d+)/i);
     const message = rawMessage

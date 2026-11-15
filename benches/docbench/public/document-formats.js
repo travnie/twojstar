@@ -113,8 +113,9 @@
   }
 
   function xmlPreviewSource(text) {
-    // Keep XML syntax intact. Strip only a simple prolog DTD; do not expand entities.
-    const prolog = /(?:\s+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->)/y;
+    // Bound synchronous parsing; keep syntax and source error offsets intact.
+    if (text.length > 2 * 1024 * 1024) throw new Error("XML exceeds the 2 Mi-character parsing limit.");
+    const prolog = /(?:[ \t\r\n]+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->)/y;
     function skipProlog(start) {
       let offset = start;
       while (offset < text.length) {
@@ -124,14 +125,21 @@
       }
       return offset;
     }
-    const offset = skipProlog(0);
+    const offset = skipProlog(text.charCodeAt(0) === 0xfeff ? 1 : 0);
     if (!text.startsWith("<!DOCTYPE", offset)) return text;
-    const simpleDoctype = /<!DOCTYPE\s+[^\s<>\[\]"']+(?:\s+(?:SYSTEM\s+(?:"[^"]*"|'[^']*')|PUBLIC\s+(?:"[^"]*"|'[^']*')\s+(?:"[^"]*"|'[^']*')))?\s*>/y;
+    // Preserve the declared root but mask external IDs; no external DTD or entity subset.
+    const simpleDoctype = /(<!DOCTYPE[ \t\r\n]+[^\s<>\[\]"']+)(?:[ \t\r\n]+(?:SYSTEM[ \t\r\n]+(?:"[^"]*"|'[^']*')|PUBLIC[ \t\r\n]+(?:"[^"]*"|'[^']*')[ \t\r\n]+(?:"[^"]*"|'[^']*')))?[ \t\r\n]*>/y;
     simpleDoctype.lastIndex = offset;
-    if (!simpleDoctype.exec(text)) throw new Error("XML DTD subsets are not supported in preview.");
+    const match = simpleDoctype.exec(text);
+    if (!match) throw new Error("XML DTD subsets are not supported in preview.");
     const end = simpleDoctype.lastIndex;
     if (text.startsWith("<!DOCTYPE", skipProlog(end))) throw new Error("Duplicate XML DOCTYPE.");
-    return text.slice(0, offset) + text.slice(end);
+    const prefixEnd = offset + match[1].length;
+    return text.slice(0, prefixEnd) + text.slice(prefixEnd, end - 1).replace(/[^\r\n]/g, " ") + text.slice(end - 1);
+  }
+
+  function xmlDoctypeMatchesRoot(doc) {
+    return !doc.doctype || doc.doctype.name === doc.documentElement?.nodeName;
   }
 
   function detectXmlContent(trimmed) {
@@ -268,6 +276,7 @@
     formatHintFromFilename,
     formatFromContent,
     xmlPreviewSource,
+    xmlDoctypeMatchesRoot,
     detectFormat,
     preferredExtension,
     labelFor,

@@ -90,8 +90,19 @@ assert.equal(formats.isRaw("html"), true);
 
 const xml = '<?xml version="1.0"?><root attr="&quot;">&amp;<![CDATA[<script>]]><!-- <?keep?> --><?keep value?></root>';
 assert.equal(formats.xmlPreviewSource(xml), xml);
-assert.equal(formats.xmlPreviewSource('<!DOCTYPE tv SYSTEM "xmltv.dtd"><tv/>'), "<tv/>");
+const externalXml = '<!DOCTYPE tv SYSTEM\n "xmltv.dtd"><tv/>';
+const safeXml = formats.xmlPreviewSource(externalXml);
+assert.equal(safeXml.length, externalXml.length);
+assert.deepEqual(safeXml.split("\n").map((line) => line.length), externalXml.split("\n").map((line) => line.length));
+assert.match(safeXml, /^<!DOCTYPE tv\s+><tv\/>$/);
+assert.equal(formats.xmlPreviewSource("<!DOCTYPE tv><tv/>"), "<!DOCTYPE tv><tv/>");
+assert.equal(formats.xmlDoctypeMatchesRoot({ doctype: { name: "tv" }, documentElement: { nodeName: "rss" } }), false);
+assert.equal(formats.xmlDoctypeMatchesRoot({ doctype: { name: "tv" }, documentElement: { nodeName: "tv" } }), true);
+assert.equal(formats.xmlDoctypeMatchesRoot({ documentElement: { nodeName: "rss" } }), true);
 assert.equal(formats.xmlPreviewSource('<!-- <!DOCTYPE root> --><root/>'), '<!-- <!DOCTYPE root> --><root/>');
 assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root [<!ENTITY unsafe "data">]><root>&unsafe;</root>'), /DTD subsets/);
 
 assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root><!-- x --><!DOCTYPE root [<!ENTITY unsafe "data">]><root/>'), /Duplicate XML DOCTYPE/);
+
+assert.throws(() => formats.xmlPreviewSource('\ufeff<!DOCTYPE root [<!ENTITY unsafe "data">]><root/>'), /DTD subsets/);
+assert.throws(() => formats.xmlPreviewSource("x".repeat(2 * 1024 * 1024 + 1)), /parsing limit/);

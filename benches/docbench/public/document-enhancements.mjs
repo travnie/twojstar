@@ -1270,6 +1270,11 @@ function renderEnhancedPreview() {
       updateMeta();
       return;
     }
+    if (!textFormats.xmlDoctypeMatchesRoot(doc)) {
+      renderParseError({ message: "XML DOCTYPE does not match the root element.", position: null });
+      updateMeta();
+      return;
+    }
     setPreviewMode("tree", "XML tree");
     preview.replaceChildren(renderXmlTree(doc));
     setStatus("good", "Valid · tree");
