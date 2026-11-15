@@ -95,9 +95,15 @@ function normalizeEol(text) {
 }
 
 function sanitizeXmlForPreview(text) {
-  return text
+  const stripped = text
     .replace(/<\?[\s\S]*?\?>/g, "")
     .replace(/<!DOCTYPE[\s\S]*?>/gi, "");
+  return stripped
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 function applyEol(text, kind) {
