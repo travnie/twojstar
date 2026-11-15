@@ -1,3 +1,5 @@
+![Audacity](https://img.shields.io/badge/Audacity-00C?logo=audacity&logoColor=fff&style=for-the-badge)
+
 # Audacity plugins
 
 Home for small audio effects and workflow helpers aimed primarily at Audacity.
