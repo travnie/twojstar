@@ -112,6 +112,47 @@
     return null;
   }
 
+  function xmlPreviewSource(text) {
+    // Bound synchronous parsing; keep syntax and source error offsets intact.
+    if (text.length > 2 * 1024 * 1024) throw new Error("XML exceeds the 2 Mi-character parsing limit.");
+    const prolog = /(?:[ \t\r\n]+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->)/y;
+    function skipProlog(start) {
+      let offset = start;
+      while (offset < text.length) {
+        prolog.lastIndex = offset;
+        if (!prolog.exec(text)) break;
+        offset = prolog.lastIndex;
+      }
+      return offset;
+    }
+    const offset = skipProlog(text.charCodeAt(0) === 0xfeff ? 1 : 0);
+    if (!text.startsWith("<!DOCTYPE", offset)) return text;
+    // Preserve the declared root but mask external IDs; no external DTD or entity subset.
+    const simpleDoctype = /(<!DOCTYPE[ \t\r\n]+[^\s<>\[\]"']+)(?:[ \t\r\n]+(?:SYSTEM[ \t\r\n]+(?:"[^"]*"|'[^']*')|PUBLIC[ \t\r\n]+(?:"[^"]*"|'[^']*')[ \t\r\n]+(?:"[^"]*"|'[^']*')))?[ \t\r\n]*>/y;
+    simpleDoctype.lastIndex = offset;
+    const match = simpleDoctype.exec(text);
+    if (!match) throw new Error("XML DTD subsets are not supported in preview.");
+    const end = simpleDoctype.lastIndex;
+    if (text.startsWith("<!DOCTYPE", skipProlog(end))) throw new Error("Duplicate XML DOCTYPE.");
+    const prefixEnd = offset + match[1].length;
+    const externalId = text.slice(prefixEnd, end - 1);
+    // Reject invalid XML characters before masking external identifiers.
+    for (const char of externalId) {
+      const point = char.codePointAt(0);
+      if (point !== 0x9 && point !== 0xa && point !== 0xd
+        && !(point >= 0x20 && point <= 0xd7ff)
+        && !(point >= 0xe000 && point <= 0xfffd)
+        && !(point >= 0x10000 && point <= 0x10ffff)) {
+        throw new Error("Invalid XML character in DOCTYPE.");
+      }
+    }
+    return text.slice(0, prefixEnd) + externalId.replace(/[^\r\n]/g, " ") + text.slice(end - 1);
+  }
+
+  function xmlDoctypeMatchesRoot(doc) {
+    return !doc.doctype || doc.doctype.name === doc.documentElement?.nodeName;
+  }
+
   function detectXmlContent(trimmed) {
     return /^<\?xml\b/iu.test(trimmed) || /^<(?:rss|feed|tv|playlist)\b/iu.test(trimmed)
       ? "xml"
@@ -245,6 +286,8 @@
     formatFromFilename,
     formatHintFromFilename,
     formatFromContent,
+    xmlPreviewSource,
+    xmlDoctypeMatchesRoot,
     detectFormat,
     preferredExtension,
     labelFor,

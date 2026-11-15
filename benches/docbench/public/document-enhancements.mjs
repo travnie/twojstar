@@ -94,18 +94,6 @@ function normalizeEol(text) {
   return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-function sanitizeXmlForPreview(text) {
-  const stripped = text
-    .replace(/<\?[\s\S]*?\?>/g, "")
-    .replace(/<!DOCTYPE[\s\S]*?>/gi, "");
-  return stripped
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
 function applyEol(text, kind) {
   const normalized = normalizeEol(text);
   if (kind === "CRLF") return normalized.replace(/\n/g, "\r\n");
@@ -1267,10 +1255,23 @@ function renderEnhancedPreview() {
     return;
   }
   if (format === "xml") {
-    const doc = new DOMParser().parseFromString(sanitizeXmlForPreview(editor.value), "application/xml");
+    let doc;
+    try {
+      // Detached XML only; renderXmlTree creates fresh nodes with textContent.
+      doc = new DOMParser().parseFromString(textFormats.xmlPreviewSource(editor.value), "application/xml");
+    } catch (error) {
+      renderParseError({ message: error.message, position: null });
+      updateMeta();
+      return;
+    }
     const parserError = xmlParserError(doc);
     if (parserError) {
       renderParseError(parseXmlError(parserError));
+      updateMeta();
+      return;
+    }
+    if (!textFormats.xmlDoctypeMatchesRoot(doc)) {
+      renderParseError({ message: "XML DOCTYPE does not match the root element.", position: null });
       updateMeta();
       return;
     }
