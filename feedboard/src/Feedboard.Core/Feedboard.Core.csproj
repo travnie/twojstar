@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Feedboard.Core.Tests" />
+  </ItemGroup>
 </Project>
