@@ -82,8 +82,6 @@ assert.equal(formats.formatFromContent("plain prose only"), null);
 assert.equal(formats.formatFromContent("{foo: 'bar'}"), "json5");
 assert.equal(formats.formatFromContent("{\n  // comment\n  \"ok\": true,\n}"), "jsonc");
 
-console.log("Doc Bench document format tests passed.");
-
 assert.equal(formats.detectFormat("sheet.csv", "a,b\n1,2"), "csv");
 assert.equal(formats.detectFormat("page.htm", "<script>alert(1)</script>"), "html");
 assert.equal(formats.isRaw("html"), true);
@@ -106,3 +104,8 @@ assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root><!-- x --><!DOCTYPE
 
 assert.throws(() => formats.xmlPreviewSource('\ufeff<!DOCTYPE root [<!ENTITY unsafe "data">]><root/>'), /DTD subsets/);
 assert.throws(() => formats.xmlPreviewSource("x".repeat(2 * 1024 * 1024 + 1)), /parsing limit/);
+
+for (const invalid of ["\u0000", "\u0001", "\ud800", "\ufffe", "\uffff"]) {
+  assert.throws(() => formats.xmlPreviewSource('<!DOCTYPE root SYSTEM "bad' + invalid + '.dtd"><root/>'), /Invalid XML character/);
+}
+console.log("Doc Bench document format tests passed.");

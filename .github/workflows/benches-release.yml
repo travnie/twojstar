@@ -25,7 +25,8 @@ jobs:
   build:
     name: Build and validate
     if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-slim
+    # Browser regression uses the standard image's preinstalled Chrome.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -58,6 +59,10 @@ jobs:
       - name: Check Docbench
         working-directory: benches
         run: npm run check:docbench
+
+      - name: Test Docbench XML preview in Chrome
+        working-directory: benches/docbench
+        run: node tests/xml-preview.browser.mjs
 
       - name: Fail on stale generated files
         # Builds regenerate synced/emitted files; any tracked diff means a committed copy is stale.

@@ -135,7 +135,18 @@
     const end = simpleDoctype.lastIndex;
     if (text.startsWith("<!DOCTYPE", skipProlog(end))) throw new Error("Duplicate XML DOCTYPE.");
     const prefixEnd = offset + match[1].length;
-    return text.slice(0, prefixEnd) + text.slice(prefixEnd, end - 1).replace(/[^\r\n]/g, " ") + text.slice(end - 1);
+    const externalId = text.slice(prefixEnd, end - 1);
+    // Reject invalid XML characters before masking external identifiers.
+    for (const char of externalId) {
+      const point = char.codePointAt(0);
+      if (point !== 0x9 && point !== 0xa && point !== 0xd
+        && !(point >= 0x20 && point <= 0xd7ff)
+        && !(point >= 0xe000 && point <= 0xfffd)
+        && !(point >= 0x10000 && point <= 0x10ffff)) {
+        throw new Error("Invalid XML character in DOCTYPE.");
+      }
+    }
+    return text.slice(0, prefixEnd) + externalId.replace(/[^\r\n]/g, " ") + text.slice(end - 1);
   }
 
   function xmlDoctypeMatchesRoot(doc) {
