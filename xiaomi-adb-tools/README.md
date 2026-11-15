@@ -1,6 +1,8 @@
 # Xiaomi ADB/Fastboot Tools
 
-[![xiaomi-adb-tools-ci CI](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml) [![JavaFX](https://img.shields.io/badge/JavaFX-E76F00?logo=openjdk&logoColor=white&style=flat-square)](https://openjfx.io/) [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white&style=flat-square)](https://kotlinlang.org/)
+[![xiaomi-adb-tools-ci](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/xiaomi-adb-tools-ci.yml)  
+![Xiaomi](https://img.shields.io/badge/Xiaomi-FF6900?logo=xiaomi&logoColor=fff&style=flat-square)
+[![JavaFX](https://img.shields.io/badge/JavaFX-E76F00?logo=openjdk&logoColor=white&style=flat-square)](https://openjfx.io/) [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white&style=flat-square)](https://kotlinlang.org/)
 
 > **Agent entry:** Gradle/Kotlin/JavaFX desktop frontend; uses `adb`/`fastboot` from `PATH` when available, otherwise reuses/downloads platform-tools into private app data. **Linux arm64 requires system-installed `adb` and `fastboot`**; the automatic download is not arm64-compatible.
 > **Validate / distribution:** [Xiaomi CI](../.github/workflows/xiaomi-adb-tools-ci.yml) builds native archives for five platforms; [download](https://github.com/travnie/twojstar/releases/latest/download/xiaomi-adb-tools.zip).
