@@ -175,7 +175,7 @@ def stage(source: Path, target: Path, apps: dict[str, str] | None = None) -> Non
         rel = path.relative_to(source)
         if path.is_symlink():
             raise ValueError(f"symlink: {rel}")
-        if path.is_dir() or "tests" in rel.parts:
+        if path.is_dir() or "tests" in rel.parts or rel.parts[0] == "scripts":
             continue
         if not path.is_file() or any(part in {"__pycache__", ".git", "node_modules"} for part in rel.parts):
             raise ValueError(f"unexpected package member: {rel}")

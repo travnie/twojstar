@@ -1,6 +1,6 @@
 # Third-party notices
 
-The bundled `cloudflare` skill and reference tree come from [`cloudflare/skills`](https://github.com/cloudflare/skills) (synced at `cbf893b`, 2026-11-10) and retain the Apache-2.0 license at `skills/cloudflare/LICENSE.txt` (copy: `LICENSE.cloudflare.txt`). The plugin wrapper and repository integration are ISC-licensed.
+The bundled `cloudflare` skill and reference tree come from [`cloudflare/skills`](https://github.com/cloudflare/skills) (synced at `cbf893b`, 2026-11-10) and retain the Apache-2.0 license, which covers the whole plugin, at `skills/cloudflare/LICENSE.txt` (copy: `LICENSE.cloudflare.txt`).
 
 The plugin references Cloudflare's hosted `https://mcp.cloudflare.com/mcp`; the remote service is not redistributed.
 

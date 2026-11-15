@@ -1,6 +1,6 @@
 # Third-party notices
 
-The plugin wrapper and repository integration are ISC-licensed (`LICENSE.txt`). Each skill keeps its own license and attribution below.
+Every skill is MIT-licensed by its upstream author; each keeps its own license file and attribution below.
 
 ## `ux-design`
 

@@ -1,6 +1,6 @@
 # Third-party notices
 
-The plugin wrapper and repository integration are ISC-licensed (`LICENSE.txt`). Each skill keeps its own license and attribution below.
+Every skill is Apache-2.0, following its Anthropic and OpenAI Dev Kit sources, and keeps its own `LICENSE.txt`. `mcp-dev` also condenses MIT-licensed material from the MCP ext-apps project, attributed below. Attribution for each skill is below or in its own `NOTICE.md`.
 
 ## `mcp-dev`
 

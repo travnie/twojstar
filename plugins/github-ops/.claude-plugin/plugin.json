@@ -1,6 +1,6 @@
 {
   "name": "github-ops",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
   "author": {
     "name": "travnie",
@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
   "repository": "https://github.com/travnie/twojstar",
-  "license": "ISC AND CC-BY-SA-4.0",
+  "license": "CC-BY-SA-4.0",
   "keywords": [
     "github",
     "pull-requests",

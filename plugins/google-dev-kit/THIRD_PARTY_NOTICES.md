@@ -14,7 +14,7 @@ This plugin contains condensed and modified derivatives of Apache-2.0 material f
 - `skills/cloud/gemini-agents-api`
 - `skills/cloud/application-design-center-design-deploy`
 
-The derivatives were reorganized, deduplicated, shortened, and moved toward live documentation/MCP lookup. See `LICENSE.google-skills.txt`.
+The derivatives were reorganized, deduplicated, shortened, and moved toward live documentation/MCP lookup. See `LICENSE`.
 
 ## Google Cloud product icons
 

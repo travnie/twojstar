@@ -141,12 +141,12 @@ def validate(root: Path) -> tuple[dict, dict | None]:
         if not isinstance(policy.get("allow_implicit_invocation"), bool):
             raise ValueError(f"skill must declare allow_implicit_invocation: {child.name}")
 
-    if not any(path.is_file() for path in root.glob("LICENSE*")):
+    if not any(path.is_file() for path in root.rglob("LICENSE*")):
         raise ValueError("plugin package must include license text")
     return manifest, mcp
 
 
-def stage(source: Path, target: Path, app_id: str | None = None) -> None:
+def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict[str, str] | None = None) -> None:
     source = source.resolve()
     for path in sorted(source.rglob("*")):
         rel = path.relative_to(source)
@@ -163,6 +163,25 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
         dest.write_bytes(path.read_bytes())
 
     manifest, mcp = validate(target)
+    if extra_mcp:
+        # Private builds only: personal servers that must not live in the public source.
+        mcp = mcp or {"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", "mcpServers": {}}
+        for name, url in extra_mcp.items():
+            parsed = urlparse(url)
+            if (
+                name in mcp["mcpServers"]
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name)
+                or parsed.scheme != "https"
+                or not parsed.netloc
+            ):
+                raise ValueError(f"--extra-mcp needs a new name and an https URL: {name}")
+            mcp["mcpServers"][name] = {"type": "streamable-http", "url": url}
+        (target / "mcp.json").write_text(json.dumps(mcp, indent=2) + "\n", encoding="utf-8")
+        claude = target / ".claude-plugin/plugin.json"
+        if claude.is_file():
+            data = json.loads(claude.read_text(encoding="utf-8"))
+            data["mcpServers"] = {name: {"type": "http", "url": server["url"]} for name, server in mcp["mcpServers"].items()}
+            claude.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if app_id is not None:
         if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
             raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
@@ -187,7 +206,7 @@ def stage(source: Path, target: Path, app_id: str | None = None) -> None:
         (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
-def package(source: Path, output: Path, app_id: str | None = None) -> dict:
+def package(source: Path, output: Path, app_id: str | None = None, extra_mcp: dict[str, str] | None = None) -> dict:
     source = source.resolve()
     output = output.resolve()
     if output == source or output.is_relative_to(source):
@@ -196,7 +215,7 @@ def package(source: Path, output: Path, app_id: str | None = None) -> dict:
     with tempfile.TemporaryDirectory() as directory:
         staged = Path(directory) / source.name
         staged.mkdir()
-        stage(source, staged, app_id)
+        stage(source, staged, app_id, extra_mcp)
         temp = output.with_suffix(output.suffix + ".tmp")
         try:
             with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -235,5 +254,22 @@ if __name__ == "__main__":
         "--app-id",
         help="Existing registered MCP app connection-page ID; adds an optional private binding",
     )
+    parser.add_argument(
+        "--extra-mcp",
+        action="append",
+        default=[],
+        metavar="NAME=URL",
+        help="Private builds only: add a personal remote MCP server (repeatable)",
+    )
     args = parser.parse_args()
-    print(json.dumps(package(args.source, args.output, args.app_id), indent=2))
+    extra: dict[str, str] = {}
+    for item in args.extra_mcp:
+        name, separator, url = item.partition("=")
+        if not separator or not name or name in extra:
+            parser.error("--extra-mcp needs unique NAME=URL values")
+        extra[name] = url
+    try:
+        result = package(args.source, args.output, args.app_id, extra)
+    except ValueError as error:
+        parser.error(str(error))
+    print(json.dumps(result, indent=2))
