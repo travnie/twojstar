@@ -1,6 +1,6 @@
 # Third-party notices
 
-Every skill is MIT-licensed by its upstream author; each keeps its own `LICENSE` file and attribution below.
+Every skill is MIT-licensed by its upstream author; each keeps its own license file and attribution below.
 
 ## `ux-design`
 

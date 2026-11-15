@@ -1,6 +1,6 @@
 # Third-party notices
 
-Every skill is Apache-2.0, following its Google sources; each keeps its own `LICENSE.txt` and attribution below.
+Every skill is Apache-2.0, following its Google sources; each skill folder keeps its own `LICENSE.txt`, with attribution below.
 
 ## `android-compose`
 

@@ -13,17 +13,23 @@ Discipline for driving a PR to merge *safely* — what must be true before mergi
 
 ```bash
 R=repos/OWNER/REPO; N=123
-gh api $R/pulls/$N --jq '{state, mergeable, mergeable_state, head: .head.sha, base: .base.ref, draft}'
-gh api $R/pulls/$N/reviews --jq '[.[] | {user: .user.login, state, commit_id}]'
+PR=$(gh api $R/pulls/$N)
+jq '{state, mergeable, mergeable_state, head: .head.sha, base: .base.ref, draft}' <<<"$PR"
+SHA=$(jq -r .head.sha <<<"$PR")   # gate and merge this exact head
+gh api --paginate $R/pulls/$N/reviews --jq '.[] | {user: .user.login, state, commit_id}'
 gh api $R/pulls/$N/ccr/review_threads            # proxy route: every thread resolved?
-SHA=$(gh api $R/pulls/$N --jq .head.sha)
-gh api "$R/commits/$SHA/check-runs" --paginate --jq '.check_runs[] | {name, status, conclusion, ann: .output.annotations_count}'
+gh api --paginate "$R/commits/$SHA/check-runs" --jq '.check_runs[] | {name, status, conclusion, ann: .output.annotations_count}'
+gh api "$R/commits/$SHA/status" --jq '.statuses[] | {context, state}'   # legacy commit statuses
 gh api $R/rules/branches/BASE --jq 'map(.type)'
-# read all of it, then, as a separate command:
+```
+
+Read all of it. Then, as a separate command, merge with a method the repository allows (`squash`, `merge` or `rebase`). If the head moved, GitHub rejects the `sha` with 409; rerun the gate.
+
+```bash
 gh api -X PUT $R/pulls/$N/merge -f merge_method=squash -f sha=$SHA
 ```
 
-`mergeable_state`: `clean`, `blocked`, `behind`, `dirty`, `unstable`, or `unknown` (still computing; re-read). Resolve a thread with `POST $R/pulls/$N/ccr/comments/COMMENT_ID/resolve`, or with the session's comment-bot MCP when one is configured. Use a merge method the repository allows.
+`mergeable_state` includes `clean`, `blocked`, `behind`, `dirty`, `unstable`, `draft`, and `unknown` (still computing; re-read). Resolve a thread with `POST $R/pulls/$N/ccr/comments/COMMENT_ID/resolve`, or with the session's comment-bot MCP when one is configured.
 
 ## The gate
 

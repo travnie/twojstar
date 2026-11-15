@@ -9,7 +9,7 @@ Two ways to act on a repo. Pick by **environment first**, then by task — they 
 
 ## CI first
 
-If an Actions workflow already covers the job (build, lint, tests, generators, deploy), use it: push the branch, or `gh workflow run NAME --ref BRANCH` / MCP `actions_run_trigger` for dispatch-only jobs, then read the run. Don't download toolchains to rebuild locally what CI builds. Run locally only what no workflow covers, or a quick probe while writing code. On failure, read the log (`gh run view ID --log-failed`, MCP `get_job_logs`) before trying to reproduce.
+If an Actions workflow already covers the job (build, lint, tests, generators, deploy), use it: push the branch, or `gh workflow run NAME --ref BRANCH` / MCP `actions_run_trigger` for dispatch-only jobs, then read the run. Don't download toolchains to rebuild locally what CI builds. Run locally only what no workflow covers, or can't be triggered from this branch (for example a `pull_request`-only workflow with no PR and no `workflow_dispatch`), or a quick probe while writing code. On failure, read the log (`gh run view ID --log-failed`, MCP `get_job_logs`) before trying to reproduce.
 
 ## Environment first (decide before anything else)
 
@@ -25,10 +25,10 @@ If an Actions workflow already covers the job (build, lint, tests, generators, d
 
 - **Auth check:** `gh api user -q .login`. Ignore `gh auth status`; it can report an invalid token while every call works. Never read or print the injected credentials.
 - **Repo scope:** only repositories attached to the session (an `add_repo`-style tool; request write/push access for API writes). Unattached → 403 `GitHub access to this repository is not enabled for this session`. Public repos still clone without attaching. Dot-named repos (`owner/.github`) may not attach; use the MCP connector for those.
-- **Clone:** `git clone --depth 1 https://github.com/OWNER/REPO`, one at a time, with a long timeout. Concurrent git operations per repo are capped: on 429 wait and retry once. Before pushing from a shallow clone, `git fetch origin main`, or the push can fail with 413.
+- **Clone:** `git clone --depth 1 https://github.com/OWNER/REPO`, one at a time, with a long timeout. Concurrent git operations per repo are capped: on 429 wait and retry once. Before pushing from a shallow clone, fetch the default or base branch (`git fetch origin main`, or whatever the repo uses), or the push can fail with 413.
 - **GraphQL is blocked**, so `gh pr view/create/edit/merge/list/checks`, `gh repo list` and `gh release list` fail with 403. Use REST: `gh api repos/OWNER/REPO/...`. Proxy-only REST routes replace the GraphQL-only parts: `GET .../pulls/N/ccr/review_threads`, `POST .../pulls/N/ccr/comments/ID/resolve` (`/unresolve`), `PUT|DELETE .../pulls/N/ccr/auto_merge`, `POST .../pulls/N/ccr/ready_for_review`, `POST .../pulls/N/ccr/convert_to_draft`.
 - **Also blocked:** search endpoints (use MCP `search_*`), Actions secrets (the user sets them in the UI), branch deletion (ask the user; so don't push scratch branches).
-- **Works:** `git push` to any new branch, `gh run list/view --log-failed`, REST reads of pulls, reviews, comments, check runs and `rules/branches/BASE`, `POST .../pulls` to open a PR, `PUT .../pulls/N/merge`.
+- **Works here** (unlike the working-branch limit in Claude Code cloud sessions above): `git push` to any new branch, `gh run list`, `gh run view ID --log-failed`, REST reads of pulls, reviews, comments, check runs and `rules/branches/BASE`, `POST .../pulls` to open a PR, `PUT .../pulls/N/merge`.
 
 **No checkout** — claude.ai chat, or a repo you are not going to clone: use the MCP tools as described below; reach for `gh` only if a token actually exists (`gh auth status`).
 
@@ -97,7 +97,7 @@ Both tools take the **whole file as a literal string** and commit whatever you h
 - **Large files, lockfiles, and binaries:** in a checkout, commit them with git. In connector-only chat, use a write tool only when its live schema explicitly supports the exact bytes you need; otherwise switch to a checkout or ask the user to upload through a supported UI. Do not invent host-specific helpers that are not present.
 - **Multi-file commits including existing repo files** (`feeds.yaml`, `README.md`): fetch each file's real content from the target ref first; a file left as a placeholder overwrites the real one. Pushing *only* the new/changed file is safe; including an existing file with a stub is destructive.
 - **Verify every push against the returned commit SHA.** In connector-only chat, re-read the written paths through the GitHub MCP. In a checkout, compare the committed tree to the local files and run the relevant parser/compiler checks.
-- **Hash-check uploads you can't diff:** `curl -fsSL https://raw.githubusercontent.com/O/R/<COMMIT-SHA>/<path> | sha256sum` against the local file. Use the commit SHA, not a branch name, which can serve a cached copy.
+- **Hash-check uploads you can't diff:** `gh api 'repos/O/R/contents/<path>?ref=<COMMIT-SHA>' -H 'Accept: application/vnd.github.raw' | sha256sum` against the local file; for a public repo, `curl -fsSL https://raw.githubusercontent.com/O/R/<COMMIT-SHA>/<path>` also works. Use the commit SHA, not a branch name, which can serve a cached copy. An empty download hashes too, so check the size first.
 - **Binaries (`.skill`, PNG, ICO):** never through the connector's string-content tools; they corrupt. Use git, or hand the file to the user for a UI upload.
 - **Watch encoding and escaping.** If a literal glyph or byte sequence matters, verify it from the committed object rather than trusting a reconstructed string.
 

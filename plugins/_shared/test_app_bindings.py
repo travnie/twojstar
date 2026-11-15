@@ -54,9 +54,14 @@ class AppBindingTests(unittest.TestCase):
             for rel in (".mcp.json", ".claude-plugin/plugin.json", "mcp.json"):
                 servers = json.loads((dest / rel).read_text())["mcpServers"]
                 self.assertEqual(set(servers), {"github", "claudiusz"}, rel)
-            source = json.loads((ROOT / "plugins/github-ops/mcp.json").read_text())["mcpServers"]
-            self.assertEqual(set(source), {"github"})
-            for bad in ({"github": "https://example.com/mcp"}, {"x": "http://example.com"}):
+                transport = "streamable-http" if rel == "mcp.json" else "http"
+                self.assertEqual(servers["claudiusz"], {"type": transport, "url": "https://example.com/mcp"}, rel)
+            public = Path(tmp) / "public"
+            public.mkdir()
+            PACK["stage"](ROOT / "plugins/github-ops", public)
+            for rel in (".mcp.json", ".claude-plugin/plugin.json", "mcp.json"):
+                self.assertEqual(set(json.loads((public / rel).read_text())["mcpServers"]), {"github"}, rel)
+            for bad in ({"github": "https://example.com/mcp"}, {"x": "http://example.com"}, {"9x": "https://example.com"}, {"x": "https://"}):
                 with self.subTest(bad=bad), self.assertRaises(ValueError):
                     again = Path(tmp) / "again"
                     again.mkdir(exist_ok=True)

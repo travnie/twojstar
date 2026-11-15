@@ -12,6 +12,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.parse import urlparse
 
 import yaml
 
@@ -167,7 +168,13 @@ def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict
         # Private builds only: personal servers that must not live in the public source.
         mcp = mcp or {"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", "mcpServers": {}}
         for name, url in extra_mcp.items():
-            if name in mcp["mcpServers"] or not re.fullmatch(r"[A-Za-z0-9_-]+", name) or not url.startswith("https://"):
+            parsed = urlparse(url)
+            if (
+                name in mcp["mcpServers"]
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name)
+                or parsed.scheme != "https"
+                or not parsed.hostname
+            ):
                 raise ValueError(f"--extra-mcp needs a new name and an https URL: {name}")
             mcp["mcpServers"][name] = {"type": "streamable-http", "url": url}
         (target / "mcp.json").write_text(json.dumps(mcp, indent=2) + "\n", encoding="utf-8")
@@ -256,5 +263,10 @@ if __name__ == "__main__":
         help="Private builds only: add a personal remote MCP server (repeatable)",
     )
     args = parser.parse_args()
-    extra = dict(item.split("=", 1) for item in args.extra_mcp)
+    extra: dict[str, str] = {}
+    for item in args.extra_mcp:
+        name, separator, url = item.partition("=")
+        if not separator or not name or name in extra:
+            parser.error("--extra-mcp needs unique NAME=URL values")
+        extra[name] = url
     print(json.dumps(package(args.source, args.output, args.app_id, extra), indent=2))
