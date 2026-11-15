@@ -172,7 +172,7 @@ def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict
                 name in mcp["mcpServers"]
                 or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name)
                 or parsed.scheme != "https"
-                or not parsed.hostname
+                or not parsed.netloc
             ):
                 raise ValueError(f"--extra-mcp needs a new name and an https URL: {name}")
             mcp["mcpServers"][name] = {"type": "streamable-http", "url": url}
@@ -268,4 +268,8 @@ if __name__ == "__main__":
         if not separator or not name or name in extra:
             parser.error("--extra-mcp needs unique NAME=URL values")
         extra[name] = url
-    print(json.dumps(package(args.source, args.output, args.app_id, extra), indent=2))
+    try:
+        result = package(args.source, args.output, args.app_id, extra)
+    except ValueError as error:
+        parser.error(str(error))
+    print(json.dumps(result, indent=2))

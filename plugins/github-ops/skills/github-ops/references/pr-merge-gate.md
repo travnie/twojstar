@@ -17,6 +17,7 @@ PR=$(gh api $R/pulls/$N)
 jq '{state, mergeable, mergeable_state, head: .head.sha, base: .base.ref, draft}' <<<"$PR"
 SHA=$(jq -r .head.sha <<<"$PR")   # gate and merge this exact head
 gh api --paginate $R/pulls/$N/reviews --jq '.[] | {user: .user.login, state, commit_id}'
+gh api $R/pulls/$N/requested_reviewers --jq '{users: [.users[].login], teams: [.teams[].slug]}'   # still pending?
 gh api $R/pulls/$N/ccr/review_threads            # proxy route: every thread resolved?
 gh api --paginate "$R/commits/$SHA/check-runs" --jq '.check_runs[] | {name, status, conclusion, ann: .output.annotations_count}'
 gh api "$R/commits/$SHA/status" --jq '.statuses[] | {context, state}'   # legacy commit statuses
