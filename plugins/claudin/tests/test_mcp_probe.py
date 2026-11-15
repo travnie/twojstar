@@ -1,5 +1,8 @@
 """MCP probe target and redirect regressions; no real network."""
 import importlib.util
+import io
+import urllib.error
+import urllib.request
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -41,6 +44,12 @@ class ProbeTargetTests(unittest.TestCase):
             opener = probe.Probe("https://example.test/mcp", {}).opener
         handler = next(h for h in opener.handlers if isinstance(h, probe.NoRedirect))
         self.assertIsNone(handler.redirect_request(None, None, 302, "", {}, "http://localhost/"))
+        # Exercise urllib's actual redirect dispatch; default handler raises HTTPError.
+        request = urllib.request.Request("https://example.test/mcp", data=b"{}")
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            opener.error("http", request, io.BytesIO(b""), 302, "Found", {"location": "http://localhost/"})
+        self.assertEqual(error.exception.code, 302)
+        self.assertEqual(error.exception.url, request.full_url)
 
 
 if __name__ == "__main__":
