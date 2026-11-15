@@ -162,7 +162,8 @@ def lint(tools):
 def _is_public_ip(ip_str):
     ip = ipaddress.ip_address(ip_str)
     return ip.is_global and not (
-        ip.is_private
+        ip in ipaddress.ip_network("100.64.0.0/10")
+        or ip.is_private
         or ip.is_loopback
         or ip.is_link_local
         or ip.is_multicast
