@@ -23,8 +23,5 @@
     "preview:codebench": "npm run preview:worker --workspace=codebench",
     "preview:docbench": "npm run preview:worker --workspace=docbench",
     "preview:streambench": "npm run preview:worker --workspace=streambench"
-  },
-  "overrides": {
-    "pako": "^2.2.0"
   }
 }
