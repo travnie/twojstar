@@ -33,7 +33,7 @@
 
     window.addEventListener("pagehide", (event) => {
       if (!event.persisted) cleanup();
-    }, { once: true });
+    }, { signal: lifecycle.signal });
 
     return Object.freeze({ register, cleanup });
   }
