@@ -17,7 +17,7 @@ export const WEBMCP_SCRIPT = String.raw`"use strict";
   };
   window.addEventListener("pagehide", (event) => {
     if (!event.persisted) cleanup();
-  }, { once: true });
+  }, { signal: lifecycle.signal });
 
   const tool = {
     name: "read_weather_state",
