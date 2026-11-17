@@ -1,3 +1,4 @@
+import { markdownAsset, varyAccept } from "../../../shared/http/markdown.js";
 import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
 
@@ -197,13 +198,14 @@ Sitemap: ${SITE_URL}sitemap.xml
       );
     }
 
-    const asset = await env.ASSETS.fetch(request);
+    const asset = await markdownAsset(request, env.ASSETS) ?? await env.ASSETS.fetch(request);
     const portable = url.pathname === "/portable.html";
     const headers = new Headers(asset.headers);
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
       if (!portable || name !== "content-security-policy") headers.set(name, value);
     }
 
+    if (url.pathname === "/") varyAccept(headers);
     const type = headers.get("content-type") ?? "";
     if (asset.ok && type.includes("text/html") && !portable) {
       headers.set(
