@@ -15,6 +15,8 @@ import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
 const SITE_ORIGIN = "https://weather.travny.workers.dev";
+const INDEXNOW_KEY = "d715f047a08ac671e4dc69cc036a7410";
+const INDEXNOW_PATH = `/${INDEXNOW_KEY}.txt`;
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
@@ -364,7 +366,7 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
-    if (pathname === "/d715f047a08ac671e4dc69cc036a7410.txt" && url.origin !== SITE_ORIGIN) {
+    if (pathname === INDEXNOW_PATH && url.origin !== SITE_ORIGIN) {
       return new Response("not found", { status: 404 });
     }
     const discovery = discoveryResponse(pathname);
@@ -420,8 +422,8 @@ export default {
 
 function discoveryResponse(pathname: string): Response | undefined {
   switch (pathname) {
-    case "/d715f047a08ac671e4dc69cc036a7410.txt":
-      return cachedResponse("d715f047a08ac671e4dc69cc036a7410", "text/plain; charset=utf-8", 86400);
+    case INDEXNOW_PATH:
+      return cachedResponse(INDEXNOW_KEY, "text/plain; charset=utf-8", 86400);
     case "/robots.txt":
       return cachedResponse(ROBOTS, "text/plain; charset=utf-8", 86400);
     case "/webmcp.js":
