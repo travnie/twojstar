@@ -364,6 +364,9 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
+    if (pathname === "/d715f047a08ac671e4dc69cc036a7410.txt" && url.origin !== SITE_ORIGIN) {
+      return new Response("not found", { status: 404 });
+    }
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;
 
@@ -418,7 +421,7 @@ export default {
 function discoveryResponse(pathname: string): Response | undefined {
   switch (pathname) {
     case "/d715f047a08ac671e4dc69cc036a7410.txt":
-      return cachedResponse("d715f047a08ac671e4dc69cc036a7410\n", "text/plain; charset=utf-8", 86400);
+      return cachedResponse("d715f047a08ac671e4dc69cc036a7410", "text/plain; charset=utf-8", 86400);
     case "/robots.txt":
       return cachedResponse(ROBOTS, "text/plain; charset=utf-8", 86400);
     case "/webmcp.js":
