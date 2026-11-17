@@ -417,6 +417,8 @@ export default {
 
 function discoveryResponse(pathname: string): Response | undefined {
   switch (pathname) {
+    case "/d715f047a08ac671e4dc69cc036a7410.txt":
+      return cachedResponse("d715f047a08ac671e4dc69cc036a7410\n", "text/plain; charset=utf-8", 86400);
     case "/robots.txt":
       return cachedResponse(ROBOTS, "text/plain; charset=utf-8", 86400);
     case "/webmcp.js":
