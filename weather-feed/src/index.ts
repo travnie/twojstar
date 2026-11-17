@@ -1,3 +1,4 @@
+import { markdownHeaders, wantsMarkdown } from "../../shared/http/markdown";
 import { CONFIG } from "./config";
 import { renderPage } from "./page";
 import { buildDayEnsembles, buildEnsemble } from "./ensemble";
@@ -17,6 +18,7 @@ import { WEBMCP_SCRIPT } from "./webmcp";
 const SITE_ORIGIN = "https://weather.travny.workers.dev";
 const INDEXNOW_KEY = "d715f047a08ac671e4dc69cc036a7410";
 const INDEXNOW_PATH = `/${INDEXNOW_KEY}.txt`;
+const DISCOVERY_LINK = '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"';
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
@@ -369,6 +371,13 @@ export default {
     if (pathname === INDEXNOW_PATH && url.origin !== SITE_ORIGIN) {
       return new Response("not found", { status: 404 });
     }
+    if (pathname === "/" && wantsMarkdown(req)) {
+      const headers = new Headers();
+      markdownHeaders(headers);
+      headers.set("link", DISCOVERY_LINK);
+      return new Response(req.method === "HEAD" ? null : INDEX_MD, { headers });
+    }
+
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;
 
@@ -404,8 +413,9 @@ export default {
         return new Response(renderPage(SITE_ORIGIN, state, entries), {
           headers: {
             "content-type": "text/html; charset=utf-8",
+            "vary": "Accept",
             "cache-control": "public, max-age=300, stale-while-revalidate=600",
-            "link": '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
+            "link": DISCOVERY_LINK,
           },
         });
       }
