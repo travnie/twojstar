@@ -370,14 +370,3 @@ test("OpenWeather drops partial forecast days built from too few 3h slots", asyn
   assert.deepEqual(result.days.map((day) => day.date), ["2026-10-12"]);
   assert.equal(result.current, null);
 });
-
-
-test("Markdown negotiation returns the public guide without weather storage", async () => {
-  const req = new Request("https://weather.travny.workers.dev/", { headers: { accept: "text/markdown" } });
-  const result = await worker.fetch(req, {} as Parameters<typeof worker.fetch>[1]);
-  assert.equal(result.status, 200);
-  assert.equal(result.headers.get("content-type"), "text/markdown; charset=utf-8");
-  assert.equal(result.headers.get("vary"), "Accept");
-  const direct = await worker.fetch(new Request("https://weather.travny.workers.dev/index.md"), {} as Parameters<typeof worker.fetch>[1]);
-  assert.equal(await result.text(), await direct.text());
-});

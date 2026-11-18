@@ -6,13 +6,11 @@ on: # yamllint disable-line rule:truthy
     branches: [main]
     paths:
       - benches/**
-      - shared/http/**
       - LICENSE
       - .github/workflows/benches-release.yml
   pull_request:
     paths:
       - benches/**
-      - shared/http/**
       - LICENSE
       - .github/workflows/benches-release.yml
   workflow_dispatch:
