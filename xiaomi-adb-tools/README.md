@@ -44,10 +44,39 @@ runtime**. No separately installed Java required.
 
 **Security (CVE-2026-114938):** x64 launchers disable the vulnerable HotSpot
 Base64 intrinsic. CI requests the latest Temurin 25 patch. Replace older native
-archives with rebuilt ones; until then, disable the intrinsic before launch using
-`JAVA_TOOL_OPTIONS="-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"`
-(set the environment variable in your shell or system settings). ARM64 is not
-affected by this CVE. See [CERT-EU advisory](https://cert.europa.eu/publications/security-advisories/2026-021/).
+archives with rebuilt ones. ARM64 is not affected by this CVE.
+See [CERT-EU advisory](https://cert.europa.eu/publications/security-advisories/2026-021/).
+
+Until replacement, close the old app and run the matching commands from its
+extracted directory. Launch from the same terminal, not Explorer, Finder or a
+desktop shortcut.
+
+PowerShell:
+
+```powershell
+$env:JAVA_TOOL_OPTIONS = "-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"
+.\XiaomiADBFastbootTools.exe
+```
+
+Command Prompt:
+
+```bat
+set "JAVA_TOOL_OPTIONS=-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"
+XiaomiADBFastbootTools.exe
+```
+
+Linux (Bash) / macOS (zsh or Bash):
+
+```bash
+export JAVA_TOOL_OPTIONS="-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"
+# Linux: from inside the extracted app directory
+./XiaomiADBFastbootTools
+# macOS: from the directory containing the .app bundle
+./XiaomiADBFastbootTools.app/Contents/MacOS/XiaomiADBFastbootTools
+```
+
+Run only the launcher for your OS. Close the terminal to discard the temporary
+environment setting. On macOS, Finder does not inherit shell variables.
 
 The unified rolling release provides `xiaomi-adb-tools.zip` containing the five
 platform-specific archives. Extract it, then extract the archive matching your system
