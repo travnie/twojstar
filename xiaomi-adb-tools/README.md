@@ -42,6 +42,13 @@ CI distributes **only standalone native archives** for Windows x64, Linux x64/ar
 and macOS x64/arm64. Each includes the launcher, JavaFX dependencies and a **Java 25
 runtime**. No separately installed Java required.
 
+**Security (CVE-2026-114938):** x64 launchers disable the vulnerable HotSpot
+Base64 intrinsic. CI requests the latest Temurin 25 patch. Replace older native
+archives with rebuilt ones; until then, disable the intrinsic before launch using
+`JAVA_TOOL_OPTIONS="-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"`
+(set the environment variable in your shell or system settings). ARM64 is not
+affected by this CVE. See [CERT-EU advisory](https://cert.europa.eu/publications/security-advisories/2026-021/).
+
 The unified rolling release provides `xiaomi-adb-tools.zip` containing the five
 platform-specific archives. Extract it, then extract the archive matching your system
 (`.zip` on Windows or `.tar.gz` elsewhere). Launch `XiaomiADBFastbootTools.exe`
