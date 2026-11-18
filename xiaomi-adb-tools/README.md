@@ -70,7 +70,7 @@ Linux (Bash) / macOS (zsh or Bash):
 ```bash
 export JAVA_TOOL_OPTIONS="-XX:+UnlockDiagnosticVMOptions -XX:-UseBASE64Intrinsics"
 # Linux: from inside the extracted app directory
-./XiaomiADBFastbootTools
+./bin/XiaomiADBFastbootTools
 # macOS: from the directory containing the .app bundle
 ./XiaomiADBFastbootTools.app/Contents/MacOS/XiaomiADBFastbootTools
 ```
@@ -81,7 +81,7 @@ environment setting. On macOS, Finder does not inherit shell variables.
 The unified rolling release provides `xiaomi-adb-tools.zip` containing the five
 platform-specific archives. Extract it, then extract the archive matching your system
 (`.zip` on Windows or `.tar.gz` elsewhere). Launch `XiaomiADBFastbootTools.exe`
-on Windows, `XiaomiADBFastbootTools` on Linux, or `XiaomiADBFastbootTools.app`
+on Windows, `bin/XiaomiADBFastbootTools` on Linux, or `XiaomiADBFastbootTools.app`
 on macOS. Do not separate the launcher from its bundled `runtime` directory.
 
 JARs are created as intermediate build inputs for `jpackage`; they are **not published**
