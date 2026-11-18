@@ -43,13 +43,9 @@ function json(body: unknown, status = 200, cacheControl = "no-store"): Response 
 }
 
 function withSecurityHeaders(response: Response): Response {
-  const headers = new Headers(response.headers);
-  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  const result = new Response(response.body, response);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) result.headers.set(name, value);
+  return result;
 }
 
 async function readPlaylist(response: Response): Promise<PlaylistReadResult> {
@@ -293,16 +289,10 @@ export default {
     const asset = await env.ASSETS.fetch(request);
     const response = withSecurityHeaders(asset);
     if (url.pathname === "/" && response.headers.get("content-type")?.includes("text/html")) {
-      const headers = new Headers(response.headers);
-      headers.set(
+      response.headers.set(
         "link",
         '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
       );
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
     }
     return response;
   },

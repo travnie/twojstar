@@ -199,7 +199,8 @@ Sitemap: ${SITE_URL}sitemap.xml
 
     const asset = await env.ASSETS.fetch(request);
     const portable = url.pathname === "/portable.html";
-    const headers = new Headers(asset.headers);
+    const response = new Response(asset.body, asset);
+    const { headers } = response;
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
       if (!portable || name !== "content-security-policy") headers.set(name, value);
     }
@@ -211,11 +212,6 @@ Sitemap: ${SITE_URL}sitemap.xml
         '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
       );
     }
-    const response = new Response(asset.body, {
-      status: asset.status,
-      statusText: asset.statusText,
-      headers,
-    });
     if (!asset.ok || !type.includes("text/html") || portable) return response;
 
     return new HTMLRewriter()

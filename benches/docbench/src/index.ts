@@ -21,7 +21,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const asset = await env.ASSETS.fetch(request);
-    const headers = new Headers(asset.headers);
+    const response = new Response(asset.body, asset);
+    const { headers } = response;
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
       headers.set(name, value);
     }
@@ -52,10 +53,6 @@ export default {
       );
     }
 
-    return new Response(asset.body, {
-      status: asset.status,
-      statusText: asset.statusText,
-      headers,
-    });
+    return response;
   },
 } satisfies ExportedHandler<Env>;
