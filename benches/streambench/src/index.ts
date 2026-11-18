@@ -1,4 +1,3 @@
-import { markdownAsset, varyAccept } from "../../../shared/http/markdown.ts";
 import { FREE_TV_COUNTRIES, filterFreeTvPlaylist } from "./providers/free-tv.ts";
 import { createRadioBrowserProvider } from "./providers/radio-browser-worker.ts";
 import { bindProviderHandlers, providerById, providerManifest } from "./providers/registry.ts";
@@ -291,12 +290,11 @@ export default {
       return withSecurityHeaders(json({ error: "method_not_allowed" }, 405));
     }
 
-    const asset = await markdownAsset(request, env.ASSETS) ?? await env.ASSETS.fetch(request);
+    const asset = await env.ASSETS.fetch(request);
     const response = withSecurityHeaders(asset);
-    if (url.pathname === "/") {
+    if (url.pathname === "/" && response.headers.get("content-type")?.includes("text/html")) {
       const headers = new Headers(response.headers);
-      varyAccept(headers);
-      if (headers.get("content-type")?.includes("text/html")) headers.set(
+      headers.set(
         "link",
         '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
       );

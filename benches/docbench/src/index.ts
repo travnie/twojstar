@@ -1,4 +1,3 @@
-import { markdownAsset, varyAccept } from "../../../shared/http/markdown.ts";
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy": [
     "default-src 'self'",
@@ -21,14 +20,13 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const asset = await markdownAsset(request, env.ASSETS) ?? await env.ASSETS.fetch(request);
+    const asset = await env.ASSETS.fetch(request);
     const headers = new Headers(asset.headers);
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
       headers.set(name, value);
     }
 
     const pathname = new URL(request.url).pathname;
-    if (pathname === "/") varyAccept(headers);
     const isHtml = asset.ok && headers.get("content-type")?.includes("text/html");
     const isCachedHtml = asset.status === 304 && (
       headers.get("content-type")?.includes("text/html") || pathname === "/" || pathname === "/index.html"

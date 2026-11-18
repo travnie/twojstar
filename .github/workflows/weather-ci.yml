@@ -5,14 +5,12 @@ on:
     branches: [main]
     paths:
       - "weather-feed/**"
-      - "shared/http/**"
       - "!weather-feed/**/*.md"
       - ".github/workflows/weather-ci.yml"
   pull_request:
     branches: [main]
     paths:
       - "weather-feed/**"
-      - "shared/http/**"
       - "!weather-feed/**/*.md"
       - ".github/workflows/weather-ci.yml"
   workflow_dispatch:

@@ -35,16 +35,3 @@ assert.match(html.headers.get("link"), /llms\.txt/);
 assert.equal(otherScript.headers.get("link"), null);
 console.log("Docbench security header checks passed.");
 
-for (const method of ["GET", "HEAD"]) {
-  const request = new Request("https://docbench.test/", { method, headers: { accept: "text/markdown" } });
-  const response = await worker.fetch(request, { ASSETS: { fetch: async req => {
-    assert.equal(new URL(req.url).pathname, "/index.md");
-    return new Response("# Guide");
-  } } });
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("content-type"), "text/markdown; charset=utf-8");
-  assert.equal(response.headers.get("vary"), "Accept");
-  assert.match(response.headers.get("content-security-policy"), /default-src 'self'/);
-  assert.equal(await response.text(), method === "HEAD" ? "" : "# Guide");
-}
-assert.equal(html.headers.get("vary"), "Accept");
