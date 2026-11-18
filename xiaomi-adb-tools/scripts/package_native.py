@@ -54,6 +54,13 @@ def main():
     image = destination / (f"{name}.app" if platform.system() == "Darwin" else name)
     if image.exists():
         shutil.rmtree(image)
+    # CVE-2026-114938: disable the vulnerable HotSpot intrinsic on x64.
+    java_options = ["--java-options", "--enable-native-access=ALL-UNNAMED"]
+    if detected.endswith("-x64"):
+        java_options += [
+            "--java-options", "-XX:+UnlockDiagnosticVMOptions",
+            "--java-options", "-XX:-UseBASE64Intrinsics",
+        ]
     subprocess.run(
         [
             jpackage, "--type", "app-image",
@@ -62,7 +69,7 @@ def main():
             "--main-jar", jar.name,
             "--main-class", "Main",
             "--dest", str(destination),
-            "--java-options", "--enable-native-access=ALL-UNNAMED",
+            *java_options,
         ],
         check=True,
     )
