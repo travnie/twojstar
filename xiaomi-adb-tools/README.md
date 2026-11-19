@@ -43,9 +43,10 @@ and macOS x64/arm64. Each includes the launcher, JavaFX dependencies and a **Jav
 runtime**. No separately installed Java required.
 
 **Security (CVE-2026-114938):** x64 launchers disable the vulnerable HotSpot
-Base64 intrinsic. CI requires patched Temurin 25.0.5.1+2 and verifies the bundled
-runtime version. Replace older native archives with rebuilt ones. ARM64 is not
-affected by this CVE.
+Base64 intrinsic. CI selects the latest available Temurin 25 and verifies the
+bundled runtime version. Some platforms may still bundle a pre-fix JDK with the
+launcher mitigation. Replace older native archives with rebuilt ones. ARM64 is
+not affected by this CVE.
 See [Adoptium advisory](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/).
 
 Until replacement, close the old app and run the matching commands from its
