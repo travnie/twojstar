@@ -1,0 +1,134 @@
+name: CodeQL
+
+on: # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { language: actions, build-mode: none, runner: ubuntu-latest }
+          - { language: c-cpp, build-mode: none, runner: ubuntu-latest }
+          - { language: csharp, build-mode: none, runner: ubuntu-latest }
+          - { language: javascript-typescript, build-mode: none, runner: ubuntu-latest }
+          - { language: python, build-mode: none, runner: ubuntu-latest }
+          - { language: java-kotlin, build-mode: manual, runner: ubuntu-latest }
+          - { language: swift, build-mode: manual, runner: macos-26 }
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Intent Keyboard JDK
+        if: matrix.build-mode == 'manual'
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Intent Keyboard Gradle
+        if: matrix.build-mode == 'manual'
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: "9.6.0"
+          cache-disabled: true
+
+      - name: Build shared iOS framework
+        if: matrix.language == 'swift'
+        working-directory: intent-keyboard
+        run: >-
+          gradle --no-daemon --no-build-cache --no-configuration-cache --stacktrace
+          :core:assembleIntentKeyboardCoreDebugXCFramework
+
+      - name: Generate Xcode project
+        if: matrix.language == 'swift'
+        working-directory: intent-keyboard
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec platforms/ios/project.yml --project platforms/ios
+
+      # Shared analysis policy via github-codeql-config-file (travnie/.github).
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Compile Intent Keyboard Kotlin
+        if: matrix.language == 'java-kotlin'
+        working-directory: intent-keyboard
+        run: >-
+          gradle --no-daemon --no-build-cache --no-configuration-cache --stacktrace
+          "-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=768m"
+          :core:desktopTest :core:testAndroidHostTest
+          :platforms:android:testDebugUnitTest :platforms:android:assembleDebug
+          :platforms:desktop:test
+
+      - name: Set up Xiaomi ADB Tools JDK
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Compile Xiaomi ADB Tools Kotlin
+        if: matrix.language == 'java-kotlin'
+        working-directory: xiaomi-adb-tools
+        run: ./gradlew --no-daemon --no-build-cache --no-configuration-cache --stacktrace classes
+
+      - name: Build native iOS app and extension
+        if: matrix.language == 'swift'
+        working-directory: intent-keyboard
+        run: >-
+          xcodebuild
+          -project platforms/ios/IntentKeyboard.xcodeproj
+          -scheme IntentKeyboard
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
+          CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          COMPILATION_CACHE_ENABLE_CACHING=NO SWIFT_ENABLE_COMPILE_CACHE=NO
+          SWIFT_USE_INTEGRATED_DRIVER=NO
+          build
+
+      - name: Compile Swift preferences tests
+        if: matrix.language == 'swift'
+        working-directory: intent-keyboard
+        run: >-
+          xcodebuild
+          -project platforms/ios/IntentKeyboard.xcodeproj
+          -scheme IntentKeyboardPreferencesTests
+          -configuration Debug -destination 'platform=macOS'
+          CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          COMPILATION_CACHE_ENABLE_CACHING=NO SWIFT_ENABLE_COMPILE_CACHE=NO
+          SWIFT_USE_INTEGRATED_DRIVER=NO
+          build-for-testing
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          category: "/language:${{ matrix.language }}"
