@@ -63,6 +63,50 @@ class RouteTests(unittest.TestCase):
         self.assertIn("Tau Station", out)
         self.assertIn("Read-only plan", out)
 
+    def test_gate_tolls_and_fleet_unknown(self):
+        data = route()["structuredContent"]
+        data["route"][1].update(via_gate=True, gate_toll=25)
+        data["route"][2].update(via_gate=True, gate_toll=10)
+        self.assertEqual(assess_route(data, 0, 34)["status"], "needs_credits")
+        self.assertEqual(assess_route(data, 0, 35)["status"], "ready")
+        self.assertEqual(assess_route(data, 0)["status"], "unknown")
+        self.assertEqual(assess_route(data, 0, 35)["gate_toll"], 35)
+        data["fleet_fuel"] = [{"username": "Wingman", "fuel_available": 50,
+                              "estimated_fuel": 12, "can_complete": True}]
+        self.assertEqual(assess_route(data, 0, 100)["status"], "unknown")
+        del data["route"][1]["gate_toll"]
+        del data["route"][2]["gate_toll"]
+        self.assertEqual(assess_route(data, 0, 100)["status"], "unknown")
+        del data["fleet_fuel"]
+        self.assertEqual(assess_route(data, 0)["status"], "ready")
+
+    def test_malformed_gate_toll_fails_closed(self):
+        for bad in (-1, True, "25", None):
+            data = route()["structuredContent"]
+            data["route"][1].update(via_gate=True, gate_toll=bad)
+            self.assertEqual(assess_route(data, 0, 100)["status"], "unknown")
+
+    def test_paid_gate_queries_credits_read_only(self):
+        payload = route()
+        payload["structuredContent"]["route"][1].update(via_gate=True, gate_toll=25)
+        calls = []
+
+        class FakeBackend:
+            @staticmethod
+            def json(args, *, timeout=None):
+                calls.append(args)
+                result = payload if args[0] == "find_route" else {
+                    "structuredContent": {"player": {"credits": 24}}
+                }
+                return BackendResult(0, "", ""), result
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = cmd_route(FakeBackend(), ["tau_ceti", "--check", "--json"])
+        self.assertEqual(code, 1)
+        self.assertEqual(calls, [["find_route", "id=tau_ceti"], ["get_status"]])
+        self.assertEqual(json.loads(out.getvalue())["assessment"]["status"], "needs_credits")
+
     def test_fuel_warning_default_still_reports_but_check_fails(self):
         payload = route(fuel_available=10)
         out, err = self.run_cli(payload, ["tau_ceti"])
