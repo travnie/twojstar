@@ -158,7 +158,8 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
                     if step.get("via_wormhole") is True:
                         marker = f"wormhole via {step.get('entrance_poi') or 'unknown entrance'}"
                     if step.get("via_gate") is True:
-                        marker = f"gate, quoted toll {step.get('gate_toll', 0)} credits"
+                        toll = step.get("gate_toll", 0)
+                        marker = f"gate, quoted toll {toll} credits" if _fuel_number(toll) else "gate, invalid toll"
                     print(f"  {index}. {name} ({marker})")
             if data.get("target_poi"):
                 print(f"  final POI: {data.get('target_poi_name') or data['target_poi']} [{data['target_poi']}]")
