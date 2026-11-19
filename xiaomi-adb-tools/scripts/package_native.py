@@ -57,10 +57,11 @@ def main():
     # CVE-2026-114938: disable the vulnerable HotSpot intrinsic on x64.
     java_options = ["--java-options", "--enable-native-access=ALL-UNNAMED"]
     if detected.endswith("-x64"):
-        java_options += [
-            "--java-options", "-XX:+UnlockDiagnosticVMOptions",
-            "--java-options", "-XX:-UseBASE64Intrinsics",
-        ]
+        mitigation = ["-XX:+UnlockDiagnosticVMOptions", "-XX:-UseBASE64Intrinsics"]
+        java = Path(jpackage).with_name("java.exe" if platform.system() == "Windows" else "java")
+        subprocess.run([str(java), *mitigation, "-version"], check=True)
+        for option in mitigation:
+            java_options += ["--java-options", option]
     subprocess.run(
         [
             jpackage, "--type", "app-image",
@@ -74,8 +75,15 @@ def main():
         check=True,
     )
 
-    if not image.is_dir() or not any(p.is_dir() for p in image.rglob("runtime")):
-        raise SystemExit(f"Packaged image is missing its bundled Java runtime: {image}")
+    runtimes = [p for p in image.rglob("runtime") if p.is_dir()]
+    releases = [release for runtime in runtimes for release in runtime.rglob("release") if release.is_file()]
+    if len(releases) != 1:
+        raise SystemExit(f"Expected one bundled Java release file: {image}")
+    metadata = dict(line.split("=", 1) for line in releases[0].read_text(encoding="utf-8").splitlines() if "=" in line)
+    bundled_version = metadata.get("JAVA_VERSION", "").strip('"')
+    if bundled_version != version.split("+", 1)[0]:
+        raise SystemExit(f"Bundled Java {bundled_version!r} does not match jpackage {version}")
+    print(f"Verified bundled Java version: {bundled_version}")
 
     output = project / "build" / "native-dist"
     output.mkdir(parents=True, exist_ok=True)
