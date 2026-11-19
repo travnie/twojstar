@@ -86,6 +86,13 @@ class RouteTests(unittest.TestCase):
             data["route"][1].update(via_gate=True, gate_toll=bad)
             self.assertEqual(assess_route(data, 0, 100)["status"], "unknown")
 
+    def test_invalid_gate_toll_is_not_rendered(self):
+        payload = route()
+        payload["structuredContent"]["route"][1].update(via_gate=True, gate_toll="\x1b[2J")
+        out, _ = self.run_cli(payload, ["tau_ceti", "--check"], code=1)
+        self.assertIn("invalid toll", out)
+        self.assertNotIn("\x1b", out)
+
     def test_paid_gate_queries_credits_read_only(self):
         payload = route()
         payload["structuredContent"]["route"][1].update(via_gate=True, gate_toll=25)
