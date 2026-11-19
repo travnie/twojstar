@@ -111,6 +111,9 @@ smx drone/list
 smx shipping/active
 ```
 
+Gate hops show the quoted credit toll. Paid solo routes check live credits; fleet gate budgets are unverified, so `--check` refuses them. Recheck before jumping.
+
+
 ## Invariants
 
 1. **Live v2 wins.** Official v2 CLI/OpenAPI and live game state outrank local cards.

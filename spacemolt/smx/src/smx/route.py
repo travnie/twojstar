@@ -22,6 +22,13 @@ def _valid_steps(steps: Any) -> bool:
                 or step.get("jumps") != index
                 or not _fuel_number(step.get("jumps"))):
             return False
+        for flag in ("via_gate", "via_wormhole"):
+            if flag in step and not isinstance(step[flag], bool):
+                return False
+        if (step.get("via_gate") is True and (index == 0 or step.get("via_wormhole") is True)
+                or "gate_toll" in step and (step.get("via_gate") is not True
+                                          or not _fuel_number(step["gate_toll"]))):
+            return False
         if step.get("via_wormhole") is True and (
                 not isinstance(step.get("entrance_poi"), str)
                 or not step["entrance_poi"]):
@@ -29,7 +36,7 @@ def _valid_steps(steps: Any) -> bool:
     return True
 
 
-def assess_route(data: Any, reserve: int) -> dict[str, Any]:
+def assess_route(data: Any, reserve: int, credits: int | None = None) -> dict[str, Any]:
     """Conservative read-only assessment of the official find_route response."""
     report: dict[str, Any] = {
         "status": "unknown",
@@ -37,6 +44,9 @@ def assess_route(data: Any, reserve: int) -> dict[str, Any]:
         "scope": "pilot",
         "fuel_on_arrival": None,
         "fleet": [],
+        "gate_toll": None,
+        "credits_available": credits,
+        "toll_status": "unknown",
     }
     if not isinstance(data, dict) or not isinstance(data.get("found"), bool):
         return report
@@ -83,17 +93,31 @@ def assess_route(data: Any, reserve: int) -> dict[str, Any]:
             "reserve_ok": enough,
         })
 
-    report["status"] = "ready" if remaining >= reserve and fleet_ok else "needs_fuel"
+    toll = sum(step.get("gate_toll", 0) for step in steps)
+    report["gate_toll"] = toll
+    # A fleet leader pays for other ships too; the route quote is not a fleet budget.
+    if toll == 0 and not (fleet and any(step.get("via_gate") for step in steps)):
+        report["toll_status"] = "free"
+    elif fleet or not _fuel_number(credits):
+        report["toll_status"] = "unknown"
+    else:
+        report["toll_status"] = "covered" if credits >= toll else "insufficient"
+    if remaining < reserve or not fleet_ok:
+        report["status"] = "needs_fuel"
+    elif report["toll_status"] == "insufficient":
+        report["status"] = "needs_credits"
+    elif report["toll_status"] != "unknown":
+        report["status"] = "ready"
     return report
 
 
 def cmd_route(backend: Any, argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="smx route", description="Read-only route and fuel preflight")
+    parser = argparse.ArgumentParser(prog="smx route", description="Read-only route, fuel and gate toll preflight")
     parser.add_argument("destination", help="system, POI or base ID (not display name)")
     parser.add_argument("--reserve", type=int, default=0, metavar="FUEL",
                         help="minimum fuel remaining on arrival, for you and fleet members")
     parser.add_argument("--check", action="store_true",
-                        help="exit nonzero unless the route and fuel reserve are verified")
+                        help="exit nonzero unless the route, fuel reserve and gate toll are verified")
     parser.add_argument("--json", action="store_true", help="official route plus derived assessment")
     ns = parser.parse_args(argv)
     if ns.reserve < 0:
@@ -107,11 +131,18 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
         sys.stderr.write(result.stderr or result.stdout or "smx: find_route returned no JSON payload\n")
     data = unwrap_payload(payload)
     report = assess_route(data, ns.reserve)
+    if report["gate_toll"] and report["scope"] == "pilot":
+        status_result, status_payload = backend.json(["get_status"], timeout=20.0)
+        status = unwrap_payload(status_payload)
+        player = status.get("player") if isinstance(status, dict) else None
+        credits = player.get("credits") if isinstance(player, dict) else None
+        if status_result.returncode == 0 and _fuel_number(credits):
+            report = assess_route(data, ns.reserve, credits)
     if ns.json:
         print(json.dumps({"destination": ns.destination, "official": data, "assessment": report},
                          indent=2, ensure_ascii=False))
     else:
-        print(f"Route to {ns.destination}: {report['status']} ({report['scope']} fuel check)")
+        print(f"Route to {ns.destination}: {report['status']} ({report['scope']} fuel/toll check)")
         if isinstance(data, dict) and data.get("found") is True:
             steps = data.get("route")
             if isinstance(steps, list):
@@ -122,6 +153,8 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
                     marker = "start" if index == 0 else "jump"
                     if step.get("via_wormhole") is True:
                         marker = f"wormhole via {step.get('entrance_poi') or 'unknown entrance'}"
+                    if step.get("via_gate") is True:
+                        marker = f"gate, quoted toll {step.get('gate_toll', 0)} credits"
                     print(f"  {index}. {name} ({marker})")
             if data.get("target_poi"):
                 print(f"  final POI: {data.get('target_poi_name') or data['target_poi']} [{data['target_poi']}]")
@@ -129,13 +162,18 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
             print(f"  fuel: {data.get('estimated_fuel', '?')} needed / {data.get('fuel_available', '?')} available"
                   f" / {report['fuel_on_arrival'] if report['fuel_on_arrival'] is not None else '?'} on arrival"
                   f" (reserve {ns.reserve})")
+            print(f"  gate toll: {report['gate_toll']} quoted credits ({report['toll_status']})")
+            if report["credits_available"] is not None:
+                print(f"  credits available: {report['credits_available']}")
             for member in report["fleet"]:
                 flag = "OK" if member["reserve_ok"] else "LOW"
                 print(f"  fleet {member['username']}: {member['fuel_on_arrival']} on arrival [{flag}]")
         if report["status"] == "unknown":
-            print("  Route response incomplete; fuel safety cannot be verified.", file=sys.stderr)
+            print("  Route or gate budget incomplete; safety cannot be verified.", file=sys.stderr)
         elif report["status"] == "needs_fuel":
             print("  Insufficient fuel for the requested reserve (possibly a fleet member).", file=sys.stderr)
+        elif report["status"] == "needs_credits":
+            print("  Insufficient credits for the quoted gate toll.", file=sys.stderr)
         elif report["status"] == "unreachable":
             print("  No known route to that destination.", file=sys.stderr)
         print("Read-only plan. Recheck live conditions before jumping.")

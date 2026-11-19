@@ -64,6 +64,7 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
         "response": (
             "found", "total_jumps", "fuel_available", "estimated_fuel", "fuel_per_jump",
             "route[].system_id", "route[].jumps", "route[].via_wormhole", "route[].entrance_poi",
+            "route[].via_gate", "route[].gate_toll",
             "fleet_fuel[].fuel_available", "fleet_fuel[].estimated_fuel",
             "fleet_fuel[].can_complete", "fleet_fuel[].username",
             "target_poi", "target_poi_name",
