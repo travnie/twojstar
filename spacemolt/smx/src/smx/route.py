@@ -136,7 +136,11 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
         status = unwrap_payload(status_payload)
         player = status.get("player") if isinstance(status, dict) else None
         credits = player.get("credits") if isinstance(player, dict) else None
-        if status_result.returncode == 0 and _fuel_number(credits):
+        if status_result.returncode != 0:
+            sys.stderr.write(status_result.stderr or status_result.stdout or "smx: get_status failed\n")
+        elif not _fuel_number(credits):
+            sys.stderr.write(status_result.stderr or "smx: get_status returned no valid credit balance\n")
+        else:
             report = assess_route(data, ns.reserve, credits)
     if ns.json:
         print(json.dumps({"destination": ns.destination, "official": data, "assessment": report},

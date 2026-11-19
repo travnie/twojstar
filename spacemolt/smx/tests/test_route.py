@@ -107,6 +107,24 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(calls, [["find_route", "id=tau_ceti"], ["get_status"]])
         self.assertEqual(json.loads(out.getvalue())["assessment"]["status"], "needs_credits")
 
+    def test_gate_balance_failure_keeps_diagnostic(self):
+        payload = route()
+        payload["structuredContent"]["route"][1].update(via_gate=True, gate_toll=25)
+
+        class FakeBackend:
+            @staticmethod
+            def json(args, *, timeout=None):
+                if args[0] == "find_route":
+                    return BackendResult(0, "", ""), payload
+                return BackendResult(3, "", "session expired\n"), None
+
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cmd_route(FakeBackend(), ["tau_ceti", "--check", "--json"])
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(out.getvalue())["assessment"]["toll_status"], "unknown")
+        self.assertIn("session expired", err.getvalue())
+
     def test_fuel_warning_default_still_reports_but_check_fails(self):
         payload = route(fuel_available=10)
         out, err = self.run_cli(payload, ["tau_ceti"])
