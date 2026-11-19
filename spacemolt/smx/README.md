@@ -111,9 +111,6 @@ smx drone/list
 smx shipping/active
 ```
 
-Gate hops show the quoted credit toll. Paid solo routes check live credits; fleet gate budgets are unverified, so `--check` refuses them. Recheck before jumping.
-
-
 ## Invariants
 
 1. **Live v2 wins.** Official v2 CLI/OpenAPI and live game state outrank local cards.
@@ -140,9 +137,11 @@ smx route station_poi_id --json
 `--reserve N` requires at least N fuel remaining on arrival for the pilot and
 every returned fleet member. When the API omits `fleet_fuel`, the assessment
 explicitly marks its scope as pilot-only instead of implying a fleet check.
-`--check` exits 1 for insufficient fuel, no
-known route or incomplete data, making it safe as an agent preflight gate.
-Without `--check`, a low-fuel route is still displayed with a warning.
+Gate hops show the quoted credit toll (omitted by the API when free). Paid solo
+routes check live credits; fleet gate budgets remain unverified.
+`--check` exits 1 for insufficient fuel or credits, unknown fleet gate budget,
+no known route or incomplete data. Without `--check`, low fuel or credits
+still produce a report with a warning.
 Machine-readable JSON includes the untouched official `find_route` data and
 a separate conservative `assessment`; no cached routes or custom pathfinding.
 A route may change as game state changes. Rerun before executing official

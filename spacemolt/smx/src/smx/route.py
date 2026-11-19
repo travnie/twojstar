@@ -167,7 +167,8 @@ def cmd_route(backend: Any, argv: list[str]) -> int:
             print(f"  fuel: {data.get('estimated_fuel', '?')} needed / {data.get('fuel_available', '?')} available"
                   f" / {report['fuel_on_arrival'] if report['fuel_on_arrival'] is not None else '?'} on arrival"
                   f" (reserve {ns.reserve})")
-            print(f"  gate toll: {report['gate_toll']} quoted credits ({report['toll_status']})")
+            toll = report["gate_toll"] if report["gate_toll"] is not None else "?"
+            print(f"  gate toll: {toll} quoted credits ({report['toll_status']})")
             if report["credits_available"] is not None:
                 print(f"  credits available: {report['credits_available']}")
             for member in report["fleet"]:
