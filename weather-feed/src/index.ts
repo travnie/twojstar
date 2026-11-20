@@ -85,7 +85,7 @@ The dashboard combines several weather sources instead of presenting a single-pr
 - [IMGW warnings Atom feed](${SITE_ORIGIN}/warnings.atom)
 - [Concise LLM guide](${SITE_ORIGIN}/llms.txt)
 - [Full LLM guide](${SITE_ORIGIN}/llms-full.txt)
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)
 `;
 
 const LLMS = `# Pogoda Chrzanów · Kościelec
@@ -100,7 +100,7 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 - [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
 - [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
 - WebMCP: read_weather_state exposes the current published state on supporting browser hosts.
-- [TRAVNY hub](https://travny.pages.dev/): related tools and services.
+- [TRAVNY hub](https://bartek.lol/): related tools and services.
 `;
 
 const LLMS_FULL = `# Pogoda Chrzanów · Kościelec full documentation
@@ -127,7 +127,7 @@ Current observations are refreshed on the Worker schedule and health status trac
 
 ## Related
 
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)
 - [Source](https://github.com/travnie/twojstar/tree/main/weather-feed)
 `;
 
