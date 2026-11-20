@@ -1,6 +1,6 @@
 # Streambench full documentation
 
-Source: https://streambench.travny.workers.dev/
+Source: https://streambench.bartek.lol/
 
 Description: Complete LLM-oriented description of Streambench and its public discovery surfaces.
 
@@ -27,9 +27,9 @@ On browser hosts implementing WebMCP, Streambench exposes `read_stream_state`, `
 
 ## Public resources
 
-- [Markdown application page](https://streambench.travny.workers.dev/index.md)
-- [Application](https://streambench.travny.workers.dev/)
-- [Provider manifest](https://streambench.travny.workers.dev/api/providers)
-- [Health](https://streambench.travny.workers.dev/health)
+- [Markdown application page](https://streambench.bartek.lol/index.md)
+- [Application](https://streambench.bartek.lol/)
+- [Provider manifest](https://streambench.bartek.lol/api/providers)
+- [Health](https://streambench.bartek.lol/health)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/streambench)
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)

@@ -2,7 +2,7 @@
 
 > Browser workshop for IPTV, internet radio, HLS, M3U/M3U8 playlists and XMLTV EPG.
 
-Streambench is promoted at https://streambench.trfny.com/ and operates directly at https://streambench.travny.workers.dev/. User-provided playlist files, XMLTV data, edits, favorites and history remain in browser storage. Public provider catalogs are fetched through the constrained Streambench Worker APIs.
+Streambench runs at https://streambench.bartek.lol/. User-provided playlist files, XMLTV data, edits, favorites and history remain in browser storage. Public provider catalogs are fetched through the constrained Streambench Worker APIs.
 
 ## What it does
 
@@ -19,9 +19,9 @@ On WebMCP-capable browser hosts, Streambench exposes `read_stream_state`, `searc
 
 ## Links
 
-- [Application](https://streambench.travny.workers.dev/)
-- [Concise LLM guide](https://streambench.travny.workers.dev/llms.txt)
-- [Full LLM guide](https://streambench.travny.workers.dev/llms-full.txt)
-- [Provider manifest](https://streambench.travny.workers.dev/api/providers)
-- [Health](https://streambench.travny.workers.dev/health)
+- [Application](https://streambench.bartek.lol/)
+- [Concise LLM guide](https://streambench.bartek.lol/llms.txt)
+- [Full LLM guide](https://streambench.bartek.lol/llms-full.txt)
+- [Provider manifest](https://streambench.bartek.lol/api/providers)
+- [Health](https://streambench.bartek.lol/health)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/streambench)

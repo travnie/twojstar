@@ -1,7 +1,7 @@
 import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
 
-const SITE_URL = "https://codebench.travny.workers.dev/";
+const SITE_URL = "https://codebench.bartek.lol/";
 const TITLE = "Code Bench — QR Code Generator, Barcode Maker & Scanner";
 const DESCRIPTION =
   "Free browser-based QR code generator, barcode maker and scanner. Create styled QR codes, Code 128, EAN, Data Matrix, Aztec and PDF417 locally, without uploads.";
@@ -32,8 +32,8 @@ const SCHEMA = JSON.stringify({
   "@type": "WebApplication",
   name: "Code Bench",
   url: SITE_URL,
-  creator: { "@id": "https://travny.pages.dev/#creator" },
-  isPartOf: { "@id": "https://travny.pages.dev/#website" },
+  creator: { "@id": "https://bartek.lol/#creator" },
+  isPartOf: { "@id": "https://bartek.lol/#website" },
   applicationCategory: "UtilitiesApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires a modern browser; camera scanning requires HTTPS.",

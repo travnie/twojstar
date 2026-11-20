@@ -1,4 +1,4 @@
-# [Streambench](https://streambench.travny.workers.dev/)
+# [Streambench](https://streambench.bartek.lol/)
 
 [![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml) [![hls.js](https://img.shields.io/badge/hls.js-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/hls.js) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
 
@@ -29,4 +29,4 @@ npm run check:streambench
 npm run dev --workspace=streambench
 ```
 
-**Deploy:** Cloudflare Worker `streambench`, root `benches/`, scripts `build:streambench`, `deploy:streambench`, `preview:streambench`; set `STREAMBENCH_RELAY_SECRET` (≥32 random chars) in Worker secrets. After deployment run `cd benches && npm run smoke --workspace=streambench -- https://streambench.travny.workers.dev` ([smoke script](scripts/smoke.mjs)).
+**Deploy:** Cloudflare Worker `streambench`, root `benches/`, scripts `build:streambench`, `deploy:streambench`, `preview:streambench`; set `STREAMBENCH_RELAY_SECRET` (≥32 random chars) in Worker secrets. After deployment run `cd benches && npm run smoke --workspace=streambench -- https://streambench.bartek.lol` ([smoke script](scripts/smoke.mjs)).

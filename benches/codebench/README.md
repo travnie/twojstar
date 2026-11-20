@@ -1,4 +1,4 @@
-# [Codebench](https://codebench.travny.workers.dev/)
+# [Codebench](https://codebench.bartek.lol/)
 
 [![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml) [![zxing-wasm](https://img.shields.io/badge/zxing-wasm-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/zxing-wasm) [![bwip-js](https://img.shields.io/badge/bwip-js-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/bwip-js) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
 

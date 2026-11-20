@@ -596,7 +596,7 @@ if (!robots.includes("Content-Signal: ai-train=yes, search=yes, ai-input=yes")) 
 }
 const llms = await readFile("public/llms.txt", "utf8");
 const llmsFull = await readFile("public/llms-full.txt", "utf8");
-if (!llms.includes("https://docbench.travny.workers.dev/index.md") || !llms.includes("/llms-full.txt")) {
+if (!llms.includes("https://docbench.bartek.lol/index.md") || !llms.includes("/llms-full.txt")) {
   throw new Error("Doc Bench llms.txt v2 resources are incomplete.");
 }
 if (!llmsFull.startsWith("# Doc Bench full documentation")) {

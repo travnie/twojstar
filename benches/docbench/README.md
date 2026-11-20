@@ -1,4 +1,4 @@
-# [Docbench](https://docbench.travny.workers.dev/)
+# [Docbench](https://docbench.bartek.lol/)
 
 [![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml)  
 [![pdfjs-dist](https://img.shields.io/badge/pdfjs-dist-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/pdfjs-dist) [![pdf-lib](https://img.shields.io/badge/pdf-lib-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/@cantoo/pdf-lib) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
