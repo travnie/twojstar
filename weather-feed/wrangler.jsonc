@@ -13,8 +13,8 @@
     },
     "logs": {
       "enabled": true,
-      "head_sampling_rate": 1,
-      "persist": true,
+      "head_sampling_rate": 0,01,
+      "persist": false,
       "invocation_logs": false
     }
   },
