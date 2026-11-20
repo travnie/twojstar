@@ -19,6 +19,12 @@ If an Actions workflow already covers the job (build, lint, tests, generators, d
 - **`gh` for everything GitHub-side:** `gh pr create/view/checks/merge`, `gh run list/view/watch`, `gh workflow run`, `gh release`, `gh api`.
 - **Never `push_files` / `create_or_update_file` into the repo you have checked out.** It bypasses git and the attribution settings, and the remote moves ahead of the working tree — the next `git push` gets rejected or clobbers it.
 - MCP `github:*` tools stay fine for **other** repos you have not cloned (reading a file elsewhere, searching code across the org) and for things `gh` cannot do.
+- **Local Claude Code (full `gh`, the user's own auth):** nothing is proxied; GraphQL, search, secrets and branch deletion all work. Reach for what the sandbox can't do:
+  - Gate: `gh pr view --json reviewDecision,mergeStateStatus,statusCheckRollup`, `gh pr checks --watch`, `gh ruleset check BRANCH` / `gh ruleset view` (explains a `BLOCKED` merge), threads via `gh api graphql` (`references/pr-merge-gate.md`).
+  - Merge: `gh pr merge --squash --delete-branch`, or `--auto` to merge once checks pass. Local branches: `git branch -d`.
+  - CI: `gh run watch ID --exit-status`, `gh run rerun ID --failed`, `gh run download ID` for artifacts, `gh workflow run NAME --ref BRANCH`.
+  - Other: `gh release create TAG --generate-notes`, `gh secret set NAME`, `gh search code|prs|issues`, `gh pr checkout N`.
+  - Token scopes bite: pushing `.github/workflows/*` needs `workflow`; `gh auth refresh -s workflow` when a push is rejected for it.
 - **Cloud sessions specifics:** git and `gh` go through Anthropic's GitHub proxy, which injects credentials — no `gh auth login`, `GH_TOKEN` reads `proxy-injected` (a script that reads the token directly gets the placeholder, not a usable token). `git push` works only for the session's working branch. The proxy only serves a pinned set of GraphQL operations for PR workflows; on a 403 `This GraphQL query is not enabled for this session`, use REST: `gh api repos/{owner}/{repo}/...`. API requests reach only repositories attached to the session.
 
 **claude.ai chat sandbox** (`CLAUDE_CODE_REMOTE=true` with `CLAUDE_CODE_SESSION_ORIGIN=claude_ai_chat`): a cloud container whose preinstalled `git` and `gh` go through a GitHub proxy that injects the connected account's credentials. Verified behaviour:
@@ -54,7 +60,7 @@ Hard rule learned the hard way: **never hit `api.github.com` unauthenticated** (
 | **Set a secret** | `gh secret set NAME -R owner/repo` | same, needs a real token |
 | **Cut a release with notes** | `gh release create` | `gh` with a token (MCP release tools are read-only) |
 
-In chat, where the connector is authed but usually no token is reachable, **prefer MCP for everything it covers** and only reach for `gh` when the task is genuinely in its column; check `gh auth status` first.
+In connector-only chat, where no token is reachable, **prefer MCP for everything it covers** and only reach for `gh` when the task is genuinely in its column. Auth check: `gh auth status` locally and in CI; `gh api user -q .login` in proxied sandboxes, where `gh auth status` misreports.
 
 ## MCP path (chat only): commit semantics
 
@@ -72,7 +78,9 @@ Other MCP tools: `create_branch`, `delete_file`, `merge_pull_request`, `pull_req
 
 ## Commit & PR conventions
 
-- **Commit identity:** keep the session's default git identity and signing setup; a signed default identity shows as Verified. Don't override `--author` or `user.name`/`user.email`: a different author shows two people, and a committer without the signing key shows as unverified. Add a co-author trailer when the project asks for one.
+- **Commit identity: Claude** (`Claude <noreply@anthropic.com>`) as author and committer, everywhere, plus a co-author trailer when the project asks for one.
+  - Cloud sessions and the chat sandbox already commit as Claude with a signing key (Verified): keep that, no `--author` or `user.name`/`user.email` override.
+  - Locally git uses the user's own config, so set the identity per commit, without touching their config, and skip their signing key (a user key on a Claude committer shows Unverified): `git -c user.name=Claude -c user.email=noreply@anthropic.com -c commit.gpgsign=false commit …`. Unsigned commits show no badge; say so if the repo requires signed commits.
 - **Comments and review replies:** if the session has a dedicated bot MCP for comments, reactions, reviews and thread resolution, use it for those instead of posting as the account owner.
 - **Bot reviews are advisory** (Codex, CodeRabbit, cubic…): verify each finding against the code, apply valid ones yourself, answer and resolve the rest with the reason. Don't ask a review bot to implement or push.
 - **Match the repo's existing style.** Before composing a message, glance at recent history (`list_commits`) and mirror it: prefix style (`chore:`, `fix:`, `feat:`), tense, scope. Don't impose conventional-commits on a repo that doesn't use them, and do follow it on one that does.

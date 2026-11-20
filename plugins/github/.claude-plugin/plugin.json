@@ -1,12 +1,12 @@
 {
-  "name": "github-ops",
-  "version": "0.2.0",
+  "name": "github",
+  "version": "1.2.0",
   "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
   },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github",
   "repository": "https://github.com/travnie/twojstar",
   "license": "CC-BY-SA-4.0",
   "keywords": [
@@ -18,7 +18,7 @@
     "git"
   ],
   "icon": "./assets/icon.png",
-  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/github",
   "supportUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
   "privacyPolicyUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
   "termsOfServiceUrl": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",

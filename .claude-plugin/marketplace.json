@@ -66,16 +66,16 @@
       "name": "cloudflare",
       "source": "./plugins/cloudflare",
       "description": "Cloudflare developer platform: the Cloudflare MCP server (Code Mode: docs search plus authenticated API requests) and a routing skill for Workers, Static Assets, Pages, KV, D1, R2, Durable Objects, Workers AI, AI Gateway, Agents SDK, framework apps (Next.js/vinext, Astro, React Router), cf CLI, Wrangler, local dev, Workers profiling and HTTP error triage.",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "displayName": "Cloudflare",
       "category": "Developer Tools"
     },
     {
-      "name": "github-ops",
-      "source": "./plugins/github-ops",
+      "name": "github",
+      "source": "./plugins/github",
       "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
-      "version": "0.2.0",
-      "displayName": "GitHub Ops",
+      "version": "1.2.0",
+      "displayName": "GitHub",
       "category": "Developer Tools"
     },
     {

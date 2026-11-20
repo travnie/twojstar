@@ -24,7 +24,7 @@ Or use `/plugin` and choose the `twojstar` marketplace to browse the ten availab
 - `claudin` (docs-lookup, skill-creator-v2, plugin-dev, mcp-dev; seven docs MCPs; replaces `devkit-claude`, migrated via the generated `renames` map)
 - `desktop-commander`
 - `cloudflare`
-- `github-ops`
+- `github`
 - `claudesign` (skills only: web-design, ux-design, naming)
 
 Plugin MCPs are declared in each plugin's generated `.claude-plugin/plugin.json` and should appear as `plugin:<plugin-name>:<server>` in Claude Code's `/mcp` view. Authenticate there as needed. **Installing a plugin does not sign in to its third-party servers or replace an existing Claude.ai connector.**

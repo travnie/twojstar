@@ -1,13 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "github-ops",
-  "version": "0.2.0",
+  "name": "github",
+  "version": "1.2.0",
   "description": "GitHub operations and merge-gate workflows paired with GitHub's official remote MCP toolset.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
   },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/github",
   "repository": "https://github.com/travnie/twojstar",
   "license": "CC-BY-SA-4.0",
   "icon": "./assets/icon.png",
@@ -22,7 +22,7 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "GitHub Ops",
+        "displayName": "GitHub",
         "shortDescription": "GitHub repos + PR ops",
         "longDescription": "Operate repositories, commits, pull requests, Actions, releases, Dependabot, and pre-merge gates with the supplied GitHub Ops workflow and GitHub's official remote MCP toolset. Personal packaging maintained by travnie; not an official GitHub plugin.",
         "developerName": "travnie",
@@ -31,7 +31,7 @@
           "Read",
           "Write"
         ],
-        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/github-ops",
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/github",
         "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
         "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
         "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",

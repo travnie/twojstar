@@ -101,10 +101,10 @@
       "category": "Developer Tools"
     },
     {
-      "name": "github-ops",
+      "name": "github",
       "source": {
         "source": "local",
-        "path": "./plugins/github-ops"
+        "path": "./plugins/github"
       },
       "policy": {
         "installation": "AVAILABLE",

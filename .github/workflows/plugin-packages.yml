@@ -33,7 +33,7 @@ on:
           - claudin
           - cloudflare
           - desktop-commander
-          - github-ops
+          - github
           - google
           - google-dev-kit
           - openai-dev-kit
