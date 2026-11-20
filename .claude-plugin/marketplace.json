@@ -88,6 +88,7 @@
     }
   ],
   "renames": {
-    "devkit-claude": "claudin"
+    "devkit-claude": "claudin",
+    "github-ops": "github"
   }
 }

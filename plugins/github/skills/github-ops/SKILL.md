@@ -23,8 +23,8 @@ If an Actions workflow already covers the job (build, lint, tests, generators, d
   - Gate: `gh pr view --json reviewDecision,mergeStateStatus,statusCheckRollup`, `gh pr checks --watch`, `gh ruleset check BRANCH` / `gh ruleset view` (explains a `BLOCKED` merge), threads via `gh api graphql` (`references/pr-merge-gate.md`).
   - Merge: `gh pr merge --squash --delete-branch`, or `--auto` to merge once checks pass. Local branches: `git branch -d`.
   - CI: `gh run watch ID --exit-status`, `gh run rerun ID --failed`, `gh run download ID` for artifacts, `gh workflow run NAME --ref BRANCH`.
-  - Other: `gh release create TAG --generate-notes`, `gh secret set NAME`, `gh search code|prs|issues`, `gh pr checkout N`.
-  - Token scopes bite: pushing `.github/workflows/*` needs `workflow`; `gh auth refresh -s workflow` when a push is rejected for it.
+  - Other: `gh release create TAG --generate-notes`, `gh secret set NAME`, `gh search code`, `gh search prs`, `gh search issues`, `gh pr checkout N`.
+  - Token scopes bite: pushing `.github/workflows/*` needs the `workflow` scope on the credential git actually uses. If git goes through `gh` (`gh auth setup-git`), `gh auth refresh -s workflow` fixes it; otherwise update that credential (PAT, app or credential manager).
 - **Cloud sessions specifics:** git and `gh` go through Anthropic's GitHub proxy, which injects credentials — no `gh auth login`, `GH_TOKEN` reads `proxy-injected` (a script that reads the token directly gets the placeholder, not a usable token). `git push` works only for the session's working branch. The proxy only serves a pinned set of GraphQL operations for PR workflows; on a 403 `This GraphQL query is not enabled for this session`, use REST: `gh api repos/{owner}/{repo}/...`. API requests reach only repositories attached to the session.
 
 **claude.ai chat sandbox** (`CLAUDE_CODE_REMOTE=true` with `CLAUDE_CODE_SESSION_ORIGIN=claude_ai_chat`): a cloud container whose preinstalled `git` and `gh` go through a GitHub proxy that injects the connected account's credentials. Verified behaviour:
@@ -36,7 +36,7 @@ If an Actions workflow already covers the job (build, lint, tests, generators, d
 - **Also blocked:** search endpoints (use MCP `search_*`), Actions secrets (the user sets them in the UI), branch deletion (ask the user; so don't push scratch branches).
 - **Works here** (unlike the working-branch limit in Claude Code cloud sessions above): `git push` to any new branch, `gh run list`, `gh run view ID --log-failed`, REST reads of pulls, reviews, comments, check runs and `rules/branches/BASE`, `POST .../pulls` to open a PR, `PUT .../pulls/N/merge`.
 
-**No checkout** — claude.ai chat, or a repo you are not going to clone: use the MCP tools as described below; reach for `gh` only if a token actually exists (`gh auth status`).
+**No checkout** — claude.ai chat, or a repo you are not going to clone: use the MCP tools as described below; reach for `gh` only if a token actually exists (auth check below).
 
 - **MCP `github:*` tools** — authenticated through the connector, structured JSON in/out, no shell or token needed. Default **in chat** for reading files, committing, PRs, issues, search, releases.
 - **`gh` CLI** — needs a token (`gh auth login`, or `GH_TOKEN`/`GITHUB_TOKEN`; CI and Claude Code cloud sessions provide one). In chat, with the `/x/all` connector toolset (~90 tools) MCP covers most Actions work too. Reach for `gh` there only for what MCP still can't do: **setting secrets (`gh secret set`), creating a release with notes, live `run watch` streaming, and shell piping / `-q` jq**.
@@ -72,7 +72,7 @@ Other MCP tools: `create_branch`, `delete_file`, `merge_pull_request`, `pull_req
 
 ## gh path: auth and install
 
-- **Auth check first:** `gh auth status`. If unauthenticated, either `gh auth login` (interactive) or `export GH_TOKEN=…`. Never ask the user to paste a token into a chat transcript — point them at `gh auth login` or the CI `GITHUB_TOKEN`.
+- **Auth check first:** `gh auth status` (in proxied sandboxes `gh api user -q .login` instead). If unauthenticated, either `gh auth login` (interactive) or `export GH_TOKEN=…`. Never ask the user to paste a token into a chat transcript — point them at `gh auth login` or the CI `GITHUB_TOKEN`.
 - **If `gh` is missing:** prefer the OS/package manager or GitHub's official installation instructions. Do not download and execute a release archive from an unpinned URL as part of an agent workflow. If a safe installation path is unavailable, stay on the authenticated MCP path instead.
 - **Actions debugging.** MCP `get_job_logs` pulls job logs without a token — use it first. `gh` still wins for a *live* tail: `gh run watch <id>`, `gh run view <id> --log-failed`. List via MCP `actions_list` or `gh run list -R owner/repo`. Distinguish a *code* failure (a step errored) from a *GitHub-side* delay/skip (scheduled runs get throttled on low-activity repos — the run simply never started; the fix is `actions_run_trigger`/`gh workflow run`, not a code change).
 
@@ -80,7 +80,7 @@ Other MCP tools: `create_branch`, `delete_file`, `merge_pull_request`, `pull_req
 
 - **Commit identity: Claude** (`Claude <noreply@anthropic.com>`) as author and committer, everywhere, plus a co-author trailer when the project asks for one.
   - Cloud sessions and the chat sandbox already commit as Claude with a signing key (Verified): keep that, no `--author` or `user.name`/`user.email` override.
-  - Locally git uses the user's own config, so set the identity per commit, without touching their config, and skip their signing key (a user key on a Claude committer shows Unverified): `git -c user.name=Claude -c user.email=noreply@anthropic.com -c commit.gpgsign=false commit …`. Unsigned commits show no badge; say so if the repo requires signed commits.
+  - Locally git uses the user's own config, so set the identity per commit through the environment (it beats `user.*`, `author.*` and `committer.*` config) without touching their config, and skip their signing key (a user key on a Claude committer shows Unverified): `GIT_AUTHOR_NAME=Claude GIT_AUTHOR_EMAIL=noreply@anthropic.com GIT_COMMITTER_NAME=Claude GIT_COMMITTER_EMAIL=noreply@anthropic.com git -c commit.gpgsign=false commit …`, then check with `git log -1 --format='%an <%ae> / %cn <%ce>'`. Unsigned commits show no badge; say so if the repo requires signed commits.
 - **Comments and review replies:** if the session has a dedicated bot MCP for comments, reactions, reviews and thread resolution, use it for those instead of posting as the account owner.
 - **Bot reviews are advisory** (Codex, CodeRabbit, cubic…): verify each finding against the code, apply valid ones yourself, answer and resolve the rest with the reason. Don't ask a review bot to implement or push.
 - **Match the repo's existing style.** Before composing a message, glance at recent history (`list_commits`) and mirror it: prefix style (`chore:`, `fix:`, `feat:`), tense, scope. Don't impose conventional-commits on a repo that doesn't use them, and do follow it on one that does.
@@ -150,5 +150,5 @@ To vet a bump before merging, MCP `check_dependency_vulnerabilities` takes a dep
 - **Unauth `api.github.com` is rate-limited** from cloud IPs → use the connector or authed `gh`. (Web/`raw.githubusercontent.com` fetches are fine; it's the *API* host that bites.)
 - **`create_or_update_file` update without SHA fails** — fetch the SHA first, or use `push_files`.
 - **`push_files` is last-write-wins** — re-read if a concurrent change may have landed since you fetched.
-- **`gh` exists ≠ `gh` is authed.** Always `gh auth status` before relying on it; a fresh install reaches the request and stops at auth.
+- **`gh` exists ≠ `gh` is authed.** Run the auth check (`gh auth status`; `gh api user -q .login` in proxied sandboxes) before relying on it; a fresh install reaches the request and stops at auth.
 - **Don't paste tokens into the conversation.** Auth happens in the user's environment, not the transcript.
