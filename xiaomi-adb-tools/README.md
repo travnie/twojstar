@@ -44,8 +44,9 @@ runtime**. No separately installed Java required.
 
 **Security (CVE-2026-114938):** x64 launchers disable the vulnerable HotSpot
 Base64 intrinsic. CI requires Temurin 25.0.5.1+2 and verifies the bundled
-runtime version on all five platforms. Replace older native archives with
-rebuilt ones. ARM64 is not affected by this CVE.
+runtime build number on all five platforms. Check `JAVA-RUNTIME.txt` in the
+extracted app image (including inside the macOS `.app`); require 25.0.5.1+2-LTS
+or later. Replace older archives. ARM64 is not affected by this CVE.
 See [Adoptium advisory](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/).
 
 Until replacement, close the old app and run the matching commands from its
@@ -88,7 +89,7 @@ on macOS. Do not separate the launcher from its bundled `runtime` directory.
 JARs are created as intermediate build inputs for `jpackage`; they are **not published**
 as separate downloads. The source build remains reproducible.
 
-To make a standalone native archive locally, use JDK 25 and Python 3.13 on the target OS:
+To make a standalone native archive locally, use Temurin 25.0.5.1+2 or later in the 25 line and Python 3.13 on the target OS:
 
 ```powershell
 .\gradlew.bat jarWindowsX64

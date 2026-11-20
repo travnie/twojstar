@@ -3,6 +3,7 @@
 
 import argparse
 import platform
+import re
 import shutil
 import subprocess
 import tarfile
@@ -25,7 +26,6 @@ def host_platform():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", required=True, help="Expected host platform")
-    parser.add_argument("--require-version", help="Exact required bundled Java version")
     args = parser.parse_args()
 
     detected = host_platform()
@@ -33,7 +33,14 @@ def main():
         raise SystemExit(f"Expected {args.platform}, running on {detected}")
 
     project = Path(__file__).resolve().parents[1]
-    jar = project / "build" / "libs" / f"XiaomiADBFastbootTools-{detected}.jar"
+    name = "XiaomiADBFastbootTools"
+    output = project / "build" / "native-dist"
+    extension = ".zip" if platform.system() == "Windows" else ".tar.gz"
+    archive = output / f"{name}-{detected}{extension}"
+    temporary = archive.with_name(archive.name + ".tmp")
+    archive.unlink(missing_ok=True)
+    temporary.unlink(missing_ok=True)
+    jar = project / "build" / "libs" / f"{name}-{detected}.jar"
     if not jar.is_file():
         raise SystemExit(f"Missing {jar.name}: build jar{''.join(part.capitalize() for part in detected.split('-'))} first")
 
@@ -51,7 +58,6 @@ def main():
 
     destination = project / "build" / "native"
     destination.mkdir(parents=True, exist_ok=True)
-    name = "XiaomiADBFastbootTools"
     image = destination / (f"{name}.app" if platform.system() == "Darwin" else name)
     if image.exists():
         shutil.rmtree(image)
@@ -71,6 +77,7 @@ def main():
             "--main-jar", jar.name,
             "--main-class", "Main",
             "--dest", str(destination),
+            "--jlink-options", "--strip-debug --no-man-pages --no-header-files",
             *java_options,
         ],
         check=True,
@@ -84,22 +91,30 @@ def main():
     bundled_version = metadata.get("JAVA_VERSION", "").strip('"')
     if bundled_version != version.split("+", 1)[0]:
         raise SystemExit(f"Bundled Java {bundled_version!r} does not match jpackage {version}")
-    if args.require_version and bundled_version != args.require_version:
-        raise SystemExit(f"Expected bundled Java {args.require_version}, got {bundled_version}")
-    print(f"Verified bundled Java version: {bundled_version}")
+    # jlink's JAVA_VERSION omits the build number. Query the bundled VM.
+    bundled_java = releases[0].parent / "bin" / ("java.exe" if platform.system() == "Windows" else "java")
+    settings = subprocess.check_output(
+        [str(bundled_java), "-XshowSettings:properties", "-version"],
+        stderr=subprocess.STDOUT, text=True,
+    )
+    properties = dict(
+        line.strip().split(" = ", 1) for line in settings.splitlines() if " = " in line
+    )
+    full_version = properties.get("java.runtime.version", "")
+    match = re.fullmatch(r"25\.(\d+)\.(\d+)(?:\.(\d+))?\+(\d+)(?:-LTS)?", full_version)
+    if (not match or tuple(int(part or 0) for part in match.groups()) < (0, 5, 1, 2)
+            or properties.get("java.vendor") != "Eclipse Adoptium"):
+        raise SystemExit(f"Expected patched Temurin 25 (25.0.5.1+2 or later), got {full_version!r}")
+    (image / "JAVA-RUNTIME.txt").write_text(full_version + "\n", encoding="utf-8")
+    print(f"Verified bundled Java version: {full_version}")
 
-    output = project / "build" / "native-dist"
     output.mkdir(parents=True, exist_ok=True)
     if platform.system() == "Windows":
-        archive = output / f"{name}-{detected}.zip"
-        temporary = archive.with_name(archive.name + ".tmp")
         with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as bundle:
             for item in sorted(image.rglob("*")):
                 if item.is_file():
                     bundle.write(item, item.relative_to(destination))
     else:
-        archive = output / f"{name}-{detected}.tar.gz"
-        temporary = archive.with_name(archive.name + ".tmp")
         with tarfile.open(temporary, "w:gz") as bundle:
             bundle.add(image, arcname=image.name)
     temporary.replace(archive)
