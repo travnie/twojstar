@@ -1,6 +1,7 @@
 # [Docbench](https://docbench.travny.workers.dev/)
 
-[![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml) [![pdfjs-dist](https://img.shields.io/badge/pdfjs-dist-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/pdfjs-dist) [![pdf-lib](https://img.shields.io/badge/pdf-lib-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/@cantoo/pdf-lib) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
+[![Bench CI](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/benches-release.yml)  
+[![pdfjs-dist](https://img.shields.io/badge/pdfjs-dist-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/pdfjs-dist) [![pdf-lib](https://img.shields.io/badge/pdf-lib-CB3837?logo=npm&logoColor=white&style=flat-square)](https://www.npmjs.com/package/@cantoo/pdf-lib) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/)
 
 Local-first file workbench with document and PDF tools. Files is the starting explorer; supported text, PDF and DOCX entries open contextually in existing tools. **User files remain in the browser**: never silently upload, rename or rewrite originals. Preserving PDF bookmarks, metadata, attachments and text/EOL fidelity is a release boundary.
 
