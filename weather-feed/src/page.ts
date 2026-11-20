@@ -186,8 +186,8 @@ export function renderPage(
     name: title,
     description,
     url: `${origin}/`,
-    creator: { "@id": "https://travny.pages.dev/#creator" },
-    isPartOf: { "@id": "https://travny.pages.dev/#website" },
+    creator: { "@id": "https://bartek.lol/#creator" },
+    isPartOf: { "@id": "https://bartek.lol/#website" },
     inLanguage: "pl-PL",
     dateModified: state?.ensemble?.observedAt,
     spatialCoverage: {
@@ -355,7 +355,7 @@ export function renderPage(
     Źródła: Open-Meteo · OpenWeather · Visual Crossing · Vaisala Xweather · Pirate Weather · IMGW-PIB · Open-Meteo Air Quality (CAMS).
     Aktualizacja co 2 h (pogoda) i raz dziennie (prognoza).<br>
     <a href="https://www.xweather.com/" target="_blank" rel="noopener noreferrer" title="Powered by Vaisala Xweather">Powered by Vaisala Xweather</a>
-    · <a href="https://travny.pages.dev/">TRAVNY ↗</a>
+    · <a href="https://bartek.lol/">TRAVNY ↗</a>
   </footer>
 </main>
 <div class="toast" id="toast"></div>
