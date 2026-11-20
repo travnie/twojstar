@@ -305,6 +305,8 @@ async function withWrangler(product, callback) {
 async function checkProduct(product, origin) {
   const shellResponse = await fetchOk(`${origin}/`, `${product}: app shell`);
   const shell = await shellResponse.text();
+  const canonical = linkHref(shell, "canonical");
+  assert(canonical?.href === `https://${product}.bartek.lol/`, `${product}: served canonical URL is incorrect`);
 
   const manifestLink = linkHref(shell, "manifest");
   assert(manifestLink, `${product}: served app shell does not declare a manifest`);

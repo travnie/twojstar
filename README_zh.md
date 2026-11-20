@@ -15,7 +15,7 @@
 
 | 项目 | 入口 | 用途 |
 | --- | --- | --- |
-| 🔲 **Benches** | [`benches/`](benches/) · [下载](https://github.com/travnie/twojstar/releases/latest/download/benches-portable.zip) · [Codebench](https://codebench.trfny.com) · [Docbench](https://docbench.travny.workers.dev) · [Streambench](https://streambench.trfny.com) | 浏览器端二维码/条形码、文档/PDF 与媒体处理工具。 |
+| 🔲 **Benches** | [`benches/`](benches/) · [下载](https://github.com/travnie/twojstar/releases/latest/download/benches-portable.zip) · [Codebench](https://codebench.bartek.lol) · [Docbench](https://docbench.bartek.lol) · [Streambench](https://streambench.bartek.lol) | 浏览器端二维码/条形码、文档/PDF 与媒体处理工具。 |
 | 🌦️ **Weather Feed** | [`weather-feed/`](weather-feed/) · [weather.trfny.com](https://weather.trfny.com) | 多来源天气、空气质量与 IMGW 预警（Kościelec/Chrzanów）；提供网页、JSON、Atom。 |
 | 📰 **Feedboard** | [`feedboard/`](feedboard/) · [下载](https://github.com/travnie/twojstar/releases/latest/download/feedboard.zip) | Windows 11 RSS/Atom/JSON Feed 小组件/提供器及小型设置应用。 |
 | 🛸 **SpaceMolt** | [`spacemolt/`](spacemolt/) · [`smx`](spacemolt/smx/) | 官方 v2 CLI 伴随与 SpaceMolt 工具。 |

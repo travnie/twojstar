@@ -15,7 +15,7 @@
 
 | Projekt | Gdzie zajrzeć | Co robi |
 | --- | --- | --- |
-| 🔲 **Benches** | [`benches/`](benches/) · [pobierz](https://github.com/travnie/twojstar/releases/latest/download/benches-portable.zip) · [Codebench](https://codebench.trfny.com) · [Docbench](https://docbench.travny.workers.dev) · [Streambench](https://streambench.trfny.com) | Narzędzia przeglądarkowe do kodów QR/barcode, dokumentów/PDF i multimediów. |
+| 🔲 **Benches** | [`benches/`](benches/) · [pobierz](https://github.com/travnie/twojstar/releases/latest/download/benches-portable.zip) · [Codebench](https://codebench.bartek.lol) · [Docbench](https://docbench.bartek.lol) · [Streambench](https://streambench.bartek.lol) | Narzędzia przeglądarkowe do kodów QR/barcode, dokumentów/PDF i multimediów. |
 | 🌦️ **Weather Feed** | [`weather-feed/`](weather-feed/) · [weather.trfny.com](https://weather.trfny.com) | Pogoda z wielu źródeł, jakość powietrza i alerty IMGW dla Kościelca/Chrzanowa; web, JSON i Atom. |
 | 📰 **Feedboard** | [`feedboard/`](feedboard/) · [pobierz](https://github.com/travnie/twojstar/releases/latest/download/feedboard.zip) | Widżet i dostawca feedów RSS/Atom/JSON Feed dla Windows 11 z małą aplikacją ustawień. |
 | 🛸 **SpaceMolt** | [`spacemolt/`](spacemolt/) · [`smx`](spacemolt/smx/) | Oficjalny towarzysz CLI v2 i narzędzia SpaceMolt. |
