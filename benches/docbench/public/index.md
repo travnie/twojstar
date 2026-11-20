@@ -2,7 +2,7 @@
 
 > Local-first file workbench with contextual text, PDF and DOCX tools. Source files remain in the browser.
 
-Doc Bench runs at https://docbench.travny.workers.dev/.
+Doc Bench runs at https://docbench.bartek.lol/.
 
 ## Files (start here)
 
@@ -50,9 +50,9 @@ can contain document text and follow the host/model data-handling policy.
 
 ## Links
 
-- [Application](https://docbench.travny.workers.dev/)
-- [Concise LLM guide](https://docbench.travny.workers.dev/llms.txt)
-- [Full LLM guide](https://docbench.travny.workers.dev/llms-full.txt)
+- [Application](https://docbench.bartek.lol/)
+- [Concise LLM guide](https://docbench.bartek.lol/llms.txt)
+- [Full LLM guide](https://docbench.bartek.lol/llms-full.txt)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/docbench)
 - [Portable builds](https://github.com/travnie/twojstar/releases/latest)
 \n### Smart JSON merge\n\nMerge JSON/JSONC objects recursively or concatenate array roots while preserving source scalar lexemes, including large numeric IDs. Scalar/type conflicts are reported and later files win. JSONL/NDJSON inputs are validated record-by-record and concatenated. JSON5 is not included in smart merge yet.\n

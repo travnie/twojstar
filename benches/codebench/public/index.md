@@ -2,7 +2,7 @@
 
 > Local-first browser studio for generating, styling, scanning and exporting QR codes and barcodes.
 
-Code Bench is promoted at https://codebench.trfny.com/ and operates directly at https://codebench.travny.workers.dev/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
+Code Bench runs at https://codebench.bartek.lol/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
 
 ## What it does
 
@@ -18,8 +18,8 @@ On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `s
 
 ## Links
 
-- [Application](https://codebench.travny.workers.dev/)
-- [Concise LLM guide](https://codebench.travny.workers.dev/llms.txt)
-- [Full LLM guide](https://codebench.travny.workers.dev/llms-full.txt)
+- [Application](https://codebench.bartek.lol/)
+- [Concise LLM guide](https://codebench.bartek.lol/llms.txt)
+- [Full LLM guide](https://codebench.bartek.lol/llms-full.txt)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/codebench)
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)

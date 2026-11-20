@@ -3,6 +3,7 @@ import { test } from "node:test";
 import entry from "../src/entry.ts";
 
 const origins = [
+  "https://streambench.bartek.lol",
   "https://streambench.travny.workers.dev",
   "https://streambench.trfny.com",
   "http://localhost:8787",

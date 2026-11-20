@@ -1,6 +1,6 @@
 # Doc Bench full documentation
 
-Source: https://docbench.travny.workers.dev/
+Source: https://docbench.bartek.lol/
 
 Description: Complete LLM-oriented description of the local-first Doc Bench document and PDF studio.
 
@@ -24,11 +24,11 @@ On browser hosts implementing WebMCP, Doc Bench exposes `read_document`, `set_do
 
 ## Public resources
 
-- [Markdown application page](https://docbench.travny.workers.dev/index.md)
-- [Application](https://docbench.travny.workers.dev/)
+- [Markdown application page](https://docbench.bartek.lol/index.md)
+- [Application](https://docbench.bartek.lol/)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/docbench)
 - [Portable builds](https://github.com/travnie/twojstar/releases/latest)
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)
 
 ## Smart JSON merge
 

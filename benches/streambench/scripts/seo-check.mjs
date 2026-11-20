@@ -39,7 +39,7 @@ const [
   text("webmcp.js"),
 ]);
 
-const origin = "https://streambench.travny.workers.dev";
+const origin = "https://streambench.bartek.lol";
 assert(index.includes(`<link rel="canonical" href="${origin}/">`), "canonical URL is missing");
 assert(index.includes(`<meta property="og:url" content="${origin}/">`), "Open Graph URL is missing");
 assert(index.includes('<meta name="twitter:card" content="summary_large_image">'), "Twitter card is missing");
@@ -55,7 +55,7 @@ assert(robots.includes("Content-Signal: ai-train=yes, search=yes, ai-input=yes")
 assert(robots.includes("Disallow: /api/"), "API crawler rule is missing");
 assert(sitemap.includes(`<loc>${origin}/</loc>`), "sitemap application URL is missing");
 assert(llms.includes("# Streambench"), "llms.txt title is missing");
-const durable = "https://streambench.travny.workers.dev";
+const durable = "https://streambench.bartek.lol";
 for (const [label, route] of [
   ["Application", "/index.md"],
   ["Full LLM guide", "/llms-full.txt"],
@@ -68,9 +68,9 @@ assert(llmsFull.includes(`Source: ${durable}/`), "llms-full.txt durable origin i
 assert(indexMarkdown.includes(`- [Application](${durable}/)`), "Markdown guide durable application link is missing");
 assert(llmsFull.startsWith("# Streambench full documentation"), "llms-full.txt title is missing");
 assert(indexMarkdown.startsWith("# Streambench"), "index.md title is missing");
-assert(llms.split("\n").some(line => line === "- [TRAVNY hub](https://travny.pages.dev/): family landing page."), "TRAVNY hub is missing from llms.txt");
-assert(index.includes("https://travny.pages.dev/#creator"), "JSON-LD creator identity is stale");
-assert(index.includes("https://travny.pages.dev/#website"), "JSON-LD parent identity is stale");
+assert(llms.split("\n").some(line => line === "- [TRAVNY hub](https://bartek.lol/): family landing page."), "TRAVNY hub is missing from llms.txt");
+assert(index.includes("https://bartek.lol/#creator"), "JSON-LD creator identity is stale");
+assert(index.includes("https://bartek.lol/#website"), "JSON-LD parent identity is stale");
 assert(index.includes('<script src="/webmcp-lifecycle.js"></script>'), "WebMCP lifecycle script is missing");
 assert(index.includes('<script type="module" src="/webmcp.js"></script>'), "WebMCP page module is missing");
 for (const toolName of ["read_stream_state", "search_streams", "start_stream_playback", "stop_stream_playback"]) {
@@ -82,7 +82,7 @@ assert(manifest.id === "/", "manifest id is missing");
 assert(manifest.lang === "pl", "manifest language is missing");
 assert(manifest.categories?.includes("utilities"), "manifest category is missing");
 assert(socialImage.includes('viewBox="0 0 1200 630"'), "social preview dimensions are invalid");
-assert(/>streambench\.travny\.workers\.dev<\/text>/u.test(socialImage), "social preview canonical domain label is missing");
+assert(/>streambench\.bartek\.lol<\/text>/u.test(socialImage), "social preview canonical domain label is missing");
 
 const wrangler = JSON.parse(wranglerSource);
 const workerRoutes = wrangler.assets?.run_worker_first;

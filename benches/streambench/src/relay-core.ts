@@ -113,7 +113,7 @@ export function sameOriginBrowserRequest(request: Request): boolean {
 export function upstreamHeaders(request: Request, { icy = false }: { icy?: boolean } = {}): Headers {
   const headers = new Headers({
     accept: request.headers.get("accept") || "*/*",
-    "user-agent": "Streambench/1.0 (+https://streambench.travny.workers.dev)",
+    "user-agent": "Streambench/1.0 (+https://streambench.bartek.lol)",
   });
   for (const name of ["range", "if-range"]) {
     const value = request.headers.get(name);
@@ -221,7 +221,7 @@ async function manifestSource(url: URL, { refresh = false }: { refresh?: boolean
   const { response, bytes } = await fetchCapped(url, {
     headers: {
       accept: "application/vnd.apple.mpegurl,application/x-mpegURL,audio/mpegurl,text/plain",
-      "user-agent": "Streambench/1.0 (+https://streambench.travny.workers.dev)",
+      "user-agent": "Streambench/1.0 (+https://streambench.bartek.lol)",
     },
   }, MAX_MANIFEST_BYTES);
   if (!response.ok) throw new Error(`manifest returned ${response.status}`);

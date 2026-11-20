@@ -2,7 +2,7 @@
 
 > Local-first file workbench for local inspection, editing and PDF maintenance without uploads.
 
-Doc Bench runs at https://docbench.travny.workers.dev/. It is part of the TRAVNY Bench family and is designed for document inspection, editing and PDF maintenance while keeping source files on the device.
+Doc Bench runs at https://docbench.bartek.lol/. It is part of the TRAVNY Bench family and is designed for document inspection, editing and PDF maintenance while keeping source files on the device.
 
 ## Files (default workspace)
 
@@ -44,16 +44,16 @@ On browser hosts that implement WebMCP, Doc Bench exposes the current local edit
 
 ## Public pages
 
-- [Application](https://docbench.travny.workers.dev/index.md): Markdown version of the Doc Bench application page.
-- [Full LLM guide](https://docbench.travny.workers.dev/llms-full.txt): complete Doc Bench documentation in one file.
+- [Application](https://docbench.bartek.lol/index.md): Markdown version of the Doc Bench application page.
+- [Full LLM guide](https://docbench.bartek.lol/llms-full.txt): complete Doc Bench documentation in one file.
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/docbench): application source and documentation.
 - [Benches portable release](https://github.com/travnie/twojstar/releases/latest): rolling standalone builds.
 
 ## Related TRAVNY tools
 
-- [TRAVNY hub](https://travny.pages.dev/): family landing page.
-- [Streambench](https://streambench.travny.workers.dev/): IPTV, radio, HLS, M3U and XMLTV workshop.
-- [Codebench](https://codebench.travny.workers.dev/): local QR and barcode studio.
+- [TRAVNY hub](https://bartek.lol/): family landing page.
+- [Streambench](https://streambench.bartek.lol/): IPTV, radio, HLS, M3U and XMLTV workshop.
+- [Codebench](https://codebench.bartek.lol/): local QR and barcode studio.
 - [Weather](https://weather.travny.workers.dev/): local weather ensemble.
 - [Feeds](https://trvny.github.io/feedseek/): feed directory and generated RSS/Atom feeds.
 

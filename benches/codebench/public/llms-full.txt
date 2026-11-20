@@ -1,7 +1,7 @@
 # Code Bench full documentation
 
-Source: https://codebench.travny.workers.dev/
-Promotional URL: https://codebench.trfny.com/
+Source: https://codebench.bartek.lol/
+Promotional URL: https://codebench.bartek.lol/
 
 Description: Complete LLM-oriented description of the Code Bench browser application.
 
@@ -32,9 +32,9 @@ On browser hosts that implement WebMCP, the application exposes `read_code_state
 
 ### Public resources
 
-- [Markdown application page](https://codebench.travny.workers.dev/index.md)
-- [Application](https://codebench.travny.workers.dev/)
+- [Markdown application page](https://codebench.bartek.lol/index.md)
+- [Application](https://codebench.bartek.lol/)
 - [Source](https://github.com/travnie/twojstar/tree/main/benches/codebench)
-- [TRAVNY hub](https://travny.pages.dev/)
+- [TRAVNY hub](https://bartek.lol/)
 
 Website icons: optional direct /favicon.ico lookup; CORS required.
