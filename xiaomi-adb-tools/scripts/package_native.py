@@ -25,6 +25,7 @@ def host_platform():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", required=True, help="Expected host platform")
+    parser.add_argument("--require-version", help="Exact required bundled Java version")
     args = parser.parse_args()
 
     detected = host_platform()
@@ -83,6 +84,8 @@ def main():
     bundled_version = metadata.get("JAVA_VERSION", "").strip('"')
     if bundled_version != version.split("+", 1)[0]:
         raise SystemExit(f"Bundled Java {bundled_version!r} does not match jpackage {version}")
+    if args.require_version and bundled_version != args.require_version:
+        raise SystemExit(f"Expected bundled Java {args.require_version}, got {bundled_version}")
     print(f"Verified bundled Java version: {bundled_version}")
 
     output = project / "build" / "native-dist"
