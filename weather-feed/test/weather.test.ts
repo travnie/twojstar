@@ -153,8 +153,11 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
   assert.match(html, /href="https:\/\/bartek\.lol\/"/);
-  assert.match(html, /https:\/\/bartek\.lol\/#creator/);
-  assert.match(html, /https:\/\/bartek\.lol\/#website/);
+  const schemaScript = html.match(/<script type="application\/ld\+json">([^<]+)<\/script>/);
+  assert.ok(schemaScript);
+  const schema = JSON.parse(schemaScript[1]);
+  assert.equal(schema.creator["@id"], "https://bartek.lol/#creator");
+  assert.equal(schema.isPartOf["@id"], "https://bartek.lol/#website");
 });
 
 test("weather page collapses long warning and change lists and keeps feed controls near the footer", () => {
