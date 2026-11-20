@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "codebench",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-14",
+  "compatibility_date": "2026-10-14",
   "compatibility_flags": ["nodejs_compat"],
   "preview_urls": false,
   "assets": {
