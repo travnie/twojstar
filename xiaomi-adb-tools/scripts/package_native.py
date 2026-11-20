@@ -98,7 +98,10 @@ def main():
         stderr=subprocess.STDOUT, text=True,
     )
     properties = dict(
-        line.strip().split(" = ", 1) for line in settings.splitlines() if " = " in line
+        (key.strip(), value.strip())
+        for line in settings.splitlines()
+        for key, separator, value in [line.partition(" = ")]
+        if separator
     )
     full_version = properties.get("java.runtime.version", "")
     match = re.fullmatch(r"25\.(\d+)\.(\d+)(?:\.(\d+))?\+(\d+)(?:-LTS)?", full_version)
