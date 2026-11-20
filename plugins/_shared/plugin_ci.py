@@ -23,7 +23,7 @@ PLUGINS = {
     "claudin": ("plugins/claudin", "shared"),
     "cloudflare": ("plugins/cloudflare", "shared"),
     "desktop-commander": ("plugins/desktop-commander", "shared"),
-    "github-ops": ("plugins/github-ops", "shared"),
+    "github": ("plugins/github", "shared"),
     "google": ("plugins/google", "shared"),
     "google-dev-kit": ("plugins/google-dev-kit", "google"),
     "openai-dev-kit": ("plugins/openai-dev-kit", "openai"),
@@ -36,13 +36,13 @@ PACKAGE_SCRIPTS = {
     "claudin": "plugins/_shared/package_plugin.py",
     "cloudflare": "plugins/_shared/package_plugin.py",
     "desktop-commander": "plugins/_shared/package_plugin.py",
-    "github-ops": "plugins/_shared/package_plugin.py",
+    "github": "plugins/_shared/package_plugin.py",
     "google": "plugins/_shared/package_plugin.py",
     "google-dev-kit": "plugins/google-dev-kit/scripts/package_plugin.py",
     "openai-dev-kit": "plugins/openai-dev-kit/scripts/package_plugin.py",
     "spacemolt": "spacemolt/scripts/package_plugin.py",
 }
-SHARED_PACKAGES = {"claudesign", "claudin", "cloudflare", "desktop-commander", "github-ops", "google"}
+SHARED_PACKAGES = {"claudesign", "claudin", "cloudflare", "desktop-commander", "github", "google"}
 COMMON_CHANGES = {
     ".github/workflows/plugin-packages.yml",
     ".agents/plugins/marketplace.json",
