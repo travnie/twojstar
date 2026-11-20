@@ -14,7 +14,7 @@ import type {
 import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
-const SITE_ORIGIN = "https://weather.travny.workers.dev";
+const SITE_ORIGIN = "https://weather.bartek.lol";
 const INDEXNOW_KEY = "d715f047a08ac671e4dc69cc036a7410";
 const INDEXNOW_PATH = `/${INDEXNOW_KEY}.txt`;
 const DISCOVERY_LINK = '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"';

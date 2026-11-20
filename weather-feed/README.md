@@ -1,8 +1,8 @@
-# [Weather Feed](https://weather.travny.workers.dev/)
+# [Weather Feed](https://weather.bartek.lol/)
 
 [![Weather CI](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml/badge.svg?branch=main)](https://github.com/travnie/twojstar/actions/workflows/weather-ci.yml) [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white&style=flat-square)](https://developers.cloudflare.com/workers/) [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=flat-square)](https://www.typescriptlang.org/)
 
-Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to five weather sources; publishes **changes**, not repeated readings. [Canonical host](https://weather.travny.workers.dev/) stays authoritative for schema, sitemap and Atom IDs.
+Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to five weather sources; publishes **changes**, not repeated readings. [Canonical host](https://weather.bartek.lol/) stays authoritative for schema, sitemap and Atom IDs.
 
 ## Public routes
 

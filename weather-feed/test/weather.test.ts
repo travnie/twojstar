@@ -152,9 +152,9 @@ test("weather page advertises its canonical and llms surface", () => {
   assert.match(html, /Powered by Vaisala Xweather/);
   assert.match(html, /Pirate Weather/);
   assert.match(html, /href="https:\/\/www\.xweather\.com\/"/);
-  assert.match(html, /href="https:\/\/travny\.pages\.dev\/"/);
-  assert.match(html, /https:\/\/travny\.pages\.dev\/#creator/);
-  assert.match(html, /https:\/\/travny\.pages\.dev\/#website/);
+  assert.match(html, /href="https:\/\/bartek\.lol\/"/);
+  assert.match(html, /https:\/\/bartek\.lol\/#creator/);
+  assert.match(html, /https:\/\/bartek\.lol\/#website/);
 });
 
 test("weather page collapses long warning and change lists and keeps feed controls near the footer", () => {
@@ -199,17 +199,17 @@ test("workers.dev serves the dashboard without depending on trfny.com", async ()
   assert.equal(response.headers.get("location"), null);
   const body = await response.text();
   assert.match(body, /<div class="card" id="nowCard" aria-live="polite">/);
-  assert.match(body, /rel="canonical" href="https:\/\/weather\.travny\.workers\.dev\//);
+  assert.match(body, /rel="canonical" href="https:\/\/weather\.bartek\.lol\//);
 });
 
 test("weather discovery routes do not require storage", async () => {
   const expected = {
-    "/robots.txt": "https://weather.travny.workers.dev/sitemap.xml",
+    "/robots.txt": "https://weather.bartek.lol/sitemap.xml",
     "/webmcp.js": "read_weather_state",
-    "/sitemap.xml": "https://weather.travny.workers.dev/feed.atom",
-    "/index.md": "https://weather.travny.workers.dev/state.json",
-    "/llms.txt": "https://weather.travny.workers.dev/index.md",
-    "/llms-full.txt": "https://weather.travny.workers.dev/state.json",
+    "/sitemap.xml": "https://weather.bartek.lol/feed.atom",
+    "/index.md": "https://weather.bartek.lol/state.json",
+    "/llms.txt": "https://weather.bartek.lol/index.md",
+    "/llms-full.txt": "https://weather.bartek.lol/state.json",
   };
 
   for (const [path, expectedUrl] of Object.entries(expected)) {
@@ -235,7 +235,7 @@ test("weather discovery routes do not require storage", async () => {
 });
 
 test("both dashboard aliases use durable canonicals and keep Atom identities", async () => {
-  const origin = "https://weather.travny.workers.dev";
+  const origin = "https://weather.bartek.lol";
   const entry: FeedEntry = {
     id: `${FEED_ID}:warn:1:new`, kind: "warning_new", title: "Weather warning",
     summary: "An existing warning", published: "2026-10-01T12:00:00.000Z",
