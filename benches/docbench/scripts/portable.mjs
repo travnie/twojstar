@@ -322,7 +322,7 @@ const portable = html
     `<script>${safeScript(filesWorkspacePortable)}</script>`,
   )
   .replace('<link rel="manifest" href="/site.webmanifest">', "")
-  .replace('<link rel="canonical" href="https://docbench.travny.workers.dev/">', "")
+  .replace(/<link rel="canonical" href="[^"]+">/i, "")
   .replace('<link rel="icon" type="image/svg+xml" href="/favicon.svg">', "")
   .replace('<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">', "")
   .replace('<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">', "")

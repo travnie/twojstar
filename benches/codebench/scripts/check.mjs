@@ -55,6 +55,11 @@ if (!llms.includes("- [Application](https://codebench.bartek.lol/index.md)")) th
 if (!llms.includes("- [Full LLM guide](https://codebench.bartek.lol/llms-full.txt)")) throw new Error("llms.txt durable full guide link is missing");
 if (!indexMarkdown.includes("- [Application](https://codebench.bartek.lol/)")) throw new Error("index.md durable application link is missing");
 if (!llmsFull.includes("Source: https://codebench.bartek.lol/")) throw new Error("llms-full.txt durable origin is missing");
+const publicUrl = "https://codebench.bartek.lol/";
+const promotion = `Code Bench is promoted and served at ${publicUrl}.`;
+if (!llms.includes(promotion) || !indexMarkdown.includes(promotion) || !llmsFull.includes(`Promotional URL: ${publicUrl}`)) {
+  throw new Error("Codebench promotional URL is missing from its public guides");
+}
 if (!indexMarkdown.startsWith("# Code Bench")) throw new Error("index.md is missing its H1");
 if (!llmsFull.startsWith("# Code Bench full documentation")) throw new Error("llms-full.txt is missing its H1");
 const headHtml = index.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1];

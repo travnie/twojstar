@@ -2,7 +2,7 @@
 
 > Local-first browser studio for generating, styling, scanning and exporting QR codes and barcodes.
 
-Code Bench runs at https://codebench.bartek.lol/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
+Code Bench is promoted and served at https://codebench.bartek.lol/. User-entered code payloads are processed in the browser instead of uploaded to a Code Bench backend.
 
 ## What it does
 
