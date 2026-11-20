@@ -18,10 +18,10 @@
     "@fontsource/space-mono": "5.3.0",
     "bwip-js": "4.11.4",
     "qr-code-styling": "1.9.2",
-    "zxing-wasm": "3.1.6"
+    "zxing-wasm": "3.1.7"
   },
   "devDependencies": {
     "typescript": "7.0.2",
-    "wrangler": "^4.160.1"
+    "wrangler": "^4.164.0"
   }
 }
