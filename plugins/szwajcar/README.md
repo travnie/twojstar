@@ -1,6 +1,6 @@
-# Claudin
+# Szwajcar
 
-<img src="assets/icon.svg" width="96" alt="Claudin">
+<img src="assets/icon.svg" width="96" alt="Szwajcar">
 
 Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the Agent Client Protocol, OpenAI/Codex and xAI/Grok — looked up, not remembered. Plus builder skills for plugins, MCP servers and skills. Replaces Anthropic's `plugin-dev` and `mcp-server-dev` and the MCP `mcp-apps` plugin (their pins had gone stale: hook list, manifest fields, ext-apps 1.x, pre-2026 spec).
 
@@ -47,7 +47,7 @@ OpenAI Dev Kit consolidation (Nov 2026): focused API/Codex workflows in
 `docs-lookup/references/`; OpenAI scaffolds and validator in
 `plugin-dev/scripts/`; build and MCP Apps reference notes in
 `plugin-dev/references/openai-kit/`. Existing four skill IDs and seven endpoints
-stay unchanged. Claudin is authoritative for fixes and new features. The
+stay unchanged. Szwajcar is authoritative for fixes and new features. The
 standalone OpenAI Dev Kit is a frozen compatibility package pending retirement;
 do not duplicate changes there.
 
@@ -57,10 +57,10 @@ Canonical source here is the portable `plugin.json` + `mcp.json` + `skills/`; th
 
 ```sh
 python -m pip install -r plugins/_shared/requirements.txt
-python plugins/_shared/package_plugin.py plugins/claudin /tmp/claudin.zip
+python plugins/_shared/package_plugin.py plugins/szwajcar /tmp/szwajcar.zip
 ```
 
-Claude Code: `/plugin install claudin@twojstar` (after `/plugin marketplace add travnie/twojstar`).
+Claude Code: `/plugin install szwajcar@twojstar` (after `/plugin marketplace add travnie/twojstar`).
 
 
 ## Links

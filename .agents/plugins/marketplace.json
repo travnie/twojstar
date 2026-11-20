@@ -65,10 +65,10 @@
       "category": "Developer Tools"
     },
     {
-      "name": "claudin",
+      "name": "szwajcar",
       "source": {
         "source": "local",
-        "path": "./plugins/claudin"
+        "path": "./plugins/szwajcar"
       },
       "policy": {
         "installation": "AVAILABLE",

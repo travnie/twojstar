@@ -47,11 +47,11 @@
       "category": "Developer Tools"
     },
     {
-      "name": "claudin",
-      "source": "./plugins/claudin",
+      "name": "szwajcar",
+      "source": "./plugins/szwajcar",
       "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
-      "version": "1.10.2",
-      "displayName": "Claudin",
+      "version": "1.11.0",
+      "displayName": "Szwajcar",
       "category": "Developer Tools"
     },
     {
@@ -88,7 +88,8 @@
     }
   ],
   "renames": {
-    "devkit-claude": "claudin",
+    "devkit-claude": "szwajcar",
+    "claudin": "szwajcar",
     "github-ops": "github"
   }
 }

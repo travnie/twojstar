@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # Package source, existing package command, and optional tests.
 PLUGINS = {
     "claudesign": ("plugins/claudesign", "shared"),
-    "claudin": ("plugins/claudin", "shared"),
+    "szwajcar": ("plugins/szwajcar", "shared"),
     "cloudflare": ("plugins/cloudflare", "shared"),
     "desktop-commander": ("plugins/desktop-commander", "shared"),
     "github": ("plugins/github", "shared"),
@@ -33,7 +33,7 @@ PLUGINS = {
 # Hardcoded allowlist of packaging scripts by plugin.
 PACKAGE_SCRIPTS = {
     "claudesign": "plugins/_shared/package_plugin.py",
-    "claudin": "plugins/_shared/package_plugin.py",
+    "szwajcar": "plugins/_shared/package_plugin.py",
     "cloudflare": "plugins/_shared/package_plugin.py",
     "desktop-commander": "plugins/_shared/package_plugin.py",
     "github": "plugins/_shared/package_plugin.py",
@@ -42,7 +42,7 @@ PACKAGE_SCRIPTS = {
     "openai-dev-kit": "plugins/openai-dev-kit/scripts/package_plugin.py",
     "spacemolt": "spacemolt/scripts/package_plugin.py",
 }
-SHARED_PACKAGES = {"claudesign", "claudin", "cloudflare", "desktop-commander", "github", "google"}
+SHARED_PACKAGES = {"claudesign", "szwajcar", "cloudflare", "desktop-commander", "github", "google"}
 COMMON_CHANGES = {
     ".github/workflows/plugin-packages.yml",
     ".agents/plugins/marketplace.json",
@@ -67,7 +67,7 @@ def changed_packages(paths: set[str]) -> list[str]:
             chosen.add(name)
     if any(path.startswith("plugins/_shared/") and path not in CATALOG_ONLY for path in paths):
         chosen.update(SHARED_PACKAGES)
-    if "plugins/claudin/skills/plugin-dev/scripts/validate_plugin.py" in paths:
+    if "plugins/szwajcar/skills/plugin-dev/scripts/validate_plugin.py" in paths:
         chosen.update(SHARED_PACKAGES)
     if paths & {"spacemolt/scripts/package_plugin.py", "spacemolt/scripts/test_plugin_package.py"}:
         chosen.add("spacemolt")
@@ -162,10 +162,10 @@ def build(plugin: str, upload_root: Path) -> None:
     if requirements:
         run(sys.executable, "-m", "pip", "install", "-r", requirements)
     if kind == "shared":
-        run(sys.executable, "plugins/claudin/skills/plugin-dev/scripts/validate_plugin.py", source)
+        run(sys.executable, "plugins/szwajcar/skills/plugin-dev/scripts/validate_plugin.py", source)
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/_shared", "-p", "test_app_bindings.py", "-v")
-    if plugin == "claudin":
-        run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/claudin/tests", "-v")
+    if plugin == "szwajcar":
+        run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/szwajcar/tests", "-v")
     if kind == "google":
         run(sys.executable, "-m", "unittest", "discover", "-s", "plugins/google-dev-kit/tests", "-v")
     if kind == "spacemolt":

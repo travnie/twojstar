@@ -9,4 +9,4 @@ validation. Use current upstream examples and live docs before generating an
 app.
 The original local Node scaffold is retained as a fallback.
 
-The original OpenAI Dev Kit icon is not included in Claudin.
+The original OpenAI Dev Kit icon is not included in Szwajcar.

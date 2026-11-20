@@ -21,7 +21,7 @@ updates:
   - package-ecosystem: "pip"
     directories:
       - "/plugins/_shared"
-      - "/plugins/claudin/skills/mcp-dev/scripts/eval"
+      - "/plugins/szwajcar/skills/mcp-dev/scripts/eval"
       - "/plugins/google-dev-kit"
       - "/plugins/openai-dev-kit"
     schedule:
