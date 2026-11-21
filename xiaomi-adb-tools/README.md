@@ -44,8 +44,8 @@ runtime**. No separately installed Java required.
 
 **Security (CVE-2026-114938):** x64 launchers disable the vulnerable HotSpot
 Base64 intrinsic. CI requires Temurin 25.0.5.1+2 and verifies the bundled
-runtime build number on all five platforms. Check `JAVA-RUNTIME.txt` in the
-extracted app image (including inside the macOS `.app`); require 25.0.5.1+2-LTS
+runtime build number on all five platforms. Check `JAVA-RUNTIME.txt` at the
+extracted app root (macOS: inside `.app/Contents/Resources`); require 25.0.5.1+2-LTS
 or later. Replace older archives. ARM64 is not affected by this CVE.
 See [Adoptium advisory](https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell/).
 
@@ -98,7 +98,7 @@ python scripts/package_native.py --platform windows-x64
 
 Replace `windows-x64` and `jarWindowsX64` with the matching platform and task.
 Native app images must be built on the corresponding operating system and CPU architecture.
-The CI matrix builds all five. macOS images are unsigned/not notarized. Linux arm64
+The CI matrix builds all five. macOS images are ad hoc signed, not Developer ID-signed/notarized. Linux arm64
 requires `adb` and `fastboot` from the system package manager **before the first launch**,
 since Google's automatic download provides only x86-64 Linux binaries.
 

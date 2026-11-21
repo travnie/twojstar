@@ -64,6 +64,13 @@ jobs:
       - name: Bundle native launcher and JDK 25
         run: python scripts/package_native.py --platform ${{ matrix.platform }}
 
+      - name: Verify archived macOS signature
+        if: startsWith(matrix.platform, 'macos-')
+        run: |
+          mkdir -p build/verify-macos
+          tar -xzf "build/native-dist/XiaomiADBFastbootTools-${{ matrix.platform }}.tar.gz" -C build/verify-macos
+          codesign --verify --deep --strict --verbose=2 build/verify-macos/XiaomiADBFastbootTools.app
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: XiaomiADBFastbootTools-${{ matrix.platform }}
