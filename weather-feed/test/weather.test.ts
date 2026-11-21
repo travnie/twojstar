@@ -151,7 +151,8 @@ test("Atom entries link to individual, readable event pages", async () => {
   };
   const xml = renderAtom([entry], "Weather", "https://weather.bartek.lol");
   const path = "/events/" + encodeURIComponent(entry.id);
-  assert.ok(xml.includes(`<link rel="alternate" href="https://weather.bartek.lol${path}"/>`));
+  const entryXml = xml.match(/<entry>[\s\S]*?<\/entry>/)?.[0] ?? "";
+  assert.ok(entryXml.includes(`<link rel="alternate" href="https://weather.bartek.lol${path}"/>`));
 
   const env = {
     WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null },
@@ -194,6 +195,17 @@ test("Atom responses support stable validators and conditional GET", async () =>
   } }), env);
   assert.equal(wrongTag.status, 200);
   assert.equal(await wrongTag.text(), await initial.text());
+  const quotedComma = await worker.fetch(new Request(url, {
+    headers: { "if-none-match": '"not,*,matching"' },
+  }), env);
+  assert.equal(quotedComma.status, 200);
+
+  const modifiedEnv = {
+    WEATHER_KV: { get: async (key: string) => key === "entries"
+      ? [{ ...entry, summary: "New content" }] : null },
+  } as unknown as Env;
+  const modified = await worker.fetch(new Request(url), modifiedEnv);
+  assert.notEqual(modified.headers.get("etag"), tag);
 });
 
 test("empty Atom feeds keep validators stable between polls", async () => {

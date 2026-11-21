@@ -520,9 +520,10 @@ async function atom(body: string, request: Request, lastUpdate?: string): Promis
   if (request.method === "GET" || request.method === "HEAD") {
     const ifNoneMatch = request.headers.get("if-none-match");
     const ifModifiedSince = request.headers.get("if-modified-since");
-    const matchesTag = ifNoneMatch?.split(",").some(
-      (part) => part.trim() === "*" || part.trim().replace(/^W\//, "") === etag,
-    );
+    // Quoted entity-tags may contain commas and '*' (RFC 9110).
+    const matchesTag = ifNoneMatch?.trim() === "*" ||
+      (ifNoneMatch?.match(/(?:W\/)?"[^"]*"/g) ?? []).some((tag) =>
+        tag.replace(/^W\//, "") === etag);
     const modifiedSince = ifModifiedSince ? Date.parse(ifModifiedSince) : NaN;
     const notModified = ifNoneMatch !== null ? matchesTag : (
       Number.isFinite(updatedMs) && Number.isFinite(modifiedSince)
