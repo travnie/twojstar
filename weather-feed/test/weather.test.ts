@@ -236,6 +236,17 @@ test("KV metadata uses whole-second revision dates and date validators can retur
     headers: {"if-modified-since":lastModified},
   }), env);
   assert.equal(second.status,304);
+
+  // Two writes in the same wall-clock second still advance Last-Modified.
+  await pushEntries(env, [{
+    ...entry, id:"rev3", published:"2026-11-20T12:02:00.000Z",
+  }]);
+  const changed = await worker.fetch(new Request(url, {
+    headers: {"if-modified-since":lastModified},
+  }), env);
+  assert.equal(changed.status,200);
+  assert.notEqual(changed.headers.get("last-modified"),lastModified);
+  assert.match(await changed.text(), /rev3/);
 });
 
 test("empty Atom feeds keep validators stable between polls", async () => {
