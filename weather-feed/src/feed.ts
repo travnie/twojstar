@@ -7,6 +7,10 @@ import { warningIsExpired } from "./warnings";
 
 export const FEED_ID = "tag:travny,2026:weather:koscielec";
 
+export function entryUrl(origin: string, id: string): string {
+  return `${origin}/events/${encodeURIComponent(id)}`;
+}
+
 // Compare against the last *published* baseline (not the last run) so small
 // drift doesn't accumulate into spurious entries.
 export function currentChange(prev: Ensemble | null, next: Ensemble): FeedEntry | null {
@@ -140,11 +144,14 @@ export function renderAtom(
   origin: string,
   selfPath = "/feed.atom",
   feedId = FEED_ID,
+  updatedOverride?: string,
 ): string {
-  const updated = entries[0]?.published ?? new Date().toISOString();
+  // Empty feeds need a stable updated value for conditional caching.
+  const updated = updatedOverride ?? entries[0]?.published ?? "2026-07-22T00:00:00.000Z";
   const items = entries.map((e) => `  <entry>
     <title>${esc(e.title)}</title>
     <id>${esc(e.id)}</id>
+    <link rel="alternate" href="${esc(entryUrl(origin, e.id))}"/>
     <updated>${e.published}</updated>
     <published>${e.published}</published>
     <category term="${e.kind}"/>

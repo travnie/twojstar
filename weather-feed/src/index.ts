@@ -1,5 +1,5 @@
 import { CONFIG } from "./config";
-import { renderPage } from "./page";
+import { renderFeedEntryPage, renderPage } from "./page";
 import { buildDayEnsembles, buildEnsemble } from "./ensemble";
 import {
   airQualityChange, currentChange, FEED_ID, forecastRevision, renderAtom, warningEntries,
@@ -172,13 +172,30 @@ async function load<T>(env: Env, key: string): Promise<T | null> {
   return env.WEATHER_KV.get(key, "json") as Promise<T | null>;
 }
 
+interface EntriesMetadata {
+  updatedAt: string;
+  warningsUpdatedAt: string;
+}
+
+async function loadEntries(env: Env): Promise<{ entries: FeedEntry[]; metadata: EntriesMetadata | null }> {
+  // Legacy KV mocks and records may have no metadata.
+  if (typeof env.WEATHER_KV.getWithMetadata !== "function") {
+    return { entries: (await load<FeedEntry[]>(env, K.entries)) ?? [], metadata: null };
+  }
+  const result = await env.WEATHER_KV.getWithMetadata(K.entries, "json") as {
+    value: FeedEntry[] | null;
+    metadata: EntriesMetadata | null;
+  };
+  return { entries: result.value ?? [], metadata: result.metadata ?? null };
+}
+
 function log(level: "info" | "warn" | "error", fields: Record<string, unknown>): void {
   console.log(JSON.stringify({ level, ...fields }));
 }
 
 export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
   if (fresh.length === 0) return;
-  const existing = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+  const { entries: existing, metadata: previousMetadata } = await loadEntries(env);
   const unique = new Map<string, FeedEntry>();
   for (const entry of [...existing, ...fresh]) {
     const previous = unique.get(entry.id);
@@ -189,7 +206,26 @@ export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
   const merged = [...unique.values()]
     .sort((a, b) => Date.parse(b.published) - Date.parse(a.published))
     .slice(0, CONFIG.maxEntries);
-  await env.WEATHER_KV.put(K.entries, JSON.stringify(merged));
+  const payload = JSON.stringify(merged);
+  if (payload === JSON.stringify(existing)) return;
+  const isWarning = (entry: FeedEntry) => entry.kind === "warning_new" || entry.kind === "warning_lifted";
+  const warningsChanged = JSON.stringify(existing.filter(isWarning)) !== JSON.stringify(merged.filter(isWarning));
+  // HTTP dates have one-second precision. Distinct revisions must have distinct dates.
+  const revisionAfter = (previous?: string): string => {
+    const prior = previous ? Date.parse(previous) : NaN;
+    const now = Math.floor(Date.now() / 1000) * 1000;
+    return new Date(Number.isFinite(prior) ? Math.max(now, Math.floor(prior / 1000) * 1000 + 1000) : now).toISOString();
+  };
+  const updatedAt = revisionAfter(previousMetadata?.updatedAt);
+  const metadata: EntriesMetadata = {
+    updatedAt,
+    warningsUpdatedAt: warningsChanged
+      ? revisionAfter(previousMetadata?.warningsUpdatedAt)
+      : previousMetadata?.warningsUpdatedAt
+        ?? existing.find(isWarning)?.published
+        ?? "2026-07-22T00:00:00.000Z",
+  };
+  await env.WEATHER_KV.put(K.entries, payload, { metadata });
   log("info", { msg: "entries appended", added: fresh.length, total: merged.length });
 }
 
@@ -374,20 +410,47 @@ export default {
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;
 
+    if (pathname.startsWith("/events/")) {
+      const encodedId = pathname.slice("/events/".length);
+      if (!encodedId || encodedId.length > 512 || encodedId.includes("/")) {
+        return new Response("not found", { status: 404 });
+      }
+      let id: string;
+      try {
+        id = decodeURIComponent(encodedId);
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+      const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+      const entry = entries.find((item) => item.id === id);
+      if (!entry) return new Response("not found", { status: 404 });
+      return new Response(req.method === "HEAD" ? null : renderFeedEntryPage(SITE_ORIGIN, entry), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=600",
+        },
+      });
+    }
     if (!KV_ROUTES.has(pathname)) return new Response("not found", { status: 404 });
-    const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+    const { entries, metadata } = await loadEntries(env);
 
     switch (pathname) {
-      case "/feed.atom":
-        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID));
-      case "/warnings.atom":
+      case "/feed.atom": {
+        const updated = metadata?.updatedAt ?? entries[0]?.published;
+        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID, updated), req, updated);
+      }
+      case "/warnings.atom": {
+        const warnings = entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted");
+        const updated = metadata?.warningsUpdatedAt ?? warnings[0]?.published;
         return atom(renderAtom(
-          entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted"),
+          warnings,
           `Ostrzeżenia IMGW — ${CONFIG.place}`,
           SITE_ORIGIN,
           "/warnings.atom",
           `${FEED_ID}:warnings`,
-        ));
+          updated,
+        ), req, updated);
+      }
       case "/state.json": {
         const state = await load<CurrentState>(env, K.current);
         return json({ place: CONFIG.place, ...state, entryCount: entries.length });
@@ -450,14 +513,35 @@ function cachedResponse(body: string, contentType: string, maxAge: number): Resp
   });
 }
 
-function atom(body: string): Response {
-  return new Response(body, {
-    headers: {
-      "content-type": "application/atom+xml; charset=utf-8",
-      "cache-control": "max-age=600",
-      "access-control-allow-origin": "*",
-    },
+async function atom(body: string, request: Request, lastUpdate?: string): Promise<Response> {
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)));
+  const etag = '"' + Array.from(hash, (byte) => byte.toString(16).padStart(2, "0")).join("") + '"';
+  const updatedMs = lastUpdate ? Date.parse(lastUpdate) : NaN;
+  const headers = new Headers({
+    "content-type": "application/atom+xml; charset=utf-8",
+    "cache-control": "max-age=600",
+    "access-control-allow-origin": "*",
+    etag,
   });
+  if (Number.isFinite(updatedMs)) {
+    headers.set("last-modified", new Date(updatedMs).toUTCString());
+  }
+
+  if (request.method === "GET" || request.method === "HEAD") {
+    const ifNoneMatch = request.headers.get("if-none-match");
+    const ifModifiedSince = request.headers.get("if-modified-since");
+    // Quoted entity-tags may contain commas and '*' (RFC 9110).
+    const matchesTag = ifNoneMatch?.trim() === "*" ||
+      (ifNoneMatch?.match(/(?:W\/)?"[^"]*"/g) ?? []).some((tag) =>
+        tag.replace(/^W\//, "") === etag);
+    const modifiedSince = ifModifiedSince ? Date.parse(ifModifiedSince) : NaN;
+    const notModified = ifNoneMatch !== null ? matchesTag : (
+      Number.isFinite(updatedMs) && Number.isFinite(modifiedSince)
+      && Math.ceil(updatedMs / 1000) <= Math.floor(modifiedSince / 1000)
+    );
+    if (notModified) return new Response(null, { status: 304, headers });
+  }
+  return new Response(request.method === "HEAD" ? null : body, { headers });
 }
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {

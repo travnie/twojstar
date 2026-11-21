@@ -141,6 +141,197 @@ test("warnings feed has its own id and self URL", () => {
   );
 });
 
+test("Atom entries link to individual, readable event pages", async () => {
+  const entry: FeedEntry = {
+    id: `${FEED_ID}:current:2026-11-20T12:00:00Z`,
+    kind: "current_change",
+    title: "Test <weather>",
+    summary: "Changed & updated.",
+    published: "2026-11-20T12:00:00.000Z",
+  };
+  const xml = renderAtom([entry], "Weather", "https://weather.bartek.lol");
+  const path = "/events/" + encodeURIComponent(entry.id);
+  const entryXml = xml.match(/<entry>[\s\S]*?<\/entry>/)?.[0] ?? "";
+  assert.ok(entryXml.includes(`<link rel="alternate" href="https://weather.bartek.lol${path}"/>`));
+
+  const env = {
+    WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null },
+  } as unknown as Env;
+  const response = await worker.fetch(new Request("https://weather.bartek.lol" + path), env);
+  assert.equal(response.status, 200);
+  const page = await response.text();
+  assert.match(page, /Test &lt;weather&gt;/);
+  assert.match(page, /Changed &amp; updated\./);
+  assert.ok(page.includes(`rel="canonical" href="https://weather.bartek.lol${path}"`));
+
+  const unknown = await worker.fetch(new Request("https://weather.bartek.lol/events/not-found"), env);
+  assert.equal(unknown.status, 404);
+});
+
+test("Atom responses support stable validators and conditional GET", async () => {
+  const entry: FeedEntry = {
+    id: "test-etag", kind: "current_change", title: "Weather update",
+    summary: "Update", published: "2026-11-20T12:00:00.000Z",
+  };
+  const env = {
+    WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null },
+  } as unknown as Env;
+  const url = "https://weather.bartek.lol/feed.atom";
+  const initial = await worker.fetch(new Request(url), env);
+  assert.equal(initial.status, 200);
+  const tag = initial.headers.get("etag");
+  assert.match(tag ?? "", /^"[0-9a-f]{64}"$/);
+  assert.equal(initial.headers.get("last-modified"), "Fri, 20 Nov 2026 12:00:00 GMT");
+  const etagHit = await worker.fetch(new Request(url, { headers: { "if-none-match": tag! } }), env);
+  assert.equal(etagHit.status, 304);
+  assert.equal(await etagHit.text(), "");
+  assert.equal(etagHit.headers.get("etag"), tag);
+
+  const dateHit = await worker.fetch(new Request(url, { headers: { "if-modified-since": "Fri, 20 Nov 2026 12:00:00 GMT" } }), env);
+  assert.equal(dateHit.status, 304);
+  const wrongTag = await worker.fetch(new Request(url, { headers: {
+    "if-none-match": '"wrong"',
+    "if-modified-since": "Fri, 20 Nov 2026 12:00:00 GMT",
+  } }), env);
+  assert.equal(wrongTag.status, 200);
+  assert.equal(await wrongTag.text(), await initial.text());
+  const quotedComma = await worker.fetch(new Request(url, {
+    headers: { "if-none-match": '"not,*,matching"' },
+  }), env);
+  assert.equal(quotedComma.status, 200);
+
+  const modifiedEnv = {
+    WEATHER_KV: { get: async (key: string) => key === "entries"
+      ? [{ ...entry, summary: "New content" }] : null },
+  } as unknown as Env;
+  const modified = await worker.fetch(new Request(url), modifiedEnv);
+  assert.notEqual(modified.headers.get("etag"), tag);
+});
+
+test("KV metadata uses whole-second revision dates and date validators can return 304", async () => {
+  const entry: FeedEntry = {
+    id:"rev", kind:"current_change", title:"Update",
+    summary:"First", published:"2026-11-20T12:00:00.000Z",
+  };
+  let metadata = { updatedAt:"2026-11-20T12:00:00.123Z", warningsUpdatedAt:"2026-11-20T12:00:00.123Z" };
+  const store = new Map([["entries",JSON.stringify([entry])]]);
+  const kv = {
+    async get(key: string) { return JSON.parse(store.get(key) || "null"); },
+    async getWithMetadata(key: string) {
+      return { value: JSON.parse(store.get(key) || "null"), metadata };
+    },
+    async put(key: string, value: string, options?: { metadata?: typeof metadata }) {
+      store.set(key,value);
+      if(options?.metadata) metadata=options.metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV:kv } as Env;
+  await pushEntries(env, [{ ...entry, id:"rev2", published:"2026-11-20T12:01:00.000Z" }]);
+  assert.equal(Date.parse(metadata.updatedAt) % 1000,0);
+  const url = "https://weather.bartek.lol/feed.atom";
+  const first = await worker.fetch(new Request(url),env);
+  const lastModified=first.headers.get("last-modified");
+  assert.ok(lastModified);
+  const second = await worker.fetch(new Request(url, {
+    headers: {"if-modified-since":lastModified},
+  }), env);
+  assert.equal(second.status,304);
+
+  // Two writes in the same wall-clock second still advance Last-Modified.
+  await pushEntries(env, [{
+    ...entry, id:"rev3", published:"2026-11-20T12:02:00.000Z",
+  }]);
+  const changed = await worker.fetch(new Request(url, {
+    headers: {"if-modified-since":lastModified},
+  }), env);
+  assert.equal(changed.status,200);
+  assert.notEqual(changed.headers.get("last-modified"),lastModified);
+  assert.match(await changed.text(), /rev3/);
+});
+
+test("empty Atom feeds keep validators stable between polls", async () => {
+  const env = { WEATHER_KV: { get: async () => null } } as unknown as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const first = await worker.fetch(new Request(url), env);
+  const etag = first.headers.get("etag");
+  assert.ok(etag);
+  const repeat = await worker.fetch(new Request(url, { headers: { "if-none-match": etag } }), env);
+  assert.equal(repeat.status, 304);
+});
+
+test("weather-only legacy update preserves an unchanged warning feed", async () => {
+  const warning: FeedEntry = {
+    id: "warning", kind: "warning_new", title: "Warning",
+    summary: "Active", published: "2026-11-01T12:00:00.000Z",
+  };
+  let entries = [warning];
+  let metadata: { updatedAt: string; warningsUpdatedAt: string } | null = null;
+  const kv = {
+    async get(key: string) { return key === "entries" ? entries : null; },
+    async getWithMetadata(key: string) {
+      return { value: key === "entries" ? entries : null, metadata };
+    },
+    async put(key: string, json: string, options?: { metadata?: typeof metadata }) {
+      if (key === "entries") entries = JSON.parse(json) as FeedEntry[];
+      metadata = options?.metadata ?? metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV: kv } as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const before = await worker.fetch(new Request(url), env);
+  const tag = before.headers.get("etag");
+  const previousDate = before.headers.get("last-modified");
+  assert.ok(tag);
+  assert.ok(previousDate);
+  await pushEntries(env, [{
+    id: "weather", kind: "current_change", title: "Weather",
+    summary: "Changed", published: "2026-11-20T12:00:00.000Z",
+  }]);
+  const revalidated = await worker.fetch(new Request(url, {
+    headers: { "if-none-match": tag },
+  }), env);
+  assert.equal(revalidated.status, 304);
+  assert.equal(revalidated.headers.get("last-modified"), previousDate);
+});
+
+test("warning feed Last-Modified changes when pruning removes older warnings", async () => {
+  const earlier = "2026-10-01T00:00:00.000Z";
+  const store = new Map<string, string>();
+  const initial = [{
+    id: "old-warning", kind: "warning_new", title: "Old alert",
+    summary: "Old", published: "2026-10-01T00:00:00.000Z",
+  }, ...Array.from({ length: 59 }, (_, i) => ({
+    id: "weather-" + i, kind: "current_change", title: "Weather",
+    summary: "Update", published: new Date(Date.parse(earlier) + (i + 1) * 3600000).toISOString(),
+  }))] as FeedEntry[];
+  let metadata = { updatedAt: earlier, warningsUpdatedAt: earlier };
+  store.set("entries", JSON.stringify(initial));
+  const kv = {
+    async get(key: string) { return JSON.parse(store.get(key) || "null"); },
+    async getWithMetadata(key: string) {
+      return { value: JSON.parse(store.get(key) || "null"), metadata };
+    },
+    async put(key: string, value: string, options?: { metadata?: typeof metadata }) {
+      store.set(key, value);
+      if (options?.metadata) metadata = options.metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV: kv } as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const before = await worker.fetch(new Request(url), env);
+  assert.match(await before.text(), /Old alert/);
+  await pushEntries(env, [{
+    id: "new-weather", kind: "current_change", title: "Fresh update",
+    summary: "Update", published: "2026-11-20T12:00:00.000Z",
+  }]);
+  const after = await worker.fetch(new Request(url, {
+    headers: { "if-modified-since": before.headers.get("last-modified")! },
+  }), env);
+  assert.equal(after.status, 200);
+  assert.doesNotMatch(await after.text(), /Old alert/);
+  assert.notEqual(after.headers.get("last-modified"), before.headers.get("last-modified"));
+});
+
 test("weather page advertises its canonical and llms surface", () => {
   const html = renderPage("https://weather.trfny.com");
   assert.match(html, /rel="canonical" href="https:\/\/weather\.trfny\.com\/"/);
