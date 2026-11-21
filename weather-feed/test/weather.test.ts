@@ -196,6 +196,54 @@ test("Atom responses support stable validators and conditional GET", async () =>
   assert.equal(await wrongTag.text(), await initial.text());
 });
 
+test("empty Atom feeds keep validators stable between polls", async () => {
+  const env = { WEATHER_KV: { get: async () => null } } as unknown as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const first = await worker.fetch(new Request(url), env);
+  const etag = first.headers.get("etag");
+  assert.ok(etag);
+  const repeat = await worker.fetch(new Request(url, { headers: { "if-none-match": etag } }), env);
+  assert.equal(repeat.status, 304);
+});
+
+test("warning feed Last-Modified changes when pruning removes older warnings", async () => {
+  const earlier = "2026-10-01T00:00:00.000Z";
+  const store = new Map<string, string>();
+  const initial = [{
+    id: "old-warning", kind: "warning_new", title: "Old alert",
+    summary: "Old", published: "2026-10-01T00:00:00.000Z",
+  }, ...Array.from({ length: 59 }, (_, i) => ({
+    id: "weather-" + i, kind: "current_change", title: "Weather",
+    summary: "Update", published: new Date(Date.parse(earlier) + (i + 1) * 3600000).toISOString(),
+  }))] as FeedEntry[];
+  let metadata = { updatedAt: earlier, warningsUpdatedAt: earlier };
+  store.set("entries", JSON.stringify(initial));
+  const kv = {
+    async get(key: string) { return JSON.parse(store.get(key) || "null"); },
+    async getWithMetadata(key: string) {
+      return { value: JSON.parse(store.get(key) || "null"), metadata };
+    },
+    async put(key: string, value: string, options?: { metadata?: typeof metadata }) {
+      store.set(key, value);
+      if (options?.metadata) metadata = options.metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV: kv } as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const before = await worker.fetch(new Request(url), env);
+  assert.match(await before.text(), /Old alert/);
+  await pushEntries(env, [{
+    id: "new-weather", kind: "current_change", title: "Fresh update",
+    summary: "Update", published: "2026-11-20T12:00:00.000Z",
+  }]);
+  const after = await worker.fetch(new Request(url, {
+    headers: { "if-modified-since": before.headers.get("last-modified")! },
+  }), env);
+  assert.equal(after.status, 200);
+  assert.doesNotMatch(await after.text(), /Old alert/);
+  assert.notEqual(after.headers.get("last-modified"), before.headers.get("last-modified"));
+});
+
 test("weather page advertises its canonical and llms surface", () => {
   const html = renderPage("https://weather.trfny.com");
   assert.match(html, /rel="canonical" href="https:\/\/weather\.trfny\.com\/"/);

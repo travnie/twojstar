@@ -144,8 +144,10 @@ export function renderAtom(
   origin: string,
   selfPath = "/feed.atom",
   feedId = FEED_ID,
+  updatedOverride?: string,
 ): string {
-  const updated = entries[0]?.published ?? new Date().toISOString();
+  // Empty feeds need a stable updated value for conditional caching.
+  const updated = updatedOverride ?? entries[0]?.published ?? "2026-07-22T00:00:00.000Z";
   const items = entries.map((e) => `  <entry>
     <title>${esc(e.title)}</title>
     <id>${esc(e.id)}</id>

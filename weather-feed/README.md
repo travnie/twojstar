@@ -15,7 +15,7 @@ Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to 
 | `/state.json` | Ensemble, warnings, air quality, station reference |
 | `/healthz` | 503 for stale/unhealthy **current** cycle; forecast health reported separately in JSON body |
 
-Both Atom feeds expose ETag and Last-Modified validators for conditional requests. Each entry links to a dedicated event detail URL; events are available while retained in WEATHER_KV.
+Both Atom feeds expose strong ETags and revision-aware Last-Modified validators for conditional requests. Last-Modified for legacy warning records may be absent until the next KV update; ETags remain authoritative. Each entry links to a dedicated event detail URL; events are available while retained in WEATHER_KV.
 
 ## Schedule / behavior
 

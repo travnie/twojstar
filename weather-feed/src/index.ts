@@ -172,13 +172,30 @@ async function load<T>(env: Env, key: string): Promise<T | null> {
   return env.WEATHER_KV.get(key, "json") as Promise<T | null>;
 }
 
+interface EntriesMetadata {
+  updatedAt: string;
+  warningsUpdatedAt: string;
+}
+
+async function loadEntries(env: Env): Promise<{ entries: FeedEntry[]; metadata: EntriesMetadata | null }> {
+  // Legacy KV mocks and records may have no metadata.
+  if (typeof env.WEATHER_KV.getWithMetadata !== "function") {
+    return { entries: (await load<FeedEntry[]>(env, K.entries)) ?? [], metadata: null };
+  }
+  const result = await env.WEATHER_KV.getWithMetadata(K.entries, "json") as {
+    value: FeedEntry[] | null;
+    metadata: EntriesMetadata | null;
+  };
+  return { entries: result.value ?? [], metadata: result.metadata ?? null };
+}
+
 function log(level: "info" | "warn" | "error", fields: Record<string, unknown>): void {
   console.log(JSON.stringify({ level, ...fields }));
 }
 
 export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
   if (fresh.length === 0) return;
-  const existing = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+  const { entries: existing, metadata: previousMetadata } = await loadEntries(env);
   const unique = new Map<string, FeedEntry>();
   for (const entry of [...existing, ...fresh]) {
     const previous = unique.get(entry.id);
@@ -189,7 +206,16 @@ export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
   const merged = [...unique.values()]
     .sort((a, b) => Date.parse(b.published) - Date.parse(a.published))
     .slice(0, CONFIG.maxEntries);
-  await env.WEATHER_KV.put(K.entries, JSON.stringify(merged));
+  const payload = JSON.stringify(merged);
+  if (payload === JSON.stringify(existing)) return;
+  const isWarning = (entry: FeedEntry) => entry.kind === "warning_new" || entry.kind === "warning_lifted";
+  const warningsChanged = JSON.stringify(existing.filter(isWarning)) !== JSON.stringify(merged.filter(isWarning));
+  const updatedAt = new Date().toISOString();
+  const metadata: EntriesMetadata = {
+    updatedAt,
+    warningsUpdatedAt: warningsChanged ? updatedAt : previousMetadata?.warningsUpdatedAt ?? updatedAt,
+  };
+  await env.WEATHER_KV.put(K.entries, payload, { metadata });
   log("info", { msg: "entries appended", added: fresh.length, total: merged.length });
 }
 
@@ -396,20 +422,24 @@ export default {
       });
     }
     if (!KV_ROUTES.has(pathname)) return new Response("not found", { status: 404 });
-    const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+    const { entries, metadata } = await loadEntries(env);
 
     switch (pathname) {
-      case "/feed.atom":
-        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID), req, entries[0]?.published);
+      case "/feed.atom": {
+        const updated = metadata?.updatedAt ?? entries[0]?.published;
+        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID, updated), req, updated);
+      }
       case "/warnings.atom": {
         const warnings = entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted");
+        const updated = metadata?.warningsUpdatedAt ?? warnings[0]?.published;
         return atom(renderAtom(
           warnings,
           `Ostrzeżenia IMGW — ${CONFIG.place}`,
           SITE_ORIGIN,
           "/warnings.atom",
           `${FEED_ID}:warnings`,
-        ), req, warnings[0]?.published);
+          updated,
+        ), req, metadata?.warningsUpdatedAt);
       }
       case "/state.json": {
         const state = await load<CurrentState>(env, K.current);
@@ -496,7 +526,7 @@ async function atom(body: string, request: Request, lastUpdate?: string): Promis
     const modifiedSince = ifModifiedSince ? Date.parse(ifModifiedSince) : NaN;
     const notModified = ifNoneMatch !== null ? matchesTag : (
       Number.isFinite(updatedMs) && Number.isFinite(modifiedSince)
-      && Math.floor(updatedMs / 1000) <= Math.floor(modifiedSince / 1000)
+      && Math.ceil(updatedMs / 1000) <= Math.floor(modifiedSince / 1000)
     );
     if (notModified) return new Response(null, { status: 304, headers });
   }
