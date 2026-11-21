@@ -208,6 +208,36 @@ test("Atom responses support stable validators and conditional GET", async () =>
   assert.notEqual(modified.headers.get("etag"), tag);
 });
 
+test("KV metadata uses whole-second revision dates and date validators can return 304", async () => {
+  const entry: FeedEntry = {
+    id:"rev", kind:"current_change", title:"Update",
+    summary:"First", published:"2026-11-20T12:00:00.000Z",
+  };
+  let metadata = { updatedAt:"2026-11-20T12:00:00.123Z", warningsUpdatedAt:"2026-11-20T12:00:00.123Z" };
+  const store = new Map([["entries",JSON.stringify([entry])]]);
+  const kv = {
+    async get(key: string) { return JSON.parse(store.get(key) || "null"); },
+    async getWithMetadata(key: string) {
+      return { value: JSON.parse(store.get(key) || "null"), metadata };
+    },
+    async put(key: string, value: string, options?: { metadata?: typeof metadata }) {
+      store.set(key,value);
+      if(options?.metadata) metadata=options.metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV:kv } as Env;
+  await pushEntries(env, [{ ...entry, id:"rev2", published:"2026-11-20T12:01:00.000Z" }]);
+  assert.equal(Date.parse(metadata.updatedAt) % 1000,0);
+  const url = "https://weather.bartek.lol/feed.atom";
+  const first = await worker.fetch(new Request(url),env);
+  const lastModified=first.headers.get("last-modified");
+  assert.ok(lastModified);
+  const second = await worker.fetch(new Request(url, {
+    headers: {"if-modified-since":lastModified},
+  }), env);
+  assert.equal(second.status,304);
+});
+
 test("empty Atom feeds keep validators stable between polls", async () => {
   const env = { WEATHER_KV: { get: async () => null } } as unknown as Env;
   const url = "https://weather.bartek.lol/warnings.atom";

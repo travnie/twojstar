@@ -210,10 +210,18 @@ export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
   if (payload === JSON.stringify(existing)) return;
   const isWarning = (entry: FeedEntry) => entry.kind === "warning_new" || entry.kind === "warning_lifted";
   const warningsChanged = JSON.stringify(existing.filter(isWarning)) !== JSON.stringify(merged.filter(isWarning));
-  const updatedAt = new Date().toISOString();
+  // HTTP dates have one-second precision. Distinct revisions must have distinct dates.
+  const revisionAfter = (previous?: string): string => {
+    const prior = previous ? Date.parse(previous) : NaN;
+    const now = Math.floor(Date.now() / 1000) * 1000;
+    return new Date(Number.isFinite(prior) ? Math.max(now, Math.floor(prior / 1000) * 1000 + 1000) : now).toISOString();
+  };
+  const updatedAt = revisionAfter(previousMetadata?.updatedAt);
   const metadata: EntriesMetadata = {
     updatedAt,
-    warningsUpdatedAt: warningsChanged ? updatedAt : previousMetadata?.warningsUpdatedAt ?? updatedAt,
+    warningsUpdatedAt: warningsChanged
+      ? revisionAfter(previousMetadata?.warningsUpdatedAt)
+      : previousMetadata?.warningsUpdatedAt ?? updatedAt,
   };
   await env.WEATHER_KV.put(K.entries, payload, { metadata });
   log("info", { msg: "entries appended", added: fresh.length, total: merged.length });
