@@ -259,6 +259,41 @@ test("empty Atom feeds keep validators stable between polls", async () => {
   assert.equal(repeat.status, 304);
 });
 
+test("weather-only legacy update preserves an unchanged warning feed", async () => {
+  const warning: FeedEntry = {
+    id: "warning", kind: "warning_new", title: "Warning",
+    summary: "Active", published: "2026-11-01T12:00:00.000Z",
+  };
+  let entries = [warning];
+  let metadata: { updatedAt: string; warningsUpdatedAt: string } | null = null;
+  const kv = {
+    async get(key: string) { return key === "entries" ? entries : null; },
+    async getWithMetadata(key: string) {
+      return { value: key === "entries" ? entries : null, metadata };
+    },
+    async put(key: string, json: string, options?: { metadata?: typeof metadata }) {
+      if (key === "entries") entries = JSON.parse(json) as FeedEntry[];
+      metadata = options?.metadata ?? metadata;
+    },
+  } as unknown as KVNamespace;
+  const env = { WEATHER_KV: kv } as Env;
+  const url = "https://weather.bartek.lol/warnings.atom";
+  const before = await worker.fetch(new Request(url), env);
+  const tag = before.headers.get("etag");
+  const previousDate = before.headers.get("last-modified");
+  assert.ok(tag);
+  assert.ok(previousDate);
+  await pushEntries(env, [{
+    id: "weather", kind: "current_change", title: "Weather",
+    summary: "Changed", published: "2026-11-20T12:00:00.000Z",
+  }]);
+  const revalidated = await worker.fetch(new Request(url, {
+    headers: { "if-none-match": tag },
+  }), env);
+  assert.equal(revalidated.status, 304);
+  assert.equal(revalidated.headers.get("last-modified"), previousDate);
+});
+
 test("warning feed Last-Modified changes when pruning removes older warnings", async () => {
   const earlier = "2026-10-01T00:00:00.000Z";
   const store = new Map<string, string>();

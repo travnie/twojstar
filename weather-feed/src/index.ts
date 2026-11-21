@@ -221,7 +221,9 @@ export async function pushEntries(env: Env, fresh: FeedEntry[]): Promise<void> {
     updatedAt,
     warningsUpdatedAt: warningsChanged
       ? revisionAfter(previousMetadata?.warningsUpdatedAt)
-      : previousMetadata?.warningsUpdatedAt ?? updatedAt,
+      : previousMetadata?.warningsUpdatedAt
+        ?? existing.find(isWarning)?.published
+        ?? "2026-07-22T00:00:00.000Z",
   };
   await env.WEATHER_KV.put(K.entries, payload, { metadata });
   log("info", { msg: "entries appended", added: fresh.length, total: merged.length });
@@ -447,7 +449,7 @@ export default {
           "/warnings.atom",
           `${FEED_ID}:warnings`,
           updated,
-        ), req, metadata?.warningsUpdatedAt);
+        ), req, updated);
       }
       case "/state.json": {
         const state = await load<CurrentState>(env, K.current);
