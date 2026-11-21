@@ -389,7 +389,7 @@ jobs:
                           version = inner.read(paths[0]).decode().strip()
                   else:
                       with tarfile.open(fileobj=data, mode="r:gz") as inner:
-                          paths = [p for p in inner.getmembers() if p.isfile() and p.name.count("/") == 1 and p.name.endswith("/JAVA-RUNTIME.txt")]
+                          paths = [p for p in inner.getmembers() if p.isfile() and p.name.endswith("/JAVA-RUNTIME.txt")]
                           assert len(paths) == 1, f"{name}: missing runtime attestation"
                           version = inner.extractfile(paths[0]).read().decode().strip()
                   match = re.fullmatch(r"25\.(\d+)\.(\d+)(?:\.(\d+))?\+(\d+)(?:-LTS)?", version)

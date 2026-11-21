@@ -109,7 +109,9 @@ def main():
     if (not match or tuple(int(part or 0) for part in match.groups()) < (0, 5, 1, 2)
             or properties.get("java.vendor") != "Eclipse Adoptium"):
         raise SystemExit(f"Expected patched Temurin 25 (25.0.5.1+2 or later), got {full_version!r}")
-    (image / "JAVA-RUNTIME.txt").write_text(full_version + "\n", encoding="utf-8")
+    attestation_dir = image / "Contents" / "Resources" if platform.system() == "Darwin" else image
+    attestation_dir.mkdir(parents=True, exist_ok=True)
+    (attestation_dir / "JAVA-RUNTIME.txt").write_text(full_version + "\n", encoding="utf-8")
     print(f"Verified bundled Java version: {full_version}")
 
     # Restore jpackage's minimal runtime layout after verifying the embedded VM.
@@ -125,6 +127,19 @@ def main():
             command.unlink()
     if bundled_java.exists():
         raise SystemExit(f"Failed to remove bundled Java launcher: {bundled_java}")
+
+    if platform.system() == "Darwin":
+        # jpackage ad hoc-signs the app. Reseal nested runtime first, then app.
+        runtime_bundle = releases[0].parent.parent.parent
+        for bundle in (runtime_bundle, image):
+            subprocess.run(
+                [
+                    "codesign", "--force", "--sign", "-",
+                    "--preserve-metadata=entitlements,flags,runtime", str(bundle),
+                ],
+                check=True,
+            )
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(image)], check=True)
 
     output.mkdir(parents=True, exist_ok=True)
     if platform.system() == "Windows":
