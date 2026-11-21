@@ -77,7 +77,6 @@ def main():
             "--main-jar", jar.name,
             "--main-class", "Main",
             "--dest", str(destination),
-            "--jlink-options", "--strip-debug --no-man-pages --no-header-files",
             *java_options,
         ],
         check=True,
