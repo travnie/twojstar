@@ -383,15 +383,28 @@ jobs:
               for name in outer.namelist():
                   data = io.BytesIO(outer.read(name))
                   if name.endswith(".zip"):
+                      expected = "XiaomiADBFastbootTools/JAVA-RUNTIME.txt"
                       with zipfile.ZipFile(data) as inner:
-                          paths = [p for p in inner.namelist() if p.count("/") == 1 and p.endswith("/JAVA-RUNTIME.txt")]
-                          assert len(paths) == 1, f"{name}: missing runtime attestation"
-                          version = inner.read(paths[0]).decode().strip()
-                  else:
+                          paths = [p for p in inner.namelist() if p == expected]
+                          assert len(paths) == 1, f"{name}: missing {expected}"
+                          version = inner.read(expected).decode().strip()
+                  elif name.endswith(".tar.gz"):
+                      if "-macos-" in name:
+                          expected = "XiaomiADBFastbootTools.app/Contents/Resources/JAVA-RUNTIME.txt"
+                      elif "-linux-" in name:
+                          expected = "XiaomiADBFastbootTools/JAVA-RUNTIME.txt"
+                      else:
+                          raise SystemExit(f"{name}: unexpected platform")
                       with tarfile.open(fileobj=data, mode="r:gz") as inner:
-                          paths = [p for p in inner.getmembers() if p.isfile() and p.name.endswith("/JAVA-RUNTIME.txt")]
-                          assert len(paths) == 1, f"{name}: missing runtime attestation"
-                          version = inner.extractfile(paths[0]).read().decode().strip()
+                          try:
+                              attestation = inner.getmember(expected)
+                          except KeyError:
+                              raise SystemExit(f"{name}: missing {expected}")
+                          if not attestation.isfile():
+                              raise SystemExit(f"{name}: not a regular file: {expected}")
+                          version = inner.extractfile(attestation).read().decode().strip()
+                  else:
+                      raise SystemExit(f"Unexpected archive: {name}")
                   match = re.fullmatch(r"25\.(\d+)\.(\d+)(?:\.(\d+))?\+(\d+)(?:-LTS)?", version)
                   if not match or tuple(int(part or 0) for part in match.groups()) < (0, 5, 1, 2):
                       raise SystemExit(f"{name}: unpatched runtime {version}")
