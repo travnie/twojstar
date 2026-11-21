@@ -11,8 +11,11 @@ Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to 
 | `/` | Weather dashboard |
 | `/feed.atom` | All change events, including weather, air quality and IMGW alerts |
 | `/warnings.atom` | IMGW alerts |
+| `/events/:id` | Readable, permanent-while-retained page for an individual Atom event |
 | `/state.json` | Ensemble, warnings, air quality, station reference |
 | `/healthz` | 503 for stale/unhealthy **current** cycle; forecast health reported separately in JSON body |
+
+Both Atom feeds expose ETag and Last-Modified validators for conditional requests. Each entry links to a dedicated event detail URL; events are available while retained in WEATHER_KV.
 
 ## Schedule / behavior
 

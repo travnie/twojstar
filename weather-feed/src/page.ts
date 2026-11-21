@@ -1,4 +1,5 @@
 import type { AirQuality, CurrentState, FeedEntry, Warning } from "./types";
+import { entryUrl } from "./feed";
 
 // Landing page served at GET /. The current KV snapshot is rendered into HTML
 // for users and crawlers; the small client script still refreshes it in place.
@@ -38,6 +39,35 @@ function escapeHtml(value: unknown): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+export function renderFeedEntryPage(origin: string, entry: FeedEntry): string {
+  const url = entryUrl(origin, entry.id);
+  return `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<title>${escapeHtml(entry.title)} | Pogoda Kościelec</title>
+<link rel="canonical" href="${escapeHtml(url)}">
+<link rel="alternate" type="application/atom+xml" href="${escapeHtml(origin)}/feed.atom">
+<style>
+body{max-width:45rem;margin:3rem auto;padding:0 1rem;font:1rem/1.65 system-ui,sans-serif;background:#101925;color:#e8f0fa}
+a{color:#8cc5ff}article{padding:1.6rem;border:1px solid #34445b;border-radius:1rem;background:#172336}
+h1{line-height:1.25;font-size:clamp(1.5rem,4vw,2rem)}time{color:#aebed2}
+</style>
+</head>
+<body>
+<p><a href="${escapeHtml(origin)}/">← Pogoda Kościelec</a></p>
+<article>
+<h1>${escapeHtml(entry.title)}</h1>
+<time datetime="${escapeHtml(entry.published)}">${escapeHtml(formatDate(entry.published))}</time>
+<p>${escapeHtml(entry.summary)}</p>
+</article>
+<p><a href="${escapeHtml(origin)}/feed.atom">Atom feed</a></p>
+</body>
+</html>`;
 }
 
 function fmt(value: number | null | undefined): string {

@@ -141,6 +141,61 @@ test("warnings feed has its own id and self URL", () => {
   );
 });
 
+test("Atom entries link to individual, readable event pages", async () => {
+  const entry: FeedEntry = {
+    id: `${FEED_ID}:current:2026-11-20T12:00:00Z`,
+    kind: "current_change",
+    title: "Test <weather>",
+    summary: "Changed & updated.",
+    published: "2026-11-20T12:00:00.000Z",
+  };
+  const xml = renderAtom([entry], "Weather", "https://weather.bartek.lol");
+  const path = "/events/" + encodeURIComponent(entry.id);
+  assert.ok(xml.includes(`<link rel="alternate" href="https://weather.bartek.lol${path}"/>`));
+
+  const env = {
+    WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null },
+  } as unknown as Env;
+  const response = await worker.fetch(new Request("https://weather.bartek.lol" + path), env);
+  assert.equal(response.status, 200);
+  const page = await response.text();
+  assert.match(page, /Test &lt;weather&gt;/);
+  assert.match(page, /Changed &amp; updated\./);
+  assert.ok(page.includes(`rel="canonical" href="https://weather.bartek.lol${path}"`));
+
+  const unknown = await worker.fetch(new Request("https://weather.bartek.lol/events/not-found"), env);
+  assert.equal(unknown.status, 404);
+});
+
+test("Atom responses support stable validators and conditional GET", async () => {
+  const entry: FeedEntry = {
+    id: "test-etag", kind: "current_change", title: "Weather update",
+    summary: "Update", published: "2026-11-20T12:00:00.000Z",
+  };
+  const env = {
+    WEATHER_KV: { get: async (key: string) => key === "entries" ? [entry] : null },
+  } as unknown as Env;
+  const url = "https://weather.bartek.lol/feed.atom";
+  const initial = await worker.fetch(new Request(url), env);
+  assert.equal(initial.status, 200);
+  const tag = initial.headers.get("etag");
+  assert.match(tag ?? "", /^"[0-9a-f]{64}"$/);
+  assert.equal(initial.headers.get("last-modified"), "Fri, 20 Nov 2026 12:00:00 GMT");
+  const etagHit = await worker.fetch(new Request(url, { headers: { "if-none-match": tag! } }), env);
+  assert.equal(etagHit.status, 304);
+  assert.equal(await etagHit.text(), "");
+  assert.equal(etagHit.headers.get("etag"), tag);
+
+  const dateHit = await worker.fetch(new Request(url, { headers: { "if-modified-since": "Fri, 20 Nov 2026 12:00:00 GMT" } }), env);
+  assert.equal(dateHit.status, 304);
+  const wrongTag = await worker.fetch(new Request(url, { headers: {
+    "if-none-match": '"wrong"',
+    "if-modified-since": "Fri, 20 Nov 2026 12:00:00 GMT",
+  } }), env);
+  assert.equal(wrongTag.status, 200);
+  assert.equal(await wrongTag.text(), await initial.text());
+});
+
 test("weather page advertises its canonical and llms surface", () => {
   const html = renderPage("https://weather.trfny.com");
   assert.match(html, /rel="canonical" href="https:\/\/weather\.trfny\.com\/"/);

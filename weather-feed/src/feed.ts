@@ -7,6 +7,10 @@ import { warningIsExpired } from "./warnings";
 
 export const FEED_ID = "tag:travny,2026:weather:koscielec";
 
+export function entryUrl(origin: string, id: string): string {
+  return `${origin}/events/${encodeURIComponent(id)}`;
+}
+
 // Compare against the last *published* baseline (not the last run) so small
 // drift doesn't accumulate into spurious entries.
 export function currentChange(prev: Ensemble | null, next: Ensemble): FeedEntry | null {
@@ -145,6 +149,7 @@ export function renderAtom(
   const items = entries.map((e) => `  <entry>
     <title>${esc(e.title)}</title>
     <id>${esc(e.id)}</id>
+    <link rel="alternate" href="${esc(entryUrl(origin, e.id))}"/>
     <updated>${e.published}</updated>
     <published>${e.published}</published>
     <category term="${e.kind}"/>

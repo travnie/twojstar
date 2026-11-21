@@ -1,5 +1,5 @@
 import { CONFIG } from "./config";
-import { renderPage } from "./page";
+import { renderFeedEntryPage, renderPage } from "./page";
 import { buildDayEnsembles, buildEnsemble } from "./ensemble";
 import {
   airQualityChange, currentChange, FEED_ID, forecastRevision, renderAtom, warningEntries,
@@ -374,20 +374,43 @@ export default {
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;
 
+    if (pathname.startsWith("/events/")) {
+      const encodedId = pathname.slice("/events/".length);
+      if (!encodedId || encodedId.length > 512 || encodedId.includes("/")) {
+        return new Response("not found", { status: 404 });
+      }
+      let id: string;
+      try {
+        id = decodeURIComponent(encodedId);
+      } catch {
+        return new Response("not found", { status: 404 });
+      }
+      const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
+      const entry = entries.find((item) => item.id === id);
+      if (!entry) return new Response("not found", { status: 404 });
+      return new Response(req.method === "HEAD" ? null : renderFeedEntryPage(SITE_ORIGIN, entry), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=600",
+        },
+      });
+    }
     if (!KV_ROUTES.has(pathname)) return new Response("not found", { status: 404 });
     const entries = (await load<FeedEntry[]>(env, K.entries)) ?? [];
 
     switch (pathname) {
       case "/feed.atom":
-        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID));
-      case "/warnings.atom":
+        return atom(renderAtom(entries, `Pogoda — ${CONFIG.place}`, SITE_ORIGIN, "/feed.atom", FEED_ID), req, entries[0]?.published);
+      case "/warnings.atom": {
+        const warnings = entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted");
         return atom(renderAtom(
-          entries.filter((e) => e.kind === "warning_new" || e.kind === "warning_lifted"),
+          warnings,
           `Ostrzeżenia IMGW — ${CONFIG.place}`,
           SITE_ORIGIN,
           "/warnings.atom",
           `${FEED_ID}:warnings`,
-        ));
+        ), req, warnings[0]?.published);
+      }
       case "/state.json": {
         const state = await load<CurrentState>(env, K.current);
         return json({ place: CONFIG.place, ...state, entryCount: entries.length });
@@ -450,14 +473,34 @@ function cachedResponse(body: string, contentType: string, maxAge: number): Resp
   });
 }
 
-function atom(body: string): Response {
-  return new Response(body, {
-    headers: {
-      "content-type": "application/atom+xml; charset=utf-8",
-      "cache-control": "max-age=600",
-      "access-control-allow-origin": "*",
-    },
+async function atom(body: string, request: Request, lastUpdate?: string): Promise<Response> {
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)));
+  const etag = '"' + Array.from(hash, (byte) => byte.toString(16).padStart(2, "0")).join("") + '"';
+  const updatedMs = lastUpdate ? Date.parse(lastUpdate) : NaN;
+  const headers = new Headers({
+    "content-type": "application/atom+xml; charset=utf-8",
+    "cache-control": "max-age=600",
+    "access-control-allow-origin": "*",
+    etag,
   });
+  if (Number.isFinite(updatedMs)) {
+    headers.set("last-modified", new Date(updatedMs).toUTCString());
+  }
+
+  if (request.method === "GET" || request.method === "HEAD") {
+    const ifNoneMatch = request.headers.get("if-none-match");
+    const ifModifiedSince = request.headers.get("if-modified-since");
+    const matchesTag = ifNoneMatch?.split(",").some(
+      (part) => part.trim() === "*" || part.trim().replace(/^W\//, "") === etag,
+    );
+    const modifiedSince = ifModifiedSince ? Date.parse(ifModifiedSince) : NaN;
+    const notModified = ifNoneMatch !== null ? matchesTag : (
+      Number.isFinite(updatedMs) && Number.isFinite(modifiedSince)
+      && Math.floor(updatedMs / 1000) <= Math.floor(modifiedSince / 1000)
+    );
+    if (notModified) return new Response(null, { status: 304, headers });
+  }
+  return new Response(request.method === "HEAD" ? null : body, { headers });
 }
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {
