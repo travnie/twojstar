@@ -77,6 +77,8 @@ def main():
             "--main-jar", jar.name,
             "--main-class", "Main",
             "--dest", str(destination),
+            # Keep java executable for full-build verification; strip tools afterwards.
+            "--jlink-options", "--strip-debug --no-man-pages --no-header-files",
             *java_options,
         ],
         check=True,
@@ -109,6 +111,20 @@ def main():
         raise SystemExit(f"Expected patched Temurin 25 (25.0.5.1+2 or later), got {full_version!r}")
     (image / "JAVA-RUNTIME.txt").write_text(full_version + "\n", encoding="utf-8")
     print(f"Verified bundled Java version: {full_version}")
+
+    # Restore jpackage's minimal runtime layout after verifying the embedded VM.
+    # Keep DLLs and other shared libraries required by Windows and macOS.
+    for command in bundled_java.parent.iterdir():
+        if not command.is_file():
+            continue
+        if platform.system() == "Windows":
+            is_launcher = command.suffix.lower() == ".exe"
+        else:
+            is_launcher = not command.suffix and bool(command.stat().st_mode & 0o111)
+        if is_launcher:
+            command.unlink()
+    if bundled_java.exists():
+        raise SystemExit(f"Failed to remove bundled Java launcher: {bundled_java}")
 
     output.mkdir(parents=True, exist_ok=True)
     if platform.system() == "Windows":
