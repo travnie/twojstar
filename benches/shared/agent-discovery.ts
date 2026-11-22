@@ -4,7 +4,7 @@ const CONFIG = {
   codebench: {
     name: "Code Bench",
     host: "codebench.bartek.lol",
-    description: "Local-only QR/barcode creation and scanning through browser WebMCP; no remote user-payload processing.",
+    description: "Local-only QR/barcode creation and export through browser WebMCP; scanning is available only through the UI.",
     tools: ["read_code_state", "set_qr_code", "set_barcode", "export_code"],
     prompt: "Create a QR code using Code Bench in my browser",
   },
@@ -12,7 +12,7 @@ const CONFIG = {
     name: "Doc Bench",
     host: "docbench.bartek.lol",
     description: "Local-first document and PDF workspace with opt-in browser WebMCP access; no server-side document API.",
-    tools: ["read_document", "set_document_text", "validate_document", "format_document"],
+    tools: ["read_file_workspace", "inspect_local_file", "select_local_files", "focus_local_file", "read_document", "set_document_text", "validate_document", "format_document", "undo_document", "redo_document", "inspect_document", "preview_document_repairs"],
     prompt: "Validate an open local document in Doc Bench",
   },
   streambench: {
@@ -38,7 +38,7 @@ function skill(product: BenchProduct): string {
   ] : [
     "Use browser WebMCP for the active playback state and loaded playlist.",
     "Public GET /api/providers discovers supported provider IDs; GET /api/catalog?provider=<id> reads a provider catalog.",
-    "GET /api/playlist?provider=<id> returns an allowed provider playlist; this is not a general streaming proxy.",
+    "GET /api/playlist?provider=<id>&type=<scope>&id=<value> returns an allowed provider playlist; type and id select a provider-specific resource.",
     "Do not submit arbitrary URLs to the relay. The Worker verifies provider allowlists/signatures.",
   ];
   return [
@@ -51,7 +51,7 @@ function skill(product: BenchProduct): string {
     "",
     ...capabilities.map((line) => "- " + line),
     "",
-    "Available tools (where document.modelContext is supported): " + cfg.tools.join(", ") + ".",
+    "Available tools (on WebMCP-capable browser hosts): " + cfg.tools.join(", ") + ".",
     "Open " + base + "/ and use browser WebMCP; a plain remote HTTP client cannot invoke those tools.",
     "Full guide: " + base + "/llms-full.txt",
     "",
@@ -78,7 +78,7 @@ function ardcatalog(product: BenchProduct): object {
     type: "application/linkset+json",
     url: base + "/.well-known/api-catalog",
     description: "Public read-only provider registry and constrained playlists.",
-    capabilities: ["provider-discovery", "provider-catalog"],
+    capabilities: ["provider-discovery", "provider-catalog", "service-health"],
     representativeQueries: ["List supported Streambench providers", "Find a public radio catalog"],
   });
   return {
@@ -128,10 +128,10 @@ function streamOpenApi(): object {
           description: "Provider-specific type and id parameters may be required; no arbitrary URL relay.",
           parameters: [
             { name: "provider", in: "query", required: true, schema: { type: "string" } },
-            { name: "type", in: "query", required: false, schema: { type: "string" } },
-            { name: "id", in: "query", required: false, schema: { type: "string" } },
+            { name: "type", in: "query", required: true, schema: { type: "string" } },
+            { name: "id", in: "query", required: true, schema: { type: "string" } },
           ],
-          responses: response("Provider playlist", "application/vnd.apple.mpegurl"),
+          responses: response("Provider playlist", "audio/x-mpegurl"),
         },
       },
       "/health": {
@@ -182,14 +182,14 @@ export async function benchDiscoveryResponse(request: Request, product: BenchPro
     return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
   }
   const body = isSkill ? skill(product)
-    : JSON.stringify(path.endsWith("/ard.json") || path.endsWith("/ai-catalog.json") ? ardcatalog(product)
-      : path.endsWith("/index.json") ? await skillIndex(product)
-        : path.endsWith("/api-catalog") ? streamApiCatalog()
+    : JSON.stringify(path === "/.well-known/ard.json" || path === "/.well-known/ai-catalog.json" ? ardcatalog(product)
+      : path === "/.well-known/agent-skills/index.json" ? await skillIndex(product)
+        : path === "/.well-known/api-catalog" ? streamApiCatalog()
           : streamOpenApi(), null, 2) + "\n";
   return new Response(request.method === "HEAD" ? null : body, {
     headers: {
       "content-type": type + "; charset=utf-8",
-      "cache-control": "public, max-age=3600",
+      "cache-control": "no-cache",
       "access-control-allow-origin": "*",
       "x-content-type-options": "nosniff",
       ...(path === "/.well-known/api-catalog" ? { link: '</.well-known/api-catalog>; rel="api-catalog"' } : {}),

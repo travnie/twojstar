@@ -68,14 +68,17 @@ const OPENAPI = {
         content: { "application/json": { schema: { type: "object" } } } } } } },
     "/healthz": { get: { operationId: "getWeatherHealth",
       responses: { 200: { description: "Current cycle fresh", content: { "application/json": { schema: { type: "object" } } } },
-        503: { description: "Current cycle stale or unavailable" } } } },
+        503: { description: "Current cycle stale or unavailable",
+          content: { "application/json": { schema: { type: "object" } } } } } } },
     "/feed.atom": { get: { operationId: "getWeatherChanges", responses: {
       200: { description: "Meaningful weather and alert changes as Atom",
         content: { "application/atom+xml": { schema: { type: "string" } } } },
+      304: { description: "Not modified (ETag or Last-Modified conditional request)" },
     } } },
     "/warnings.atom": { get: { operationId: "getImgwWarningChanges", responses: {
       200: { description: "IMGW warning changes as Atom",
         content: { "application/atom+xml": { schema: { type: "string" } } } },
+      304: { description: "Not modified (ETag or Last-Modified conditional request)" },
     } } },
   },
 };
@@ -112,14 +115,14 @@ export async function weatherAgentDiscovery(request: Request): Promise<Response 
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
   }
-  const body = path.endsWith("/SKILL.md") ? SKILL
-    : JSON.stringify(path.endsWith("/ard.json") || path.endsWith("/ai-catalog.json") ? ARD
-      : path.endsWith("/api-catalog") ? API_CATALOG
-        : path.endsWith("/index.json") ? await skillIndex() : OPENAPI, null, 2) + "\n";
+  const body = path === "/.well-known/agent-skills/koscielec-weather/SKILL.md" ? SKILL
+    : JSON.stringify(path === "/.well-known/ard.json" || path === "/.well-known/ai-catalog.json" ? ARD
+      : path === "/.well-known/api-catalog" ? API_CATALOG
+        : path === "/.well-known/agent-skills/index.json" ? await skillIndex() : OPENAPI, null, 2) + "\n";
   return new Response(request.method === "HEAD" ? null : body, {
     headers: {
       "content-type": type + "; charset=utf-8",
-      "cache-control": "public, max-age=3600",
+      "cache-control": "no-cache",
       "access-control-allow-origin": "*",
       "x-content-type-options": "nosniff",
       ...(path.endsWith("/api-catalog") ? { link: '</.well-known/api-catalog>; rel="api-catalog"' } : {}),

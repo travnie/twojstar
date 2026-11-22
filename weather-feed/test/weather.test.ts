@@ -571,6 +571,7 @@ test("agent discovery describes real local weather endpoints and hashes the skil
   assert.equal(index.status, 200);
   const skillIndex = await index.json() as { skills: Array<{ digest: string }> };
   const skillRes = await worker.fetch(new Request(base + "/.well-known/agent-skills/koscielec-weather/SKILL.md"), {} as Env);
+  assert.equal(skillRes.status, 200);
   const skill = await skillRes.text();
   assert.match(skill, /name: koscielec-weather/u);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(skill));

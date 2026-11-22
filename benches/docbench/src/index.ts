@@ -23,7 +23,10 @@ const SECURITY_HEADERS: Record<string, string> = {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const discovery = await benchDiscoveryResponse(request, "docbench");
-    if (discovery) return discovery;
+    if (discovery) {
+      for (const [key, value] of Object.entries(SECURITY_HEADERS)) discovery.headers.set(key, value);
+      return discovery;
+    }
     const asset = await env.ASSETS.fetch(request);
     const response = new Response(asset.body, asset);
     const { headers } = response;

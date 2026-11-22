@@ -7,6 +7,12 @@ for (const product of ["codebench", "docbench", "streambench"]) {
   test(product + " discovery exposes actual browser tools and correct skill digest", async () => {
     const get = async (path, method = "GET") =>
       benchDiscoveryResponse(new Request(base + path, { method }), product);
+    const module = await import("../" + product + "/src/index.ts");
+    const deployedRoute = await module.default.fetch(new Request(base + "/.well-known/ard.json"), {
+      ASSETS: { fetch: () => { throw Error("Discovery must run before static assets"); } },
+    });
+    assert.equal(deployedRoute.status, 200);
+    assert.match(deployedRoute.headers.get("content-type"), /^application\/ard\+json/u);
     const ard = await (await get("/.well-known/ard.json")).json();
     assert.equal(ard.specVersion, "0.9");
     assert.equal(ard.host.identifier, product + ".bartek.lol");
@@ -14,7 +20,9 @@ for (const product of ["codebench", "docbench", "streambench"]) {
     assert.equal(ard.entries[0].url, base + "/");
     assert.match(agentDiscoveryLink(product), /rel="ard"/);
     const index = await (await get("/.well-known/agent-skills/index.json")).json();
-    const skill = await (await get("/.well-known/agent-skills/" + product + "-browser-tools/SKILL.md")).text();
+    const skillResponse = await get("/.well-known/agent-skills/" + product + "-browser-tools/SKILL.md");
+    assert.equal(skillResponse.status, 200);
+    const skill = await skillResponse.text();
     const sha = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(skill));
     assert.equal(index.skills[0].digest, "sha256:" + [...new Uint8Array(sha)]
       .map((x) => x.toString(16).padStart(2, "0")).join(""));
