@@ -42,6 +42,12 @@ User documents and PDFs are processed locally in the browser. The application ha
 
 On browser hosts that implement WebMCP, Doc Bench exposes the current local editor through `read_document`, `set_document_text`, `validate_document`, `format_document`, `inspect_document` and read-only `preview_document_repairs`, plus `undo_document` and `redo_document`. These tools reuse the visible application state. Doc Bench itself does not upload documents, but WebMCP tool results can contain editor text; once returned to a host or model, that data is governed by the host/model data-handling policy.
 
+## Agent discovery
+
+- [ARD manifest](https://docbench.bartek.lol/.well-known/ard.json): truthful browser WebMCP capabilities.
+- [Agent Skill index](https://docbench.bartek.lol/.well-known/agent-skills/index.json): browser-use instructions with content hash.
+- Browser tools require the active page and a WebMCP-capable browser; no remote MCP or user-upload API.
+
 ## Public pages
 
 - [Application](https://docbench.bartek.lol/index.md): Markdown version of the Doc Bench application page.

@@ -564,3 +564,24 @@ test("OpenWeather drops partial forecast days built from too few 3h slots", asyn
   assert.deepEqual(result.days.map((day) => day.date), ["2026-10-12"]);
   assert.equal(result.current, null);
 });
+
+test("agent discovery describes real local weather endpoints and hashes the skill artifact", async () => {
+  const base = "https://weather.bartek.lol";
+  const index = await worker.fetch(new Request(base + "/.well-known/agent-skills/index.json"), {} as Env);
+  assert.equal(index.status, 200);
+  const skillIndex = await index.json() as { skills: Array<{ digest: string }> };
+  const skillRes = await worker.fetch(new Request(base + "/.well-known/agent-skills/koscielec-weather/SKILL.md"), {} as Env);
+  const skill = await skillRes.text();
+  assert.match(skill, /name: koscielec-weather/u);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(skill));
+  assert.equal(skillIndex.skills[0].digest, "sha256:" + [...new Uint8Array(digest)]
+    .map((v) => v.toString(16).padStart(2, "0")).join(""));
+  const api = await worker.fetch(new Request(base + "/.well-known/api-catalog"), {} as Env);
+  assert.match(api.headers.get("content-type") || "", /^application\/linkset\+json/u);
+  assert.equal((await api.json() as { linkset: Array<{ anchor: string }> }).linkset[0].anchor, base + "/state.json");
+  const head = await worker.fetch(new Request(base + "/.well-known/api-catalog", { method: "HEAD" }), {} as Env);
+  assert.equal(head.headers.get("link"), '</.well-known/api-catalog>; rel="api-catalog"');
+  assert.equal(await head.text(), "");
+  const denied = await worker.fetch(new Request(base + "/openapi.json", { method: "POST" }), {} as Env);
+  assert.equal(denied.status, 405);
+});

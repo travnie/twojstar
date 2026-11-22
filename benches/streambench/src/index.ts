@@ -1,5 +1,6 @@
 import { FREE_TV_COUNTRIES, filterFreeTvPlaylist } from "./providers/free-tv.ts";
 import { createRadioBrowserProvider } from "./providers/radio-browser-worker.ts";
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
 import { bindProviderHandlers, providerById, providerManifest } from "./providers/registry.ts";
 
 const IPTV_ORG_API = "https://iptv-org.github.io/api/";
@@ -265,6 +266,8 @@ function isProviderRoute(pathname: string): boolean {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const discovery = await benchDiscoveryResponse(request, "streambench");
+    if (discovery) return withSecurityHeaders(discovery);
     const url = new URL(request.url);
 
     if (url.pathname === "/health") {
@@ -291,7 +294,7 @@ export default {
     if (url.pathname === "/" && response.headers.get("content-type")?.includes("text/html")) {
       response.headers.set(
         "link",
-        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
+        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"' + ', ' + agentDiscoveryLink("streambench"),
       );
     }
     return response;

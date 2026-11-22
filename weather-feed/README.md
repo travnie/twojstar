@@ -17,6 +17,13 @@ Cloudflare Worker for Kościelec/Chrzanów (50.14 N, 19.42 E). Normalizes up to 
 
 Both Atom feeds expose strong ETags and revision-aware Last-Modified validators for conditional requests. Last-Modified for legacy warning records may be absent until the next KV update; ETags remain authoritative. Each entry links to a dedicated event detail URL; events are available while retained in WEATHER_KV.
 
+## Agent discovery
+
+- `/.well-known/ard.json` (and legacy `ai-catalog.json`) advertises real read-only HTTP and browser WebMCP capabilities.
+- `/.well-known/api-catalog` serves an RFC 9727 Linkset pointing at `/openapi.json`, `/llms-full.txt`, and `/healthz`.
+- `/.well-known/agent-skills/index.json` lists a weather skill with the SHA-256 of the exact published Markdown bytes. Browser `read_weather_state` remains read-only and requires a supporting browser.
+- No OAuth, agent registration or remote MCP server; users can read existing public endpoints without credentials.
+
 ## Schedule / behavior
 
 - `0 */2 * * *`: current observations, air quality and IMGW warnings. `0 5 * * *`: forecast revisions.

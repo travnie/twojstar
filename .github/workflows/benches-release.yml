@@ -60,6 +60,10 @@ jobs:
         working-directory: benches
         run: npm run check:docbench
 
+      - name: Test agent discovery contracts
+        working-directory: benches
+        run: node --test scripts/agent-discovery.test.mjs
+
       - name: Test Docbench XML preview in Chrome
         working-directory: benches/docbench
         run: node tests/xml-preview.browser.mjs
