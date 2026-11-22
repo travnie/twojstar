@@ -1,6 +1,6 @@
 import { FREE_TV_COUNTRIES, filterFreeTvPlaylist } from "./providers/free-tv.ts";
 import { createRadioBrowserProvider } from "./providers/radio-browser-worker.ts";
-import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery.ts";
 import { bindProviderHandlers, providerById, providerManifest } from "./providers/registry.ts";
 
 const IPTV_ORG_API = "https://iptv-org.github.io/api/";

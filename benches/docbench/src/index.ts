@@ -1,4 +1,4 @@
-import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery.ts";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy": [

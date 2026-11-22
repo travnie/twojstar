@@ -104,7 +104,7 @@ function streamApiCatalog(): object {
 
 function streamOpenApi(): object {
   const response = (description: string, mediaType = "application/json") => ({
-    "200": { description, content: { [mediaType]: { schema: { type: "string" } } } },
+    "200": { description, content: { [mediaType]: { schema: { type: mediaType === "application/json" ? "object" : "string" } } } },
   });
   return {
     openapi: "3.1.0",

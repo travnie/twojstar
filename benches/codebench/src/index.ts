@@ -1,6 +1,6 @@
 import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
-import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery.ts";
 
 const SITE_URL = "https://codebench.bartek.lol/";
 const TITLE = "Code Bench — QR Code Generator, Barcode Maker & Scanner";
