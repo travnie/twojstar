@@ -58,7 +58,9 @@ class RemoveElement {
 }
 
 class SetText {
-  constructor(private readonly value: string) {}
+  private readonly value: string;
+
+  constructor(value: string) { this.value = value; }
 
   element(element: Element): void {
     element.setInnerContent(this.value);
