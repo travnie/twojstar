@@ -65,10 +65,10 @@
       "category": "Developer Tools"
     },
     {
-      "name": "szwajcar",
+      "name": "allin",
       "source": {
         "source": "local",
-        "path": "./plugins/szwajcar"
+        "path": "./plugins/allin"
       },
       "policy": {
         "installation": "AVAILABLE",

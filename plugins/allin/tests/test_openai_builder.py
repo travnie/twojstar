@@ -1,4 +1,4 @@
-"""Regression checks for OpenAI builder tools retained in Szwajcar."""
+"""Regression checks for OpenAI builder tools retained in AllIn."""
 from __future__ import annotations
 
 import json

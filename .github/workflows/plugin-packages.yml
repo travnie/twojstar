@@ -30,7 +30,7 @@ on:
         options:
           - all
           - claudesign
-          - szwajcar
+          - allin
           - cloudflare
           - desktop-commander
           - github
