@@ -1,4 +1,4 @@
-import { ICONS as smallIcons } from "./favicon-small.js";
+import { ICONS as smallIcons } from "./favicon-small.ts";
 
 type Icon = {
   readonly type: string;

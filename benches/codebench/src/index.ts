@@ -1,5 +1,5 @@
-import { favicon16Response } from "./favicon-16.js";
-import { faviconResponse } from "./favicons.js";
+import { favicon16Response } from "./favicon-16.ts";
+import { faviconResponse } from "./favicons.ts";
 import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery.ts";
 
 const SITE_URL = "https://codebench.bartek.lol/";
