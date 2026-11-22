@@ -29,7 +29,7 @@ function skill(product: BenchProduct): string {
   const base = "https://" + cfg.host;
   const capabilities = product === "codebench" ? [
     "Manipulate visible QR and barcode editor state using Code Bench WebMCP tools.",
-    "Keep QR payloads, personal data and camera frames inside the local browser.",
+    "The Worker does not upload QR payloads or camera frames. WebMCP read_code_state can reveal editor content to the calling agent; request consent before reading sensitive values.",
     "No server-side QR generation API; never send user payloads to a remote discovery endpoint.",
   ] : product === "docbench" ? [
     "Use Doc Bench WebMCP only with the current user's open browser document/workspace.",
