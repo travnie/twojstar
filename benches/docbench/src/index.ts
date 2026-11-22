@@ -1,3 +1,5 @@
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
+
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy": [
     "default-src 'self'",
@@ -20,6 +22,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const discovery = await benchDiscoveryResponse(request, "docbench");
+    if (discovery) return discovery;
     const asset = await env.ASSETS.fetch(request);
     const response = new Response(asset.body, asset);
     const { headers } = response;
@@ -49,7 +53,7 @@ export default {
       headers.set("cache-control", "no-cache");
       headers.set(
         "link",
-        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
+        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"' + ', ' + agentDiscoveryLink("docbench"),
       );
     }
 

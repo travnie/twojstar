@@ -15,6 +15,12 @@ Code Bench is promoted and served at https://codebench.bartek.lol/. User content
 
 On browser hosts that implement WebMCP, Code Bench exposes `read_code_state`, `set_qr_code`, `set_barcode` and `export_code`. The tools reuse the visible browser UI; payloads are only returned to the calling agent when requested by a tool call.
 
+## Agent discovery
+
+- [ARD manifest](https://codebench.bartek.lol/.well-known/ard.json): truthful browser WebMCP capabilities.
+- [Agent Skill index](https://codebench.bartek.lol/.well-known/agent-skills/index.json): browser-use instructions with content hash.
+- Browser tools require the active page and a WebMCP-capable browser; no remote MCP or user-upload API.
+
 ## Public pages
 
 - [Application](https://codebench.bartek.lol/index.md): Markdown version of the Code Bench application page.

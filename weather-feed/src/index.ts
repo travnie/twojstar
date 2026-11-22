@@ -13,11 +13,12 @@ import type {
 } from "./types";
 import { reconcileWarnings } from "./warnings";
 import { WEBMCP_SCRIPT } from "./webmcp";
+import { weatherAgentDiscovery, AGENT_DISCOVERY_LINK } from "./agent-discovery";
 
 const SITE_ORIGIN = "https://weather.bartek.lol";
 const INDEXNOW_KEY = "d715f047a08ac671e4dc69cc036a7410";
 const INDEXNOW_PATH = `/${INDEXNOW_KEY}.txt`;
-const DISCOVERY_LINK = '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"';
+const DISCOVERY_LINK = '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby", ' + AGENT_DISCOVERY_LINK;
 
 const ROBOTS = `# AI crawlers and user-triggered fetchers explicitly welcome.
 User-agent: GPTBot
@@ -99,6 +100,8 @@ const LLMS = `# Pogoda Chrzanów · Kościelec
 - [Weather changes feed](${SITE_ORIGIN}/feed.atom): Atom feed of meaningful changes.
 - [IMGW warnings feed](${SITE_ORIGIN}/warnings.atom): warning-only Atom feed.
 - [Full LLM guide](${SITE_ORIGIN}/llms-full.txt): complete weather-service guide in one file.
+- [API catalog](${SITE_ORIGIN}/.well-known/api-catalog): RFC 9727 read-only weather API discovery.
+- [Agent Skills](${SITE_ORIGIN}/.well-known/agent-skills/index.json): verified read-only weather skill.
 - WebMCP: read_weather_state exposes the current published state on supporting browser hosts.
 - [TRAVNY hub](https://bartek.lol/): related tools and services.
 `;
@@ -406,6 +409,9 @@ export default {
     if (pathname === INDEXNOW_PATH && url.origin !== SITE_ORIGIN) {
       return new Response("not found", { status: 404 });
     }
+
+    const agentDiscovery = await weatherAgentDiscovery(req);
+    if (agentDiscovery) return agentDiscovery;
 
     const discovery = discoveryResponse(pathname);
     if (discovery) return discovery;

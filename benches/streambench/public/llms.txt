@@ -18,6 +18,12 @@ Streambench runs at https://streambench.bartek.lol/. Local playlist files, XMLTV
 
 On browser hosts that implement WebMCP, Streambench exposes `read_stream_state`, `search_streams`, `start_stream_playback` and `stop_stream_playback`. These tools operate only on the currently loaded playlist and existing player state; they do not expose a general fetch, signing or relay interface.
 
+## Agent discovery
+
+- [ARD manifest](https://streambench.bartek.lol/.well-known/ard.json): truthful browser WebMCP capabilities.
+- [Agent Skill index](https://streambench.bartek.lol/.well-known/agent-skills/index.json): browser-use instructions with content hash.
+- [RFC 9727 API catalog](https://streambench.bartek.lol/.well-known/api-catalog): public provider API description and health.
+
 ## Public pages
 
 - [Application](https://streambench.bartek.lol/index.md): Markdown version of the Streambench application page.

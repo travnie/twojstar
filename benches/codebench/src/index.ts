@@ -1,5 +1,6 @@
 import { favicon16Response } from "./favicon-16.js";
 import { faviconResponse } from "./favicons.js";
+import { benchDiscoveryResponse, agentDiscoveryLink } from "../../shared/agent-discovery";
 
 const SITE_URL = "https://codebench.bartek.lol/";
 const TITLE = "Code Bench — QR Code Generator, Barcode Maker & Scanner";
@@ -124,6 +125,8 @@ function textResponse(
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const discovery = await benchDiscoveryResponse(request, "codebench");
+    if (discovery) return discovery;
     const url = new URL(request.url);
     if (url.pathname === "/index.html") {
       url.protocol = "https:";
@@ -209,7 +212,7 @@ Sitemap: ${SITE_URL}sitemap.xml
     if (asset.ok && type.includes("text/html") && !portable) {
       headers.set(
         "link",
-        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
+        '</index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"' + ', ' + agentDiscoveryLink("codebench"),
       );
     }
     if (!asset.ok || !type.includes("text/html") || portable) return response;
