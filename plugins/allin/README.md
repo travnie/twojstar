@@ -60,7 +60,7 @@ python -m pip install -r plugins/_shared/requirements.txt
 python plugins/_shared/package_plugin.py plugins/allin /tmp/allin.zip
 ```
 
-Claude Code: `/plugin install allin@twojstar` (after `/plugin marketplace add travnie/twojstar`). Renamed from `claudin`/`szwajcar`: Claude Code migrates the install through `renames` (run the install command once if it reports the plugin not cached). Codex has no rename map, so uninstall the old ID there and install `allin@twojstar`.
+Claude Code: `/plugin install allin@twojstar` (after `/plugin marketplace add travnie/twojstar`). Renamed from `devkit-claude`/`claudin`/`szwajcar`: Claude Code migrates the install through `renames` (run the install command once if it reports the plugin not cached). Codex has no rename map, so uninstall the old ID there and install `allin@twojstar`.
 
 
 ## Links
