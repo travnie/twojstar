@@ -2,7 +2,7 @@ const BASE = "https://weather.bartek.lol";
 const SKILL = [
   "---",
   "name: koscielec-weather",
-  "description: Read multi-source Kościelec/Chrzanów weather, local forecasts, air quality and IMGW alerts.",
+  "description: Read current Kościelec/Chrzanów weather, air quality and IMGW alerts.",
   "---",
   "",
   "# Kościelec Weather",
