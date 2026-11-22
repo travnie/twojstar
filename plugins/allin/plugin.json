@@ -1,13 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "szwajcar",
-  "version": "1.11.0",
+  "name": "allin",
+  "version": "1.12.0",
   "description": "Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, ACP, OpenAI/Codex and xAI/Grok via seven authless docs MCPs, with docs-lookup preferring docs connectors over web fetches when available. Builder skills: plugin-dev (plugins for Claude, Codex, Grok Build, Copilot CLI, Antigravity, Gemini CLI), mcp-dev (MCP servers and Apps, OAuth, MCPB, directory review) and skill-creator-v2 (skill lifecycle, evals, packaging).",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
   },
-  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/szwajcar",
+  "homepage": "https://github.com/travnie/twojstar/tree/main/plugins/allin",
   "repository": "https://github.com/travnie/twojstar",
   "license": "Apache-2.0 AND MIT",
   "icon": "./assets/icon.png",
@@ -31,7 +31,7 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Szwajcar",
+        "displayName": "AllIn",
         "shortDescription": "Live docs, plugins & MCP",
         "longDescription": "Ask about Claude Code, claude.ai, the Claude API, MCP, the Agent Client Protocol, OpenAI/Codex or xAI/Grok and docs-lookup answers from the live official docs, with links: seven bundled docs MCP servers, no setup. For builders: plugin-dev packages skills, MCP servers and Claude Code extras into plugins for Claude chat, Cowork, Claude Code, Codex/ChatGPT, Grok Build, GitHub Copilot CLI, Google Antigravity and Gemini CLI; mcp-dev designs, tests and ships MCP servers and MCP Apps (deployment, tool design, OAuth, MCPB, directory review, the stateless 2026-07-28 spec, a stdlib probe script); skill-creator-v2 runs the skill lifecycle. Personal toolkit maintained by travnie; not an official Anthropic, OpenAI or xAI plugin. Includes OpenAI plugin and MCP App scaffolding, static validation, and focused API/Codex references.",
         "developerName": "travnie",
@@ -40,7 +40,7 @@
           "Interactive",
           "Read"
         ],
-        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/szwajcar",
+        "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/allin",
         "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",
         "privacyPolicyURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/PRIVACY.md",
         "termsOfServiceURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/TERMS.md",

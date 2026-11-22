@@ -1,7 +1,7 @@
 # OpenAI Dev Kit
 
 **Frozen compatibility package.** New development and fixes belong in
-[Szwajcar](../szwajcar/). Kept temporarily for existing installations pending
+[AllIn](../allin/). Kept temporarily for existing installations pending
 retirement.
 
 Two focused OpenAI Dev Kit skills plus the official read-only OpenAI documentation MCP. No other installed plugin is required.
