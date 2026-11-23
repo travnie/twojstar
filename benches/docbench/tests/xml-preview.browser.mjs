@@ -165,6 +165,9 @@ frame.addEventListener("load", async () => {
     const zip = win.fflate.zipSync({
       "docs/readme.html": win.fflate.strToU8(source),
       "docs/corrupt.txt": [win.fflate.strToU8(payload), { level: 0 }],
+      "docs/pixel.png": win.Uint8Array.from(win.atob(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/T1sAAAAASUVORK5CYII="
+      ), char => char.charCodeAt(0)),
     });
     // Locate the stored payload by bytes, independent of UTF-8 replacement.
     const payloadBytes = win.fflate.strToU8(payload);
@@ -181,7 +184,8 @@ frame.addEventListener("load", async () => {
       });
       observer.observe(filesPreview, { childList: true, subtree: true, attributes: true });
     });
-    const archive = win.DocBenchFiles.importFile(new win.File([zip], "preview.zip", { type: "application/zip" }));
+    const original = new win.File([zip], "preview.zip", { type: "application/zip" });
+    const archive = win.DocBenchFiles.importFile(original);
     if (!archive.ok) throw Error("Could not import ZIP preview fixture");
     const folderSelector = 'button[aria-label="Open ZIP folder docs"]';
     await until(() => filesPreview.querySelector(folderSelector));
@@ -203,6 +207,43 @@ frame.addEventListener("load", async () => {
     await until(() => entry.querySelector('[role="status"]').textContent.includes("CRC-32 mismatch"));
     if (entry.querySelector(".files-zip-entry-preview-body").childElementCount) {
       throw Error("Preview published bytes from a corrupt ZIP entry");
+    }
+
+    entry.querySelector("button").click();
+    filesPreview.querySelector('button[aria-label="Preview entry: pixel.png"]').click();
+    await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
+    const mediaUrl = entry.querySelector("img").src;
+    const revoke = win.URL.revokeObjectURL;
+    let revokedMedia = false;
+    win.URL.revokeObjectURL = (url) => {
+      if (url === mediaUrl) revokedMedia = true;
+      revoke(url);
+    };
+    try {
+      entry.querySelector("button").click();
+      if (!revokedMedia || entry.querySelector("img")) throw Error("ZIP media preview was not released");
+    } finally {
+      win.URL.revokeObjectURL = revoke;
+    }
+    const originalSlice = original.slice.bind(original);
+    let releaseRead;
+    original.slice = (...args) => {
+      const part = originalSlice(...args);
+      if (releaseRead) return part;
+      const read = part.arrayBuffer.bind(part);
+      part.arrayBuffer = () => new Promise(resolve => { releaseRead = () => resolve(read()); });
+      return part;
+    };
+    openEntry.click();
+    if (!releaseRead) throw Error("ZIP preview did not start reading");
+    win.DocBenchFiles.importFile(new win.File([zip], "replacement.zip", { type: "application/zip" }));
+    await until(() => filesPreview.querySelector(folderSelector));
+    filesPreview.querySelector(folderSelector).click();
+    const newTrigger = filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]');
+    releaseRead();
+    await until(() => !newTrigger.disabled);
+    if (!filesPreview.querySelector(".files-zip-entry-preview").hidden) {
+      throw Error("Canceled ZIP preview leaked into a replacement archive");
     }
 
     document.documentElement.dataset.result = "passed";

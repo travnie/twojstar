@@ -63,7 +63,8 @@ const MAX_ZIP_PREVIEW_BYTES = 8 * 1024 * 1024;
 const ZIP_PREVIEW_LIMITS = Object.freeze({
   ...ZIP_EXTRACT_LIMITS,
   maxEntryBytes: MAX_ZIP_PREVIEW_BYTES,
-  maxCompressedBytes: MAX_ZIP_PREVIEW_BYTES,
+  // Smaller pushes bound output allocated before the inflater callback.
+  chunkBytes: 4 * 1024,
 });
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
 const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "ogg", "m4a"]);
@@ -72,7 +73,7 @@ const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
 const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
 const zipJobs = new Map();
-const zipPreviewClosers = new Map();
+const zipViews = new Map();
 let selectionRevision = 0;
 let viewMode = "list";
 let query = "";
@@ -138,8 +139,8 @@ function closeAudioDock() {
 }
 
 function releasePreview(target = preview) {
-  zipPreviewClosers.get(target)?.();
-  zipPreviewClosers.delete(target);
+  zipViews.get(target)?.close();
+  zipViews.delete(target);
   const job = zipJobs.get(target);
   if (job) job.controller.abort();
   const media = target.querySelector("audio, video");
@@ -343,7 +344,7 @@ async function showZipContents(file, revision, target = preview) {
     if (zipJobs.get(target)?.controller !== controller) return;
     zipJobs.delete(target);
     cancel.hidden = true;
-    refreshActions();
+    zipViews.get(target)?.refreshActions();
   }
   cancel.addEventListener("click", () => {
     const job = zipJobs.get(target);
@@ -360,7 +361,7 @@ async function showZipContents(file, revision, target = preview) {
     if (restoreFocus) (entryTrigger.disabled ? title : entryTrigger).focus();
     entryTrigger = null;
   }
-  zipPreviewClosers.set(target, closeEntryPreview);
+  zipViews.set(target, { close: closeEntryPreview, refreshActions });
   backToZip.addEventListener("click", () => closeEntryPreview(true));
 
   async function previewZipEntry(entry, item, trigger) {
@@ -387,7 +388,9 @@ async function showZipContents(file, revision, target = preview) {
       const extracted = new File([output], item.name);
       const info = await inspectLocalFile(extracted);
       if (!isCurrent()) return;
-      if (info.format === "zip") {
+      if (resolveFileTool(info, extracted.size)?.mode === "pdf") {
+        emptyPreview("Extract this file to open it in PDF tools.", entryBody);
+      } else if (info.format === "zip") {
         emptyPreview("Extract this archive to browse it separately.", entryBody);
       } else {
         await renderFileContent(extracted, info, entryBody, isCurrent);
@@ -1115,8 +1118,8 @@ new MutationObserver(() => {
   if (filesPanel.hidden && audioDockId) closeAudioDock();
   if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
   if (filesPanel.hidden) {
-    zipPreviewClosers.get(preview)?.();
-    zipPreviewClosers.get(dialogBody)?.();
+    zipViews.get(preview)?.close();
+    zipViews.get(dialogBody)?.close();
   }
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {
