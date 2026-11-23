@@ -517,7 +517,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             inputSilenceFlags,
             strengthQueue,
             maxQueue,
-            modeQueue);
+            modeQueue,
+            repairQueue);
     }
     else
     {
