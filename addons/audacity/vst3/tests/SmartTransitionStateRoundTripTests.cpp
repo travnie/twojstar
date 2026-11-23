@@ -105,8 +105,8 @@ int main()
             {
                 if (split == 0)
                 {
-                    queue->addPoint(5499, 1.0, pointIndex);
-                    queue->addPoint(5500, 0.0, pointIndex);
+                    queue->addPoint(3499, 1.0, pointIndex);
+                    queue->addPoint(3500, 0.0, pointIndex);
                 }
                 else if (begin == split)
                     queue->addPoint(0, 0.0, pointIndex);
@@ -148,16 +148,28 @@ int main()
 
     const auto wet = render(0, false, false);
     const auto lateStep = render(0, true, false);
-    const auto splitStep = render(5500, true, false);
+    const auto splitStep = render(3500, true, false);
     const auto fullRamp = render(0, false, true);
     const auto splitRamp = render(3000, false, true);
     bool repaired = false;
     for (int i = 5290; i < 5330; ++i)
     {
-        repaired |= std::abs(wet[i] - audio[i - 4800]) > 1e-6;
+        const auto sourceIndex = i - 4800;
+        const auto dry = audio[sourceIndex];
+        repaired |= std::abs(wet[i] - dry) > 1e-6;
         if (wet[i] != lateStep[i])
         {
-            std::cerr << "Late automation altered audio before its sample offset\n";
+            std::cerr << "Late Strength automation changed an earlier source sample\n";
+            return EXIT_FAILURE;
+        }
+
+        // The ramp is defined in SOURCE coordinates. A 4800-sample lookahead
+        // must not shift its wet/dry blend ahead of the source.
+        const auto sourceStrength = 1.0 - static_cast<double>(sourceIndex + 1) / 6000.0;
+        const auto expectedRamp = dry + (wet[i] - dry) * sourceStrength;
+        if (std::abs(fullRamp[i] - expectedRamp) > 1e-11)
+        {
+            std::cerr << "Strength automation drifted by lookahead latency\n";
             return EXIT_FAILURE;
         }
     }

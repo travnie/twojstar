@@ -90,6 +90,7 @@ private:
     [[nodiscard]] double renderSample(std::size_t channel, std::int64_t outputIndex) const noexcept;
 
     std::array<std::array<double, kRingCapacity>, kMaxChannels> ring_{};
+    std::array<double, kRingCapacity> strengthRing_{};
     std::int64_t inputCount_{0};
     double sampleRate_{48000.0};
     double strength_{1.0};

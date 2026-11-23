@@ -133,6 +133,7 @@ void SmartTransitionDsp::processFrameInternal(
 void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, std::int64_t index) noexcept
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
+    strengthRing_[slot] = strength_;
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -464,9 +465,12 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
     }
 
     const auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
-    if (strength_ == 1.0) return repaired;
-    if (strength_ == 0.0) return source;
-    return source + (repaired - source) * strength_;
+    // This sample left the lookahead buffer later than it entered.
+    // Use Strength captured alongside its source sample, not the current input.
+    const auto strength = strengthRing_[static_cast<std::size_t>(outputIndex) % kRingCapacity];
+    if (strength == 1.0) return repaired;
+    if (strength == 0.0) return source;
+    return source + (repaired - source) * strength;
 }
 
 } // namespace Travny::Audio
