@@ -17,7 +17,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  select:
+    name: Select CodeQL languages
+    runs-on: ubuntu-slim
+    outputs:
+      include: ${{ steps.plan.outputs.include }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test CodeQL selector
+        run: python -m unittest discover -s .github/scripts -p 'test_codeql_matrix.py' -v
+      - name: Select affected languages
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python .github/scripts/codeql_matrix.py >> "$GITHUB_OUTPUT"
+
   analyze:
+    needs: select
+    if: needs.select.outputs.include != '[]'
     name: CodeQL (${{ matrix.language }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -28,14 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { language: actions, build-mode: none, runner: ubuntu-latest }
-          - { language: c-cpp, build-mode: none, runner: ubuntu-latest }
-          - { language: csharp, build-mode: none, runner: ubuntu-latest }
-          - { language: javascript-typescript, build-mode: none, runner: ubuntu-latest }
-          - { language: python, build-mode: none, runner: ubuntu-latest }
-          - { language: java-kotlin, build-mode: manual, runner: ubuntu-latest }
-          - { language: swift, build-mode: manual, runner: macos-26 }
+        include: ${{ fromJSON(needs.select.outputs.include) }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
