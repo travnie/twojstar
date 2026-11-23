@@ -59,6 +59,7 @@ void SmartTransitionDsp::reset() noexcept
     rejectedByCap_ = false;
     committedAnchor_ = -1;
     planWindowStart_ = 0;
+    transitionPeak_.fill(0.0);
 }
 
 void SmartTransitionDsp::setStrength(double normalized) noexcept
@@ -71,6 +72,21 @@ void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexc
     maxTransitionMilliseconds_ = std::isfinite(milliseconds)
         ? std::round(std::clamp(milliseconds, 1.0, 4.0))
         : 4.0;
+}
+
+void SmartTransitionDsp::setMode(SmartTransitionMode mode) noexcept
+{
+    switch (mode)
+    {
+    case SmartTransitionMode::Speech:
+    case SmartTransitionMode::Music:
+    case SmartTransitionMode::HardSplice:
+        mode_ = mode;
+        break;
+    default:
+        mode_ = SmartTransitionMode::Auto;
+        break;
+    }
 }
 
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
@@ -139,6 +155,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     strengthRing_[slot] = strength_;
     maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
+    modeRing_[slot] = static_cast<std::uint8_t>(mode_);
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -363,7 +380,12 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
     // input position after lookahead. Automation remains block-independent.
     const auto durationMs = maxTransitionRing_[
         static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity];
-    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * durationMs));
+    const auto mode = static_cast<SmartTransitionMode>(
+        modeRing_[static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity]);
+    const auto modeLimitMs = mode == SmartTransitionMode::Speech ? 2.0
+        : (mode == SmartTransitionMode::HardSplice ? 1.0 : 4.0);
+    const auto effectiveLimitMs = std::min(static_cast<double>(durationMs), modeLimitMs);
+    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * effectiveLimitMs));
     const auto cappedFade = std::min(fadeLengthSamples_, maxSamples) & ~std::size_t{1};
     if (cappedFade < kMinFadeLengthSamples)
     {
@@ -392,6 +414,20 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
         plan_.seamAnchorSamples = clusterBest_.anchor - planWindowStart_;
         committedAnchor_ = clusterBest_.anchor;
         planCommitted_ = !plan_.noOp;
+        if (planCommitted_ && plan_.fadeCurve == SmartFadeCurve::EqualPower)
+        {
+            // One fixed source peak per channel, computed before emission.
+            // Never let the limiter inherit the splice's per-sample envelope jump.
+            for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+            {
+                transitionPeak_[channel] = 0.0;
+                if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                    continue;
+                for (auto index = transitionStart - 2; index <= transitionEnd + 1; ++index)
+                    transitionPeak_[channel] = std::max(
+                        transitionPeak_[channel], std::abs(sampleAt(channel, index)));
+            }
+        }
     }
 
     clusterActive_ = false;
@@ -422,7 +458,11 @@ SmartEditPlan SmartTransitionDsp::makePlan(const Candidate& candidate, std::size
     plan.dcDelta = clampFinite(candidate.rightMean - candidate.leftMean, -0.35, 0.35);
     plan.timingOffsetSamples = 0;
     plan.fadeLengthSamples = static_cast<std::int32_t>(fadeLength);
-    plan.fadeCurve = SmartFadeCurve::SCurve;
+    const auto mode = static_cast<SmartTransitionMode>(
+        modeRing_[static_cast<std::size_t>(candidate.anchor) % kRingCapacity]);
+    plan.fadeCurve = mode == SmartTransitionMode::Music ? SmartFadeCurve::EqualPower
+        : (mode == SmartTransitionMode::Speech ? SmartFadeCurve::ConstantAmplitude
+            : SmartFadeCurve::SCurve);
     plan.repairMode = SmartRepairMode::None;
     plan.noOp = false;
     return plan;
@@ -451,7 +491,12 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
     }
 
     const auto t = static_cast<double>(outputIndex - start + 1) / static_cast<double>(fadeLength + 1);
-    const auto bridgeWeight = std::pow(std::sin(kPi * t), 2.0);
+    const auto pulse = std::sin(kPi * t);
+    auto bridgeWeight = std::pow(pulse, 2.0);
+    if (plan_.fadeCurve == SmartFadeCurve::EqualPower)
+        bridgeWeight = pulse;
+    else if (plan_.fadeCurve == SmartFadeCurve::ConstantAmplitude)
+        bridgeWeight = std::pow(pulse, 4.0);
 
     const auto leftEdge = sampleAt(channel, start - 1);
     const auto rightEdge = sampleAt(channel, end);
@@ -468,7 +513,11 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
     auto bridge = h00 * leftEdge + h10 * span * leftSlope + h01 * rightEdge + h11 * span * rightSlope;
 
     const auto envelope = std::max({std::abs(source), std::abs(leftEdge), std::abs(rightEdge), 1e-6});
-    bridge = std::clamp(bridge, -1.5 * envelope, 1.5 * envelope);
+    const auto peakLimit = plan_.fadeCurve == SmartFadeCurve::EqualPower
+        ? transitionPeak_[channel] : envelope;
+    const auto bridgeLimit = plan_.fadeCurve == SmartFadeCurve::EqualPower
+        ? peakLimit : 1.5 * envelope;
+    bridge = std::clamp(bridge, -bridgeLimit, bridgeLimit);
 
     auto corrected = source;
     if (outputIndex < committedAnchor_)
@@ -485,7 +534,21 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         corrected = corrected * dbToGain(plan_.rightGainDb * taper) - plan_.dcDelta * taper;
     }
 
-    const auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    if (plan_.fadeCurve == SmartFadeCurve::EqualPower)
+    {
+        // Equal-power gains preserve squared gain sum. Guard local peak
+        // against coherent reinforcement and Hermite overshoot.
+        const auto dryGain = std::cos(0.5 * kPi * bridgeWeight);
+        const auto wetGain = std::sin(0.5 * kPi * bridgeWeight);
+        const auto mixed = corrected * dryGain + bridge * wetGain;
+        // Feather the power-law mix into unchanged edges. Pure equal-power
+        // reinforcement at the first sample creates a new onset click.
+        const auto edge = std::clamp(std::min(t, 1.0 - t) / 0.25, 0.0, 1.0);
+        const auto edgeTaper = edge * edge * (3.0 - 2.0 * edge);
+        repaired = std::clamp(source + edgeTaper * (mixed - source),
+            -peakLimit, peakLimit);
+    }
     // This sample left the lookahead buffer later than it entered.
     // Use Strength captured alongside its source sample, not the current input.
     const auto strength = strengthRing_[static_cast<std::size_t>(outputIndex) % kRingCapacity];

@@ -11,6 +11,8 @@
 
 using Travny::Audio::SmartEditPlan;
 using Travny::Audio::SmartTransitionDsp;
+using Travny::Audio::SmartTransitionMode;
+using Travny::Audio::SmartFadeCurve;
 
 namespace {
 
@@ -32,12 +34,14 @@ struct RenderResult
     bool hasPlan{false};
 };
 
-RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0)
+RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
+                    SmartTransitionMode mode = SmartTransitionMode::Auto)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
     dsp.setStrength(strength);
     dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
+    dsp.setMode(mode);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -489,6 +493,210 @@ void testUnrepairableCapKeepsLaterSplicesDry()
     }
 }
 
+void testModePoliciesAreSourceAlignedAndDeterministic()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto automatic = render(input, 2, {37, 97});
+    const auto speech = render(input, 2, {19, 61}, 1.0, 4.0, 48000.0, SmartTransitionMode::Speech);
+    const auto music = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::Music);
+    const auto hard = render(input, 2, {1, 13, 83}, 1.0, 4.0, 48000.0, SmartTransitionMode::HardSplice);
+    const auto speechSplit = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::Speech);
+    const auto musicSplit = render(input, 2, {5, 31, 41}, 1.0, 4.0, 48000.0, SmartTransitionMode::Music);
+    const auto hardSplit = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::HardSplice);
+
+    require(automatic.hasPlan && speech.hasPlan && music.hasPlan && hard.hasPlan,
+            "mode change discarded the accepted seam");
+    require(globalAnchor(automatic) == globalAnchor(speech) &&
+            globalAnchor(automatic) == globalAnchor(music) &&
+            globalAnchor(automatic) == globalAnchor(hard),
+            "mode changed seam selection");
+    require(automatic.plan.fadeLengthSamples == 192 &&
+            speech.plan.fadeLengthSamples == 96 &&
+            music.plan.fadeLengthSamples == 192 &&
+            hard.plan.fadeLengthSamples == 48,
+            "mode duration policy changed");
+    require(automatic.plan.fadeCurve == SmartFadeCurve::SCurve &&
+            speech.plan.fadeCurve == SmartFadeCurve::ConstantAmplitude &&
+            music.plan.fadeCurve == SmartFadeCurve::EqualPower &&
+            hard.plan.fadeCurve == SmartFadeCurve::SCurve,
+            "mode fade curve policy changed");
+    require(speech.output == speechSplit.output && music.output == musicSplit.output &&
+            hard.output == hardSplit.output, "mode repair depends on host block boundaries");
+    require(automatic.output != speech.output && automatic.output != music.output &&
+            automatic.output != hard.output, "mode control did not change repaired audio");
+    for (const auto mode : {SmartTransitionMode::Auto, SmartTransitionMode::Speech,
+                            SmartTransitionMode::Music, SmartTransitionMode::HardSplice})
+    {
+        const auto clean = cleanSine(1200);
+        require(render(clean, 2, {1, 7, 19}, 1.0, 4.0, 48000.0, mode).output == clean,
+                "mode changed clean audio");
+    }
+
+    SmartTransitionDsp dsp;
+    dsp.setMode(SmartTransitionMode::Music);
+    require(dsp.mode() == SmartTransitionMode::Music, "selected mode was not retained");
+    dsp.setMode(static_cast<SmartTransitionMode>(255));
+    require(dsp.mode() == SmartTransitionMode::Auto, "invalid mode did not select Auto");
+}
+
+void testMusicModeDoesNotIntroduceFullScaleOvers()
+{
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> input(1400);
+    std::array<double, 2> peaks{};
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 6.0 : (285.0 * pi / 180.0);
+        const auto value = 0.9 * std::sin(2.0 * pi * 500.0 *
+            static_cast<double>(i) / 48000.0 + phase);
+        input[i] = {value, value * 0.85};
+        peaks[0] = std::max(peaks[0], std::abs(value));
+        peaks[1] = std::max(peaks[1], std::abs(value * 0.85));
+    }
+    const auto music = render(input, 2, {1, 31, 127}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
+    require(music.hasPlan, "phase-jump fixture did not trigger Music mode");
+    for (const auto& frame : music.output)
+        for (std::size_t channel = 0; channel < frame.size(); ++channel)
+            require(std::isfinite(frame[channel]) && std::abs(frame[channel]) <= peaks[channel] + 1e-10,
+                    "Music mode introduced a per-channel peak above the source envelope");
+
+    const auto seam = static_cast<std::size_t>(globalAnchor(music));
+    require(seam > 0 && seam < input.size(), "Music mode selected an invalid seam");
+    const auto beforeJump = std::abs(input[seam][0] - input[seam - 1][0]);
+    const auto afterJump = std::abs(music.output[seam][0] - music.output[seam - 1][0]);
+    require(afterJump < beforeJump, "Music equal-power bridge did not smooth the seam");
+}
+
+void testMusicModeFixedCeilingAndEqualPowerGains()
+{
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> source(1400);
+    for (std::size_t i = 0; i < source.size(); ++i)
+    {
+        const auto phase = i < 500 ? 270.0 * pi / 180.0 : 225.0 * pi / 180.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 125.0 *
+            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+        source[i] = {value, value * 0.8};
+    }
+    const auto music = render(source, 2, {31, 7, 83}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
+    require(music.hasPlan, "same-polarity splice was not detected");
+    const auto anchor = globalAnchor(music);
+    require(anchor > 1 && anchor < static_cast<std::int64_t>(source.size()), "invalid seam anchor");
+    const auto beforeJump = std::abs(source[anchor][0] - source[anchor - 1][0]);
+    const auto afterJump = std::abs(music.output[anchor][0] - music.output[anchor - 1][0]);
+    require(afterJump < beforeJump * 0.25,
+            "Music peak guard retained an audible same-polarity splice");
+
+    const auto fade = static_cast<std::int64_t>(music.plan.fadeLengthSamples);
+    const auto start = anchor - fade / 2;
+    const auto end = start + fade;
+    double peak = 0.0;
+    for (auto i = start - 2; i <= end + 1; ++i)
+        peak = std::max(peak, std::abs(source[i][0]));
+
+    // Reconstruct an unclipped left-side sample and check the actual
+    // equal-power gain law, not only the absence of digital overs.
+    const auto leftEdge = source[start - 1][0];
+    const auto rightEdge = source[end][0];
+    const auto leftSlope = leftEdge - source[start - 2][0];
+    const auto rightSlope = source[end + 1][0] - rightEdge;
+    bool checkedPower = false;
+    for (auto i = start + fade / 4 + 2; i < anchor - 8; ++i)
+    {
+        const auto tau = static_cast<double>(i - start + 1) / static_cast<double>(fade + 1);
+        const auto t2 = tau * tau;
+        const auto t3 = t2 * tau;
+        const auto bridge = std::clamp(
+            (2.0 * t3 - 3.0 * t2 + 1.0) * leftEdge +
+            (t3 - 2.0 * t2 + tau) * static_cast<double>(fade + 1) * leftSlope +
+            (-2.0 * t3 + 3.0 * t2) * rightEdge +
+            (t3 - t2) * static_cast<double>(fade + 1) * rightSlope, -peak, peak);
+        const auto weight = std::sin(pi * tau);
+        const auto dry = source[i][0];
+        const auto expected = std::clamp(
+            dry * std::cos(0.5 * pi * weight) + bridge * std::sin(0.5 * pi * weight), -peak, peak);
+        const auto linear = std::clamp(dry * (1.0 - weight) + bridge * weight, -peak, peak);
+        if (std::abs(expected - linear) > 1e-4 && std::abs(expected) < peak - 1e-4)
+        {
+            require(std::abs(music.output[i][0] - expected) < 1e-11,
+                    "Music renderer did not use equal-power gains");
+            checkedPower = true;
+            break;
+        }
+    }
+    require(checkedPower, "phase fixture did not exercise an unclipped power-law sample");
+}
+
+void testMusicModeFadeEntranceDoesNotClick()
+{
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> input(1400);
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        const auto left = i < 500;
+        const auto phase = left ? pi : 0.5 * pi;
+        const auto amplitude = left ? 0.6 : 0.9;
+        const auto value = amplitude * std::sin(2.0 * pi * 500.0 *
+            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+        input[i] = {value, value * 0.7};
+    }
+    const auto music = render(input, 2, {17, 31, 23}, 1.0, 1.0, 48000.0,
+        SmartTransitionMode::Music);
+    require(music.hasPlan, "Music entrance-click fixture was not detected");
+    const auto anchor = globalAnchor(music);
+    const auto start = anchor - music.plan.fadeLengthSamples / 2;
+    require(start >= 2, "Music fade starts before the input");
+    const auto sourceOnset = std::abs(input[start][0] - input[start - 1][0]);
+    const auto repairedOnset = std::abs(music.output[start][0] - music.output[start - 1][0]);
+    require(repairedOnset < sourceOnset + 0.012,
+            "Music mode introduced a new fade entrance click");
+    const auto sourceJump = std::abs(input[anchor][0] - input[anchor - 1][0]);
+    const auto repairedJump = std::abs(music.output[anchor][0] - music.output[anchor - 1][0]);
+    require(repairedJump < sourceJump * 0.5, "Music mode failed to soften the phase splice");
+}
+
+void testMusicModeFadeExitDoesNotClick()
+{
+    constexpr double pi = 3.14159265358979323846;
+    // Exercise both drain-only short selections and normal streaming output.
+    for (const std::size_t seam : {std::size_t{500}, std::size_t{5500}})
+    {
+        const auto frames = seam + 900;
+        std::vector<Frame> input(frames);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            const auto left = i < seam;
+            const auto phase = left ? -0.5 * pi : 0.0;
+            const auto amplitude = left ? 0.6 : 0.9;
+            const auto value = amplitude * std::sin(2.0 * pi * 500.0 *
+                (static_cast<double>(i) - static_cast<double>(seam)) / 48000.0 + phase);
+            input[i] = {value, value * 0.7};
+        }
+        const auto music = render(input, 2, {11, 61}, 1.0, 1.0, 48000.0,
+            SmartTransitionMode::Music);
+        require(music.hasPlan, "Music exit-click fixture was not detected");
+        const auto anchor = globalAnchor(music);
+        const auto end = anchor + music.plan.fadeLengthSamples / 2;
+        require(end > 1 && end < static_cast<std::int64_t>(input.size()),
+                "Music fade exits outside the input");
+        bool renderedRepair = false;
+        for (auto index = anchor - music.plan.fadeLengthSamples / 2;
+             index < anchor + music.plan.fadeLengthSamples / 2; ++index)
+            renderedRepair |= std::abs(music.output[index][0] - input[index][0]) > 1e-6;
+        require(renderedRepair, "streaming Music fixture did not actually render a repair");
+        for (std::size_t channel = 0; channel < 2; ++channel)
+        {
+            const auto originalJump = std::abs(input[end][channel] - input[end - 1][channel]);
+            const auto processedJump = std::abs(music.output[end][channel] -
+                music.output[end - 1][channel]);
+            require(processedJump < originalJump + 0.012,
+                    "Music mode introduced a fade exit click");
+        }
+    }
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -538,6 +746,11 @@ int main()
         testStrengthBlendsWithoutChangingDetection();
         testMaxTransitionCapsFadeWithoutMovingSeam();
         testUnrepairableCapKeepsLaterSplicesDry();
+        testModePoliciesAreSourceAlignedAndDeterministic();
+        testMusicModeDoesNotIntroduceFullScaleOvers();
+        testMusicModeFixedCeilingAndEqualPowerGains();
+        testMusicModeFadeEntranceDoesNotClick();
+        testMusicModeFadeExitDoesNotClick();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }
