@@ -7,7 +7,7 @@ Dependency-free C# codec for multi-frame Windows `.ico` files. [Latest ZIP](http
 ## Source / behavior
 
 - Opens PNG-backed and BMP/DIB-backed ICO frames as named layers; skips malformed frames. Exports multiple sizes (16–256 px), alpha and optional aspect-ratio padding.
-- `PaintDotNetIco.Modern.csproj`: Paint.NET **5.2+** FileTypes API / **.NET 11 preview** SDK.
+- `PaintDotNetIco.Modern.csproj`: Paint.NET **5.2+** FileTypes API / **.NET 11 stable** SDK, compiled against the official Paint.NET 5.2 GA assemblies.
 - `PaintDotNetIco.csproj`: Paint.NET **5.1** compatibility API / **.NET 9** SDK.
 - Shared codec is plain C#, no Pillow/ImageSharp dependency.
 
@@ -21,4 +21,15 @@ dotnet build .\PaintDotNetIco.csproj -c Release -p:PaintDotNetDir='D:\Apps\paint
 
 ## Install
 
-Use the release ZIP's `Install.bat` and choose Classic, Store or custom folder; restart Paint.NET. Classic: `C:\Program Files\paint.net\FileTypes`; Store: `Documents\Paint.NET App Files\FileTypes`; portable: `<Paint.NET directory>\FileTypes`. If a portable folder is writable without elevation, use the ZIP's `INSTALL.txt` to copy the matching adapter DLL into its `FileTypes` folder manually; `Install.bat` may request administrator rights and exit when denied. CI builds both adapters; a passing badge does **not** claim untested host compatibility.
+Use the release ZIP's `Install.bat` and choose Classic, Store or custom folder; restart Paint.NET. Classic: `C:\Program Files\paint.net\FileTypes`; Store: `Documents\Paint.NET App Files\FileTypes`; portable: `<Paint.NET directory>\FileTypes`. If a portable folder is writable without elevation, use the ZIP's `INSTALL.txt` to copy the matching adapter DLL into its `FileTypes` folder manually; `Install.bat` may request administrator rights and exit when denied. CI builds both adapters against SHA-verified Paint.NET 5.1.12 and **5.2 stable** references and runs codec smoke tests. A passing badge does **not** establish in-app host compatibility.
+
+## Manual 5.2 host check
+
+Install the `Paint.NET-5.2+` DLL, restart Paint.NET 5.2, then verify:
+
+1. `Windows Icon (*.ico)` appears in the **Open** and **Save As** format lists (FileType plugins do not appear in the Effects menu).
+2. Open a multi-frame ICO with PNG-backed and BMP/DIB-backed frames. Confirm the decoded sizes are separate named layers, with transparency intact.
+3. Save an ICO with 16, 32, 48 and 256 px entries, reopen it, and verify frame sizes, alpha and aspect-ratio padding.
+4. If the format is missing, inspect **Settings → Plugin Errors** before assuming the decoder is broken.
+
+The CI suite does not launch the Paint.NET UI, so this checklist remains a manual release gate.
