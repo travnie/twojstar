@@ -32,10 +32,10 @@ struct RenderResult
     bool hasPlan{false};
 };
 
-RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0)
+RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0)
 {
     SmartTransitionDsp dsp;
-    dsp.configure(48000.0);
+    dsp.configure(sampleRate);
     dsp.setStrength(strength);
     dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
 
@@ -405,6 +405,37 @@ void testMaxTransitionCapsFadeWithoutMovingSeam()
         }
     }
     require(changed, "duration cap did not affect rendered audio");
+
+    constexpr std::size_t firstSeam = 500;
+    constexpr std::size_t strongerSeam = 650;
+    std::vector<Frame> overlapping(1500);
+    for (std::size_t i = 0; i < overlapping.size(); ++i)
+    {
+        const double value = i < firstSeam ? 0.40 : (i < strongerSeam ? 0.50 : -0.50);
+        overlapping[i] = {value, value * 0.9};
+    }
+    const auto autoWinner = render(overlapping, 2);
+    const auto cappedWinner = render(overlapping, 2, {3, 19, 47}, 1.0, 1.0);
+    require(autoWinner.hasPlan && cappedWinner.hasPlan, "overlapping seam fixture did not qualify");
+    require(globalAnchor(autoWinner) == globalAnchor(cappedWinner) &&
+            std::llabs(globalAnchor(cappedWinner) - static_cast<std::int64_t>(strongerSeam)) <= 2,
+            "duration cap changed the winning splice");
+
+    for (double rate : {8000.0, 16000.0, 22050.0, 32000.0, 44100.0})
+    {
+        const auto lowRate = render(input, 2, {7, 59}, 1.0, 1.0, rate);
+        if (lowRate.hasPlan)
+        {
+            const auto length = lowRate.plan.fadeLengthSamples;
+            require(length >= static_cast<int>(SmartTransitionDsp::kMinFadeLengthSamples) &&
+                    length <= static_cast<int>(std::floor(rate * 0.001)),
+                    "selected fade exceeded 1 ms at a lower sample rate");
+        }
+        else
+        {
+            require(lowRate.output == input, "shorter-than-minimum fade modified source audio");
+        }
+    }
 
     SmartTransitionDsp dsp;
     dsp.setMaxTransitionMilliseconds(-10.0);

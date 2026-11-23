@@ -66,11 +66,18 @@ void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexc
         ? std::clamp(milliseconds, 1.0, 4.0)
         : 4.0;
     const auto maximumFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
-    fadeLengthSamples_ = static_cast<std::size_t>(std::clamp<long long>(
-        std::llround(sampleRate_ * 0.001 * maxTransitionMilliseconds_),
-        32, static_cast<long long>(maximumFade)));
-    if ((fadeLengthSamples_ & 1U) != 0U) ++fadeLengthSamples_;
-    competitionRadius_ = std::max(analysisRadius_, fadeLengthSamples_);
+    // Round down to an even fade, never beyond the selected millisecond ceiling.
+    // Below the minimum 16-sample fade, the candidate must bypass unchanged.
+    fadeLengthSamples_ = std::min<std::size_t>(
+        static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * maxTransitionMilliseconds_)),
+        maximumFade);
+    fadeLengthSamples_ &= ~std::size_t{1};
+
+    // The cap shortens rendering, never the candidate competition window:
+    // otherwise overlapping splices could choose a different winner.
+    const auto defaultFade = static_cast<std::size_t>(std::clamp<long long>(
+        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maximumFade)));
+    competitionRadius_ = std::max(analysisRadius_, defaultFade + (defaultFade & 1U));
 }
 
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
