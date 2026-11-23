@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 
 int main()
 {
@@ -36,25 +37,25 @@ int main()
     }
     if (!visibleStrength) { std::cerr << "Strength must be visible and automatable\n"; return EXIT_FAILURE; }
 
-    SmartTransitionProcessor source;
-    if (source.initialize(nullptr) != Steinberg::kResultOk) return EXIT_FAILURE;
+    auto source = std::make_unique<SmartTransitionProcessor>();
+    if (source->initialize(nullptr) != Steinberg::kResultOk) return EXIT_FAILURE;
     Steinberg::MemoryStream input;
     Steinberg::IBStreamer writer(&input, kLittleEndian);
     if (!writer.writeDouble(0.35)) return EXIT_FAILURE;
     input.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
-    if (source.setState(&input) != Steinberg::kResultOk) return EXIT_FAILURE;
+    if (source->setState(&input) != Steinberg::kResultOk) return EXIT_FAILURE;
 
     Steinberg::MemoryStream saved;
-    if (source.getState(&saved) != Steinberg::kResultOk) return EXIT_FAILURE;
-    source.terminate();
+    if (source->getState(&saved) != Steinberg::kResultOk) return EXIT_FAILURE;
+    source->terminate();
     saved.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
 
-    SmartTransitionProcessor restored;
-    if (restored.initialize(nullptr) != Steinberg::kResultOk ||
-        restored.setState(&saved) != Steinberg::kResultOk) return EXIT_FAILURE;
+    auto restored = std::make_unique<SmartTransitionProcessor>();
+    if (restored->initialize(nullptr) != Steinberg::kResultOk ||
+        restored->setState(&saved) != Steinberg::kResultOk) return EXIT_FAILURE;
     Steinberg::MemoryStream controllerState;
-    if (restored.getState(&controllerState) != Steinberg::kResultOk) return EXIT_FAILURE;
-    restored.terminate();
+    if (restored->getState(&controllerState) != Steinberg::kResultOk) return EXIT_FAILURE;
+    restored->terminate();
     controllerState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
     if (controller.setComponentState(&controllerState) != Steinberg::kResultOk) return EXIT_FAILURE;
     if (std::abs(controller.getParamNormalized(kSmartTransitionStrengthId) - 0.35) > 1e-9)
@@ -78,19 +79,19 @@ int main()
 
     const auto render = [&](int split, bool step, bool ramp)
     {
-        SmartTransitionProcessor processor;
-        if (processor.initialize(nullptr) != Steinberg::kResultOk) std::abort();
+        auto processor = std::make_unique<SmartTransitionProcessor>();
+        if (processor->initialize(nullptr) != Steinberg::kResultOk) std::abort();
         auto arrangement = Steinberg::Vst::SpeakerArr::kMono;
         auto outputArrangement = arrangement;
-        if (processor.setBusArrangements(&arrangement, 1, &outputArrangement, 1) != Steinberg::kResultOk)
+        if (processor->setBusArrangements(&arrangement, 1, &outputArrangement, 1) != Steinberg::kResultOk)
             std::abort();
         Steinberg::Vst::ProcessSetup setup{};
         setup.processMode = Steinberg::Vst::kRealtime;
         setup.symbolicSampleSize = Steinberg::Vst::kSample64;
         setup.sampleRate = 48000.0;
         setup.maxSamplesPerBlock = kFrames;
-        if (processor.setupProcessing(setup) != Steinberg::kResultOk ||
-            processor.setActive(true) != Steinberg::kResultOk) std::abort();
+        if (processor->setupProcessing(setup) != Steinberg::kResultOk ||
+            processor->setActive(true) != Steinberg::kResultOk) std::abort();
 
         std::vector<double> output(kFrames);
         for (int begin = 0; begin < kFrames;)
@@ -138,11 +139,11 @@ int main()
             data.inputs = &in;
             data.outputs = &out;
             data.inputParameterChanges = (step || ramp) ? &changes : nullptr;
-            if (processor.process(data) != Steinberg::kResultOk) std::abort();
+            if (processor->process(data) != Steinberg::kResultOk) std::abort();
             begin = end;
         }
-        processor.setActive(false);
-        processor.terminate();
+        processor->setActive(false);
+        processor->terminate();
         return output;
     };
 
@@ -164,7 +165,7 @@ int main()
         }
 
         // The ramp is defined in SOURCE coordinates. A 4800-sample lookahead
-        // must not shift its wet/dry blend ahead of the source.
+        // must not shift its wet/dry blend ahead of the source->
         const auto sourceStrength = 1.0 - static_cast<double>(sourceIndex + 1) / 6000.0;
         const auto expectedRamp = dry + (wet[i] - dry) * sourceStrength;
         if (std::abs(fullRamp[i] - expectedRamp) > 1e-11)
