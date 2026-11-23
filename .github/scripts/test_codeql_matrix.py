@@ -60,6 +60,14 @@ class MatrixSelectionTests(unittest.TestCase):
             self.assertIn("--no-renames", args)
             self.assertFalse(any(arg.startswith("--diff-filter") for arg in args))
 
+    def test_stale_event_base_does_not_scan_unrelated_main_changes(self):
+        from unittest.mock import patch
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.return_value.stdout = "spacemolt/smx/src/smx/contract.py\\n"
+            selected = codeql_matrix.plan("pull_request", "stale-base-sha")
+            self.assertEqual([row["language"] for row in selected], ["python"])
+            self.assertEqual(run.call_args.args[0][-2:], ["HEAD^1", "HEAD"])
+
     def test_full_scans_outside_pull_requests(self):
         for event in ("push", "schedule", "workflow_dispatch"):
             self.assertEqual(len(codeql_matrix.plan(event, "")), 7)
