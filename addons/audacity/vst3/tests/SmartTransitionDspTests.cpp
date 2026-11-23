@@ -454,35 +454,39 @@ void testMaxTransitionCapsFadeWithoutMovingSeam()
 
 void testUnrepairableCapKeepsLaterSplicesDry()
 {
-    SmartTransitionDsp dsp;
-    dsp.configure(8000.0);
-    std::vector<Frame> input(1600);
-    for (std::size_t i = 0; i < input.size(); ++i)
+    // Adjacent and distant clusters both stay dry after an unrepairable first seam.
+    for (const std::size_t secondSeam : {std::size_t{540}, std::size_t{1000}})
     {
-        const auto value = i < 500 ? 0.30 : (i < 1000 ? -0.50 : 0.70);
-        input[i] = {value, value * 0.85};
-    }
+        SmartTransitionDsp dsp;
+        dsp.configure(8000.0);
+        std::vector<Frame> input(1600);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            const auto value = i < 500 ? 0.30 : (i < secondSeam ? -0.50 : 0.70);
+            input[i] = {value, value * 0.85};
+        }
 
-    dsp.setMaxTransitionMilliseconds(1.0);
-    std::vector<Frame> raw;
-    raw.reserve(input.size() + dsp.latencySamples());
-    for (std::size_t i = 0; i < input.size(); ++i)
-    {
-        if (i == 950) dsp.setMaxTransitionMilliseconds(4.0);
-        Frame out{};
-        dsp.processFrame(input[i].data(), out.data(), 2);
-        raw.push_back(out);
+        dsp.setMaxTransitionMilliseconds(1.0);
+        std::vector<Frame> raw;
+        raw.reserve(input.size() + dsp.latencySamples());
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            if (i == secondSeam - 25) dsp.setMaxTransitionMilliseconds(4.0);
+            Frame out{};
+            dsp.processFrame(input[i].data(), out.data(), 2);
+            raw.push_back(out);
+        }
+        for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
+        {
+            Frame out{};
+            dsp.drainFrame(out.data(), 2);
+            raw.push_back(out);
+        }
+        require(!dsp.hasPlan(), "rejected cap committed a later adjacent/distant seam");
+        for (std::size_t i = 0; i < input.size(); ++i)
+            require(raw[i + dsp.latencySamples()] == input[i],
+                    "later seam changed after an unrepairable first transition");
     }
-    for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
-    {
-        Frame out{};
-        dsp.drainFrame(out.data(), 2);
-        raw.push_back(out);
-    }
-    require(!dsp.hasPlan(), "unrepairable first seam incorrectly committed a later seam");
-    for (std::size_t i = 0; i < input.size(); ++i)
-        require(raw[i + dsp.latencySamples()] == input[i],
-                "later splice changed after the first seam was rejected by cap");
 }
 
 void testStrengthBlendsWithoutChangingDetection()
