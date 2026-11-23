@@ -74,7 +74,6 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     if (!streamer.readDouble(savedStrength)) savedStrength = 1.0;
     const auto normalized = std::isfinite(savedStrength) ? std::clamp(savedStrength, 0.0, 1.0) : 1.0;
     pendingStrength_.store(normalized, std::memory_order_relaxed);
-    publishedStrength_.store(normalized, std::memory_order_release);
     restoreGeneration_.fetch_add(1, std::memory_order_release);
     return Steinberg::kResultOk;
 }
@@ -83,8 +82,13 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
 {
     if (!state) return Steinberg::kResultFalse;
     Steinberg::IBStreamer streamer(state, kLittleEndian);
-    return streamer.writeDouble(publishedStrength_.load(std::memory_order_acquire))
-        ? Steinberg::kResultOk : Steinberg::kResultFalse;
+    // A restore supersedes the last audio snapshot until the audio thread
+    // publishes a value for the matching generation. No torn state pairs.
+    const auto generation = restoreGeneration_.load(std::memory_order_acquire);
+    const auto value = audioGeneration_.load(std::memory_order_acquire) == generation
+        ? audioStrength_.load(std::memory_order_acquire)
+        : pendingStrength_.load(std::memory_order_acquire);
+    return streamer.writeDouble(value) ? Steinberg::kResultOk : Steinberg::kResultFalse;
 }
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBool state)
@@ -255,7 +259,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             if (strengthQueue->getPoint(strengthQueue->getPointCount() - 1, offset, value) == Steinberg::kResultTrue)
                 dsp_.setStrength(value);
         }
-        publishedStrength_.store(dsp_.strength(), std::memory_order_release);
+        audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
+        audioGeneration_.store(generation, std::memory_order_release);
         return Steinberg::kResultOk;
     }
     if (data.numInputs == 0 || data.numOutputs == 0)
@@ -301,7 +306,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     }
 
     data.outputs[0].silenceFlags = allSilent ? silenceMask : unavailableOutputs;
-    publishedStrength_.store(dsp_.strength(), std::memory_order_release);
+    audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
+    audioGeneration_.store(generation, std::memory_order_release);
     return Steinberg::kResultOk;
 }
 

@@ -73,7 +73,7 @@ int main()
     }
     controller.terminate();
 
-    constexpr Steinberg::int32 kFrames = 6400;
+    constexpr Steinberg::int32 kFrames = 13000;
     std::vector<double> audio(kFrames, 0.25);
     for (int i = 500; i < kFrames; ++i) audio[i] = -0.6;
 
@@ -187,6 +187,42 @@ int main()
             std::cerr << "Strength automation depends on host block partition\n";
             return EXIT_FAILURE;
         }
+    }
+
+    // Exercise a seam after the automation boundary, not only the first
+    // 1600 output frames that remain after the lookahead in short fixtures.
+    std::fill(audio.begin(), audio.end(), 0.25);
+    std::fill(audio.begin() + 5000, audio.end(), -0.6);
+    const auto lateWet = render(0, false, false);
+    const auto lateStepOneBlock = render(0, true, false);
+    const auto lateStepSplit = render(3500, true, false);
+    const auto lateRampOneBlock = render(0, false, true);
+    const auto lateRampSplit = render(3000, false, true);
+    bool lateRepair = false;
+    for (int i = 9790; i < 9830; ++i)
+    {
+        const auto sourceIndex = i - 4800;
+        const auto dry = audio[sourceIndex];
+        lateRepair |= std::abs(lateWet[i] - dry) > 1e-6;
+        if (std::abs(lateStepOneBlock[i] - dry) > 1e-12 ||
+            std::abs(lateStepSplit[i] - dry) > 1e-12)
+        {
+            std::cerr << "Post-automation seam was not fully dry\n";
+            return EXIT_FAILURE;
+        }
+        const auto sourceStrength = 1.0 - static_cast<double>(sourceIndex + 1) / 6000.0;
+        const auto expected = dry + (lateWet[i] - dry) * sourceStrength;
+        if (std::abs(lateRampOneBlock[i] - expected) > 1e-11 ||
+            std::abs(lateRampSplit[i] - expected) > 1e-11)
+        {
+            std::cerr << "Post-automation seam blended at the wrong source time\n";
+            return EXIT_FAILURE;
+        }
+    }
+    if (!lateRepair)
+    {
+        std::cerr << "Late seam fixture did not trigger repair\n";
+        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }

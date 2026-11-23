@@ -48,8 +48,9 @@ private:
     // State callbacks may run concurrently with the audio thread.
     // Only process() touches DSP strength; atomics transfer restored state.
     std::atomic<double> pendingStrength_{1.0};
-    std::atomic<double> publishedStrength_{1.0};
+    std::atomic<double> audioStrength_{1.0};
     std::atomic<Steinberg::uint64> restoreGeneration_{0};
+    std::atomic<Steinberg::uint64> audioGeneration_{0};
     Steinberg::uint64 appliedRestoreGeneration_{0};
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
