@@ -1,0 +1,49 @@
+name: SpaceMolt gateway CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "spacemolt/gateway/**"
+      - "!spacemolt/gateway/**/*.md"
+      - ".github/workflows/spacemolt-gateway-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "spacemolt/gateway/**"
+      - "!spacemolt/gateway/**/*.md"
+      - ".github/workflows/spacemolt-gateway-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: spacemolt-gateway-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: spacemolt/gateway
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: spacemolt/gateway/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      # `wrangler deploy --dry-run`: config and bundle check with the pinned Wrangler; deploys stay on Workers Builds.
+      - name: Wrangler dry run
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: npm run check
