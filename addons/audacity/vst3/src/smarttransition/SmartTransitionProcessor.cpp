@@ -41,6 +41,14 @@ template <typename Sample>
     return static_cast<double>(step + 1);
 }
 
+[[nodiscard]] Travny::Audio::SmartTransitionMode modeFromNormalized(double normalized) noexcept
+{
+    if (!std::isfinite(normalized)) return Travny::Audio::SmartTransitionMode::Auto;
+    // Match StringListParameter: floor(normalized * 4), capped at 3.
+    const auto index = std::min(3, static_cast<int>(std::clamp(normalized, 0.0, 1.0) * 4.0));
+    return static_cast<Travny::Audio::SmartTransitionMode>(index);
+}
+
 [[nodiscard]] Steinberg::Vst::IParamValueQueue* findParameterQueue(
     Steinberg::Vst::IParameterChanges* changes,
     Steinberg::Vst::ParamID id) noexcept
@@ -84,12 +92,16 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     // Older presets contain only Strength.
     double savedMaxTransition = 1.0;
     if (!streamer.readDouble(savedMaxTransition)) savedMaxTransition = 1.0;
+    double savedMode = 0.0;
+    if (!streamer.readDouble(savedMode)) savedMode = 0.0;
     const auto normalized = std::isfinite(savedStrength) ? std::clamp(savedStrength, 0.0, 1.0) : 1.0;
     const auto maxNormalized = std::isfinite(savedMaxTransition)
         ? std::clamp(savedMaxTransition, 0.0, 1.0) : 1.0;
     restoreEpoch_.fetch_add(1, std::memory_order_acq_rel);
     pendingStrength_.store(normalized, std::memory_order_relaxed);
     pendingMaxTransition_.store(maxNormalized, std::memory_order_relaxed);
+    pendingMode_.store(std::isfinite(savedMode) ? std::clamp(savedMode, 0.0, 1.0) : 0.0,
+        std::memory_order_relaxed);
     restoreGeneration_.fetch_add(1, std::memory_order_release);
     restoreEpoch_.fetch_add(1, std::memory_order_release);
     return Steinberg::kResultOk;
@@ -102,6 +114,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
     // Read a stable pair while the host may be processing audio or restoring state.
     double strength = 1.0;
     double maxTransition = 1.0;
+    double mode = 0.0;
     for (;;)
     {
         const auto restoreStart = restoreEpoch_.load(std::memory_order_acquire);
@@ -112,19 +125,21 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
         {
             strength = audioStrength_.load(std::memory_order_relaxed);
             maxTransition = audioMaxTransition_.load(std::memory_order_relaxed);
+            mode = audioMode_.load(std::memory_order_relaxed);
         }
         else
         {
             strength = pendingStrength_.load(std::memory_order_relaxed);
             maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
+            mode = pendingMode_.load(std::memory_order_relaxed);
         }
         if (generation == restoreGeneration_.load(std::memory_order_acquire) &&
             restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
             audioStart == audioEpoch_.load(std::memory_order_acquire))
             break;
     }
-    return streamer.writeDouble(strength) && streamer.writeDouble(maxTransition)
-        ? Steinberg::kResultOk : Steinberg::kResultFalse;
+    return streamer.writeDouble(strength) && streamer.writeDouble(maxTransition) &&
+        streamer.writeDouble(mode) ? Steinberg::kResultOk : Steinberg::kResultFalse;
 }
 
 void SmartTransitionProcessor::publishAudioState(Steinberg::uint64 generation) noexcept
@@ -133,6 +148,7 @@ void SmartTransitionProcessor::publishAudioState(Steinberg::uint64 generation) n
     audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
     audioMaxTransition_.store((dsp_.maxTransitionMilliseconds() - 1.0) / 3.0,
         std::memory_order_relaxed);
+    audioMode_.store(static_cast<double>(dsp_.mode()) / 3.0, std::memory_order_relaxed);
     audioGeneration_.store(generation, std::memory_order_release);
     audioEpoch_.fetch_add(1, std::memory_order_release);
 }
@@ -209,7 +225,8 @@ bool SmartTransitionProcessor::processBlock(
     Steinberg::int32 samples,
     Steinberg::uint64 inputSilenceFlags,
     Steinberg::Vst::IParamValueQueue* strengthQueue,
-    Steinberg::Vst::IParamValueQueue* maxTransitionQueue) noexcept
+    Steinberg::Vst::IParamValueQueue* maxTransitionQueue,
+    Steinberg::Vst::IParamValueQueue* modeQueue) noexcept
 {
     // Process continuous VST3 automation at its sample offsets, not per block.
     auto previousOffset = Steinberg::int32{-1};
@@ -262,11 +279,39 @@ bool SmartTransitionProcessor::processBlock(
     };
     advanceMaxPoint();
 
+    Steinberg::int32 modePointIndex = 0;
+    Steinberg::int32 nextModeOffset = 0;
+    double nextModeValue = 0.0;
+    bool hasNextMode = false;
+    const auto modePointCount = modeQueue ? modeQueue->getPointCount() : 0;
+    const auto advanceModePoint = [&]() noexcept
+    {
+        hasNextMode = false;
+        while (modePointIndex < modePointCount)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue normalized = 0.0;
+            if (modeQueue->getPoint(modePointIndex++, offset, normalized) != Steinberg::kResultTrue ||
+                offset < 0 || offset >= samples || offset < nextModeOffset)
+                continue;
+            nextModeOffset = offset;
+            nextModeValue = normalized;
+            hasNextMode = true;
+            break;
+        }
+    };
+    advanceModePoint();
+
     bool allSilent = true;
     const auto channelCount = std::clamp<Steinberg::int32>(channels, 1, 2);
 
     for (Steinberg::int32 sample = 0; sample < samples; ++sample)
     {
+        while (hasNextMode && nextModeOffset <= sample)
+        {
+            dsp_.setMode(modeFromNormalized(nextModeValue));
+            advanceModePoint();
+        }
         while (hasNextMax && maxNextOffset <= sample)
         {
             dsp_.setMaxTransitionMilliseconds(maxTransitionMillisecondsFromNormalized(maxNextValue));
@@ -329,12 +374,14 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
         {
             const auto strength = pendingStrength_.load(std::memory_order_relaxed);
             const auto maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
+            const auto mode = pendingMode_.load(std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_acquire);
             if (restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
                 restoredGeneration == restoreGeneration_.load(std::memory_order_acquire))
             {
                 dsp_.setStrength(strength);
                 dsp_.setMaxTransitionMilliseconds(maxTransitionMillisecondsFromNormalized(maxTransition));
+                dsp_.setMode(modeFromNormalized(mode));
                 appliedRestoreGeneration_ = restoredGeneration;
             }
         }
@@ -345,6 +392,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
 
     auto* strengthQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionStrengthId);
     auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId);
+    auto* modeQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionModeId);
     if (data.numSamples <= 0)
     {
         // Hosts may flush only parameter changes without audio buffers.
@@ -364,6 +412,16 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
                 if (maxQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue && offset >= 0)
                     dsp_.setMaxTransitionMilliseconds(
                         maxTransitionMillisecondsFromNormalized(normalized));
+            }
+        }
+        if (modeQueue)
+        {
+            for (Steinberg::int32 i = 0; i < modeQueue->getPointCount(); ++i)
+            {
+                Steinberg::int32 offset = 0;
+                Steinberg::Vst::ParamValue normalized = 0.0;
+                if (modeQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue && offset >= 0)
+                    dsp_.setMode(modeFromNormalized(normalized));
             }
         }
         publishAudioState(generation);
@@ -393,7 +451,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             data.numSamples,
             inputSilenceFlags,
             strengthQueue,
-            maxQueue);
+            maxQueue,
+            modeQueue);
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
@@ -406,7 +465,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             data.numSamples,
             inputSilenceFlags,
             strengthQueue,
-            maxQueue);
+            maxQueue,
+            modeQueue);
     }
     else
     {
