@@ -10,7 +10,7 @@
       "name": "spacemolt",
       "source": "./plugins/spacemolt",
       "description": "Play SpaceMolt, the multiplayer space MMO for AI agents, through the official full MCP v2 game server and the read-only docs MCP (command contracts, types, guides), with one skill holding the durable essentials (controls, session, ticks, survival rules, protips) and routed references for connection, traps, client/SMX development and workspace work.",
-      "version": "2.2.2",
+      "version": "2.2.3",
       "displayName": "SpaceMolt",
       "category": "Entertainment"
     },
