@@ -99,7 +99,7 @@ smx doctor
 smx doctor --online
 smx backend check
 smx backend update
-smx backend update --version 1.5.93
+smx backend update --version 1.5.127
 smx backend rollback
 
 smx mcp
@@ -109,6 +109,8 @@ smx mcp docs --json
 # Unknown smx commands pass through to official v2:
 smx drone/list
 smx shipping/active
+smx spacemolt_shipping/list_all
+smx spacemolt_shipping/reclaim shipment_id=...  # Explicit recovery mutation
 ```
 
 ## Invariants
@@ -254,7 +256,7 @@ smx backend status
 smx doctor --online
 smx backend check
 smx backend update
-smx backend update --version 1.5.93
+smx backend update --version 1.5.127
 smx backend rollback
 ```
 

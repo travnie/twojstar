@@ -43,6 +43,20 @@ class ContractTests(unittest.TestCase):
     def test_complete_spec_is_clean(self):
         self.assertEqual(find_drift(full_spec()), [])
 
+    def test_recent_upstream_endpoints_remain_available(self):
+        # Command transport belongs to the official client, not an SMX reimplementation.
+        commands = (
+            "spacemolt_battle/default_stance",
+            "spacemolt_shipping/list_all",
+            "spacemolt_shipping/reclaim",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertIn(command, CONTRACT)
+                spec = full_spec()
+                del spec["paths"][f"/api/v2/{command}"]
+                self.assertEqual(find_drift(spec), [f"{command}: endpoint removed"])
+
     def test_reports_removed_endpoint(self):
         spec = full_spec()
         del spec["paths"]["/api/v2/spacemolt/sell"]
