@@ -36,7 +36,8 @@ struct RenderResult
 };
 
 RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
-                    SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false)
+                    SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false,
+                    std::int64_t repairEnableAt = -1)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
@@ -57,6 +58,9 @@ RenderResult render(const std::vector<Frame>& input, std::size_t channels, const
         for (std::size_t i = 0; i < count; ++i)
         {
             Frame out{};
+            if (repairEnableAt >= 0 &&
+                static_cast<std::int64_t>(position + i) == repairEnableAt)
+                dsp.setRepairAuto(true);
             dsp.processFrame(input[position + i].data(), out.data(), channels);
             raw.push_back(out);
         }
@@ -227,11 +231,54 @@ void testConservativeSpectralRepair()
                     const auto without = render(signal, 2);
                     require(result.output != without.output,
                         "Accepted spectral plan was not rendered");
+                    const auto early = render(signal, 2, {19, 67}, 1.0, 4.0,
+                        48000.0, SmartTransitionMode::Auto, false, 300);
+                    const auto late = render(signal, 2, {19, 67}, 1.0, 4.0,
+                        48000.0, SmartTransitionMode::Auto, false, 700);
+                    require(early.output == result.output,
+                        "Source-aligned Repair enable before seam was ignored");
+                    require(late.output == without.output,
+                        "Source-aligned Repair enable after seam changed audio");
                     acceptedSpectral = true;
                     break;
                 }
             }
         }
+    }
+    // Unequal stereo transients: a louder channel must not let the other
+    // channel acquire a larger derivative under a shared repair plan.
+    std::vector<Frame> unequal(1400);
+    for (std::size_t i = 0; i < unequal.size(); ++i)
+    {
+        const auto sample = static_cast<double>(i) - 500.0;
+        const auto leftPhase = i < 500 ? 1.5 * pi : (5.0 / 6.0) * pi;
+        const auto rightPhase = i < 500 ? (2.0 / 3.0) * pi : 0.0;
+        unequal[i] = {
+            0.8 * std::sin(2.0 * pi * 200.0 * sample / 48000.0 + leftPhase),
+            0.8 * std::sin(2.0 * pi * 500.0 * sample / 48000.0 + rightPhase)
+        };
+    }
+    const auto unequalOff = render(unequal, 2);
+    const auto unequalAuto = render(unequal, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    require(unequalOff.hasPlan && unequalAuto.hasPlan,
+        "Unequal stereo splice was not detected");
+    const auto unequalEntry = globalAnchor(unequalOff) - 8;
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        double dryPeak = 0.0;
+        double autoPeak = 0.0;
+        for (auto i = unequalEntry; i <= unequalEntry + 16; ++i)
+        {
+            dryPeak = std::max(dryPeak,
+                std::abs(unequalOff.output[i][channel] -
+                    unequalOff.output[i - 1][channel]));
+            autoPeak = std::max(autoPeak,
+                std::abs(unequalAuto.output[i][channel] -
+                    unequalAuto.output[i - 1][channel]));
+        }
+        require(autoPeak <= dryPeak * 1.05 + 0.005,
+            "Loud stereo channel hid a quieter-channel repair click");
     }
     require(acceptedSpectral, "Repair Auto never accepted a spectral improvement");
     const auto clean = cleanSine(1400);
