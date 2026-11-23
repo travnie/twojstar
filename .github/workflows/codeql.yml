@@ -145,4 +145,4 @@ jobs:
       - name: Analyze
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:${{ matrix.language }}${{ matrix.language == 'java-kotlin' && (matrix.keyboard && matrix.xiaomi && '-all' || matrix.keyboard && '-keyboard' || '-xiaomi') || '' }}"

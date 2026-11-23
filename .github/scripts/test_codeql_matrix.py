@@ -88,6 +88,33 @@ class MatrixSelectionTests(unittest.TestCase):
             result = codeql_matrix.plan("pull_request", "old-sha")
             self.assertEqual([row["language"] for row in result], ["java-kotlin", "swift"])
 
+    def test_multiple_nul_separated_paths(self):
+        from unittest.mock import patch
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.return_value.stdout = (
+                b"spacemolt/smx/src/smx/contract.py\0"
+                b"spacemolt/gateway/package.json\0"
+            )
+            rows = codeql_matrix.plan("pull_request", "old-base")
+            self.assertEqual([row["language"] for row in rows],
+                             ["javascript-typescript", "python"])
+
+    def test_pr_fallback_event_base_and_full_scan(self):
+        from subprocess import CalledProcessError
+        from unittest.mock import patch
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.side_effect = [
+                CalledProcessError(128, ["git"]),
+                type("Completed", (), {"stdout": b"spacemolt/smx/pyproject.toml\0"})(),
+            ]
+            rows = codeql_matrix.plan("pull_request", "event-base")
+            self.assertEqual([row["language"] for row in rows], ["python"])
+            self.assertEqual(run.call_args.args[0][-2:], ["event-base", "HEAD"])
+
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.side_effect = CalledProcessError(128, ["git"])
+            self.assertEqual(len(codeql_matrix.plan("pull_request", "event-base")), 7)
+
     def test_full_scans_outside_pull_requests(self):
         for event in ("push", "schedule", "workflow_dispatch"):
             self.assertEqual(len(codeql_matrix.plan(event, "")), 7)
