@@ -310,25 +310,30 @@ bool SmartTransitionProcessor::processBlock(
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::ProcessData& data)
 {
-    // Read both restored settings from one stable generation. A newer
-    // setState() must not split the Strength and Max transition pair.
-    Steinberg::uint64 generation = 0;
-    for (;;)
+    // One bounded snapshot attempt. The audio thread never spins while
+    // setState() publishes a new preset; an incomplete restore waits until
+    // the next process block.
+    const auto restoreStart = restoreEpoch_.load(std::memory_order_acquire);
+    if ((restoreStart & 1U) == 0)
     {
-        const auto start = restoreEpoch_.load(std::memory_order_acquire);
-        if ((start & 1U) != 0) continue;
-        generation = restoreGeneration_.load(std::memory_order_acquire);
-        if (generation == appliedRestoreGeneration_) break;
-        const auto strength = pendingStrength_.load(std::memory_order_relaxed);
-        const auto maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
-        if (start != restoreEpoch_.load(std::memory_order_acquire) ||
-            generation != restoreGeneration_.load(std::memory_order_acquire))
-            continue;
-        dsp_.setStrength(strength);
-        dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxTransition);
-        appliedRestoreGeneration_ = generation;
-        break;
+        const auto restoredGeneration = restoreGeneration_.load(std::memory_order_acquire);
+        if (restoredGeneration != appliedRestoreGeneration_)
+        {
+            const auto strength = pendingStrength_.load(std::memory_order_relaxed);
+            const auto maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
+            std::atomic_thread_fence(std::memory_order_acquire);
+            if (restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
+                restoredGeneration == restoreGeneration_.load(std::memory_order_acquire))
+            {
+                dsp_.setStrength(strength);
+                dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxTransition);
+                appliedRestoreGeneration_ = restoredGeneration;
+            }
+        }
     }
+
+    // Publish only the generation actually applied to DSP.
+    const auto generation = appliedRestoreGeneration_;
 
     auto* strengthQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionStrengthId);
     auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId);
