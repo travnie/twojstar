@@ -33,6 +33,14 @@ template <typename Sample>
     return mask;
 }
 
+[[nodiscard]] double maxTransitionMillisecondsFromNormalized(double normalized) noexcept
+{
+    if (!std::isfinite(normalized)) return 4.0;
+    // Match RangeParameter::toPlain for four discrete values: floor(n * 4).
+    const auto step = std::min(3, static_cast<int>(std::clamp(normalized, 0.0, 1.0) * 4.0));
+    return static_cast<double>(step + 1);
+}
+
 [[nodiscard]] Steinberg::Vst::IParamValueQueue* findParameterQueue(
     Steinberg::Vst::IParameterChanges* changes,
     Steinberg::Vst::ParamID id) noexcept
@@ -261,7 +269,7 @@ bool SmartTransitionProcessor::processBlock(
     {
         while (hasNextMax && maxNextOffset <= sample)
         {
-            dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxNextValue);
+            dsp_.setMaxTransitionMilliseconds(maxTransitionMillisecondsFromNormalized(maxNextValue));
             advanceMaxPoint();
         }
         while (hasNext && nextOffset <= sample)
@@ -326,7 +334,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
                 restoredGeneration == restoreGeneration_.load(std::memory_order_acquire))
             {
                 dsp_.setStrength(strength);
-                dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxTransition);
+                dsp_.setMaxTransitionMilliseconds(maxTransitionMillisecondsFromNormalized(maxTransition));
                 appliedRestoreGeneration_ = restoredGeneration;
             }
         }
@@ -354,8 +362,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
                 Steinberg::int32 offset = 0;
                 Steinberg::Vst::ParamValue normalized = 1.0;
                 if (maxQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue && offset >= 0)
-                    dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * (std::isfinite(normalized)
-                        ? std::clamp(normalized, 0.0, 1.0) : 1.0));
+                    dsp_.setMaxTransitionMilliseconds(
+                        maxTransitionMillisecondsFromNormalized(normalized));
             }
         }
         publishAudioState(generation);

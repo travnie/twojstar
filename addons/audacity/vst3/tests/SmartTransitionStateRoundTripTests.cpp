@@ -105,7 +105,8 @@ int main()
     for (int i = 500; i < kFrames; ++i) audio[i] = -0.6;
 
     const auto render = [&](int split, bool step, bool ramp, double restoredStrength = 1.0,
-                            double restoredMax = 1.0, int maxStepAt = -1)
+                            double restoredMax = 1.0, int maxStepAt = -1,
+                            double maxStepNormalized = 0.0)
     {
         auto processor = std::make_unique<SmartTransitionProcessor>();
         if (processor->initialize(nullptr) != Steinberg::kResultOk) std::abort();
@@ -150,7 +151,7 @@ int main()
             if (maxStepAt >= begin && maxStepAt < end)
             {
                 auto* maxQueue = changes.addParameterData(kSmartTransitionMaxTransitionId, parameterIndex);
-                maxQueue->addPoint(maxStepAt - begin, 0.0, pointIndex);
+                maxQueue->addPoint(maxStepAt - begin, maxStepNormalized, pointIndex);
             }
             if (ramp)
             {
@@ -198,7 +199,10 @@ int main()
         double savedStrength = -1.0;
         const auto expected = (step || ramp) ? 0.0 : restoredStrength;
         double savedMax = -1.0;
-        const auto expectedMax = maxStepAt >= 0 ? 0.0 : restoredMax;
+        const auto expectedMax = maxStepAt >= 0
+            ? static_cast<double>(std::min(3, static_cast<int>(
+                std::clamp(maxStepNormalized, 0.0, 1.0) * 4.0))) / 3.0
+            : restoredMax;
         if (!savedReader.readDouble(savedStrength) || !savedReader.readDouble(savedMax) ||
             !std::isfinite(savedStrength) || std::abs(savedStrength - expected) > 1e-12 ||
             std::abs(savedMax - expectedMax) > 1e-12)
@@ -241,11 +245,13 @@ int main()
     const auto capBefore = render(0, false, false, 1.0, 1.0, 300);
     const auto capBeforeSplit = render(300, false, false, 1.0, 1.0, 300);
     const auto capAfter = render(0, false, false, 1.0, 1.0, 700);
+    const auto midNormalized = render(0, false, false, 1.0, 1.0, 300, 0.8);
     const auto lateStep = render(0, true, false);
     const auto splitStep = render(3500, true, false);
     const auto fullRamp = render(0, false, true);
     const auto splitRamp = render(3000, false, true);
-    if (capBefore != capped || capBeforeSplit != capped || capAfter != wet)
+    if (capBefore != capped || capBeforeSplit != capped ||
+        capAfter != wet || midNormalized != wet)
     {
         std::cerr << "Max transition automation lost source sample alignment or block determinism\n";
         return EXIT_FAILURE;
