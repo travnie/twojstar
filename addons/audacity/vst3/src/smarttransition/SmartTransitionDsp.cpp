@@ -38,16 +38,7 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
     analysisRadius_ = static_cast<std::size_t>(std::clamp<long long>(
         std::llround(sampleRate_ * 0.001), 32, 128));
 
-    const auto maximumFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
-    fadeLengthSamples_ = static_cast<std::size_t>(std::clamp<long long>(
-        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maximumFade)));
-    if ((fadeLengthSamples_ & 1U) != 0U)
-    {
-        ++fadeLengthSamples_;
-    }
-
-    // Any candidates whose transition intervals can overlap must compete before a plan commits.
-    competitionRadius_ = std::max(analysisRadius_, fadeLengthSamples_);
+    setMaxTransitionMilliseconds(maxTransitionMilliseconds_);
     reset();
 }
 
@@ -67,6 +58,19 @@ void SmartTransitionDsp::reset() noexcept
 void SmartTransitionDsp::setStrength(double normalized) noexcept
 {
     strength_ = std::isfinite(normalized) ? std::clamp(normalized, 0.0, 1.0) : 1.0;
+}
+
+void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexcept
+{
+    maxTransitionMilliseconds_ = std::isfinite(milliseconds)
+        ? std::clamp(milliseconds, 1.0, 4.0)
+        : 4.0;
+    const auto maximumFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
+    fadeLengthSamples_ = static_cast<std::size_t>(std::clamp<long long>(
+        std::llround(sampleRate_ * 0.001 * maxTransitionMilliseconds_),
+        32, static_cast<long long>(maximumFade)));
+    if ((fadeLengthSamples_ & 1U) != 0U) ++fadeLengthSamples_;
+    competitionRadius_ = std::max(analysisRadius_, fadeLengthSamples_);
 }
 
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept

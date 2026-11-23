@@ -17,6 +17,9 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::initialize(Steinberg::F
     parameters.addParameter(new Steinberg::Vst::RangeParameter(
         STR16("Strength"), kSmartTransitionStrengthId, STR16("%"),
         0.0, 100.0, 100.0, 0, Steinberg::Vst::ParameterInfo::kCanAutomate));
+    parameters.addParameter(new Steinberg::Vst::RangeParameter(
+        STR16("Max transition"), kSmartTransitionMaxTransitionId, STR16("ms"),
+        1.0, 4.0, 4.0, 3, 0));
     return Steinberg::kResultOk;
 }
 
@@ -26,6 +29,9 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::setComponentState(Stein
     Steinberg::IBStreamer streamer(state, kLittleEndian);
     double savedStrength = 1.0;
     if (!streamer.readDouble(savedStrength)) savedStrength = 1.0;
+    // Older presets contain only Strength.
+    double savedMaxTransition = 1.0;
+    if (!streamer.readDouble(savedMaxTransition)) savedMaxTransition = 1.0;
 
     const auto normalized = std::isfinite(savedStrength)
         ? std::clamp(savedStrength, 0.0, 1.0)
@@ -33,6 +39,11 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::setComponentState(Stein
     if (auto* parameter = parameters.getParameter(kSmartTransitionStrengthId))
     {
         parameter->setNormalized(normalized);
+    }
+    if (auto* parameter = parameters.getParameter(kSmartTransitionMaxTransitionId))
+    {
+        parameter->setNormalized(std::isfinite(savedMaxTransition)
+            ? std::clamp(savedMaxTransition, 0.0, 1.0) : 1.0);
     }
     return Steinberg::kResultOk;
 }
