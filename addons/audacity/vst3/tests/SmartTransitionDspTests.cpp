@@ -13,6 +13,7 @@ using Travny::Audio::SmartEditPlan;
 using Travny::Audio::SmartTransitionDsp;
 using Travny::Audio::SmartTransitionMode;
 using Travny::Audio::SmartFadeCurve;
+using Travny::Audio::SmartRepairMode;
 
 namespace {
 
@@ -35,13 +36,14 @@ struct RenderResult
 };
 
 RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
-                    SmartTransitionMode mode = SmartTransitionMode::Auto)
+                    SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
     dsp.setStrength(strength);
     dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
     dsp.setMode(mode);
+    dsp.setRepairAuto(repairAuto);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -104,6 +106,36 @@ std::vector<Frame> withHardSeam(std::size_t count, std::size_t seam)
 std::int64_t globalAnchor(const RenderResult& result)
 {
     return result.planWindowStart + result.plan.seamAnchorSamples;
+}
+
+void testConservativeSpectralRepair()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto off = render(input, 2, {17, 53});
+    const auto autoA = render(input, 2, {17, 53}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    const auto autoB = render(input, 2, {1400}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    require(off.hasPlan && autoA.hasPlan, "spectral fixture missed seam");
+    require(globalAnchor(off) == globalAnchor(autoA), "Repair moved seam");
+    require(autoA.output == autoB.output, "Repair changed with block partition");
+    require(autoA.plan.repairMode == SmartRepairMode::Spectral,
+        "high-confidence Auto did not schedule repair");
+    require(autoA.plan.repairStartOffsetSamples == -8 &&
+        autoA.plan.repairLengthSamples == 16, "Repair window out of bounds");
+    bool changed = false;
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        changed |= off.output[i] != autoA.output[i];
+        if (i < 492 || i >= 508)
+            require(off.output[i] == autoA.output[i], "Repair leaked outside window");
+        for (const auto value : autoA.output[i])
+            require(std::isfinite(value), "Repair produced non-finite audio");
+    }
+    require(changed, "spectral repair was a no-op");
+    const auto clean = cleanSine(1400);
+    require(render(clean, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true).output == clean, "Repair changed clean signal");
 }
 
 void testCleanAudioIsBitTransparent()
@@ -730,6 +762,7 @@ int main()
 {
     try
     {
+        testConservativeSpectralRepair();
         testCleanAudioIsBitTransparent();
         testHardSeamIsDetectedAndSmoothed();
         testPlanWindowContainsTransition();
