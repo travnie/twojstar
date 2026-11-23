@@ -6,7 +6,7 @@ Live official docs for Claude Code, claude.ai/Cowork, the Claude API, MCP, the A
 
 ## Just want answers
 
-Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. The builder skills use the same connector-first route (these seven, plus GitHub, Google Developer, Microsoft Learn, Cloudflare or Context7 when connected), falling back to WebFetch only when no connector covers the site or it fails.
+Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork run plugin agents?", "what changed in the MCP 2026-07-28 spec?". `docs-lookup` picks the right server, reads the full page and answers with the link. The builder skills use the same connector-first route (these eight, plus GitHub, Google Developer, Microsoft Learn, Cloudflare or Context7 when connected), falling back to WebFetch only when no connector covers the site or it fails.
 
 | Docs MCP (public, authless) | Covers |
 |---|---|
@@ -17,6 +17,7 @@ Install it and ask: "how do Claude Code hooks block a tool call?", "does Cowork 
 | `acp-docs` — `https://agentclientprotocol.com/mcp` | Agent Client Protocol (editor ↔ coding agent): spec v1/v2, libraries, registry, RFDs |
 | `openai-docs` — `https://developers.openai.com/mcp` | OpenAI API, Codex/ChatGPT plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — `https://docs.x.ai/api/mcp` | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API |
+| `mdn-docs` — `https://mcp.mdn.mozilla.net/` | MDN Web Docs (HTML, CSS, JS, Web APIs, HTTP) and browser compatibility data; experimental at Mozilla |
 
 `openai-docs` uses the same official endpoint as OpenAI Dev Kit. Verify
 connection reuse or registered App bindings in the target host.
@@ -31,7 +32,7 @@ connection reuse or registered App bindings in the target host.
 
 ## Surfaces
 
-- **claude.ai chat / Cowork:** skills + the seven remote MCPs. The sandbox runs `mcp_probe.py` against public URLs.
+- **claude.ai chat / Cowork:** skills + the eight remote MCPs. The sandbox runs `mcp_probe.py` against public URLs.
 - **Claude Code:** same, plus `claude plugin validate`, Inspector, local servers, MCPB packing.
 - **Codex / ChatGPT:** `.codex-plugin/plugin.json` overlay; skills are provider-neutral where it matters.
 - **Antigravity:** `agy plugin import claude`, or the `.antigravity-plugin/` + `mcp_config.json` overlay from the account build. **Gemini CLI:** needs a `gemini-extension.json`. Neither overlay is kept in this repo: both would duplicate the `mcp.json` URL list.

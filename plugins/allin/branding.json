@@ -24,6 +24,9 @@
     },
     "acp-docs": {
       "logo": "./assets/icon.svg"
+    },
+    "mdn-docs": {
+      "logo": "./assets/icon.svg"
     }
   },
   "skills": {

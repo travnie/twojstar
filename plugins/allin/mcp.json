@@ -28,6 +28,10 @@
     "acp-docs": {
       "type": "streamable-http",
       "url": "https://agentclientprotocol.com/mcp"
+    },
+    "mdn-docs": {
+      "type": "streamable-http",
+      "url": "https://mcp.mdn.mozilla.net/"
     }
   }
 }

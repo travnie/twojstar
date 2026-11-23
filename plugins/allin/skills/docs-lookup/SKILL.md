@@ -1,6 +1,6 @@
 ---
 name: "docs-lookup"
-description: "Get facts from live official docs through docs MCP connectors, not WebFetch or web search: Claude Code, claude.ai/Cowork, Claude API, MCP, ACP, OpenAI/Codex, xAI/Grok, plus any docs connector the session has. Use whenever a doc fact matters: answering, building, reviewing or debugging."
+description: "Get facts from live official docs through docs MCP connectors, not WebFetch or web search: Claude Code, claude.ai/Cowork, Claude API, MCP, ACP, OpenAI/Codex, xAI/Grok, MDN web platform and browser compatibility, plus any docs connector the session has. Use whenever a doc fact matters: answering, building, reviewing or debugging."
 license: Apache-2.0
 ---
 
@@ -28,6 +28,7 @@ Bundled with this plugin, public and authless:
 | `acp-docs` — agentclientprotocol.com | Agent Client Protocol (editor ↔ coding agent): protocol v1/v2 and migration, sessions, tool calls, terminals, transports, libraries (TS, Python, Rust, Kotlin, Java), ACP registry, RFDs |
 | `openai-docs` — developers.openai.com | OpenAI API, Codex, ChatGPT apps/plugins, Agent Plugins manifest, Apps SDK |
 | `xai-docs` — docs.x.ai | Grok Build (plugins, skills, hooks, MCP, CLI) and the xAI API. Tools: `search_docs`, `get_doc_page` (slug), `list_doc_pages` |
+| `mdn-docs` — mcp.mdn.mozilla.net (Mozilla, experimental) | Web platform: HTML, CSS, JavaScript, Web APIs, HTTP, and browser support. Tools: `search`, `get-doc` (path such as `/en-US/docs/Web/API/Headers`), `get-compat` (BCD key such as `api.fetch`) |
 
 Not bundled but often connected — use when present: GitHub docs (GitHub MCP `github_support_docs_search`), Google Developer Knowledge (Android, Chrome, Firebase, Gemini API `ai.google.dev`, Gemini CLI, ADK, Genkit), Microsoft Learn (Azure, .NET, M365), Cloudflare docs, Context7 (library and framework docs). No matching connector in the session: official URLs (Gemini API `https://ai.google.dev/gemini-api/docs`, ADK `https://adk.dev`, Genkit `https://genkit.dev/docs`; other hosts in `plugin-dev` `references/hosts.md`), via WebFetch. Claude plans, usage limits and pricing: `product-self-knowledge` too. Claude API model IDs and renamed params: `plugin-dev` `references/claude-api.md` drift table.
 
