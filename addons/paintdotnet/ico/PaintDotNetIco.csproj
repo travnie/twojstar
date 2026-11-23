@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>Travny.PaintDotNet.IcoFileType</AssemblyName>
     <RootNamespace>Travny.PaintDotNetIco</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <Deterministic>false</Deterministic>
     <NoWarn>MSB3277</NoWarn>
