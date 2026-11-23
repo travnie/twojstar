@@ -66,7 +66,7 @@ The prototype is deliberately deterministic DSP first:
 - exact same-format determinism tests across arbitrary input chunking,
 - no allocation, network, model loading or background helper in the audio path.
 
-The effect uses conservative defaults for Mode and Repair while the host contract is being validated. **Strength** is an automatable 0–100% VST3 parameter (default 100%): 0% preserves source samples, 50% blends halfway and 100% keeps full repair. **Max transition** is an automatable 1–4 ms ceiling (default 4 ms). The discrete control updates at source sample offsets and limits the fade without changing which splice is selected. Both settings are saved with the VST3 component, including compatibility with older Strength-only presets. Audacity's control UI still needs live host validation before release.
+The effect uses conservative defaults for Mode and Repair while the host contract is being validated. **Strength** is an automatable 0–100% VST3 parameter (default 100%): 0% preserves source samples, 50% blends halfway and 100% keeps full repair. **Max transition** is an automatable 1–4 ms ceiling (default 4 ms). The discrete control updates at source sample offsets and limits the fade without changing which splice is selected. Both settings are saved with the VST3 component, including compatibility with older Strength-only presets. At 88.2 kHz, the strict 4 ms cap shortens the old 354-sample rounded fade to 352 samples; legacy presets still load but need not be bit-identical at every sample rate. Audacity's control UI still needs live host validation before release.
 
 ### Why it is not in Latest yet
 

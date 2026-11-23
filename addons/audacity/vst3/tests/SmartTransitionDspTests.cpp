@@ -421,7 +421,7 @@ void testMaxTransitionCapsFadeWithoutMovingSeam()
             std::llabs(globalAnchor(cappedWinner) - static_cast<std::int64_t>(strongerSeam)) <= 2,
             "duration cap changed the winning splice");
 
-    for (double rate : {8000.0, 16000.0, 22050.0, 32000.0, 44100.0})
+    for (double rate : {8000.0, 16000.0, 22050.0, 32000.0, 44100.0, 88200.0, 96000.0})
     {
         const auto lowRate = render(input, 2, {7, 59}, 1.0, 1.0, rate);
         if (lowRate.hasPlan)
@@ -436,6 +436,12 @@ void testMaxTransitionCapsFadeWithoutMovingSeam()
             require(lowRate.output == input, "shorter-than-minimum fade modified source audio");
         }
     }
+
+    // Previous 88.2 kHz defaults rounded 352.8 up to an even 354 frames.
+    // Max transition is a strict 4 ms ceiling, so the revised length is 352.
+    const auto strictDefault = render(input, 2, {37, 61}, 1.0, 4.0, 88200.0);
+    require(strictDefault.hasPlan && strictDefault.plan.fadeLengthSamples == 352,
+            "88.2 kHz default exceeded its requested 4 ms ceiling");
 
     SmartTransitionDsp dsp;
     dsp.setMaxTransitionMilliseconds(-10.0);
