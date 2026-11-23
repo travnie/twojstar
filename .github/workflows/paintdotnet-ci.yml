@@ -123,11 +123,10 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Set up .NET 11 preview
+      - name: Set up .NET 11 stable
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Verify adapter versions
         shell: pwsh
@@ -370,11 +369,10 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Set up .NET 11 preview
+      - name: Set up .NET 11 stable
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 11.0.x
-          dotnet-quality: preview
 
       - name: Verify adapter versions
         shell: pwsh
