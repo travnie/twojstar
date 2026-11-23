@@ -139,6 +139,9 @@ jobs:
   # Builds and smoke-tests distributions on PRs and release dispatches; only `publish` releases.
   build:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'
+    concurrency:
+      group: smx-build-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -168,6 +171,7 @@ jobs:
           uv run --no-project --with "./$wheel" -- smx --help
           uv run --no-project --with "./$wheel" -- python -m unittest discover -s spacemolt/smx/tests -v
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name != 'pull_request'
         with:
           name: smx-python-distributions
           path: dist/*
