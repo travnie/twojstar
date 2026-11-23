@@ -4,9 +4,10 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
 
-const portable = await readFile(new URL("../public/portable.html", import.meta.url));
+const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
+  .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
 const harness = `<!doctype html><html data-result="pending"><body>
-<iframe id="app" src="/app"></iframe>
+<iframe id="app" src="/app" width="320" height="720"></iframe>
 <script>
 const frame = document.getElementById("app");
 frame.addEventListener("load", async () => {
@@ -30,6 +31,84 @@ frame.addEventListener("load", async () => {
     if (preview.querySelector("script,img,svg") || frame.contentWindow.xmlProbeExecuted) {
       throw Error("XML content became active markup");
     }
+
+    const save = doc.getElementById("save-button");
+    const copy = doc.getElementById("download-button");
+    if (save.textContent !== "Download" || !copy.hidden) throw Error("Duplicate Download actions");
+    const more = doc.getElementById("document-more");
+    more.querySelector("summary").click();
+    const actions = more.querySelector(".document-more-actions").getBoundingClientRect();
+    if (!more.open || actions.left < 0 || actions.right > frame.contentWindow.innerWidth) {
+      throw Error("More menu clipped at 320px");
+    }
+    doc.getElementById("wrap-editor-button").click();
+    await wait(0);
+    if (more.open || frame.contentWindow.getComputedStyle(editor).whiteSpace !== "pre") {
+      throw Error("Wrap toggle did not update the editor and close the menu");
+    }
+
+    editor.value = "a. b A. c a.";
+    editor.setSelectionRange(0, 0);
+    editor.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    doc.getElementById("find-toggle").click();
+    const find = doc.getElementById("find-query");
+    const setQuery = (value) => {
+      find.value = value;
+      find.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    };
+    const enterFind = () => find.dispatchEvent(new frame.contentWindow.KeyboardEvent("keydown", {
+      key: "Enter", bubbles: true, cancelable: true,
+    }));
+    const next = doc.getElementById("find-next");
+    setQuery("a.");
+    enterFind();
+    if (editor.selectionStart !== 0 || editor.selectionEnd !== 2) throw Error("Find did not select the exact match");
+    enterFind();
+    if (doc.activeElement !== find || editor.selectionStart !== 5 || editor.value !== "a. b A. c a."
+      || doc.getElementById("editor-match-highlight").hidden) {
+      throw Error("Repeated Find must keep focus and reveal the next match without editing");
+    }
+    more.querySelector("summary").click();
+    doc.getElementById("wrap-editor-button").click();
+    await wait(0);
+    doc.getElementById("replace-value").value = "replacement";
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b A. c a." || doc.getElementById("editor-match-highlight").hidden) {
+      throw Error("Replace must reveal a hidden match again after wrapping changes");
+    }
+    doc.getElementById("find-match-case").click();
+    doc.getElementById("replace-value").value = "$&";
+    doc.getElementById("replace-all").click();
+    if (editor.value !== "$& b A. c $&") throw Error("Replace all lost case or literal replacement");
+    doc.getElementById("undo-button").click();
+    if (editor.value !== "a. b A. c a.") throw Error("Replace all was not a single undo step");
+
+    doc.getElementById("find-match-case").click();
+    editor.setSelectionRange(0, 0);
+    doc.getElementById("replace-value").value = "a.";
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b A. c a." || editor.selectionEnd !== 2) {
+      throw Error("Replace must reveal an unselected match before editing");
+    }
+    doc.getElementById("replace-one").click();
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b a. c a.") throw Error("Replace stalled on an unchanged match");
+    editor.setSelectionRange(4, 4);
+    doc.getElementById("replace-value").value = "long";
+    doc.getElementById("replace-all").click();
+    if (editor.value !== "long b long c long" || editor.selectionStart !== 6) {
+      throw Error("Replace all did not remap the caret");
+    }
+
+    format.value = "json";
+    format.dispatchEvent(new frame.contentWindow.Event("change", { bubbles: true }));
+    editor.value = '{"a" : 1}';
+    editor.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    setQuery('":');
+    if (!next.disabled) throw Error("Unexpected match before Minify");
+    doc.getElementById("minify-button").click();
+    if (next.disabled) throw Error("Find did not refresh after Minify");
+
     document.documentElement.dataset.result = "passed";
   } catch (error) {
     document.documentElement.dataset.result = "failed";

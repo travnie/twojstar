@@ -4,7 +4,7 @@ Project: `spacemolt-smx`. CLI: `smx`. Source: `spacemolt/smx/` in the existing m
 
 ## Build/check
 
-Run the [smx](../../.github/workflows/smx.yml) workflow with **publish = false**. It produces a wheel and source distribution, then smoke-tests the wheel and tests.
+Every pull request that touches SMX runs the build job. To build `main` or another branch without a PR, run the [smx](../../.github/workflows/smx.yml) workflow with **publish = false**. It produces a wheel and source distribution, then smoke-tests the wheel and tests.
 
 ## First release
 
@@ -25,7 +25,7 @@ The official SpaceMolt v2 binary stays the backend; SMX manages verified updates
 
 ## Authenticated operator dispatch
 
-The publishing workflow also accepts the `publish_smx_pypi` GitHub `repository_dispatch` event on `main`. GPTomek can send it from the existing authenticated operator mailbox; no PyPI API token or second publishing implementation is required. The payload must explicitly contain `{"publish":true,"version":"<current-version>"}`. Replace `<current-version>` with the version in the canonical `pyproject.toml` before dispatching. The build rejects a version that differs from the canonical `spacemolt/smx/pyproject.toml`. Unrelated repository-dispatch event types do not start this workflow. Pull requests skip the `build` and `publish` jobs; use the source tests and manual build-only runs for validation.
+The publishing workflow also accepts the `publish_smx_pypi` GitHub `repository_dispatch` event on `main`. GPTomek can send it from the existing authenticated operator mailbox; no PyPI API token or second publishing implementation is required. The payload must explicitly contain `{"publish":true,"version":"<current-version>"}`. Replace `<current-version>` with the version in the canonical `pyproject.toml` before dispatching. The build rejects a version that differs from the canonical `spacemolt/smx/pyproject.toml`. Unrelated repository-dispatch event types do not start this workflow. Pull requests run the `build` job (distributions, wheel install, `smx --help` and the test suite against the wheel) and never `publish`.
 
 The publishing job is restricted to the default branch and is never started from a pull request. The GitHub Actions environment `pypi` remains the release gate. Prefer restricting its deployment branches and requiring approval when supported. A PyPI version is immutable, so increment the canonical version before a subsequent release.
 

@@ -158,6 +158,8 @@
       }
     },
     status: () => history.status(),
+    canRecordEdit: history.canRecordEdit,
+    subscribe: history.subscribe,
     undo: performUndo,
     redo: performRedo,
   });

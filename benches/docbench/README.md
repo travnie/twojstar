@@ -12,6 +12,11 @@ Local-first file workbench with document and PDF tools. Files is the starting ex
 - **Files (home):** local folder/drop import, search/sort, independent selection and preview, signature/MIME and metadata inspection; read-only ZIP folder navigation, selective extraction with CRC-32 verification (stored/DEFLATE entries), and local ZIP packing for up to 100 selected files. ZIP exports preserve safe folder paths, rename duplicate names, show progress and support cancellation. Compression profiles: Smart (store known precompressed formats, DEFLATE remaining entries), Store, Fast, Balanced and Maximum. Native Save As streams large output (up to 512 MiB source); download fallback is capped at 56 MiB source and 64 MiB output, with no ZIP64 or encryption. Responsive explorer, preview and inspector panes. Context actions open text/PDF editors or the existing DOCX→PDF converter; unsupported files remain inspectable without pretending to be editable. Image preview ≤48 MiB, text preview ≤128 KiB; unsupported codecs shown as unsupported. The read-only modal can navigate the filtered visible list with Previous/Next or arrow keys (media controls keep their own keys); each preview cancels stale reads and releases media URLs on change or close. Audio can play in an explicit mini-player while browsing other files; removing the source, leaving Files or closing the player revokes its object URL.
 - **WebMCP:** bounded workspace snapshots and visible selection from the **same UI/store**, not a parallel hidden file engine. Includes read-only repair previews (category counts, offsets, codepoints and operation examples); actual repair requires the visible document UI. No arbitrary filesystem paths or system pickers.
 
+The text editor toolbar keeps Find, Undo/Redo and Save or Download visible.
+More holds import, inspection, wrapping and export actions. Find and replace
+matches literal text, supports case matching and groups Replace all as one undo
+within the editor's existing history limit.
+
 ## Security
 
 URL opening needs HTTPS connections in the HTML CSP. Any injected script could use those connections; protect the page against script injection. Other assets retain their restricted policy.

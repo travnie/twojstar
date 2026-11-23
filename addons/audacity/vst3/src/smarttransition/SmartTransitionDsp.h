@@ -50,6 +50,8 @@ public:
 
     void configure(double sampleRate) noexcept;
     void reset() noexcept;
+    void setStrength(double normalized) noexcept;
+    [[nodiscard]] double strength() const noexcept { return strength_; }
 
     [[nodiscard]] std::size_t latencySamples() const noexcept { return lookaheadSamples_; }
     [[nodiscard]] bool hasPlan() const noexcept { return planCommitted_; }
@@ -88,8 +90,10 @@ private:
     [[nodiscard]] double renderSample(std::size_t channel, std::int64_t outputIndex) const noexcept;
 
     std::array<std::array<double, kRingCapacity>, kMaxChannels> ring_{};
+    std::array<double, kRingCapacity> strengthRing_{};
     std::int64_t inputCount_{0};
     double sampleRate_{48000.0};
+    double strength_{1.0};
     std::size_t lookaheadSamples_{4800};
     std::size_t analysisRadius_{48};
     std::size_t fadeLengthSamples_{192};

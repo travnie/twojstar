@@ -2,7 +2,10 @@
 
 #include "SmartTransitionCids.h"
 #include "SmartTransitionDsp.h"
+#include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
+
+#include <atomic>
 
 namespace Travny::Vst3 {
 
@@ -29,8 +32,8 @@ public:
     Steinberg::uint32 PLUGIN_API getLatencySamples() SMTG_OVERRIDE;
     Steinberg::uint32 PLUGIN_API getTailSamples() SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
-    Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream*) SMTG_OVERRIDE { return Steinberg::kResultOk; }
-    Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream*) SMTG_OVERRIDE { return Steinberg::kResultOk; }
+    Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) SMTG_OVERRIDE;
+    Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) SMTG_OVERRIDE;
 
 private:
     template <typename Sample>
@@ -39,8 +42,16 @@ private:
         Sample** output,
         Steinberg::int32 channels,
         Steinberg::int32 samples,
-        Steinberg::uint64 inputSilenceFlags) noexcept;
+        Steinberg::uint64 inputSilenceFlags,
+        Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept;
 
+    // State callbacks may run concurrently with the audio thread.
+    // Only process() touches DSP strength; atomics transfer restored state.
+    std::atomic<double> pendingStrength_{1.0};
+    std::atomic<double> audioStrength_{1.0};
+    std::atomic<Steinberg::uint64> restoreGeneration_{0};
+    std::atomic<Steinberg::uint64> audioGeneration_{0};
+    Steinberg::uint64 appliedRestoreGeneration_{0};
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
 
