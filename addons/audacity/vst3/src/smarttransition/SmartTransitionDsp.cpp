@@ -59,6 +59,7 @@ void SmartTransitionDsp::reset() noexcept
     rejectedByCap_ = false;
     committedAnchor_ = -1;
     planWindowStart_ = 0;
+    transitionPeak_.fill(0.0);
 }
 
 void SmartTransitionDsp::setStrength(double normalized) noexcept
@@ -413,6 +414,20 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
         plan_.seamAnchorSamples = clusterBest_.anchor - planWindowStart_;
         committedAnchor_ = clusterBest_.anchor;
         planCommitted_ = !plan_.noOp;
+        if (planCommitted_ && plan_.fadeCurve == SmartFadeCurve::EqualPower)
+        {
+            // One fixed source peak per channel, computed before emission.
+            // Never let the limiter inherit the splice's per-sample envelope jump.
+            for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+            {
+                transitionPeak_[channel] = 0.0;
+                if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                    continue;
+                for (auto index = transitionStart - 2; index <= transitionEnd + 1; ++index)
+                    transitionPeak_[channel] = std::max(
+                        transitionPeak_[channel], std::abs(sampleAt(channel, index)));
+            }
+        }
     }
 
     clusterActive_ = false;
@@ -498,7 +513,11 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
     auto bridge = h00 * leftEdge + h10 * span * leftSlope + h01 * rightEdge + h11 * span * rightSlope;
 
     const auto envelope = std::max({std::abs(source), std::abs(leftEdge), std::abs(rightEdge), 1e-6});
-    bridge = std::clamp(bridge, -1.5 * envelope, 1.5 * envelope);
+    const auto peakLimit = plan_.fadeCurve == SmartFadeCurve::EqualPower
+        ? transitionPeak_[channel] : envelope;
+    const auto bridgeLimit = plan_.fadeCurve == SmartFadeCurve::EqualPower
+        ? peakLimit : 1.5 * envelope;
+    bridge = std::clamp(bridge, -bridgeLimit, bridgeLimit);
 
     auto corrected = source;
     if (outputIndex < committedAnchor_)
@@ -522,7 +541,7 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         // against coherent reinforcement and Hermite overshoot.
         const auto dryGain = std::cos(0.5 * kPi * bridgeWeight);
         const auto wetGain = std::sin(0.5 * kPi * bridgeWeight);
-        repaired = std::clamp(corrected * dryGain + bridge * wetGain, -envelope, envelope);
+        repaired = std::clamp(corrected * dryGain + bridge * wetGain, -peakLimit, peakLimit);
     }
     // This sample left the lookahead buffer later than it entered.
     // Use Strength captured alongside its source sample, not the current input.

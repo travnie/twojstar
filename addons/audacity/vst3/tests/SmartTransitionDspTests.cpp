@@ -567,6 +567,67 @@ void testMusicModeDoesNotIntroduceFullScaleOvers()
     require(afterJump < beforeJump, "Music equal-power bridge did not smooth the seam");
 }
 
+void testMusicModeFixedCeilingAndEqualPowerGains()
+{
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> source(1400);
+    for (std::size_t i = 0; i < source.size(); ++i)
+    {
+        const auto phase = i < 500 ? 270.0 * pi / 180.0 : 225.0 * pi / 180.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 125.0 *
+            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+        source[i] = {value, value * 0.8};
+    }
+    const auto music = render(source, 2, {31, 7, 83}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
+    require(music.hasPlan, "same-polarity splice was not detected");
+    const auto anchor = globalAnchor(music);
+    require(anchor > 1 && anchor < static_cast<std::int64_t>(source.size()), "invalid seam anchor");
+    const auto beforeJump = std::abs(source[anchor][0] - source[anchor - 1][0]);
+    const auto afterJump = std::abs(music.output[anchor][0] - music.output[anchor - 1][0]);
+    require(afterJump < beforeJump * 0.25,
+            "Music peak guard retained an audible same-polarity splice");
+
+    const auto fade = static_cast<std::int64_t>(music.plan.fadeLengthSamples);
+    const auto start = anchor - fade / 2;
+    const auto end = start + fade;
+    double peak = 0.0;
+    for (auto i = start - 2; i <= end + 1; ++i)
+        peak = std::max(peak, std::abs(source[i][0]));
+
+    // Reconstruct an unclipped left-side sample and check the actual
+    // equal-power gain law, not only the absence of digital overs.
+    const auto leftEdge = source[start - 1][0];
+    const auto rightEdge = source[end][0];
+    const auto leftSlope = leftEdge - source[start - 2][0];
+    const auto rightSlope = source[end + 1][0] - rightEdge;
+    bool checkedPower = false;
+    for (auto i = start + 8; i < anchor - 8; ++i)
+    {
+        const auto tau = static_cast<double>(i - start + 1) / static_cast<double>(fade + 1);
+        const auto t2 = tau * tau;
+        const auto t3 = t2 * tau;
+        const auto bridge = std::clamp(
+            (2.0 * t3 - 3.0 * t2 + 1.0) * leftEdge +
+            (t3 - 2.0 * t2 + tau) * static_cast<double>(fade + 1) * leftSlope +
+            (-2.0 * t3 + 3.0 * t2) * rightEdge +
+            (t3 - t2) * static_cast<double>(fade + 1) * rightSlope, -peak, peak);
+        const auto weight = std::sin(pi * tau);
+        const auto dry = source[i][0];
+        const auto expected = std::clamp(
+            dry * std::cos(0.5 * pi * weight) + bridge * std::sin(0.5 * pi * weight), -peak, peak);
+        const auto linear = std::clamp(dry * (1.0 - weight) + bridge * weight, -peak, peak);
+        if (std::abs(expected - linear) > 1e-4 && std::abs(expected) < peak - 1e-4)
+        {
+            require(std::abs(music.output[i][0] - expected) < 1e-11,
+                    "Music renderer did not use equal-power gains");
+            checkedPower = true;
+            break;
+        }
+    }
+    require(checkedPower, "phase fixture did not exercise an unclipped power-law sample");
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -618,6 +679,7 @@ int main()
         testUnrepairableCapKeepsLaterSplicesDry();
         testModePoliciesAreSourceAlignedAndDeterministic();
         testMusicModeDoesNotIntroduceFullScaleOvers();
+        testMusicModeFixedCeilingAndEqualPowerGains();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }

@@ -107,6 +107,7 @@ private:
     std::array<double, kRingCapacity> strengthRing_{};
     std::array<std::uint8_t, kRingCapacity> maxTransitionRing_{};
     std::array<std::uint8_t, kRingCapacity> modeRing_{};
+    std::array<double, kMaxChannels> transitionPeak_{};
     std::int64_t inputCount_{0};
     double sampleRate_{48000.0};
     double strength_{1.0};
