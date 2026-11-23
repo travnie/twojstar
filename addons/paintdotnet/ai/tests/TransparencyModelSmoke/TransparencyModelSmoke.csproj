@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net9.0-windows10.0.18362.0;net11.0-windows10.0.18362.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.AI.MachineLearning" Version="$(WindowsMLVersion)" />
+    <Compile Include="..\..\src\TransparencyModelSession.cs" Link="TransparencyModelSession.cs" />
+    <Compile Include="..\..\src\TransparencyMath.cs" Link="TransparencyMath.cs" />
+    <Compile Include="..\..\src\InferenceSessionOptions.cs" Link="InferenceSessionOptions.cs" />
+  </ItemGroup>
+</Project>

@@ -103,6 +103,8 @@ jobs:
       FBCNN_SHA256: 1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922
       SCUNET_URL: https://huggingface.co/colpona/dejpeg-models/resolve/main/scunet/scunet_color_real_psnr_fp16.onnx
       SCUNET_SHA256: 8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a
+      U2NETP_URL: https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx
+      U2NETP_SHA256: 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -229,6 +231,18 @@ jobs:
             if ($code -ne 0) { throw "$($case.Kind) smoke failed with exit code $code" }
           }
 
+      - name: Verify Smart Transparency model and inference
+        working-directory: ${{ env.PLUGIN_DIR }}
+        shell: pwsh
+        run: |
+          $model = Join-Path $PWD 'model/u2netp.onnx'
+          Invoke-WebRequest $env:U2NETP_URL -OutFile $model
+          if ((Get-FileHash $model -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:U2NETP_SHA256) {
+            throw 'U2Net-p model checksum mismatch.'
+          }
+          dotnet run --project ./tests/TransparencyModelSmoke/TransparencyModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- $model
+          if ($LASTEXITCODE -ne 0) { throw "Transparency model smoke failed with exit code $LASTEXITCODE" }
+
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}
         shell: pwsh
@@ -266,6 +280,7 @@ jobs:
           Copy-Item .\model\realesr-general-x4v3.onnx "$common/model/"
           Copy-Item .\model\fbcnn_color_fp16.onnx "$common/model/"
           Copy-Item .\model\scunet_color_real_psnr_fp16.onnx "$common/model/"
+          Copy-Item .\model\u2netp.onnx "$common/model/"
           Copy-Item .\licenses "$common/licenses" -Recurse
           Copy-Item .\Install.bat "$package/Install.bat"
 
@@ -278,7 +293,8 @@ jobs:
             "$common/DirectML.dll",
             "$common/model/realesr-general-x4v3.onnx",
             "$common/model/fbcnn_color_fp16.onnx",
-            "$common/model/scunet_color_real_psnr_fp16.onnx"
+            "$common/model/scunet_color_real_psnr_fp16.onnx",
+            "$common/model/u2netp.onnx"
           )) {
             if (-not (Test-Path $required -PathType Leaf)) { throw "Package file missing: $required" }
           }
@@ -311,7 +327,7 @@ jobs:
           }
 
           @'
-          Paint.NET AI Restore / DeJPEG / Denoise
+          Paint.NET AI Restore / DeJPEG / Denoise / Smart Transparency
 
           Run Install.bat and select the installation type and Paint.NET version. It combines the matching
           adapter with the shared ONNX Runtime, models and license files. Classic builds install

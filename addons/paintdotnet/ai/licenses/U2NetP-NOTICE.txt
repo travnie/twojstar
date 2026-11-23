@@ -1,0 +1,6 @@
+U2Net-p weights: U2-Net by Xuebin Qin et al.
+Project: https://github.com/xuebinqin/U-2-Net
+License: Apache License 2.0 (full text in FBCNN.txt)
+ONNX distribution: https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx
+rembg code license: MIT. No rembg code bundled.
+Model SHA-256: 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8
