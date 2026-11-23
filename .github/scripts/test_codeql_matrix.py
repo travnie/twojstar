@@ -31,6 +31,13 @@ class MatrixSelectionTests(unittest.TestCase):
         self.assertEqual(names(["addons/test/a.cpp", "benches/docbench/app.tsx", "misc/x.cs"]),
                          ["c-cpp", "csharp", "javascript-typescript"])
 
+    def test_composite_actions(self):
+        self.assertEqual(names([".github/actions/smx-python/action.yml"]), ["actions"])
+
+    def test_html_inline_scripts(self):
+        self.assertEqual(names(["benches/codebench/public/index.html"]),
+                         ["javascript-typescript"])
+
     def test_actions_workflow(self):
         self.assertEqual(names([".github/workflows/codeql.yml"]), ["actions"])
 

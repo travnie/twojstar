@@ -24,6 +24,9 @@ SUFFIX_LANGUAGES = {
     ".ts": "javascript-typescript", ".tsx": "javascript-typescript",
     ".mjs": "javascript-typescript", ".cjs": "javascript-typescript",
     ".mts": "javascript-typescript", ".cts": "javascript-typescript",
+    ".html": "javascript-typescript", ".htm": "javascript-typescript",
+    ".vue": "javascript-typescript", ".svelte": "javascript-typescript",
+    ".astro": "javascript-typescript",
     ".py": "python", ".pyi": "python",
     ".java": "java-kotlin", ".kt": "java-kotlin", ".kts": "java-kotlin",
     ".swift": "swift",
@@ -46,7 +49,7 @@ def choose(paths):
         path = raw_path.lower().replace("\\", "/")
         if path.startswith(".github/codeql/"):
             return matrix(lang for lang, _, _ in LANGUAGES)
-        if path.startswith(".github/workflows/"):
+        if path.startswith((".github/workflows/", ".github/actions/")):
             selected.add("actions")
         if path.startswith("intent-keyboard/"):
             # Shared KMP sources feed Android, desktop and iOS framework.
