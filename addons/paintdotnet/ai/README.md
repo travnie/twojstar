@@ -50,7 +50,7 @@ For Paint.NET 5.x the safe paths are:
 2. **Resize then refine** — user resizes the image with Paint.NET, then runs AI Restore to reconstruct detail and suppress interpolation artifacts.
 3. **True one-click upscale later** — only when there is a stable host/document API that can create or resize the destination document without relying on private internals. Paint.NET 5.2's modern FileType system is useful infrastructure, but a FileType plugin is not a general document-resize command.
 
-## Smart Transparency
+## Smart Transparency (proposed, not shipped)
 
 The first useful version should produce a matte, not delete pixels blindly:
 
@@ -61,23 +61,11 @@ The first useful version should produce a matte, not delete pixels blindly:
 - preview through the normal Paint.NET effect pipeline,
 - no network dependency.
 
-## SVG utility
+## SVG support (external)
 
-SVG belongs in the same Paint.NET plugin hub but as a **FileType/utility component**, not as an AI effect.
+SVG import is already provided by the [Scalable Vector Graphics FileType plugin](https://github.com/otuncelli/Scalable-Vector-Graphics-Plugin-for-Paint.NET), which supports SVG/SVGZ, flattening or element/group layers, and basic tracing. The plugin is installed separately and is **not** part of this AI pack.
 
-The goal is robust SVG raster import for the annoying real-world cases:
-
-- `viewBox`, transforms and nested groups,
-- gradients, masks and clip paths,
-- opacity and transparent backgrounds,
-- embedded raster images,
-- sensible sizing/DPI controls,
-- predictable font fallback warnings instead of silent layout changes,
-- an import preview before rasterization.
-
-`Svg.Skia` + SkiaSharp is a promising MIT-licensed renderer candidate. Paint.NET remains a raster editor, so importing SVG means rendering it to pixels; the pack should not pretend it can preserve arbitrary SVG as editable vector objects. Exporting a raster document back to SVG merely by embedding a PNG is not a useful feature and is out of scope.
-
-Paint.NET 5.2's modern FileType plugin system is especially interesting here because it is decoupled from the old `Document`/`Layer` plugin contract and supports richer pixel formats.
+No duplicate in-tree SVG importer or SVG renderer dependency is planned. If an SVG compatibility gap appears, investigate it upstream first. The external plugin is GPL-2.0 licensed; do not bundle its code into the Paint.NET AI ZIP.
 
 ## Packaging direction
 
