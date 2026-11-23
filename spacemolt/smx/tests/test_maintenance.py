@@ -400,6 +400,8 @@ class MaintenanceTests(unittest.TestCase):
                  patch("smx.maintenance.backend_version", return_value="999.0.0"):
                 status = backend_status(online=False)
             self.assertTrue(status["newer_than_tested"])
+            self.assertEqual(status["tested"], "1.5.93")
+            self.assertEqual(status["source_reviewed"], "1.5.127")
 
 
 if __name__ == "__main__":
