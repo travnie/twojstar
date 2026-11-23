@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spacemolt-smx"
-version = "0.3.1"
+version = "0.3.2"
 description = "Ergonomic companion shell for the official SpaceMolt v2 CLI"
 readme = "README.md"
 requires-python = ">=3.14"

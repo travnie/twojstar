@@ -100,6 +100,10 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
         ),
     },
     "spacemolt_battle/stance": {"request": ("id",)},
+    # Latest v2 additions use official passthrough; monitor that endpoints remain.
+    "spacemolt_battle/default_stance": {},
+    "spacemolt_shipping/list_all": {},
+    "spacemolt_shipping/reclaim": {},
 }
 
 

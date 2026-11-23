@@ -95,6 +95,11 @@ class WatchAndFieldsTests(unittest.TestCase):
         self.assertFalse(watch_command_is_read_only("sell"))
         self.assertFalse(watch_command_is_read_only("mine"))
 
+    def test_upstream_shipping_and_stance_safety(self):
+        self.assertTrue(watch_command_is_read_only("spacemolt_shipping/list_all"))
+        self.assertFalse(watch_command_is_read_only("spacemolt_shipping/reclaim"))
+        self.assertFalse(watch_command_is_read_only("spacemolt_battle/default_stance"))
+
     def test_watch_refuses_list_prefixed_mutations(self):
         self.assertTrue(watch_command_is_read_only("spacemolt_ship/list_ships"))
         self.assertFalse(watch_command_is_read_only("spacemolt_facility/list_for_sale"))

@@ -28,7 +28,7 @@ RELEASES_API = "https://api.github.com/repos/SpaceMolt/client-v2/releases"
 VERSION_RE = re.compile(r"SpaceMolt CLI v?([0-9]+(?:\.[0-9]+)+)", re.IGNORECASE)
 USER_AGENT = f"spacemolt-smx/{__version__}"
 # Newest official client this smx release was checked against; bump on release.
-TESTED_BACKEND = "1.5.93"
+TESTED_BACKEND = "1.5.127"
 
 
 @dataclass(frozen=True)
