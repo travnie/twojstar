@@ -52,6 +52,8 @@ public:
     void reset() noexcept;
     void setStrength(double normalized) noexcept;
     [[nodiscard]] double strength() const noexcept { return strength_; }
+    void setMaxTransitionMilliseconds(double milliseconds) noexcept;
+    [[nodiscard]] double maxTransitionMilliseconds() const noexcept { return maxTransitionMilliseconds_; }
 
     [[nodiscard]] std::size_t latencySamples() const noexcept { return lookaheadSamples_; }
     [[nodiscard]] bool hasPlan() const noexcept { return planCommitted_; }
@@ -91,9 +93,11 @@ private:
 
     std::array<std::array<double, kRingCapacity>, kMaxChannels> ring_{};
     std::array<double, kRingCapacity> strengthRing_{};
+    std::array<std::uint8_t, kRingCapacity> maxTransitionRing_{};
     std::int64_t inputCount_{0};
     double sampleRate_{48000.0};
     double strength_{1.0};
+    double maxTransitionMilliseconds_{4.0};
     std::size_t lookaheadSamples_{4800};
     std::size_t analysisRadius_{48};
     std::size_t fadeLengthSamples_{192};
@@ -105,6 +109,7 @@ private:
     bool clusterActive_{false};
     SmartEditPlan plan_{};
     bool planCommitted_{false};
+    bool rejectedByCap_{false};
     std::int64_t committedAnchor_{-1};
     std::int64_t planWindowStart_{0};
 };

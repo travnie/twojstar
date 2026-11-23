@@ -66,7 +66,7 @@ The prototype is deliberately deterministic DSP first:
 - exact same-format determinism tests across arbitrary input chunking,
 - no allocation, network, model loading or background helper in the audio path.
 
-The effect still uses conservative defaults for Mode, Max transition and Repair while the host contract is being validated. **Strength** is now an automatable 0–100% VST3 parameter (default 100%): 0% preserves source samples, 50% blends halfway and 100% keeps full repair. State round-trip and DSP tests cover this; Audacity's control UI still needs live host validation before release.
+The effect uses conservative defaults for Mode and Repair while the host contract is being validated. **Strength** is an automatable 0–100% VST3 parameter (default 100%): 0% preserves source samples, 50% blends halfway and 100% keeps full repair. **Max transition** is an automatable 1–4 ms ceiling (default 4 ms). The discrete control updates at source sample offsets and limits the fade without changing which splice is selected. Both settings are saved with the VST3 component, including compatibility with older Strength-only presets. At 88.2 kHz, the strict 4 ms cap shortens the old 354-sample rounded fade to 352 samples; legacy presets still load but need not be bit-identical at every sample rate. Audacity's control UI still needs live host validation before release.
 
 ### Why it is not in Latest yet
 
@@ -78,7 +78,7 @@ Windows host validation on **Audacity 3.7.9** now passes discovery, Preview, App
 
 Audacity 4.0 has not yet been claimed as equivalent Smart Transition processing validation here. Any 4.0 scan/discovery evidence should be treated as host recognition only until Preview/Apply behavior and the end-of-selection contract are explicitly exercised there.
 
-Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and the remaining `Mode`, `Max transition`, and `Repair` parameters are still required for 0.1. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
+Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and the remaining `Mode` and `Repair` parameters are still required for 0.1. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
 
 ## Released packages
 

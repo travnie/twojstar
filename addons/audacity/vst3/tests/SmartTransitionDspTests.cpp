@@ -32,11 +32,12 @@ struct RenderResult
     bool hasPlan{false};
 };
 
-RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0)
+RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0)
 {
     SmartTransitionDsp dsp;
-    dsp.configure(48000.0);
+    dsp.configure(sampleRate);
     dsp.setStrength(strength);
+    dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -379,6 +380,115 @@ void testResetStartsFreshRun()
     require(!dsp.hasPlan(), "fresh run inherited seam state");
 }
 
+void testMaxTransitionCapsFadeWithoutMovingSeam()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto automatic = render(input, 2, {17, 71});
+    const auto capped = render(input, 2, {1, 3, 11}, 1.0, 1.0);
+    const auto cappedOtherChunks = render(input, 2, {1400}, 1.0, 1.0);
+
+    require(automatic.hasPlan && capped.hasPlan, "duration cap prevented seam detection");
+    require(automatic.plan.fadeLengthSamples == 192, "4 ms default fade changed");
+    require(capped.plan.fadeLengthSamples == 48, "1 ms cap did not shorten the fade");
+    require(globalAnchor(automatic) == globalAnchor(capped), "duration cap moved seam anchor");
+    require(capped.plan.fadeLengthSamples == cappedOtherChunks.plan.fadeLengthSamples &&
+            capped.output == cappedOtherChunks.output,
+            "duration cap depends on processing blocks");
+
+    bool changed = false;
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        if (capped.output[i] != automatic.output[i]) changed = true;
+        if (i < 476 || i >= 524)
+        {
+            require(capped.output[i] == input[i], "capped fade modified audio outside 1 ms window");
+        }
+    }
+    require(changed, "duration cap did not affect rendered audio");
+
+    constexpr std::size_t firstSeam = 500;
+    constexpr std::size_t strongerSeam = 650;
+    std::vector<Frame> overlapping(1500);
+    for (std::size_t i = 0; i < overlapping.size(); ++i)
+    {
+        const double value = i < firstSeam ? 0.40 : (i < strongerSeam ? 0.50 : -0.50);
+        overlapping[i] = {value, value * 0.9};
+    }
+    const auto autoWinner = render(overlapping, 2);
+    const auto cappedWinner = render(overlapping, 2, {3, 19, 47}, 1.0, 1.0);
+    require(autoWinner.hasPlan && cappedWinner.hasPlan, "overlapping seam fixture did not qualify");
+    require(globalAnchor(autoWinner) == globalAnchor(cappedWinner) &&
+            std::llabs(globalAnchor(cappedWinner) - static_cast<std::int64_t>(strongerSeam)) <= 2,
+            "duration cap changed the winning splice");
+
+    for (double rate : {8000.0, 16000.0, 22050.0, 32000.0, 44100.0, 88200.0, 96000.0})
+    {
+        const auto lowRate = render(input, 2, {7, 59}, 1.0, 1.0, rate);
+        if (lowRate.hasPlan)
+        {
+            const auto length = lowRate.plan.fadeLengthSamples;
+            require(length >= static_cast<int>(SmartTransitionDsp::kMinFadeLengthSamples) &&
+                    length <= static_cast<int>(std::floor(rate * 0.001)),
+                    "selected fade exceeded 1 ms at a lower sample rate");
+        }
+        else
+        {
+            require(lowRate.output == input, "shorter-than-minimum fade modified source audio");
+        }
+    }
+
+    // Previous 88.2 kHz defaults rounded 352.8 up to an even 354 frames.
+    // Max transition is a strict 4 ms ceiling, so the revised length is 352.
+    const auto strictDefault = render(input, 2, {37, 61}, 1.0, 4.0, 88200.0);
+    require(strictDefault.hasPlan && strictDefault.plan.fadeLengthSamples == 352,
+            "88.2 kHz default exceeded its requested 4 ms ceiling");
+
+    SmartTransitionDsp dsp;
+    dsp.setMaxTransitionMilliseconds(-10.0);
+    require(dsp.maxTransitionMilliseconds() == 1.0, "negative cap was not clamped");
+    dsp.setMaxTransitionMilliseconds(99.0);
+    require(dsp.maxTransitionMilliseconds() == 4.0, "oversized cap was not clamped");
+    dsp.setMaxTransitionMilliseconds(std::numeric_limits<double>::quiet_NaN());
+    require(dsp.maxTransitionMilliseconds() == 4.0, "non-finite cap did not restore default");
+}
+
+void testUnrepairableCapKeepsLaterSplicesDry()
+{
+    // Adjacent and distant clusters both stay dry after an unrepairable first seam.
+    for (const std::size_t secondSeam : {std::size_t{540}, std::size_t{1000}})
+    {
+        SmartTransitionDsp dsp;
+        dsp.configure(8000.0);
+        std::vector<Frame> input(1600);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            const auto value = i < 500 ? 0.30 : (i < secondSeam ? -0.50 : 0.70);
+            input[i] = {value, value * 0.85};
+        }
+
+        dsp.setMaxTransitionMilliseconds(1.0);
+        std::vector<Frame> raw;
+        raw.reserve(input.size() + dsp.latencySamples());
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            if (i == secondSeam - 25) dsp.setMaxTransitionMilliseconds(4.0);
+            Frame out{};
+            dsp.processFrame(input[i].data(), out.data(), 2);
+            raw.push_back(out);
+        }
+        for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
+        {
+            Frame out{};
+            dsp.drainFrame(out.data(), 2);
+            raw.push_back(out);
+        }
+        require(!dsp.hasPlan(), "rejected cap committed a later adjacent/distant seam");
+        for (std::size_t i = 0; i < input.size(); ++i)
+            require(raw[i + dsp.latencySamples()] == input[i],
+                    "later seam changed after an unrepairable first transition");
+    }
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -426,6 +536,8 @@ int main()
         testMonoPath();
         testResetStartsFreshRun();
         testStrengthBlendsWithoutChangingDetection();
+        testMaxTransitionCapsFadeWithoutMovingSeam();
+        testUnrepairableCapKeepsLaterSplicesDry();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }

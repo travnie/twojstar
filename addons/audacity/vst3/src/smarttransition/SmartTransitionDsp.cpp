@@ -38,15 +38,11 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
     analysisRadius_ = static_cast<std::size_t>(std::clamp<long long>(
         std::llround(sampleRate_ * 0.001), 32, 128));
 
-    const auto maximumFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
+    // Default 4 ms fade. Candidate competition never depends on the user's cap.
+    const auto maxFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
     fadeLengthSamples_ = static_cast<std::size_t>(std::clamp<long long>(
-        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maximumFade)));
-    if ((fadeLengthSamples_ & 1U) != 0U)
-    {
-        ++fadeLengthSamples_;
-    }
-
-    // Any candidates whose transition intervals can overlap must compete before a plan commits.
+        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maxFade)));
+    if ((fadeLengthSamples_ & 1U) != 0U) ++fadeLengthSamples_;
     competitionRadius_ = std::max(analysisRadius_, fadeLengthSamples_);
     reset();
 }
@@ -60,6 +56,7 @@ void SmartTransitionDsp::reset() noexcept
     clusterActive_ = false;
     plan_ = {};
     planCommitted_ = false;
+    rejectedByCap_ = false;
     committedAnchor_ = -1;
     planWindowStart_ = 0;
 }
@@ -67,6 +64,13 @@ void SmartTransitionDsp::reset() noexcept
 void SmartTransitionDsp::setStrength(double normalized) noexcept
 {
     strength_ = std::isfinite(normalized) ? std::clamp(normalized, 0.0, 1.0) : 1.0;
+}
+
+void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexcept
+{
+    maxTransitionMilliseconds_ = std::isfinite(milliseconds)
+        ? std::round(std::clamp(milliseconds, 1.0, 4.0))
+        : 4.0;
 }
 
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
@@ -106,7 +110,7 @@ void SmartTransitionDsp::processFrameInternal(
     storeFrame(input, channels, inputIndex);
     ++inputCount_;
 
-    if (analyze && !planCommitted_)
+    if (analyze && !planCommitted_ && !rejectedByCap_)
     {
         const auto rightContext = static_cast<std::int64_t>(analysisRadius_);
         if (inputIndex >= rightContext + static_cast<std::int64_t>(analysisRadius_) + 2)
@@ -134,6 +138,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     strengthRing_[slot] = strength_;
+    maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -259,7 +264,7 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
 
 void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int64_t currentInputIndex) noexcept
 {
-    if (planCommitted_)
+    if (planCommitted_ || rejectedByCap_)
     {
         return;
     }
@@ -271,7 +276,7 @@ void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int6
         candidate.anchor - clusterSeedAnchor_ > static_cast<std::int64_t>(competitionRadius_))
     {
         finalizeCluster(currentInputIndex);
-        if (planCommitted_)
+        if (planCommitted_ || rejectedByCap_)
         {
             return;
         }
@@ -299,7 +304,7 @@ void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int6
 
 void SmartTransitionDsp::scanShortSelection(std::size_t channels) noexcept
 {
-    if (planCommitted_ || clusterActive_ || inputCount_ <= 0 ||
+    if (planCommitted_ || rejectedByCap_ || clusterActive_ || inputCount_ <= 0 ||
         inputCount_ >= static_cast<std::int64_t>(2 * analysisRadius_ + 4))
     {
         return;
@@ -354,7 +359,23 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
 
     const auto leftCapacity = clusterBest_.anchor - 2;
     const auto rightCapacity = inputCount_ - clusterBest_.anchor - 2;
-    const auto preferredHalfFade = static_cast<std::int64_t>(fadeLengthSamples_ / 2);
+    // Use the cap captured at the seam's SOURCE sample, not the current
+    // input position after lookahead. Automation remains block-independent.
+    const auto durationMs = maxTransitionRing_[
+        static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity];
+    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * durationMs));
+    const auto cappedFade = std::min(fadeLengthSamples_, maxSamples) & ~std::size_t{1};
+    if (cappedFade < kMinFadeLengthSamples)
+    {
+        // One accepted seam per run: an unrepairable cap means bypass, not
+        // an opportunistic repair of a later unrelated splice.
+        rejectedByCap_ = true;
+        clusterActive_ = false;
+        clusterBest_ = {};
+        clusterSeedAnchor_ = -1;
+        return;
+    }
+    const auto preferredHalfFade = static_cast<std::int64_t>(cappedFade / 2);
     const auto halfFade = std::min({preferredHalfFade, leftCapacity, rightCapacity});
     const auto effectiveFadeLength = halfFade > 0 ? static_cast<std::size_t>(halfFade * 2) : 0;
 
