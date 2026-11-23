@@ -94,14 +94,14 @@ internal static class Program
 
         using Bitmap dibFrame = icon.Decode(frames[0]);
         Color dibPixel = dibFrame.GetPixel(8, 8);
-        Assert(dibPixel.A == 255 && dibPixel.G > 100,
-            "Legacy DIB frame lost opaque image data.");
+        Assert(dibPixel.ToArgb() == Color.FromArgb(255, 44, 155, 44).ToArgb(),
+            "Legacy DIB frame colors changed during decoding.");
 
         using Bitmap pngFrame = icon.Decode(frames[1]);
         Assert(pngFrame.GetPixel(0, 0).A == 0, "PNG frame lost transparent pixels.");
         Color pngPixel = pngFrame.GetPixel(16, 16);
-        Assert(pngPixel.A == 255 && pngPixel.B > 200,
-            "PNG frame lost opaque image data.");
+        Assert(pngPixel.ToArgb() == Color.DodgerBlue.ToArgb(),
+            "PNG frame colors changed during decoding.");
     }
 
     private static void WriteEntry(BinaryWriter writer, int size, int length, int offset)
