@@ -423,6 +423,32 @@ select {
   pointer-events: none;
 }
 
+.editor-input {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.editor-match-highlight {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.editor-match-highlight > div,
+.editor-match-highlight span {
+  position: absolute;
+  inset: 0 auto auto 0;
+}
+
+.editor-match-highlight span {
+  border: 1px solid var(--warn);
+  border-radius: 2px;
+  background: rgb(223 172 109 / 20%);
+}
+
 .json-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 20px; border-bottom:1px solid var(--line); background:rgb(224 68 56 / 5%); }
 .json-tools strong { margin-right:4px; font-size:.8rem; color:var(--text-soft); }
 .json-tools label { display:flex; align-items:center; gap:6px; font-size:.75rem; color:var(--muted); }
@@ -1061,7 +1087,8 @@ footer a:hover {
   }
 
   .document-controls .button,
-  .document-find .button {
+  .document-find .button,
+  .document-find-row input {
     min-height: 44px;
   }
 

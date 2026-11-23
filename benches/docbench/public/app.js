@@ -18,7 +18,6 @@
   const mergeControls = $("#document-merge-controls");
   const more = $("#document-more");
   const moreSummary = more.querySelector("summary");
-  const wrapEditorButton = $("#wrap-editor-button");
   const dropZone = $("#drop-zone");
 
   const state = { filename: "untitled.txt", bom: false, mixedEol: false };
@@ -616,11 +615,6 @@
   $("#format-button").addEventListener("click", formatDocument);
   $("#save-button").addEventListener("click", saveFile);
   $("#copy-button").addEventListener("click", async () => navigator.clipboard.writeText(editor.value));
-  wrapEditorButton.addEventListener("click", () => {
-    const wrapping = !editor.classList.toggle("editor-no-wrap");
-    wrapEditorButton.setAttribute("aria-pressed", String(wrapping));
-  });
-
   function closeMore(restoreFocus = false) {
     if (!more.open) return;
     if (restoreFocus && more.contains(document.activeElement)) moreSummary.focus({ preventScroll: true });

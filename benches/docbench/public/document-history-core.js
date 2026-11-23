@@ -72,6 +72,10 @@
       current = next;
     }
 
+    function canRecordEdit(length) {
+      return Boolean(current && current.text.length <= maxSnapshotChars && length <= maxSnapshotChars);
+    }
+
     function record(snapshot, { kind = "programmatic", now = Date.now() } = {}) {
       const next = normalize(snapshot);
       if (!current) return reset(next);
@@ -79,7 +83,7 @@
         current = next;
         return false;
       }
-      if (current.text.length > maxSnapshotChars || next.text.length > maxSnapshotChars) {
+      if (!canRecordEdit(next.text.length)) {
         reset(next);
         return false;
       }
@@ -127,6 +131,7 @@
     return Object.freeze({
       record, reset, undo, redo, updateSelection,
       current: () => current,
+      canRecordEdit,
       status,
       subscribe(listener) {
         if (typeof listener !== "function") throw new TypeError("Expected history listener.");
