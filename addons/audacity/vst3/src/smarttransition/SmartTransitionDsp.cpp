@@ -68,7 +68,7 @@ void SmartTransitionDsp::setStrength(double normalized) noexcept
 void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexcept
 {
     maxTransitionMilliseconds_ = std::isfinite(milliseconds)
-        ? std::clamp(milliseconds, 1.0, 4.0)
+        ? std::round(std::clamp(milliseconds, 1.0, 4.0))
         : 4.0;
 }
 
@@ -137,7 +137,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     strengthRing_[slot] = strength_;
-    maxTransitionRing_[slot] = maxTransitionMilliseconds_;
+    maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
