@@ -165,7 +165,7 @@ int main()
         }
 
         // The ramp is defined in SOURCE coordinates. A 4800-sample lookahead
-        // must not shift its wet/dry blend ahead of the source->
+        // must not shift its wet/dry blend ahead of the source.
         const auto sourceStrength = 1.0 - static_cast<double>(sourceIndex + 1) / 6000.0;
         const auto expectedRamp = dry + (wet[i] - dry) * sourceStrength;
         if (std::abs(fullRamp[i] - expectedRamp) > 1e-11)
