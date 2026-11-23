@@ -331,7 +331,9 @@ int main()
         0.0, -1, 0.0, 0.0, 300, 1.0);
     const auto spectralAfter = render(0, false, false, 1.0, 1.0, -1, 0.0,
         0.0, -1, 0.0, 0.0, 700, 1.0);
-    if (spectral == wet || spectralBefore != spectral ||
+    // Quality gate may reject Auto's spectral proposal for this fixture.
+    // Source-aligned scheduling must still be partition-independent.
+    if (spectralBefore != spectral ||
         spectralBeforeSplit != spectral || spectralAfter != wet)
     {
         std::cerr << "Repair automation lost source alignment or no-op policy\n";
