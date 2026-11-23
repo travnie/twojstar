@@ -63,17 +63,22 @@ def choose(paths):
 
 
 def plan(event, base_sha):
-    if event != "pull_request" or not base_sha:
+    if event != "pull_request":
         return matrix(lang for lang, _, _ in LANGUAGES)
-    try:
-        changed = subprocess.run(
-            ["git", "diff", "--name-only", "--no-renames", base_sha, "HEAD"],
-            check=True, text=True, capture_output=True,
-        )
-        return choose(changed.stdout.splitlines())
-    except subprocess.CalledProcessError:
-        # No silent security scan skips on missing history.
-        return matrix(lang for lang, _, _ in LANGUAGES)
+    # Synthetic PR merge: first parent is the current base, unlike stale event SHA.
+    for base in ("HEAD^1", base_sha):
+        if not base:
+            continue
+        try:
+            changed = subprocess.run(
+                ["git", "diff", "--name-only", "--no-renames", base, "HEAD"],
+                check=True, text=True, capture_output=True,
+            )
+            return choose(changed.stdout.splitlines())
+        except subprocess.CalledProcessError:
+            continue
+    # Never lose coverage if both Git references are unavailable.
+    return matrix(lang for lang, _, _ in LANGUAGES)
 
 
 if __name__ == "__main__":
