@@ -181,7 +181,10 @@
             <strong id="filename-label" class="filename-editable" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Filename">untitled.txt</strong>
             <span id="encoding-label">UTF-8 · LF</span>
           </div>
-          <textarea id="editor" spellcheck="false" aria-label="Document editor" placeholder="Drop a file here or start typing…"></textarea>
+          <div class="editor-input">
+            <textarea id="editor" spellcheck="false" aria-label="Document editor" placeholder="Drop a file here or start typing…"></textarea>
+            <div id="editor-match-highlight" class="editor-match-highlight" aria-hidden="true" hidden><div></div></div>
+          </div>
         </section>
         <section class="panel preview-panel" aria-label="Parsed preview">
           <div class="panel-header">

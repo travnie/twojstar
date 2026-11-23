@@ -14,7 +14,8 @@ Local-first file workbench with document and PDF tools. Files is the starting ex
 
 The text editor toolbar keeps Find, Undo/Redo and Save or Download visible.
 More holds import, inspection, wrapping and export actions. Find and replace
-matches literal text, supports case matching and groups Replace all as one undo.
+matches literal text, supports case matching and groups Replace all as one undo
+within the editor's existing history limit.
 
 ## Security
 

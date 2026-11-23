@@ -52,16 +52,54 @@ frame.addEventListener("load", async () => {
     editor.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
     doc.getElementById("find-toggle").click();
     const find = doc.getElementById("find-query");
-    find.value = "a.";
-    find.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
-    doc.getElementById("find-next").click();
+    const setQuery = (value) => {
+      find.value = value;
+      find.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    };
+    const enterFind = () => find.dispatchEvent(new frame.contentWindow.KeyboardEvent("keydown", {
+      key: "Enter", bubbles: true, cancelable: true,
+    }));
+    const next = doc.getElementById("find-next");
+    setQuery("a.");
+    enterFind();
     if (editor.selectionStart !== 0 || editor.selectionEnd !== 2) throw Error("Find did not select the exact match");
+    enterFind();
+    if (doc.activeElement !== find || editor.selectionStart !== 5 || editor.value !== "a. b A. c a."
+      || doc.getElementById("editor-match-highlight").hidden) {
+      throw Error("Repeated Find must keep focus and reveal the next match without editing");
+    }
     doc.getElementById("find-match-case").click();
     doc.getElementById("replace-value").value = "$&";
     doc.getElementById("replace-all").click();
     if (editor.value !== "$& b A. c $&") throw Error("Replace all lost case or literal replacement");
     doc.getElementById("undo-button").click();
     if (editor.value !== "a. b A. c a.") throw Error("Replace all was not a single undo step");
+
+    doc.getElementById("find-match-case").click();
+    editor.setSelectionRange(0, 0);
+    doc.getElementById("replace-value").value = "a.";
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b A. c a." || editor.selectionEnd !== 2) {
+      throw Error("Replace must reveal an unselected match before editing");
+    }
+    doc.getElementById("replace-one").click();
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b a. c a.") throw Error("Replace stalled on an unchanged match");
+    editor.setSelectionRange(4, 4);
+    doc.getElementById("replace-value").value = "long";
+    doc.getElementById("replace-all").click();
+    if (editor.value !== "long b long c long" || editor.selectionStart !== 6) {
+      throw Error("Replace all did not remap the caret");
+    }
+
+    format.value = "json";
+    format.dispatchEvent(new frame.contentWindow.Event("change", { bubbles: true }));
+    editor.value = '{"a" : 1}';
+    editor.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    setQuery('":');
+    if (!next.disabled) throw Error("Unexpected match before Minify");
+    doc.getElementById("minify-button").click();
+    if (next.disabled) throw Error("Find did not refresh after Minify");
 
     document.documentElement.dataset.result = "passed";
   } catch (error) {

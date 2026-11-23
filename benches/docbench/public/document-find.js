@@ -14,14 +14,21 @@
   const replaceOne = byId("replace-one");
   const replaceAll = byId("replace-all");
   const status = byId("find-status");
+  const highlight = byId("editor-match-highlight");
+  const highlightRects = highlight.firstElementChild;
+  const wrap = byId("wrap-editor-button");
+  const history = globalThis.DocBenchDocumentHistory;
+  let lastText = editor.value;
 
   function searchPattern() {
     if (!query.value) return null;
+    // Escape all regex operators. Search the complete query as literal text.
     const literal = query.value.replace(/[.*+?^$(){}|[\]\\]/g, "\\$&");
     return new RegExp(literal, matchCase.checked ? "gu" : "giu");
   }
 
   function refresh() {
+    clearHighlight();
     if (panel.hidden) return;
     const pattern = searchPattern();
     const found = pattern?.test(editor.value);
@@ -29,10 +36,27 @@
     status.textContent = pattern && !found ? "No matches" : "";
   }
 
+  function refreshDocument() {
+    if (lastText === editor.value) return;
+    lastText = editor.value;
+    refresh();
+  }
+
+  function clearHighlight() {
+    highlight.hidden = true;
+  }
+
+  function syncHighlightScroll() {
+    if (!highlight.hidden) {
+      highlightRects.style.transform = "translate(" + -editor.scrollLeft + "px, " + -editor.scrollTop + "px)";
+    }
+  }
+
   function setFindOpen(open) {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
     if (!open) {
+      clearHighlight();
       toggle.focus();
       return;
     }
@@ -63,7 +87,6 @@
 
   function revealMatch(match) {
     const start = match.index;
-    editor.focus({ preventScroll: true });
     editor.setSelectionRange(start, start + match[0].length);
 
     // Match the textarea's wrap geometry without moving its selection.
@@ -79,18 +102,26 @@
     }
     probe.style.width = editor.clientWidth + "px";
     const marker = document.createElement("span");
-    marker.textContent = String.fromCodePoint(editor.value.codePointAt(start));
-    const lineEnd = editor.value.indexOf("\n", start);
+    marker.textContent = match[0];
+    const end = start + match[0].length;
+    const lineEnd = editor.value.indexOf("\n", end);
     probe.append(
       editor.value.slice(0, start),
       marker,
-      editor.value.slice(start + marker.textContent.length, lineEnd < 0 ? undefined : lineEnd),
+      editor.value.slice(end, lineEnd < 0 ? undefined : lineEnd),
     );
     editor.parentElement.append(probe);
-    const { offsetTop: top, offsetLeft: left } = marker;
+    const origin = probe.getBoundingClientRect();
+    const rects = [...marker.getClientRects()].map((rect) => ({
+      left: rect.left - origin.left,
+      top: rect.top - origin.top,
+      width: rect.width,
+      height: rect.height,
+    }));
     probe.remove();
-    const lineHeight = Number.parseFloat(style.lineHeight);
-    if (top < editor.scrollTop || top + lineHeight > editor.scrollTop + editor.clientHeight) {
+    if (!rects.length) return;
+    const { left, top, height } = rects[0];
+    if (top < editor.scrollTop || top + height > editor.scrollTop + editor.clientHeight) {
       editor.scrollTop = top - editor.clientHeight / 3;
     }
     if (left < editor.scrollLeft || left > editor.scrollLeft + editor.clientWidth - 20) {
@@ -98,9 +129,21 @@
     }
     const pageY = editor.getBoundingClientRect().top + top - editor.scrollTop;
     const viewportHeight = document.documentElement.clientHeight;
-    if (pageY < 0 || pageY + lineHeight > viewportHeight) {
+    if (pageY < 0 || pageY + height > viewportHeight) {
       window.scrollBy(0, pageY - viewportHeight * 0.6);
     }
+
+    highlightRects.replaceChildren(...rects.map((rect) => {
+      const box = document.createElement("span");
+      for (const property of ["left", "top", "width", "height"]) {
+        box.style[property] = rect[property] + "px";
+      }
+      return box;
+    }));
+    highlight.style.width = editor.clientWidth + "px";
+    highlight.style.height = editor.clientHeight + "px";
+    highlight.hidden = false;
+    syncHighlightScroll();
   }
 
   function navigate(backwards) {
@@ -110,7 +153,11 @@
   }
 
   function applyReplacement(start, end, text, caret = start + text.length) {
-    if (editor.value.slice(start, end) === text) return;
+    if (editor.value.slice(start, end) === text) {
+      editor.setSelectionRange(caret, caret);
+      clearHighlight();
+      return false;
+    }
     const scrollTop = editor.scrollTop;
     const scrollLeft = editor.scrollLeft;
     editor.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, inputType: "insertReplacementText" }));
@@ -119,6 +166,7 @@
     editor.scrollTop = scrollTop;
     editor.scrollLeft = scrollLeft;
     editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+    return true;
   }
 
   previous.addEventListener("click", () => navigate(true));
@@ -127,26 +175,37 @@
     const pattern = searchPattern();
     if (!pattern) return;
     pattern.lastIndex = editor.selectionStart;
-    const candidate = pattern.exec(editor.value);
-    const match = candidate?.index === editor.selectionStart
-        && candidate.index + candidate[0].length === editor.selectionEnd
-      ? candidate
-      : findMatch(pattern, false);
-    if (!match) return;
-    applyReplacement(match.index, match.index + match[0].length, replacement.value);
-    status.textContent = "Replaced 1 match";
+    const match = pattern.exec(editor.value);
+    if (match?.index !== editor.selectionStart
+      || match.index + match[0].length !== editor.selectionEnd) {
+      navigate(false);
+      return;
+    }
+    const changed = applyReplacement(match.index, match.index + match[0].length, replacement.value);
+    navigate(false);
+    status.textContent = changed ? "Replaced 1 match" : "Match already has that text";
   });
   replaceAll.addEventListener("click", () => {
     const pattern = searchPattern();
     if (!pattern) return;
     let count = 0;
     const source = editor.value;
-    const value = source.replace(pattern, () => {
+    const replacementText = replacement.value;
+    const caret = editor.selectionStart;
+    let nextCaret = caret;
+    const value = source.replace(pattern, (match, offset) => {
+      if (match === replacementText) return match;
       count += 1;
-      return replacement.value;
+      if (offset < caret) nextCaret += replacementText.length - Math.min(match.length, caret - offset);
+      return replacementText;
     });
-    if (!count) return;
-    applyReplacement(0, source.length, value, editor.selectionStart);
+    if (!count) {
+      status.textContent = "No text changed";
+      return;
+    }
+    if (!history.canRecordEdit(value.length)
+      && !globalThis.confirm("Replace all matches? This change is too large to undo.")) return;
+    applyReplacement(0, source.length, value, nextCaret);
     status.textContent = count === 1 ? "Replaced 1 match" : "Replaced " + count + " matches";
   });
 
@@ -154,8 +213,16 @@
   byId("find-close").addEventListener("click", () => setFindOpen(false));
   query.addEventListener("input", refresh);
   matchCase.addEventListener("change", refresh);
-  editor.addEventListener("input", refresh);
-  document.addEventListener("docbench:document-change", refresh);
+  history.subscribe(refreshDocument);
+  editor.addEventListener("input", refreshDocument);
+  editor.addEventListener("scroll", syncHighlightScroll);
+  editor.addEventListener("focus", clearHighlight);
+  window.addEventListener("resize", clearHighlight);
+  wrap.addEventListener("click", () => {
+    const wrapping = !editor.classList.toggle("editor-no-wrap");
+    wrap.setAttribute("aria-pressed", String(wrapping));
+    clearHighlight();
+  });
   query.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.isComposing) return;
     event.preventDefault();
