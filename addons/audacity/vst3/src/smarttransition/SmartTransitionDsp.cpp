@@ -64,6 +64,11 @@ void SmartTransitionDsp::reset() noexcept
     planWindowStart_ = 0;
 }
 
+void SmartTransitionDsp::setStrength(double normalized) noexcept
+{
+    strength_ = std::isfinite(normalized) ? std::clamp(normalized, 0.0, 1.0) : 1.0;
+}
+
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
 {
     processFrameInternal(input, output, channels, true);
@@ -458,7 +463,10 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         corrected = corrected * dbToGain(plan_.rightGainDb * taper) - plan_.dcDelta * taper;
     }
 
-    return corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    const auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    if (strength_ == 1.0) return repaired;
+    if (strength_ == 0.0) return source;
+    return source + (repaired - source) * strength_;
 }
 
 } // namespace Travny::Audio

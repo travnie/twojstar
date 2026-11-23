@@ -66,7 +66,7 @@ The prototype is deliberately deterministic DSP first:
 - exact same-format determinism tests across arbitrary input chunking,
 - no allocation, network, model loading or background helper in the audio path.
 
-The effect currently uses conservative fixed defaults while the host contract is being validated. The planned `Mode`, `Max transition`, `Strength` and `Repair` host parameters are still required before calling 0.1 release-ready.
+The effect still uses conservative defaults for Mode, Max transition and Repair while the host contract is being validated. **Strength** is now an automatable 0–100% VST3 parameter (default 100%): 0% preserves source samples, 50% blends halfway and 100% keeps full repair. State round-trip and DSP tests cover this; Audacity's control UI still needs live host validation before release.
 
 ### Why it is not in Latest yet
 

@@ -2,6 +2,7 @@
 
 #include "SmartTransitionCids.h"
 #include "SmartTransitionDsp.h"
+#include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
 namespace Travny::Vst3 {
@@ -29,10 +30,12 @@ public:
     Steinberg::uint32 PLUGIN_API getLatencySamples() SMTG_OVERRIDE;
     Steinberg::uint32 PLUGIN_API getTailSamples() SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
-    Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream*) SMTG_OVERRIDE { return Steinberg::kResultOk; }
-    Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream*) SMTG_OVERRIDE { return Steinberg::kResultOk; }
+    Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) SMTG_OVERRIDE;
+    Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) SMTG_OVERRIDE;
 
 private:
+    void applyParameterChanges(Steinberg::Vst::IParameterChanges* changes) noexcept;
+
     template <typename Sample>
     bool processBlock(
         Sample** input,

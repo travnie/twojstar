@@ -1,5 +1,9 @@
 #include "SmartTransitionProcessor.h"
 
+#include "SmartTransitionParams.h"
+#include "base/source/fstreamer.h"
+#include "pluginterfaces/vst/ivstparameterchanges.h"
+
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/vstspeaker.h"
 
@@ -46,6 +50,39 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::initialize(Steinberg::FU
     addAudioInput(STR16("Input"), Steinberg::Vst::SpeakerArr::kStereo);
     addAudioOutput(STR16("Output"), Steinberg::Vst::SpeakerArr::kStereo);
     return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBStream* state)
+{
+    if (!state) return Steinberg::kResultFalse;
+    Steinberg::IBStreamer streamer(state, kLittleEndian);
+    double savedStrength = 1.0;
+    if (!streamer.readDouble(savedStrength)) savedStrength = 1.0;
+    dsp_.setStrength(savedStrength);
+    return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBStream* state)
+{
+    if (!state) return Steinberg::kResultFalse;
+    Steinberg::IBStreamer streamer(state, kLittleEndian);
+    return streamer.writeDouble(dsp_.strength()) ? Steinberg::kResultOk : Steinberg::kResultFalse;
+}
+
+void SmartTransitionProcessor::applyParameterChanges(Steinberg::Vst::IParameterChanges* changes) noexcept
+{
+    if (!changes) return;
+    for (Steinberg::int32 index = 0; index < changes->getParameterCount(); ++index)
+    {
+        auto* queue = changes->getParameterData(index);
+        if (!queue || queue->getParameterId() != kSmartTransitionStrengthId || queue->getPointCount() <= 0)
+            continue;
+
+        Steinberg::int32 sampleOffset = 0;
+        Steinberg::Vst::ParamValue value = 1.0;
+        if (queue->getPoint(queue->getPointCount() - 1, sampleOffset, value) == Steinberg::kResultTrue)
+            dsp_.setStrength(value);
+    }
 }
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBool state)
@@ -157,6 +194,8 @@ bool SmartTransitionProcessor::processBlock(
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::ProcessData& data)
 {
+    applyParameterChanges(data.inputParameterChanges);
+
     if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
     {
         return Steinberg::kResultOk;

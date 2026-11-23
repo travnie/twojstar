@@ -156,7 +156,9 @@ endif()
 
 smtg_add_vst3plugin(TravnySmartTransition
     src/smarttransition/SmartTransitionCids.h
+    src/smarttransition/SmartTransitionController.cpp
     src/smarttransition/SmartTransitionController.h
+    src/smarttransition/SmartTransitionParams.h
     src/smarttransition/SmartTransitionEntry.cpp
     src/smarttransition/SmartTransitionProcessor.cpp
     src/smarttransition/SmartTransitionProcessor.h
@@ -165,3 +167,16 @@ smtg_add_vst3plugin(TravnySmartTransition
 target_include_directories(TravnySmartTransition PRIVATE src/smarttransition)
 target_compile_features(TravnySmartTransition PRIVATE cxx_std_20)
 target_link_libraries(TravnySmartTransition PRIVATE sdk TravnySmartTransitionDsp)
+
+if(BUILD_TESTING)
+    add_executable(SmartTransitionStateRoundTripTests
+        tests/SmartTransitionStateRoundTripTests.cpp
+        src/smarttransition/SmartTransitionController.cpp
+        src/smarttransition/SmartTransitionProcessor.cpp
+        ${VST3_SDK_ROOT}/public.sdk/source/common/memorystream.cpp
+    )
+    target_include_directories(SmartTransitionStateRoundTripTests PRIVATE src/smarttransition)
+    target_compile_features(SmartTransitionStateRoundTripTests PRIVATE cxx_std_20)
+    target_link_libraries(SmartTransitionStateRoundTripTests PRIVATE sdk TravnySmartTransitionDsp)
+    add_test(NAME SmartTransitionStateRoundTripTests COMMAND SmartTransitionStateRoundTripTests)
+endif()
