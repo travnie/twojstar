@@ -48,11 +48,19 @@ frame.addEventListener("load", async () => {
     frame.width = "320";
     for (let i = 0; i < 30 && inspector.parentElement !== sheet; i++) await wait(40);
     inspect.click();
-    tool.click();
     const documentWorkspace = doc.getElementById("document-workspace");
-    for (let i = 0; i < 30 && documentWorkspace.hidden; i++) await wait(40);
-    if (documentWorkspace.hidden || sheet.open || editor.value !== "sample") {
-      throw Error("Opening the text tool from File details did not dismiss the sheet");
+    if (!sheet.open || tool.disabled || tool.hidden) throw Error("Text tool unavailable after resizing back to mobile");
+    const loaded = new Promise(resolve => {
+      doc.addEventListener("docbench:open-document-file", (event) => {
+        queueMicrotask(() => resolve(event.detail.openPromise));
+      }, { once: true });
+    });
+    tool.click();
+    const result = await loaded;
+    if (!result?.ok || documentWorkspace.hidden || sheet.open || editor.value !== "sample") {
+      throw Error("File details could not hand off to Text editor: " + JSON.stringify({
+        result, workspaceHidden: documentWorkspace.hidden, sheetOpen: sheet.open, text: editor.value,
+      }));
     }
     format.value = "xml";
     editor.value = '<root attr="&quot;"><script xmlns="http://www.w3.org/1999/xhtml">globalThis.xmlProbeExecuted=true;<\\/script><![CDATA[<img src=x onerror="globalThis.xmlProbeExecuted=true">]]>&amp;</root>';
