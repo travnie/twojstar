@@ -411,6 +411,14 @@
   flex: 1;
 }
 
+.files-inspector-sheet .files-inspector-header strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.4;
+  max-height: 2.8em;
+}
+
 .files-inspector-sheet .files-metadata {
   grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
 }

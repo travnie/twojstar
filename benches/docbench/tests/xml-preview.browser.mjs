@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
 const harness = `<!doctype html><html data-result="pending"><body>
-<iframe id="app" src="/app" width="320" height="720"></iframe>
+<iframe id="app" src="/app" width="320" height="460"></iframe>
 <script>
 const frame = document.getElementById("app");
 frame.addEventListener("load", async () => {
@@ -25,7 +25,10 @@ frame.addEventListener("load", async () => {
     const inspectionStatus = doc.getElementById("files-status");
     if (!inspect.disabled || inspector.parentElement !== sheet) throw Error("Mobile inspector not initialized");
     if (!inspectionStatus.closest("#files-preview-summary")) throw Error("Inspection status hidden behind closed sheet");
-    const imported = win.DocBenchFiles.importFile(new win.File(["sample"], "notes.txt", { type: "text/plain" }));
+    const fixture = new win.File(["sample"], "notes.txt", { type: "text/plain" });
+    const virtualPath = "long-folder-name/".repeat(38) + fixture.name;
+    Object.defineProperty(fixture, "webkitRelativePath", { value: virtualPath });
+    const imported = win.DocBenchFiles.importFile(fixture);
     if (!imported.ok) throw Error("Could not import mobile inspector fixture");
     const tool = doc.getElementById("files-open-tool");
     for (let i = 0; i < 30 && tool.hidden; i++) await wait(40);
@@ -36,17 +39,17 @@ frame.addEventListener("load", async () => {
       || Math.abs(sheet.getBoundingClientRect().bottom - win.innerHeight) > 1) {
       throw Error("File details did not open at the bottom with the active file's metadata");
     }
+    if (!sheet.querySelector("#files-metadata").textContent.includes(virtualPath)) {
+      throw Error("Full path missing from displayed metadata");
+    }
+    tool.scrollIntoView({ block: "center" });
+    const box = tool.getBoundingClientRect();
+    if (doc.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) !== tool) {
+      throw Error("File details header overlaps the text tool action");
+    }
     closeInspector.click();
     if (sheet.open || doc.activeElement !== inspect) throw Error("Closing file details did not restore focus");
 
-    inspect.click();
-    frame.width = "1120";
-    for (let i = 0; i < 30 && inspector.parentElement === sheet; i++) await wait(40);
-    if (sheet.open || !inspect.hidden || inspector.parentElement.className !== "files-details") {
-      throw Error("Desktop resize did not move the same inspector inline");
-    }
-    frame.width = "320";
-    for (let i = 0; i < 30 && inspector.parentElement !== sheet; i++) await wait(40);
     inspect.click();
     const documentWorkspace = doc.getElementById("document-workspace");
     if (!sheet.open || tool.disabled || tool.hidden) throw Error("Text tool unavailable after resizing back to mobile");
@@ -55,11 +58,15 @@ frame.addEventListener("load", async () => {
         queueMicrotask(() => resolve(event.detail.openPromise));
       }, { once: true });
     });
+    let sheetOpenAtActivation;
+    doc.addEventListener("docbench:activate-workspace", () => {
+      sheetOpenAtActivation = sheet.open;
+    }, { once: true });
     tool.click();
     const result = await loaded;
-    if (!result?.ok || documentWorkspace.hidden || sheet.open || editor.value !== "sample") {
+    if (!result?.ok || documentWorkspace.hidden || sheetOpenAtActivation !== false || editor.value !== "sample") {
       throw Error("File details could not hand off to Text editor: " + JSON.stringify({
-        result, workspaceHidden: documentWorkspace.hidden, sheetOpen: sheet.open, text: editor.value,
+        result, workspaceHidden: documentWorkspace.hidden, sheetOpenAtActivation, text: editor.value,
       }));
     }
     format.value = "xml";

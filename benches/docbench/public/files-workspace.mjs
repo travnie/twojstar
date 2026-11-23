@@ -109,12 +109,14 @@ function syncInspectorStatus() {
 
 function syncInspectorLayout() {
   const useSheet = inspectorViewport.matches;
+  const moveFocus = !useSheet && (inspectorSheet.open || document.activeElement === inspectButton);
   if (!useSheet && inspectorSheet.open) inspectorSheet.close();
   (useSheet ? inspectorSheet : inspectorHome).append(inspector);
   inspectButton.hidden = !useSheet;
   inspectorClose.hidden = !useSheet;
   previewCaption.hidden = useSheet;
   syncInspectorStatus();
+  if (moveFocus && !filesPanel.hidden) heading.focus();
 }
 
 function closeAudioDock() {
@@ -555,6 +557,7 @@ function playAudioDock() {
   const started = audioDockPlayer.play();
   if (inspectorSheet.open) {
     inspectorSheet.close();
+    audioDock.scrollIntoView({ block: "nearest" });
     audioDockPlayer.focus({ preventScroll: true });
   }
   if (started && typeof started.catch === "function") {
