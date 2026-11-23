@@ -21,7 +21,7 @@ Live state and current official help beat this short checklist. Consult [officia
 - Captured hulls are not instantly yours at a garage. Boarding trades combat safety for a separate prize recovery and crew/fuel problem.
 - Markets, mission rewards, police levels, module requirements, fuel costs and prices are dynamic. Read live state and catalog rather than trusting an old route or guide.
 - Distress, taxes, freight and faction obligations may have opt-in/permission/deadline behavior. Inspect the current contract and active objectives.
-- Freight `shipping/list_all` reads listings between charted stations at an operational missions service; `shipping/active` shows current contracts. After a default, a still-sealed package can be reclaimed by its shipper at the station storage where it sits (`shipping/reclaim`, `shipment_id` or `package_id`). Reclaim is state-changing, never a polling/retry command.
+- Freight `shipping/list_all` reads listings between charted stations at an operational missions service; `shipping/active` shows current contracts. After a default, a still-sealed package can be reclaimed by its shipper at the station storage where it sits (`shipping/reclaim`, `shipment_id` or `package_id`). Insured recovery repays the insurance payout; any shortfall becomes freight debt (`claim_debt`, pay with `shipping/pay_debt`). Check credits and outstanding debt before acting. Reclaim is state-changing, never a polling/retry command.
 
 ## Find details at the source
 
