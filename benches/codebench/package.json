@@ -7,7 +7,7 @@
     "build:client": "node ../scripts/clean-client-output.mjs codebench && tsc -p tsconfig.client.json",
     "build": "npm run build:client && node ../scripts/sync-i18n.mjs codebench && node ../scripts/sync-webmcp.mjs codebench && node scripts/vendor.mjs && node scripts/portable.mjs",
     "typecheck": "wrangler types && tsc --noEmit",
-    "check": "npm run build && npm run typecheck && node scripts/check.mjs",
+    "check": "npm run build && npm run typecheck && node scripts/check.mjs && wrangler deploy --dry-run",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
