@@ -38,7 +38,12 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
     analysisRadius_ = static_cast<std::size_t>(std::clamp<long long>(
         std::llround(sampleRate_ * 0.001), 32, 128));
 
-    setMaxTransitionMilliseconds(maxTransitionMilliseconds_);
+    // Default 4 ms fade. Candidate competition never depends on the user's cap.
+    const auto maxFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
+    fadeLengthSamples_ = static_cast<std::size_t>(std::clamp<long long>(
+        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maxFade)));
+    if ((fadeLengthSamples_ & 1U) != 0U) ++fadeLengthSamples_;
+    competitionRadius_ = std::max(analysisRadius_, fadeLengthSamples_);
     reset();
 }
 
@@ -65,19 +70,6 @@ void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexc
     maxTransitionMilliseconds_ = std::isfinite(milliseconds)
         ? std::clamp(milliseconds, 1.0, 4.0)
         : 4.0;
-    const auto maximumFade = std::max<std::size_t>(32, lookaheadSamples_ / 2);
-    // Round down to an even fade, never beyond the selected millisecond ceiling.
-    // Below the minimum 16-sample fade, the candidate must bypass unchanged.
-    fadeLengthSamples_ = std::min<std::size_t>(
-        static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * maxTransitionMilliseconds_)),
-        maximumFade);
-    fadeLengthSamples_ &= ~std::size_t{1};
-
-    // The cap shortens rendering, never the candidate competition window:
-    // otherwise overlapping splices could choose a different winner.
-    const auto defaultFade = static_cast<std::size_t>(std::clamp<long long>(
-        std::llround(sampleRate_ * 0.004), 32, static_cast<long long>(maximumFade)));
-    competitionRadius_ = std::max(analysisRadius_, defaultFade + (defaultFade & 1U));
 }
 
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
@@ -145,6 +137,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     strengthRing_[slot] = strength_;
+    maxTransitionRing_[slot] = maxTransitionMilliseconds_;
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -365,7 +358,13 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
 
     const auto leftCapacity = clusterBest_.anchor - 2;
     const auto rightCapacity = inputCount_ - clusterBest_.anchor - 2;
-    const auto preferredHalfFade = static_cast<std::int64_t>(fadeLengthSamples_ / 2);
+    // Use the cap captured at the seam's SOURCE sample, not the current
+    // input position after lookahead. Automation remains block-independent.
+    const auto durationMs = maxTransitionRing_[
+        static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity];
+    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * durationMs));
+    const auto cappedFade = std::min(fadeLengthSamples_, maxSamples) & ~std::size_t{1};
+    const auto preferredHalfFade = static_cast<std::int64_t>(cappedFade / 2);
     const auto halfFade = std::min({preferredHalfFade, leftCapacity, rightCapacity});
     const auto effectiveFadeLength = halfFade > 0 ? static_cast<std::size_t>(halfFade * 2) : 0;
 
