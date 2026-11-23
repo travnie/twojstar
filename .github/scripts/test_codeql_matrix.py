@@ -53,7 +53,7 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_deletion_passes_through_planner(self):
         from unittest.mock import patch
         with patch.object(codeql_matrix.subprocess, "run") as run:
-            run.return_value.stdout = b"xiaomi-adb-tools/src/main/kotlin/Old.kt\\0"
+            run.return_value.stdout = b"xiaomi-adb-tools/src/main/kotlin/Old.kt\0"
             selected = codeql_matrix.plan("pull_request", "abc123")
             self.assertEqual([row["language"] for row in selected], ["java-kotlin"])
             args = run.call_args.args[0]
@@ -63,7 +63,7 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_stale_event_base_does_not_scan_unrelated_main_changes(self):
         from unittest.mock import patch
         with patch.object(codeql_matrix.subprocess, "run") as run:
-            run.return_value.stdout = b"spacemolt/smx/src/smx/contract.py\\0"
+            run.return_value.stdout = b"spacemolt/smx/src/smx/contract.py\0"
             selected = codeql_matrix.plan("pull_request", "stale-base-sha")
             self.assertEqual([row["language"] for row in selected], ["python"])
             self.assertEqual(run.call_args.args[0][-2:], ["HEAD^1", "HEAD"])
@@ -84,7 +84,7 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_accented_path_in_git_diff(self):
         from unittest.mock import patch
         with patch.object(codeql_matrix.subprocess, "run") as run:
-            run.return_value.stdout = "intent-keyboard/zażółć.kt".encode() + b"\\0"
+            run.return_value.stdout = "intent-keyboard/zażółć.kt".encode() + b"\0"
             result = codeql_matrix.plan("pull_request", "old-sha")
             self.assertEqual([row["language"] for row in result], ["java-kotlin", "swift"])
 

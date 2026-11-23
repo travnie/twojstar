@@ -95,7 +95,7 @@ def plan(event, base_sha):
                 ["git", "diff", "--name-only", "--no-renames", "-z", base, "HEAD"],
                 check=True, capture_output=True,
             )
-            return choose(os.fsdecode(p) for p in changed.stdout.split(b"\\0") if p)
+            return choose(os.fsdecode(p) for p in changed.stdout.split(b"\0") if p)
         except subprocess.CalledProcessError:
             continue
     # Never lose coverage if both Git references are unavailable.
