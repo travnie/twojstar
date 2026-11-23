@@ -78,7 +78,7 @@ Windows host validation on **Audacity 3.7.9** now passes discovery, Preview, App
 
 Audacity 4.0 has not yet been claimed as equivalent Smart Transition processing validation here. Any 4.0 scan/discovery evidence should be treated as host recognition only until Preview/Apply behavior and the end-of-selection contract are explicitly exercised there.
 
-Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and the remaining `Repair` parameter is still required for 0.1. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
+Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and Audacity 4 host Preview/Apply and selection-end QA remain release gates. `Repair Off/Auto` is implemented but stays experimental. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
 
 ## Released packages
 

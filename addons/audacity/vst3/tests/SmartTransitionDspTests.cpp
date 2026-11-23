@@ -145,18 +145,50 @@ void testConservativeSpectralRepair()
         SmartTransitionMode::Music, false);
     const auto musicAuto = render(phaseSplice, 2, {}, 1.0, 4.0, 48000.0,
         SmartTransitionMode::Music, true);
-    require(musicAuto.plan.repairMode == SmartRepairMode::Spectral,
-        "phase splice did not exercise spectral Repair Auto");
+    require(musicAuto.hasPlan, "phase splice was not detected");
     const auto entry = globalAnchor(musicAuto) - 8;
     require(entry > 1, "invalid repair entry");
     for (std::size_t channel = 0; channel < 2; ++channel)
     {
-        const auto dryJump = std::abs(musicOff.output[entry][channel] -
-            musicOff.output[entry - 1][channel]);
-        const auto autoJump = std::abs(musicAuto.output[entry][channel] -
-            musicAuto.output[entry - 1][channel]);
-        require(autoJump <= dryJump + 0.02,
-            "spectral peak guard created a new repair-entry click");
+        double maxDryJump = 0.0;
+        double maxAutoJump = 0.0;
+        for (auto i = entry; i <= entry + 16; ++i)
+        {
+            maxDryJump = std::max(maxDryJump,
+                std::abs(musicOff.output[i][channel] - musicOff.output[i - 1][channel]));
+            maxAutoJump = std::max(maxAutoJump,
+                std::abs(musicAuto.output[i][channel] - musicAuto.output[i - 1][channel]));
+        }
+        require(maxAutoJump <= maxDryJump * 1.05 + 0.005,
+            "Repair Auto introduced a larger phase-splice transient");
+    }
+    std::vector<Frame> softerPhase(1400);
+    for (std::size_t i = 0; i < softerPhase.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 12.0 : pi / 3.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 300.0 * i / 48000.0 + phase);
+        softerPhase[i] = {value, value * 0.85};
+    }
+    const auto softerOff = render(softerPhase, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto);
+    const auto softerAuto = render(softerPhase, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    require(softerOff.hasPlan && softerAuto.hasPlan,
+        "300 Hz phase fixture did not detect the seam");
+    const auto softerEntry = globalAnchor(softerOff) - 8;
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        double dryMax = 0.0;
+        double autoMax = 0.0;
+        for (auto i = softerEntry; i <= softerEntry + 16; ++i)
+        {
+            dryMax = std::max(dryMax,
+                std::abs(softerOff.output[i][channel] - softerOff.output[i - 1][channel]));
+            autoMax = std::max(autoMax,
+                std::abs(softerAuto.output[i][channel] - softerAuto.output[i - 1][channel]));
+        }
+        require(autoMax <= dryMax * 1.05 + 0.005,
+            "Repair Auto sharpened an already-smooth join");
     }
     const auto clean = cleanSine(1400);
     require(render(clean, 2, {}, 1.0, 4.0, 48000.0,

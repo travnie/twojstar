@@ -415,6 +415,20 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
         plan_.seamAnchorSamples = clusterBest_.anchor - planWindowStart_;
         committedAnchor_ = clusterBest_.anchor;
         planCommitted_ = !plan_.noOp;
+        if (planCommitted_ && plan_.fadeCurve == SmartFadeCurve::EqualPower)
+        {
+            // One fixed source peak per channel, computed before emission.
+            // Never let the limiter inherit the splice's per-sample envelope jump.
+            for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+            {
+                transitionPeak_[channel] = 0.0;
+                if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                    continue;
+                for (auto index = transitionStart - 2; index <= transitionEnd + 1; ++index)
+                    transitionPeak_[channel] = std::max(
+                        transitionPeak_[channel], std::abs(sampleAt(channel, index)));
+            }
+        }
         // Source-aligned Repair Auto. Only strong seams get a 16-sample
         // low-harmonic spectral bridge. Fixed arrays, no audio-thread allocation.
         if (planCommitted_ && repairRing_[static_cast<std::size_t>(
@@ -475,20 +489,41 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
                             prediction[0] * (1.0 - t) + prediction[1] * t;
                     }
                 }
-            }
-        }
-        if (planCommitted_ && plan_.fadeCurve == SmartFadeCurve::EqualPower)
-        {
-            // One fixed source peak per channel, computed before emission.
-            // Never let the limiter inherit the splice's per-sample envelope jump.
-            for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
-            {
-                transitionPeak_[channel] = 0.0;
-                if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
-                    continue;
-                for (auto index = transitionStart - 2; index <= transitionEnd + 1; ++index)
-                    transitionPeak_[channel] = std::max(
-                        transitionPeak_[channel], std::abs(sampleAt(channel, index)));
+
+                // Compare both complete renderings, including both edges,
+                // before accepting the spectral correction. A good ordinary
+                // fade must never gain a stronger transient from Repair Auto.
+                double baselinePeak = 0.0;
+                double repairedPeak = 0.0;
+                for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+                {
+                    if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                        continue;
+                    plan_.repairMode = SmartRepairMode::None;
+                    auto baselinePrevious = renderSample(channel, committedAnchor_ - 9);
+                    plan_.repairMode = SmartRepairMode::Spectral;
+                    auto repairedPrevious = renderSample(channel, committedAnchor_ - 9);
+                    for (auto index = committedAnchor_ - 8;
+                         index <= committedAnchor_ + 8; ++index)
+                    {
+                        plan_.repairMode = SmartRepairMode::None;
+                        const auto baseline = renderSample(channel, index);
+                        plan_.repairMode = SmartRepairMode::Spectral;
+                        const auto repaired = renderSample(channel, index);
+                        baselinePeak = std::max(baselinePeak,
+                            std::abs(baseline - baselinePrevious));
+                        repairedPeak = std::max(repairedPeak,
+                            std::abs(repaired - repairedPrevious));
+                        baselinePrevious = baseline;
+                        repairedPrevious = repaired;
+                    }
+                }
+                if (repairedPeak > baselinePeak * 1.05 + 0.005)
+                {
+                    plan_.repairMode = SmartRepairMode::None;
+                    plan_.repairStartOffsetSamples = 0;
+                    plan_.repairLengthSamples = 0;
+                }
             }
         }
     }

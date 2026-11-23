@@ -106,6 +106,19 @@ int main()
         return EXIT_FAILURE;
     }
 
+    Steinberg::MemoryStream autoRepairState;
+    Steinberg::IBStreamer autoRepairWriter(&autoRepairState, kLittleEndian);
+    if (!autoRepairWriter.writeDouble(1.0) || !autoRepairWriter.writeDouble(1.0) ||
+        !autoRepairWriter.writeDouble(0.0) || !autoRepairWriter.writeDouble(1.0))
+        return EXIT_FAILURE;
+    autoRepairState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+    if (controller.setComponentState(&autoRepairState) != Steinberg::kResultOk ||
+        controller.getParamNormalized(kSmartTransitionRepairId) != 1.0)
+    {
+        std::cerr << "Repair Auto preset did not restore host UI state\n";
+        return EXIT_FAILURE;
+    }
+
     Steinberg::MemoryStream legacyEmptyState;
     if (controller.setComponentState(&legacyEmptyState) != Steinberg::kResultOk ||
         controller.getParamNormalized(kSmartTransitionStrengthId) != 1.0 ||
