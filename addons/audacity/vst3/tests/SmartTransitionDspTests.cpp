@@ -11,6 +11,8 @@
 
 using Travny::Audio::SmartEditPlan;
 using Travny::Audio::SmartTransitionDsp;
+using Travny::Audio::SmartTransitionMode;
+using Travny::Audio::SmartFadeCurve;
 
 namespace {
 
@@ -32,12 +34,14 @@ struct RenderResult
     bool hasPlan{false};
 };
 
-RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0)
+RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
+                    SmartTransitionMode mode = SmartTransitionMode::Auto)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
     dsp.setStrength(strength);
     dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
+    dsp.setMode(mode);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -489,6 +493,52 @@ void testUnrepairableCapKeepsLaterSplicesDry()
     }
 }
 
+void testModePoliciesAreSourceAlignedAndDeterministic()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto automatic = render(input, 2, {37, 97});
+    const auto speech = render(input, 2, {19, 61}, 1.0, 4.0, 48000.0, SmartTransitionMode::Speech);
+    const auto music = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::Music);
+    const auto hard = render(input, 2, {1, 13, 83}, 1.0, 4.0, 48000.0, SmartTransitionMode::HardSplice);
+    const auto speechSplit = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::Speech);
+    const auto musicSplit = render(input, 2, {5, 31, 41}, 1.0, 4.0, 48000.0, SmartTransitionMode::Music);
+    const auto hardSplit = render(input, 2, {1400}, 1.0, 4.0, 48000.0, SmartTransitionMode::HardSplice);
+
+    require(automatic.hasPlan && speech.hasPlan && music.hasPlan && hard.hasPlan,
+            "mode change discarded the accepted seam");
+    require(globalAnchor(automatic) == globalAnchor(speech) &&
+            globalAnchor(automatic) == globalAnchor(music) &&
+            globalAnchor(automatic) == globalAnchor(hard),
+            "mode changed seam selection");
+    require(automatic.plan.fadeLengthSamples == 192 &&
+            speech.plan.fadeLengthSamples == 96 &&
+            music.plan.fadeLengthSamples == 192 &&
+            hard.plan.fadeLengthSamples == 48,
+            "mode duration policy changed");
+    require(automatic.plan.fadeCurve == SmartFadeCurve::SCurve &&
+            speech.plan.fadeCurve == SmartFadeCurve::ConstantAmplitude &&
+            music.plan.fadeCurve == SmartFadeCurve::EqualPower &&
+            hard.plan.fadeCurve == SmartFadeCurve::SCurve,
+            "mode fade curve policy changed");
+    require(speech.output == speechSplit.output && music.output == musicSplit.output &&
+            hard.output == hardSplit.output, "mode repair depends on host block boundaries");
+    require(automatic.output != speech.output && automatic.output != music.output &&
+            automatic.output != hard.output, "mode control did not change repaired audio");
+    for (const auto mode : {SmartTransitionMode::Auto, SmartTransitionMode::Speech,
+                            SmartTransitionMode::Music, SmartTransitionMode::HardSplice})
+    {
+        const auto clean = cleanSine(1200);
+        require(render(clean, 2, {1, 7, 19}, 1.0, 4.0, 48000.0, mode).output == clean,
+                "mode changed clean audio");
+    }
+
+    SmartTransitionDsp dsp;
+    dsp.setMode(SmartTransitionMode::Music);
+    require(dsp.mode() == SmartTransitionMode::Music, "selected mode was not retained");
+    dsp.setMode(static_cast<SmartTransitionMode>(255));
+    require(dsp.mode() == SmartTransitionMode::Auto, "invalid mode did not select Auto");
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -538,6 +588,7 @@ int main()
         testStrengthBlendsWithoutChangingDetection();
         testMaxTransitionCapsFadeWithoutMovingSeam();
         testUnrepairableCapKeepsLaterSplicesDry();
+        testModePoliciesAreSourceAlignedAndDeterministic();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }

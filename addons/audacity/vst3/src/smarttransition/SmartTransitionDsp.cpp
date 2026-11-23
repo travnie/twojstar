@@ -73,6 +73,21 @@ void SmartTransitionDsp::setMaxTransitionMilliseconds(double milliseconds) noexc
         : 4.0;
 }
 
+void SmartTransitionDsp::setMode(SmartTransitionMode mode) noexcept
+{
+    switch (mode)
+    {
+    case SmartTransitionMode::Speech:
+    case SmartTransitionMode::Music:
+    case SmartTransitionMode::HardSplice:
+        mode_ = mode;
+        break;
+    default:
+        mode_ = SmartTransitionMode::Auto;
+        break;
+    }
+}
+
 void SmartTransitionDsp::processFrame(const double* input, double* output, std::size_t channels) noexcept
 {
     processFrameInternal(input, output, channels, true);
@@ -139,6 +154,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     strengthRing_[slot] = strength_;
     maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
+    modeRing_[slot] = static_cast<std::uint8_t>(mode_);
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -363,7 +379,12 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
     // input position after lookahead. Automation remains block-independent.
     const auto durationMs = maxTransitionRing_[
         static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity];
-    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * durationMs));
+    const auto mode = static_cast<SmartTransitionMode>(
+        modeRing_[static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity]);
+    const auto modeLimitMs = mode == SmartTransitionMode::Speech ? 2.0
+        : (mode == SmartTransitionMode::HardSplice ? 1.0 : 4.0);
+    const auto effectiveLimitMs = std::min(static_cast<double>(durationMs), modeLimitMs);
+    const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * effectiveLimitMs));
     const auto cappedFade = std::min(fadeLengthSamples_, maxSamples) & ~std::size_t{1};
     if (cappedFade < kMinFadeLengthSamples)
     {
@@ -422,7 +443,11 @@ SmartEditPlan SmartTransitionDsp::makePlan(const Candidate& candidate, std::size
     plan.dcDelta = clampFinite(candidate.rightMean - candidate.leftMean, -0.35, 0.35);
     plan.timingOffsetSamples = 0;
     plan.fadeLengthSamples = static_cast<std::int32_t>(fadeLength);
-    plan.fadeCurve = SmartFadeCurve::SCurve;
+    const auto mode = static_cast<SmartTransitionMode>(
+        modeRing_[static_cast<std::size_t>(candidate.anchor) % kRingCapacity]);
+    plan.fadeCurve = mode == SmartTransitionMode::Music ? SmartFadeCurve::EqualPower
+        : (mode == SmartTransitionMode::Speech ? SmartFadeCurve::ConstantAmplitude
+            : SmartFadeCurve::SCurve);
     plan.repairMode = SmartRepairMode::None;
     plan.noOp = false;
     return plan;
@@ -451,7 +476,12 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
     }
 
     const auto t = static_cast<double>(outputIndex - start + 1) / static_cast<double>(fadeLength + 1);
-    const auto bridgeWeight = std::pow(std::sin(kPi * t), 2.0);
+    const auto pulse = std::sin(kPi * t);
+    auto bridgeWeight = std::pow(pulse, 2.0);
+    if (plan_.fadeCurve == SmartFadeCurve::EqualPower)
+        bridgeWeight = pulse;
+    else if (plan_.fadeCurve == SmartFadeCurve::ConstantAmplitude)
+        bridgeWeight = std::pow(pulse, 4.0);
 
     const auto leftEdge = sampleAt(channel, start - 1);
     const auto rightEdge = sampleAt(channel, end);
