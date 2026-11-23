@@ -174,6 +174,7 @@ if(BUILD_TESTING)
         src/smarttransition/SmartTransitionController.cpp
         src/smarttransition/SmartTransitionProcessor.cpp
         ${VST3_SDK_ROOT}/public.sdk/source/common/memorystream.cpp
+        ${VST3_SDK_ROOT}/public.sdk/source/vst/hosting/parameterchanges.cpp
     )
     target_include_directories(SmartTransitionStateRoundTripTests PRIVATE src/smarttransition)
     target_compile_features(SmartTransitionStateRoundTripTests PRIVATE cxx_std_20)

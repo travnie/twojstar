@@ -3,6 +3,12 @@
 #include "SmartTransitionProcessor.h"
 #include "base/source/fstreamer.h"
 #include "public.sdk/source/common/memorystream.h"
+#include "public.sdk/source/vst/hosting/parameterchanges.h"
+#include "pluginterfaces/vst/vstspeaker.h"
+
+#include <algorithm>
+#include <array>
+#include <vector>
 
 #include <cmath>
 #include <cstdlib>
@@ -65,5 +71,109 @@ int main()
         return EXIT_FAILURE;
     }
     controller.terminate();
+
+    constexpr Steinberg::int32 kFrames = 6400;
+    std::vector<double> audio(kFrames, 0.25);
+    for (int i = 500; i < kFrames; ++i) audio[i] = -0.6;
+
+    const auto render = [&](int split, bool step, bool ramp)
+    {
+        SmartTransitionProcessor processor;
+        if (processor.initialize(nullptr) != Steinberg::kResultOk) std::abort();
+        auto arrangement = Steinberg::Vst::SpeakerArr::kMono;
+        auto outputArrangement = arrangement;
+        if (processor.setBusArrangements(&arrangement, 1, &outputArrangement, 1) != Steinberg::kResultOk)
+            std::abort();
+        Steinberg::Vst::ProcessSetup setup{};
+        setup.processMode = Steinberg::Vst::kRealtime;
+        setup.symbolicSampleSize = Steinberg::Vst::kSample64;
+        setup.sampleRate = 48000.0;
+        setup.maxSamplesPerBlock = kFrames;
+        if (processor.setupProcessing(setup) != Steinberg::kResultOk ||
+            processor.setActive(true) != Steinberg::kResultOk) std::abort();
+
+        std::vector<double> output(kFrames);
+        for (int begin = 0; begin < kFrames;)
+        {
+            const int end = split > 0 && begin == 0 ? split : kFrames;
+            const auto size = end - begin;
+            Steinberg::Vst::ParameterChanges changes;
+            Steinberg::int32 parameterIndex = 0;
+            auto* queue = changes.addParameterData(kSmartTransitionStrengthId, parameterIndex);
+            Steinberg::int32 pointIndex = 0;
+            if (step)
+            {
+                if (split == 0)
+                {
+                    queue->addPoint(5499, 1.0, pointIndex);
+                    queue->addPoint(5500, 0.0, pointIndex);
+                }
+                else if (begin == split)
+                    queue->addPoint(0, 0.0, pointIndex);
+            }
+            if (ramp)
+            {
+                if (split == 0)
+                    queue->addPoint(5999, 0.0, pointIndex);
+                else if (begin == 0)
+                    queue->addPoint(split - 1, 1.0 - static_cast<double>(split) / 6000.0, pointIndex);
+                else
+                    queue->addPoint(5999 - split, 0.0, pointIndex);
+            }
+
+            double* inputPtr = audio.data() + begin;
+            double* outputPtr = output.data() + begin;
+            Steinberg::Vst::AudioBusBuffers in{};
+            Steinberg::Vst::AudioBusBuffers out{};
+            in.numChannels = 1;
+            out.numChannels = 1;
+            in.channelBuffers64 = &inputPtr;
+            out.channelBuffers64 = &outputPtr;
+            Steinberg::Vst::ProcessData data{};
+            data.processMode = Steinberg::Vst::kRealtime;
+            data.symbolicSampleSize = Steinberg::Vst::kSample64;
+            data.numSamples = size;
+            data.numInputs = 1;
+            data.numOutputs = 1;
+            data.inputs = &in;
+            data.outputs = &out;
+            data.inputParameterChanges = (step || ramp) ? &changes : nullptr;
+            if (processor.process(data) != Steinberg::kResultOk) std::abort();
+            begin = end;
+        }
+        processor.setActive(false);
+        processor.terminate();
+        return output;
+    };
+
+    const auto wet = render(0, false, false);
+    const auto lateStep = render(0, true, false);
+    const auto splitStep = render(5500, true, false);
+    const auto fullRamp = render(0, false, true);
+    const auto splitRamp = render(3000, false, true);
+    bool repaired = false;
+    for (int i = 5290; i < 5330; ++i)
+    {
+        repaired |= std::abs(wet[i] - audio[i - 4800]) > 1e-6;
+        if (wet[i] != lateStep[i])
+        {
+            std::cerr << "Late automation altered audio before its sample offset\n";
+            return EXIT_FAILURE;
+        }
+    }
+    if (!repaired)
+    {
+        std::cerr << "Automation fixture did not exercise a repaired seam\n";
+        return EXIT_FAILURE;
+    }
+    for (int i = 0; i < kFrames; ++i)
+    {
+        if (std::abs(lateStep[i] - splitStep[i]) > 1e-12 ||
+            std::abs(fullRamp[i] - splitRamp[i]) > 1e-12)
+        {
+            std::cerr << "Strength automation depends on host block partition\n";
+            return EXIT_FAILURE;
+        }
+    }
     return EXIT_SUCCESS;
 }

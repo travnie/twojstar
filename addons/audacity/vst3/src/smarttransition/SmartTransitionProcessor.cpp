@@ -72,7 +72,10 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     Steinberg::IBStreamer streamer(state, kLittleEndian);
     double savedStrength = 1.0;
     if (!streamer.readDouble(savedStrength)) savedStrength = 1.0;
-    dsp_.setStrength(savedStrength);
+    const auto normalized = std::isfinite(savedStrength) ? std::clamp(savedStrength, 0.0, 1.0) : 1.0;
+    pendingStrength_.store(normalized, std::memory_order_relaxed);
+    publishedStrength_.store(normalized, std::memory_order_release);
+    restoreGeneration_.fetch_add(1, std::memory_order_release);
     return Steinberg::kResultOk;
 }
 
@@ -80,7 +83,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
 {
     if (!state) return Steinberg::kResultFalse;
     Steinberg::IBStreamer streamer(state, kLittleEndian);
-    return streamer.writeDouble(dsp_.strength()) ? Steinberg::kResultOk : Steinberg::kResultFalse;
+    return streamer.writeDouble(publishedStrength_.load(std::memory_order_acquire))
+        ? Steinberg::kResultOk : Steinberg::kResultFalse;
 }
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBool state)
@@ -233,12 +237,29 @@ bool SmartTransitionProcessor::processBlock(
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::ProcessData& data)
 {
-    auto* strengthQueue = findStrengthQueue(data.inputParameterChanges);
-
-    if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
+    const auto generation = restoreGeneration_.load(std::memory_order_acquire);
+    if (generation != appliedRestoreGeneration_)
     {
+        dsp_.setStrength(pendingStrength_.load(std::memory_order_acquire));
+        appliedRestoreGeneration_ = generation;
+    }
+
+    auto* strengthQueue = findStrengthQueue(data.inputParameterChanges);
+    if (data.numSamples <= 0)
+    {
+        // Hosts may flush only parameter changes without audio buffers.
+        if (strengthQueue && strengthQueue->getPointCount() > 0)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue value = 1.0;
+            if (strengthQueue->getPoint(strengthQueue->getPointCount() - 1, offset, value) == Steinberg::kResultTrue)
+                dsp_.setStrength(value);
+        }
+        publishedStrength_.store(dsp_.strength(), std::memory_order_release);
         return Steinberg::kResultOk;
     }
+    if (data.numInputs == 0 || data.numOutputs == 0)
+        return Steinberg::kResultOk;
 
     const auto channels = data.inputs[0].numChannels;
     if (channels < 1 || channels > 2 || data.outputs[0].numChannels != channels)
@@ -280,6 +301,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     }
 
     data.outputs[0].silenceFlags = allSilent ? silenceMask : unavailableOutputs;
+    publishedStrength_.store(dsp_.strength(), std::memory_order_release);
     return Steinberg::kResultOk;
 }
 

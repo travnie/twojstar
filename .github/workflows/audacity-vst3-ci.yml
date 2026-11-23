@@ -63,16 +63,17 @@ jobs:
         run: cmake --build addons/audacity/vst3/build-sdk --config Release --target TravnyAutoDeclip TravnySmartTransition validator AutoDeclipDspTests AutoDeclipParameterStateTests AutoDeclipControllerTests AutoDeclipStateRoundTripTests AutoDeclipProcessorTests DeClickDspTests DeHumDspTests DeNoiseDspTests SmartTransitionDspTests SmartTransitionStateRoundTripTests
       - name: Run DSP tests in SDK build
         run: ctest --test-dir addons/audacity/vst3/build-sdk -C Release --output-on-failure
-      - name: Run Steinberg validator on Auto Declip
+      - name: Run Steinberg validator on both VST3 effects
         shell: bash
         run: |
           set -euo pipefail
           validator="addons/audacity/vst3/build-sdk/bin/Release/validator"
-          plugin="addons/audacity/vst3/build-sdk/VST3/Release/TravnyAutoDeclip.vst3"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             validator="${validator}.exe"
           fi
-          "$validator" "$plugin"
+          for plugin in TravnyAutoDeclip TravnySmartTransition; do
+            "$validator" "addons/audacity/vst3/build-sdk/VST3/Release/${plugin}.vst3"
+          done
 
       - name: Package Windows Auto Declip VST3
         if: runner.os == 'Windows'

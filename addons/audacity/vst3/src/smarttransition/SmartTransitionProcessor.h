@@ -5,6 +5,8 @@
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
+#include <atomic>
+
 namespace Travny::Vst3 {
 
 class SmartTransitionProcessor final : public Steinberg::Vst::AudioEffect
@@ -43,6 +45,12 @@ private:
         Steinberg::uint64 inputSilenceFlags,
         Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept;
 
+    // State callbacks may run concurrently with the audio thread.
+    // Only process() touches DSP strength; atomics transfer restored state.
+    std::atomic<double> pendingStrength_{1.0};
+    std::atomic<double> publishedStrength_{1.0};
+    std::atomic<Steinberg::uint64> restoreGeneration_{0};
+    Steinberg::uint64 appliedRestoreGeneration_{0};
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
 
