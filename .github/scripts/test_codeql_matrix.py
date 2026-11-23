@@ -47,6 +47,19 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_docs_only_skips_analysis(self):
         self.assertEqual(names(["README.md", "plugins/spacemolt/README.md"]), [])
 
+    def test_keyboard_readme_does_not_build(self):
+        self.assertEqual(names(["intent-keyboard/README.md"]), [])
+
+    def test_deletion_passes_through_planner(self):
+        from unittest.mock import patch
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.return_value.stdout = "xiaomi-adb-tools/src/main/kotlin/Old.kt\\n"
+            selected = codeql_matrix.plan("pull_request", "abc123")
+            self.assertEqual([row["language"] for row in selected], ["java-kotlin"])
+            args = run.call_args.args[0]
+            self.assertIn("--no-renames", args)
+            self.assertFalse(any(arg.startswith("--diff-filter") for arg in args))
+
     def test_full_scans_outside_pull_requests(self):
         for event in ("push", "schedule", "workflow_dispatch"):
             self.assertEqual(len(codeql_matrix.plan(event, "")), 7)
