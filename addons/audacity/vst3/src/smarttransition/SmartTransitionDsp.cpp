@@ -541,7 +541,13 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         // against coherent reinforcement and Hermite overshoot.
         const auto dryGain = std::cos(0.5 * kPi * bridgeWeight);
         const auto wetGain = std::sin(0.5 * kPi * bridgeWeight);
-        repaired = std::clamp(corrected * dryGain + bridge * wetGain, -peakLimit, peakLimit);
+        const auto mixed = corrected * dryGain + bridge * wetGain;
+        // Feather the power-law mix into unchanged edges. Pure equal-power
+        // reinforcement at the first sample creates a new onset click.
+        const auto edge = std::clamp(std::min(t, 1.0 - t) / 0.25, 0.0, 1.0);
+        const auto edgeTaper = edge * edge * (3.0 - 2.0 * edge);
+        repaired = std::clamp(corrected + edgeTaper * (mixed - corrected),
+            -peakLimit, peakLimit);
     }
     // This sample left the lookahead buffer later than it entered.
     // Use Strength captured alongside its source sample, not the current input.
