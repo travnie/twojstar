@@ -276,7 +276,7 @@ void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int6
         candidate.anchor - clusterSeedAnchor_ > static_cast<std::int64_t>(competitionRadius_))
     {
         finalizeCluster(currentInputIndex);
-        if (planCommitted_)
+        if (planCommitted_ || rejectedByCap_)
         {
             return;
         }
