@@ -181,6 +181,10 @@
       navigate(false);
       return;
     }
+    if (highlight.hidden) {
+      revealMatch(match);
+      return;
+    }
     const changed = applyReplacement(match.index, match.index + match[0].length, replacement.value);
     navigate(false);
     status.textContent = changed ? "Replaced 1 match" : "Match already has that text";

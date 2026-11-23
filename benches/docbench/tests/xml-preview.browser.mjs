@@ -68,6 +68,14 @@ frame.addEventListener("load", async () => {
       || doc.getElementById("editor-match-highlight").hidden) {
       throw Error("Repeated Find must keep focus and reveal the next match without editing");
     }
+    more.querySelector("summary").click();
+    doc.getElementById("wrap-editor-button").click();
+    await wait(0);
+    doc.getElementById("replace-value").value = "replacement";
+    doc.getElementById("replace-one").click();
+    if (editor.value !== "a. b A. c a." || doc.getElementById("editor-match-highlight").hidden) {
+      throw Error("Replace must reveal a hidden match again after wrapping changes");
+    }
     doc.getElementById("find-match-case").click();
     doc.getElementById("replace-value").value = "$&";
     doc.getElementById("replace-all").click();
