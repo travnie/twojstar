@@ -77,7 +77,7 @@ int main()
     std::vector<double> audio(kFrames, 0.25);
     for (int i = 500; i < kFrames; ++i) audio[i] = -0.6;
 
-    const auto render = [&](int split, bool step, bool ramp)
+    const auto render = [&](int split, bool step, bool ramp, double restoredStrength = 1.0)
     {
         auto processor = std::make_unique<SmartTransitionProcessor>();
         if (processor->initialize(nullptr) != Steinberg::kResultOk) std::abort();
@@ -95,7 +95,7 @@ int main()
 
         Steinberg::MemoryStream restoredState;
         Steinberg::IBStreamer restoredWriter(&restoredState, kLittleEndian);
-        if (!restoredWriter.writeDouble(1.0)) std::abort();
+        if (!restoredWriter.writeDouble(restoredStrength)) std::abort();
         restoredState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         if (processor->setState(&restoredState) != Steinberg::kResultOk) std::abort();
 
@@ -155,8 +155,9 @@ int main()
         savedState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         Steinberg::IBStreamer savedReader(&savedState, kLittleEndian);
         double savedStrength = -1.0;
-        const auto expected = (step || ramp) ? 0.0 : 1.0;
-        if (!savedReader.readDouble(savedStrength) || std::abs(savedStrength - expected) > 1e-12)
+        const auto expected = (step || ramp) ? 0.0 : restoredStrength;
+        if (!savedReader.readDouble(savedStrength) || !std::isfinite(savedStrength) ||
+            std::abs(savedStrength - expected) > 1e-12)
         {
             std::cerr << "Saved state ignored processed Strength automation\n";
             std::abort();
@@ -176,7 +177,8 @@ int main()
         if (processor->getState(&flushedState) != Steinberg::kResultOk) std::abort();
         flushedState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         Steinberg::IBStreamer flushedReader(&flushedState, kLittleEndian);
-        if (!flushedReader.readDouble(savedStrength) || std::abs(savedStrength - 0.25) > 1e-12)
+        if (!flushedReader.readDouble(savedStrength) || !std::isfinite(savedStrength) ||
+            std::abs(savedStrength - 0.25) > 1e-12)
         {
             std::cerr << "Parameter-only Strength flush was not persisted\n";
             std::abort();
@@ -187,6 +189,7 @@ int main()
     };
 
     const auto wet = render(0, false, false);
+    const auto restoredHalf = render(0, false, false, 0.5);
     const auto lateStep = render(0, true, false);
     const auto splitStep = render(3500, true, false);
     const auto fullRamp = render(0, false, true);
@@ -200,6 +203,11 @@ int main()
         if (wet[i] != lateStep[i])
         {
             std::cerr << "Late Strength automation changed an earlier source sample\n";
+            return EXIT_FAILURE;
+        }
+        if (std::abs(restoredHalf[i] - (dry + 0.5 * (wet[i] - dry))) > 1e-11)
+        {
+            std::cerr << "Restored 50% Strength did not affect unautomated audio\n";
             return EXIT_FAILURE;
         }
 
