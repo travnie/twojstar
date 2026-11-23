@@ -43,7 +43,8 @@ private:
         Steinberg::int32 channels,
         Steinberg::int32 samples,
         Steinberg::uint64 inputSilenceFlags,
-        Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept;
+        Steinberg::Vst::IParamValueQueue* strengthQueue,
+        Steinberg::Vst::IParamValueQueue* maxTransitionQueue) noexcept;
 
     // State callbacks may run concurrently with the audio thread.
     // Only process() touches DSP strength; atomics transfer restored state.

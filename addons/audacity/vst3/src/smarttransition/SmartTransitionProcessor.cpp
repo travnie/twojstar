@@ -200,7 +200,8 @@ bool SmartTransitionProcessor::processBlock(
     Steinberg::int32 channels,
     Steinberg::int32 samples,
     Steinberg::uint64 inputSilenceFlags,
-    Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept
+    Steinberg::Vst::IParamValueQueue* strengthQueue,
+    Steinberg::Vst::IParamValueQueue* maxTransitionQueue) noexcept
 {
     // Process continuous VST3 automation at its sample offsets, not per block.
     auto previousOffset = Steinberg::int32{-1};
@@ -228,11 +229,41 @@ bool SmartTransitionProcessor::processBlock(
     };
     advancePoint();
 
+    // Discrete 1/2/3/4 ms automation is a step at the original source offset.
+    // DSP retains each value alongside its source sample until the seam commits.
+    Steinberg::int32 maxPointIndex = 0;
+    Steinberg::int32 maxNextOffset = 0;
+    double maxNextValue = 1.0;
+    bool hasNextMax = false;
+    const auto maxPointCount = maxTransitionQueue ? maxTransitionQueue->getPointCount() : 0;
+    const auto advanceMaxPoint = [&]() noexcept
+    {
+        hasNextMax = false;
+        while (maxPointIndex < maxPointCount)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue normalized = 1.0;
+            if (maxTransitionQueue->getPoint(maxPointIndex++, offset, normalized) != Steinberg::kResultTrue ||
+                offset < 0 || offset >= samples || offset < maxNextOffset)
+                continue;
+            maxNextOffset = offset;
+            maxNextValue = std::isfinite(normalized) ? std::clamp(normalized, 0.0, 1.0) : 1.0;
+            hasNextMax = true;
+            break;
+        }
+    };
+    advanceMaxPoint();
+
     bool allSilent = true;
     const auto channelCount = std::clamp<Steinberg::int32>(channels, 1, 2);
 
     for (Steinberg::int32 sample = 0; sample < samples; ++sample)
     {
+        while (hasNextMax && maxNextOffset <= sample)
+        {
+            dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxNextValue);
+            advanceMaxPoint();
+        }
         while (hasNext && nextOffset <= sample)
         {
             previousOffset = nextOffset;
@@ -279,31 +310,28 @@ bool SmartTransitionProcessor::processBlock(
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::ProcessData& data)
 {
-    const auto generation = restoreGeneration_.load(std::memory_order_acquire);
-    if (generation != appliedRestoreGeneration_)
+    // Read both restored settings from one stable generation. A newer
+    // setState() must not split the Strength and Max transition pair.
+    Steinberg::uint64 generation = 0;
+    for (;;)
     {
-        dsp_.setStrength(pendingStrength_.load(std::memory_order_acquire));
-        dsp_.setMaxTransitionMilliseconds(
-            1.0 + 3.0 * pendingMaxTransition_.load(std::memory_order_acquire));
+        const auto start = restoreEpoch_.load(std::memory_order_acquire);
+        if ((start & 1U) != 0) continue;
+        generation = restoreGeneration_.load(std::memory_order_acquire);
+        if (generation == appliedRestoreGeneration_) break;
+        const auto strength = pendingStrength_.load(std::memory_order_relaxed);
+        const auto maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
+        if (start != restoreEpoch_.load(std::memory_order_acquire) ||
+            generation != restoreGeneration_.load(std::memory_order_acquire))
+            continue;
+        dsp_.setStrength(strength);
+        dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * maxTransition);
         appliedRestoreGeneration_ = generation;
+        break;
     }
 
     auto* strengthQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionStrengthId);
-    // Non-automatable Max transition is applied at block boundaries.
-    if (auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId))
-    {
-        for (Steinberg::int32 i = 0; i < maxQueue->getPointCount(); ++i)
-        {
-            Steinberg::int32 offset = 0;
-            Steinberg::Vst::ParamValue normalized = 1.0;
-            if (maxQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue &&
-                offset >= 0 && (data.numSamples <= 0 || offset < data.numSamples))
-            {
-                dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * (std::isfinite(normalized)
-                    ? std::clamp(normalized, 0.0, 1.0) : 1.0));
-            }
-        }
-    }
+    auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId);
     if (data.numSamples <= 0)
     {
         // Hosts may flush only parameter changes without audio buffers.
@@ -313,6 +341,17 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             Steinberg::Vst::ParamValue value = 1.0;
             if (strengthQueue->getPoint(strengthQueue->getPointCount() - 1, offset, value) == Steinberg::kResultTrue)
                 dsp_.setStrength(value);
+        }
+        if (maxQueue)
+        {
+            for (Steinberg::int32 i = 0; i < maxQueue->getPointCount(); ++i)
+            {
+                Steinberg::int32 offset = 0;
+                Steinberg::Vst::ParamValue normalized = 1.0;
+                if (maxQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue && offset >= 0)
+                    dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * (std::isfinite(normalized)
+                        ? std::clamp(normalized, 0.0, 1.0) : 1.0));
+            }
         }
         publishAudioState(generation);
         return Steinberg::kResultOk;
@@ -340,7 +379,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             channels,
             data.numSamples,
             inputSilenceFlags,
-            strengthQueue);
+            strengthQueue,
+            maxQueue);
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
@@ -352,7 +392,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             channels,
             data.numSamples,
             inputSilenceFlags,
-            strengthQueue);
+            strengthQueue,
+            maxQueue);
     }
     else
     {

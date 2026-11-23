@@ -19,7 +19,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::initialize(Steinberg::F
         0.0, 100.0, 100.0, 0, Steinberg::Vst::ParameterInfo::kCanAutomate));
     parameters.addParameter(new Steinberg::Vst::RangeParameter(
         STR16("Max transition"), kSmartTransitionMaxTransitionId, STR16("ms"),
-        1.0, 4.0, 4.0, 3, 0));
+        1.0, 4.0, 4.0, 3, Steinberg::Vst::ParameterInfo::kCanAutomate));
     return Steinberg::kResultOk;
 }
 

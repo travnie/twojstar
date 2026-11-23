@@ -38,13 +38,13 @@ int main()
         {
             visibleMaxTransition = info.stepCount == 3 &&
                 info.defaultNormalizedValue == 1.0 &&
-                (info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate) == 0 &&
+                (info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate) != 0 &&
                 (info.flags & Steinberg::Vst::ParameterInfo::kIsHidden) == 0;
         }
     }
     if (!visibleMaxTransition)
     {
-        std::cerr << "Max transition must be visible and non-automatable\n";
+        std::cerr << "Max transition must be visible and automatable\n";
         return EXIT_FAILURE;
     }
     if (!visibleStrength) { std::cerr << "Strength must be visible and automatable\n"; return EXIT_FAILURE; }
@@ -105,7 +105,7 @@ int main()
     for (int i = 500; i < kFrames; ++i) audio[i] = -0.6;
 
     const auto render = [&](int split, bool step, bool ramp, double restoredStrength = 1.0,
-                            double restoredMax = 1.0)
+                            double restoredMax = 1.0, int maxStepAt = -1)
     {
         auto processor = std::make_unique<SmartTransitionProcessor>();
         if (processor->initialize(nullptr) != Steinberg::kResultOk) std::abort();
@@ -147,6 +147,11 @@ int main()
                 else if (begin == split)
                     queue->addPoint(0, 0.0, pointIndex);
             }
+            if (maxStepAt >= begin && maxStepAt < end)
+            {
+                auto* maxQueue = changes.addParameterData(kSmartTransitionMaxTransitionId, parameterIndex);
+                maxQueue->addPoint(maxStepAt - begin, 0.0, pointIndex);
+            }
             if (ramp)
             {
                 if (split == 0)
@@ -173,7 +178,7 @@ int main()
             data.numOutputs = 1;
             data.inputs = &in;
             data.outputs = &out;
-            data.inputParameterChanges = (step || ramp) ? &changes : nullptr;
+            data.inputParameterChanges = (step || ramp || maxStepAt >= 0) ? &changes : nullptr;
             if (processor->process(data) != Steinberg::kResultOk) std::abort();
             begin = end;
         }
@@ -193,9 +198,10 @@ int main()
         double savedStrength = -1.0;
         const auto expected = (step || ramp) ? 0.0 : restoredStrength;
         double savedMax = -1.0;
+        const auto expectedMax = maxStepAt >= 0 ? 0.0 : restoredMax;
         if (!savedReader.readDouble(savedStrength) || !savedReader.readDouble(savedMax) ||
             !std::isfinite(savedStrength) || std::abs(savedStrength - expected) > 1e-12 ||
-            std::abs(savedMax - restoredMax) > 1e-12)
+            std::abs(savedMax - expectedMax) > 1e-12)
         {
             std::cerr << "Saved state ignored processed Strength automation\n";
             std::abort();
@@ -232,10 +238,18 @@ int main()
     const auto wet = render(0, false, false);
     const auto restoredHalf = render(0, false, false, 0.5);
     const auto capped = render(0, false, false, 1.0, 0.0);
+    const auto capBefore = render(0, false, false, 1.0, 1.0, 300);
+    const auto capBeforeSplit = render(300, false, false, 1.0, 1.0, 300);
+    const auto capAfter = render(0, false, false, 1.0, 1.0, 700);
     const auto lateStep = render(0, true, false);
     const auto splitStep = render(3500, true, false);
     const auto fullRamp = render(0, false, true);
     const auto splitRamp = render(3000, false, true);
+    if (capBefore != capped || capBeforeSplit != capped || capAfter != wet)
+    {
+        std::cerr << "Max transition automation lost source sample alignment or block determinism\n";
+        return EXIT_FAILURE;
+    }
     bool capChangesAudio = false;
     for (int i = 5290; i < 5330; ++i)
     {
@@ -298,12 +312,18 @@ int main()
     const auto lateStepSplit = render(3500, true, false);
     const auto lateRampOneBlock = render(0, false, true);
     const auto lateRampSplit = render(3000, false, true);
+    const auto capAfterLateSeam = render(0, false, false, 1.0, 1.0, 5300);
     bool lateRepair = false;
     for (int i = 9790; i < 9830; ++i)
     {
         const auto sourceIndex = i - 4800;
         const auto dry = audio[sourceIndex];
         lateRepair |= std::abs(lateWet[i] - dry) > 1e-6;
+        if (capAfterLateSeam[i] != lateWet[i])
+        {
+            std::cerr << "Max transition automation drifted forward by lookahead latency\n";
+            return EXIT_FAILURE;
+        }
         if (std::abs(lateStepOneBlock[i] - dry) > 1e-12 ||
             std::abs(lateStepSplit[i] - dry) > 1e-12)
         {
