@@ -493,12 +493,13 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
                 // Compare both complete renderings, including both edges,
                 // before accepting the spectral correction. A good ordinary
                 // fade must never gain a stronger transient from Repair Auto.
-                double baselinePeak = 0.0;
-                double repairedPeak = 0.0;
+                bool acceptable = true;
                 for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
                 {
                     if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
                         continue;
+                    double baselinePeak = 0.0;
+                    double repairedPeak = 0.0;
                     plan_.repairMode = SmartRepairMode::None;
                     auto baselinePrevious = renderSample(channel, committedAnchor_ - 9);
                     plan_.repairMode = SmartRepairMode::Spectral;
@@ -517,8 +518,10 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
                         baselinePrevious = baseline;
                         repairedPrevious = repaired;
                     }
+                    if (repairedPeak > baselinePeak * 1.05 + 0.005)
+                        acceptable = false;
                 }
-                if (repairedPeak > baselinePeak * 1.05 + 0.005)
+                if (!acceptable)
                 {
                     plan_.repairMode = SmartRepairMode::None;
                     plan_.repairStartOffsetSamples = 0;

@@ -200,6 +200,40 @@ void testConservativeSpectralRepair()
         require(autoMax <= dryMax * 1.05 + 0.005,
             "Repair Auto sharpened an already-smooth join");
     }
+    // Positive control: some discontinuities must benefit from spectral
+    // repair. Otherwise a permanently bypassed Auto implementation passes.
+    bool acceptedSpectral = false;
+    for (int frequency : {125, 256, 500, 703})
+    {
+        if (acceptedSpectral) break;
+        for (int leftDegrees : {15, 60, 135, 225, 300})
+        {
+            if (acceptedSpectral) break;
+            for (int rightDegrees : {15, 90, 165, 240, 315})
+            {
+                std::vector<Frame> signal(1000);
+                for (std::size_t i = 0; i < signal.size(); ++i)
+                {
+                    const auto degrees = i < 500 ? leftDegrees : rightDegrees;
+                    const auto phase = degrees * pi / 180.0;
+                    const auto value = 0.9 * std::sin(2.0 * pi * frequency *
+                        (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+                    signal[i] = {value, value * 0.8};
+                }
+                const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0,
+                    48000.0, SmartTransitionMode::Auto, true);
+                if (result.plan.repairMode == SmartRepairMode::Spectral)
+                {
+                    const auto without = render(signal, 2);
+                    require(result.output != without.output,
+                        "Accepted spectral plan was not rendered");
+                    acceptedSpectral = true;
+                    break;
+                }
+            }
+        }
+    }
+    require(acceptedSpectral, "Repair Auto never accepted a spectral improvement");
     const auto clean = cleanSine(1400);
     require(render(clean, 2, {}, 1.0, 4.0, 48000.0,
         SmartTransitionMode::Auto, true).output == clean, "Repair changed clean signal");
