@@ -19,6 +19,14 @@ const count = getNode("#files-count");
 const clearButton = getNode("#files-clear");
 const removeButton = getNode("#files-remove");
 const previewButton = getNode("#files-preview-open");
+const inspectButton = getNode("#files-inspect-open");
+const inspectorClose = getNode("#files-inspect-close");
+const inspector = getNode("#files-inspector");
+const inspectorHome = inspector.parentElement;
+const inspectorSheet = getNode("#files-inspector-sheet");
+const previewCaption = getNode("#files-preview-caption");
+const inspectorViewport = matchMedia("(max-width: 800px)");
+const filesPanel = getNode("#files-workspace");
 const toolButton = getNode("#files-open-tool");
 const audioOpenButton = getNode("#files-play-audio");
 const audioDock = getNode("#files-audio-dock");
@@ -89,6 +97,15 @@ function element(tag, className, value) {
 function setStatus(message, failed = false) {
   status.textContent = message;
   status.classList.toggle("files-error", failed);
+}
+
+function syncInspectorLayout() {
+  const useSheet = inspectorViewport.matches;
+  if (!useSheet && inspectorSheet.open) inspectorSheet.close();
+  (useSheet ? inspectorSheet : inspectorHome).append(inspector);
+  inspectButton.hidden = !useSheet;
+  inspectorClose.hidden = !useSheet;
+  previewCaption.hidden = useSheet;
 }
 
 function closeAudioDock() {
@@ -214,6 +231,7 @@ function renderList() {
   clearButton.disabled = store.count() === 0;
   removeButton.disabled = selectedCount === 0;
   previewButton.disabled = !store.activeId();
+  inspectButton.disabled = previewButton.disabled;
   selectVisible.disabled = !ids.length;
   packZipButton.disabled = selectedCount === 0 || Boolean(zipController);
   compressionSelect.disabled = Boolean(zipController);
@@ -526,6 +544,10 @@ function playAudioDock() {
   preview.querySelector("audio")?.pause();
   dialogBody.querySelector("audio")?.pause();
   const started = audioDockPlayer.play();
+  if (inspectorSheet.open) {
+    inspectorSheet.close();
+    audioDockPlayer.focus({ preventScroll: true });
+  }
   if (started && typeof started.catch === "function") {
     void started.catch(() => {
       if (audioDockId === entry.id) audioDockStatus.textContent = "Press Play to start audio.";
@@ -703,6 +725,7 @@ async function showActive() {
   releasePreview();
   metadata.replaceChildren();
   if (!activeId) {
+    if (inspectorSheet.open) inspectorSheet.close();
     heading.removeAttribute("data-i18n-skip");
     heading.textContent = "Choose a file";
     setStatus("Files remain on this device.");
@@ -915,6 +938,23 @@ folderInput.addEventListener("change", () => {
 clearButton.addEventListener("click", () => store.clear());
 removeButton.addEventListener("click", () => store.remove(store.selectedIds()));
 previewButton.addEventListener("click", openDialog);
+if (typeof inspectorSheet.showModal === "function") {
+  inspectButton.addEventListener("click", () => {
+    if (filesPanel.hidden || inspectButton.hidden || inspectButton.disabled || inspectorSheet.open) return;
+    inspectButton.focus({ preventScroll: true });
+    inspectorSheet.showModal();
+    inspectorSheet.scrollTop = 0;
+  });
+  inspectorClose.addEventListener("click", () => inspectorSheet.close());
+  inspectorSheet.addEventListener("click", (event) => {
+    if (event.target === inspectorSheet && event.clientY < inspectorSheet.getBoundingClientRect().top) {
+      inspectorSheet.close();
+    }
+  });
+  if (inspectorViewport.addEventListener) inspectorViewport.addEventListener("change", syncInspectorLayout);
+  else inspectorViewport.addListener(syncInspectorLayout);
+  syncInspectorLayout();
+}
 getNode("#files-dialog-close").addEventListener("click", () => dialog.close());
 dialogPrevious.addEventListener("click", () => navigateDialog(-1));
 dialogNext.addEventListener("click", () => navigateDialog(1));
@@ -965,8 +1005,8 @@ store.subscribe(() => {
   renderList();
   if (activeRendered !== store.activeId()) showActive();
 });
-const filesPanel = getNode("#files-workspace");
 new MutationObserver(() => {
+  if (filesPanel.hidden && inspectorSheet.open) inspectorSheet.close();
   if (filesPanel.hidden && audioDockId) closeAudioDock();
   if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
