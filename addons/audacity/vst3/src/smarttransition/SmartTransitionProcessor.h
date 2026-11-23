@@ -45,16 +45,19 @@ private:
         Steinberg::uint64 inputSilenceFlags,
         Steinberg::Vst::IParamValueQueue* strengthQueue,
         Steinberg::Vst::IParamValueQueue* maxTransitionQueue,
-        Steinberg::Vst::IParamValueQueue* modeQueue) noexcept;
+        Steinberg::Vst::IParamValueQueue* modeQueue,
+        Steinberg::Vst::IParamValueQueue* repairQueue) noexcept;
 
     // State callbacks may run concurrently with the audio thread.
     // Only process() touches DSP strength; atomics transfer restored state.
     std::atomic<double> pendingStrength_{1.0};
     std::atomic<double> pendingMaxTransition_{1.0};
     std::atomic<double> pendingMode_{0.0};
+    std::atomic<double> pendingRepair_{0.0};
     std::atomic<double> audioStrength_{1.0};
     std::atomic<double> audioMaxTransition_{1.0};
     std::atomic<double> audioMode_{0.0};
+    std::atomic<double> audioRepair_{0.0};
     std::atomic<Steinberg::uint64> restoreGeneration_{0};
     std::atomic<Steinberg::uint64> audioGeneration_{0};
     // All normalized values form one state snapshot. Single-writer epochs

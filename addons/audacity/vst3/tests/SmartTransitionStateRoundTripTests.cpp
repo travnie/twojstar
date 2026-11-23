@@ -25,6 +25,7 @@ int main()
     bool visibleStrength = false;
     bool visibleMaxTransition = false;
     bool visibleMode = false;
+    bool visibleRepair = false;
     for (Steinberg::int32 i = 0; i < controller.getParameterCount(); ++i)
     {
         if (controller.getParameterInfo(i, info) != Steinberg::kResultOk) continue;
@@ -42,6 +43,13 @@ int main()
                 (info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate) != 0 &&
                 (info.flags & Steinberg::Vst::ParameterInfo::kIsHidden) == 0;
         }
+        if (info.id == kSmartTransitionRepairId)
+        {
+            visibleRepair = info.stepCount == 1 && info.defaultNormalizedValue == 0.0 &&
+                (info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate) != 0 &&
+                (info.flags & Steinberg::Vst::ParameterInfo::kIsList) != 0 &&
+                (info.flags & Steinberg::Vst::ParameterInfo::kIsHidden) == 0;
+        }
         if (info.id == kSmartTransitionModeId)
         {
             visibleMode = info.stepCount == 3 && info.defaultNormalizedValue == 0.0 &&
@@ -50,6 +58,7 @@ int main()
                 (info.flags & Steinberg::Vst::ParameterInfo::kIsHidden) == 0;
         }
     }
+    if (!visibleRepair) { std::cerr << "Repair list must be visible and automatable\n"; return EXIT_FAILURE; }
     if (!visibleMode) { std::cerr << "Mode list must be visible and automatable\n"; return EXIT_FAILURE; }
     if (!visibleMaxTransition)
     {
@@ -80,6 +89,7 @@ int main()
     restored->terminate();
     controllerState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
     if (controller.setComponentState(&controllerState) != Steinberg::kResultOk) return EXIT_FAILURE;
+    if (controller.getParamNormalized(kSmartTransitionRepairId) != 0.0) return EXIT_FAILURE;
     if (std::abs(controller.getParamNormalized(kSmartTransitionMaxTransitionId) - (1.0 / 3.0)) > 1e-9)
     {
         std::cerr << "Max transition lost during state round-trip\n";
@@ -96,11 +106,25 @@ int main()
         return EXIT_FAILURE;
     }
 
+    Steinberg::MemoryStream autoRepairState;
+    Steinberg::IBStreamer autoRepairWriter(&autoRepairState, kLittleEndian);
+    if (!autoRepairWriter.writeDouble(1.0) || !autoRepairWriter.writeDouble(1.0) ||
+        !autoRepairWriter.writeDouble(0.0) || !autoRepairWriter.writeDouble(1.0))
+        return EXIT_FAILURE;
+    autoRepairState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+    if (controller.setComponentState(&autoRepairState) != Steinberg::kResultOk ||
+        controller.getParamNormalized(kSmartTransitionRepairId) != 1.0)
+    {
+        std::cerr << "Repair Auto preset did not restore host UI state\n";
+        return EXIT_FAILURE;
+    }
+
     Steinberg::MemoryStream legacyEmptyState;
     if (controller.setComponentState(&legacyEmptyState) != Steinberg::kResultOk ||
         controller.getParamNormalized(kSmartTransitionStrengthId) != 1.0 ||
         controller.getParamNormalized(kSmartTransitionMaxTransitionId) != 1.0 ||
-        controller.getParamNormalized(kSmartTransitionModeId) != 0.0)
+        controller.getParamNormalized(kSmartTransitionModeId) != 0.0 ||
+        controller.getParamNormalized(kSmartTransitionRepairId) != 0.0)
     {
         std::cerr << "Legacy empty state must restore defaults\n";
         return EXIT_FAILURE;
@@ -113,7 +137,8 @@ int main()
     if (controller.setComponentState(&legacyStrength) != Steinberg::kResultOk ||
         controller.getParamNormalized(kSmartTransitionStrengthId) != 0.75 ||
         controller.getParamNormalized(kSmartTransitionMaxTransitionId) != 1.0 ||
-        controller.getParamNormalized(kSmartTransitionModeId) != 0.0)
+        controller.getParamNormalized(kSmartTransitionModeId) != 0.0 ||
+        controller.getParamNormalized(kSmartTransitionRepairId) != 0.0)
         return EXIT_FAILURE;
     Steinberg::MemoryStream previousState;
     Steinberg::IBStreamer previousWriter(&previousState, kLittleEndian);
@@ -133,7 +158,9 @@ int main()
                             double restoredMax = 1.0, int maxStepAt = -1,
                             double maxStepNormalized = 0.0,
                             double restoredMode = 0.0, int modeStepAt = -1,
-                            double modeStepNormalized = 0.0)
+                            double modeStepNormalized = 0.0,
+                            double restoredRepair = 0.0, int repairStepAt = -1,
+                            double repairStepNormalized = 1.0)
     {
         auto processor = std::make_unique<SmartTransitionProcessor>();
         if (processor->initialize(nullptr) != Steinberg::kResultOk) std::abort();
@@ -153,7 +180,8 @@ int main()
         Steinberg::IBStreamer restoredWriter(&restoredState, kLittleEndian);
         if (!restoredWriter.writeDouble(restoredStrength) ||
             !restoredWriter.writeDouble(restoredMax) ||
-            !restoredWriter.writeDouble(restoredMode)) std::abort();
+            !restoredWriter.writeDouble(restoredMode) ||
+            !restoredWriter.writeDouble(restoredRepair)) std::abort();
         restoredState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         if (processor->setState(&restoredState) != Steinberg::kResultOk) std::abort();
 
@@ -186,6 +214,11 @@ int main()
                 auto* modeQueue = changes.addParameterData(kSmartTransitionModeId, parameterIndex);
                 modeQueue->addPoint(modeStepAt - begin, modeStepNormalized, pointIndex);
             }
+            if (repairStepAt >= begin && repairStepAt < end)
+            {
+                auto* repairQueue = changes.addParameterData(kSmartTransitionRepairId, parameterIndex);
+                repairQueue->addPoint(repairStepAt - begin, repairStepNormalized, pointIndex);
+            }
             if (ramp)
             {
                 if (split == 0)
@@ -212,7 +245,7 @@ int main()
             data.numOutputs = 1;
             data.inputs = &in;
             data.outputs = &out;
-            data.inputParameterChanges = (step || ramp || maxStepAt >= 0 || modeStepAt >= 0)
+            data.inputParameterChanges = (step || ramp || maxStepAt >= 0 || modeStepAt >= 0 || repairStepAt >= 0)
                 ? &changes : nullptr;
             if (processor->process(data) != Steinberg::kResultOk) std::abort();
             begin = end;
@@ -242,11 +275,15 @@ int main()
             ? static_cast<double>(std::min(3, static_cast<int>(
                 std::clamp(modeStepNormalized, 0.0, 1.0) * 4.0))) / 3.0
             : restoredMode;
+        double savedRepair = -1.0;
+        const auto expectedRepair = repairStepAt >= 0
+            ? (repairStepNormalized >= 0.5 ? 1.0 : 0.0) : restoredRepair;
         if (!savedReader.readDouble(savedStrength) || !savedReader.readDouble(savedMax) ||
-            !savedReader.readDouble(savedMode) ||
+            !savedReader.readDouble(savedMode) || !savedReader.readDouble(savedRepair) ||
             !std::isfinite(savedStrength) || std::abs(savedStrength - expected) > 1e-12 ||
             std::abs(savedMax - expectedMax) > 1e-12 ||
-            std::abs(savedMode - expectedMode) > 1e-12)
+            std::abs(savedMode - expectedMode) > 1e-12 ||
+            savedRepair != expectedRepair)
         {
             std::cerr << "Saved state ignored processed Strength automation\n";
             std::abort();
@@ -262,6 +299,8 @@ int main()
         maxQueue->addPoint(0, 0.0, pointIndex);
         auto* modeQueue = flushChanges.addParameterData(kSmartTransitionModeId, parameterIndex);
         modeQueue->addPoint(0, 1.0, pointIndex);
+        auto* repairQueue = flushChanges.addParameterData(kSmartTransitionRepairId, parameterIndex);
+        repairQueue->addPoint(0, 1.0, pointIndex);
         Steinberg::Vst::ProcessData flush{};
         flush.numSamples = 0;
         flush.inputParameterChanges = &flushChanges;
@@ -271,9 +310,9 @@ int main()
         flushedState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
         Steinberg::IBStreamer flushedReader(&flushedState, kLittleEndian);
         if (!flushedReader.readDouble(savedStrength) || !flushedReader.readDouble(savedMax) ||
-            !flushedReader.readDouble(savedMode) ||
+            !flushedReader.readDouble(savedMode) || !flushedReader.readDouble(savedRepair) ||
             !std::isfinite(savedStrength) || std::abs(savedStrength - 0.25) > 1e-12 ||
-            savedMax != 0.0 || savedMode != 1.0)
+            savedMax != 0.0 || savedMode != 1.0 || savedRepair != 1.0)
         {
             std::cerr << "Parameter-only Strength flush was not persisted\n";
             std::abort();
@@ -284,6 +323,22 @@ int main()
     };
 
     const auto wet = render(0, false, false);
+    const auto spectral = render(0, false, false, 1.0, 1.0, -1, 0.0,
+        0.0, -1, 0.0, 1.0);
+    const auto spectralBefore = render(0, false, false, 1.0, 1.0, -1, 0.0,
+        0.0, -1, 0.0, 0.0, 300, 1.0);
+    const auto spectralBeforeSplit = render(300, false, false, 1.0, 1.0, -1, 0.0,
+        0.0, -1, 0.0, 0.0, 300, 1.0);
+    const auto spectralAfter = render(0, false, false, 1.0, 1.0, -1, 0.0,
+        0.0, -1, 0.0, 0.0, 700, 1.0);
+    // Quality gate may reject Auto's spectral proposal for this fixture.
+    // Source-aligned scheduling must still be partition-independent.
+    if (spectralBefore != spectral ||
+        spectralBeforeSplit != spectral || spectralAfter != wet)
+    {
+        std::cerr << "Repair automation lost source alignment or no-op policy\n";
+        return EXIT_FAILURE;
+    }
     const auto restoredHalf = render(0, false, false, 0.5);
     const auto capped = render(0, false, false, 1.0, 0.0);
     const auto speech = render(0, false, false, 1.0, 1.0, -1, 0.0, 1.0 / 3.0);

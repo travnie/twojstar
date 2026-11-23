@@ -94,6 +94,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     if (!streamer.readDouble(savedMaxTransition)) savedMaxTransition = 1.0;
     double savedMode = 0.0;
     if (!streamer.readDouble(savedMode)) savedMode = 0.0;
+    double savedRepair = 0.0;
+    if (!streamer.readDouble(savedRepair)) savedRepair = 0.0;
     const auto normalized = std::isfinite(savedStrength) ? std::clamp(savedStrength, 0.0, 1.0) : 1.0;
     const auto maxNormalized = std::isfinite(savedMaxTransition)
         ? std::clamp(savedMaxTransition, 0.0, 1.0) : 1.0;
@@ -101,6 +103,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     pendingStrength_.store(normalized, std::memory_order_relaxed);
     pendingMaxTransition_.store(maxNormalized, std::memory_order_relaxed);
     pendingMode_.store(std::isfinite(savedMode) ? std::clamp(savedMode, 0.0, 1.0) : 0.0,
+        std::memory_order_relaxed);
+    pendingRepair_.store(std::isfinite(savedRepair) ? std::clamp(savedRepair, 0.0, 1.0) : 0.0,
         std::memory_order_relaxed);
     restoreGeneration_.fetch_add(1, std::memory_order_release);
     restoreEpoch_.fetch_add(1, std::memory_order_release);
@@ -115,6 +119,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
     double strength = 1.0;
     double maxTransition = 1.0;
     double mode = 0.0;
+    double repair = 0.0;
     for (;;)
     {
         const auto restoreStart = restoreEpoch_.load(std::memory_order_acquire);
@@ -126,12 +131,14 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
             strength = audioStrength_.load(std::memory_order_relaxed);
             maxTransition = audioMaxTransition_.load(std::memory_order_relaxed);
             mode = audioMode_.load(std::memory_order_relaxed);
+            repair = audioRepair_.load(std::memory_order_relaxed);
         }
         else
         {
             strength = pendingStrength_.load(std::memory_order_relaxed);
             maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
             mode = pendingMode_.load(std::memory_order_relaxed);
+            repair = pendingRepair_.load(std::memory_order_relaxed);
         }
         if (generation == restoreGeneration_.load(std::memory_order_acquire) &&
             restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
@@ -139,7 +146,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
             break;
     }
     return streamer.writeDouble(strength) && streamer.writeDouble(maxTransition) &&
-        streamer.writeDouble(mode) ? Steinberg::kResultOk : Steinberg::kResultFalse;
+        streamer.writeDouble(mode) && streamer.writeDouble(repair)
+        ? Steinberg::kResultOk : Steinberg::kResultFalse;
 }
 
 void SmartTransitionProcessor::publishAudioState(Steinberg::uint64 generation) noexcept
@@ -149,6 +157,7 @@ void SmartTransitionProcessor::publishAudioState(Steinberg::uint64 generation) n
     audioMaxTransition_.store((dsp_.maxTransitionMilliseconds() - 1.0) / 3.0,
         std::memory_order_relaxed);
     audioMode_.store(static_cast<double>(dsp_.mode()) / 3.0, std::memory_order_relaxed);
+    audioRepair_.store(dsp_.repairAuto() ? 1.0 : 0.0, std::memory_order_relaxed);
     audioGeneration_.store(generation, std::memory_order_release);
     audioEpoch_.fetch_add(1, std::memory_order_release);
 }
@@ -226,7 +235,8 @@ bool SmartTransitionProcessor::processBlock(
     Steinberg::uint64 inputSilenceFlags,
     Steinberg::Vst::IParamValueQueue* strengthQueue,
     Steinberg::Vst::IParamValueQueue* maxTransitionQueue,
-    Steinberg::Vst::IParamValueQueue* modeQueue) noexcept
+    Steinberg::Vst::IParamValueQueue* modeQueue,
+    Steinberg::Vst::IParamValueQueue* repairQueue) noexcept
 {
     // Process continuous VST3 automation at its sample offsets, not per block.
     auto previousOffset = Steinberg::int32{-1};
@@ -302,11 +312,38 @@ bool SmartTransitionProcessor::processBlock(
     };
     advanceModePoint();
 
+    Steinberg::int32 repairPointIndex = 0;
+    Steinberg::int32 repairNextOffset = 0;
+    double repairNextValue = 0.0;
+    bool hasNextRepair = false;
+    const auto repairPointCount = repairQueue ? repairQueue->getPointCount() : 0;
+    const auto advanceRepairPoint = [&]() noexcept
+    {
+        hasNextRepair = false;
+        while (repairPointIndex < repairPointCount)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue value = 0.0;
+            if (repairQueue->getPoint(repairPointIndex++, offset, value) != Steinberg::kResultTrue ||
+                offset < 0 || offset >= samples || offset < repairNextOffset)
+                continue;
+            repairNextOffset = offset;
+            repairNextValue = value;
+            hasNextRepair = true;
+            break;
+        }
+    };
+    advanceRepairPoint();
     bool allSilent = true;
     const auto channelCount = std::clamp<Steinberg::int32>(channels, 1, 2);
 
     for (Steinberg::int32 sample = 0; sample < samples; ++sample)
     {
+        while (hasNextRepair && repairNextOffset <= sample)
+        {
+            dsp_.setRepairAuto(std::isfinite(repairNextValue) && repairNextValue >= 0.5);
+            advanceRepairPoint();
+        }
         while (hasNextMode && nextModeOffset <= sample)
         {
             dsp_.setMode(modeFromNormalized(nextModeValue));
@@ -375,6 +412,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             const auto strength = pendingStrength_.load(std::memory_order_relaxed);
             const auto maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
             const auto mode = pendingMode_.load(std::memory_order_relaxed);
+            const auto repair = pendingRepair_.load(std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_acquire);
             if (restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
                 restoredGeneration == restoreGeneration_.load(std::memory_order_acquire))
@@ -382,6 +420,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
                 dsp_.setStrength(strength);
                 dsp_.setMaxTransitionMilliseconds(maxTransitionMillisecondsFromNormalized(maxTransition));
                 dsp_.setMode(modeFromNormalized(mode));
+                dsp_.setRepairAuto(repair >= 0.5);
                 appliedRestoreGeneration_ = restoredGeneration;
             }
         }
@@ -393,6 +432,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     auto* strengthQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionStrengthId);
     auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId);
     auto* modeQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionModeId);
+    auto* repairQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionRepairId);
     if (data.numSamples <= 0)
     {
         // Hosts may flush only parameter changes without audio buffers.
@@ -424,6 +464,16 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
                     dsp_.setMode(modeFromNormalized(normalized));
             }
         }
+        if (repairQueue)
+        {
+            for (Steinberg::int32 i = 0; i < repairQueue->getPointCount(); ++i)
+            {
+                Steinberg::int32 offset = 0;
+                Steinberg::Vst::ParamValue value = 0.0;
+                if (repairQueue->getPoint(i, offset, value) == Steinberg::kResultTrue && offset >= 0)
+                    dsp_.setRepairAuto(std::isfinite(value) && value >= 0.5);
+            }
+        }
         publishAudioState(generation);
         return Steinberg::kResultOk;
     }
@@ -452,7 +502,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             inputSilenceFlags,
             strengthQueue,
             maxQueue,
-            modeQueue);
+            modeQueue,
+            repairQueue);
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
@@ -466,7 +517,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             inputSilenceFlags,
             strengthQueue,
             maxQueue,
-            modeQueue);
+            modeQueue,
+            repairQueue);
     }
     else
     {

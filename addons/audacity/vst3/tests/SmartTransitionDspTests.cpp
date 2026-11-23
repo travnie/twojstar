@@ -13,6 +13,7 @@ using Travny::Audio::SmartEditPlan;
 using Travny::Audio::SmartTransitionDsp;
 using Travny::Audio::SmartTransitionMode;
 using Travny::Audio::SmartFadeCurve;
+using Travny::Audio::SmartRepairMode;
 
 namespace {
 
@@ -35,13 +36,15 @@ struct RenderResult
 };
 
 RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
-                    SmartTransitionMode mode = SmartTransitionMode::Auto)
+                    SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false,
+                    std::int64_t repairEnableAt = -1)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
     dsp.setStrength(strength);
     dsp.setMaxTransitionMilliseconds(maxTransitionMilliseconds);
     dsp.setMode(mode);
+    dsp.setRepairAuto(repairAuto);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -55,6 +58,9 @@ RenderResult render(const std::vector<Frame>& input, std::size_t channels, const
         for (std::size_t i = 0; i < count; ++i)
         {
             Frame out{};
+            if (repairEnableAt >= 0 &&
+                static_cast<std::int64_t>(position + i) == repairEnableAt)
+                dsp.setRepairAuto(true);
             dsp.processFrame(input[position + i].data(), out.data(), channels);
             raw.push_back(out);
         }
@@ -104,6 +110,184 @@ std::vector<Frame> withHardSeam(std::size_t count, std::size_t seam)
 std::int64_t globalAnchor(const RenderResult& result)
 {
     return result.planWindowStart + result.plan.seamAnchorSamples;
+}
+
+void testConservativeSpectralRepair()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto off = render(input, 2, {17, 53});
+    const auto autoA = render(input, 2, {17, 53}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    const auto autoB = render(input, 2, {1400}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    require(off.hasPlan && autoA.hasPlan, "spectral fixture missed seam");
+    require(globalAnchor(off) == globalAnchor(autoA), "Repair moved seam");
+    require(autoA.output == autoB.output, "Repair changed with block partition");
+    // Auto may reject its proposed spectral blend if the ordinary fade
+    // already has a lower peak transient. Bypass is the safety contract.
+    if (autoA.plan.repairMode == SmartRepairMode::Spectral)
+        require(autoA.plan.repairStartOffsetSamples == -8 &&
+            autoA.plan.repairLengthSamples == 16, "Repair window out of bounds");
+    else
+        require(autoA.plan.repairMode == SmartRepairMode::None &&
+            autoA.plan.repairLengthSamples == 0 &&
+            autoA.plan.repairStartOffsetSamples == 0,
+            "Rejected repair left an invalid plan");
+    bool changed = false;
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        changed |= off.output[i] != autoA.output[i];
+        if (i < 492 || i >= 508)
+            require(off.output[i] == autoA.output[i], "Repair leaked outside window");
+        for (const auto value : autoA.output[i])
+            require(std::isfinite(value), "Repair produced non-finite audio");
+    }
+    if (autoA.plan.repairMode == SmartRepairMode::Spectral)
+        require(changed, "accepted spectral repair was a no-op");
+    else
+        require(!changed, "rejected spectral repair modified the audio");
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> phaseSplice(1400);
+    for (std::size_t i = 0; i < phaseSplice.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 12.0 : 13.0 * pi / 12.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 125.0 * i / 48000.0 + phase);
+        phaseSplice[i] = {value, value * 0.85};
+    }
+    const auto musicOff = render(phaseSplice, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music, false);
+    const auto musicAuto = render(phaseSplice, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music, true);
+    require(musicAuto.hasPlan, "phase splice was not detected");
+    const auto entry = globalAnchor(musicAuto) - 8;
+    require(entry > 1, "invalid repair entry");
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        double maxDryJump = 0.0;
+        double maxAutoJump = 0.0;
+        for (auto i = entry; i <= entry + 16; ++i)
+        {
+            maxDryJump = std::max(maxDryJump,
+                std::abs(musicOff.output[i][channel] - musicOff.output[i - 1][channel]));
+            maxAutoJump = std::max(maxAutoJump,
+                std::abs(musicAuto.output[i][channel] - musicAuto.output[i - 1][channel]));
+        }
+        require(maxAutoJump <= maxDryJump * 1.05 + 0.005,
+            "Repair Auto introduced a larger phase-splice transient");
+    }
+    std::vector<Frame> softerPhase(1400);
+    for (std::size_t i = 0; i < softerPhase.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 12.0 : pi / 3.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 300.0 *
+            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+        softerPhase[i] = {value, value * 0.85};
+    }
+    const auto softerOff = render(softerPhase, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto);
+    const auto softerAuto = render(softerPhase, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true);
+    require(softerOff.hasPlan && softerAuto.hasPlan,
+        "300 Hz phase fixture did not detect the seam");
+    const auto softerEntry = globalAnchor(softerOff) - 8;
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        double dryMax = 0.0;
+        double autoMax = 0.0;
+        for (auto i = softerEntry; i <= softerEntry + 16; ++i)
+        {
+            dryMax = std::max(dryMax,
+                std::abs(softerOff.output[i][channel] - softerOff.output[i - 1][channel]));
+            autoMax = std::max(autoMax,
+                std::abs(softerAuto.output[i][channel] - softerAuto.output[i - 1][channel]));
+        }
+        require(autoMax <= dryMax * 1.05 + 0.005,
+            "Repair Auto sharpened an already-smooth join");
+    }
+    // Positive control: some discontinuities must benefit from spectral
+    // repair. Otherwise a permanently bypassed Auto implementation passes.
+    bool acceptedSpectral = false;
+    for (int frequency : {125, 256, 500, 703})
+    {
+        if (acceptedSpectral) break;
+        for (int leftDegrees : {15, 60, 135, 225, 300})
+        {
+            if (acceptedSpectral) break;
+            for (int rightDegrees : {15, 90, 165, 240, 315})
+            {
+                std::vector<Frame> signal(1000);
+                for (std::size_t i = 0; i < signal.size(); ++i)
+                {
+                    const auto degrees = i < 500 ? leftDegrees : rightDegrees;
+                    const auto phase = degrees * pi / 180.0;
+                    const auto value = 0.9 * std::sin(2.0 * pi * frequency *
+                        (static_cast<double>(i) - 500.0) / 48000.0 + phase);
+                    signal[i] = {value, value * 0.8};
+                }
+                const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0,
+                    48000.0, SmartTransitionMode::Auto, true);
+                if (result.plan.repairMode == SmartRepairMode::Spectral)
+                {
+                    const auto without = render(signal, 2);
+                    require(result.output != without.output,
+                        "Accepted spectral plan was not rendered");
+                    const auto early = render(signal, 2, {19, 67}, 1.0, 4.0,
+                        48000.0, SmartTransitionMode::Auto, false, 300);
+                    const auto late = render(signal, 2, {19, 67}, 1.0, 4.0,
+                        48000.0, SmartTransitionMode::Auto, false, 700);
+                    require(early.output == result.output,
+                        "Source-aligned Repair enable before seam was ignored");
+                    require(late.output == without.output,
+                        "Source-aligned Repair enable after seam changed audio");
+                    acceptedSpectral = true;
+                    break;
+                }
+            }
+        }
+    }
+    // Unequal stereo transients: a louder channel must not let the other
+    // channel acquire a larger derivative under a shared repair plan.
+    std::vector<Frame> unequal(1400);
+    for (std::size_t i = 0; i < unequal.size(); ++i)
+    {
+        const auto sample = static_cast<double>(i) - 500.0;
+        const auto leftPhase = (i < 500 ? 244.0 : 132.0) * pi / 180.0;
+        const auto rightPhase = (i < 500 ? 326.0 : 88.0) * pi / 180.0;
+        unequal[i] = {
+            0.6 * std::sin(2.0 * pi * 256.0 * sample / 48000.0 + leftPhase),
+            0.42 * std::sin(2.0 * pi * 703.0 * sample / 48000.0 + rightPhase)
+        };
+    }
+    const auto unequalOff = render(unequal, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
+    const auto unequalAuto = render(unequal, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music, true);
+    require(unequalOff.hasPlan && unequalAuto.hasPlan,
+        "Unequal stereo splice was not detected");
+    require(unequalAuto.plan.repairMode == SmartRepairMode::None &&
+        unequalAuto.output == unequalOff.output,
+        "Unequal stereo bypass must protect the quieter channel");
+    const auto unequalEntry = globalAnchor(unequalOff) - 8;
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        double dryPeak = 0.0;
+        double autoPeak = 0.0;
+        for (auto i = unequalEntry; i <= unequalEntry + 16; ++i)
+        {
+            dryPeak = std::max(dryPeak,
+                std::abs(unequalOff.output[i][channel] -
+                    unequalOff.output[i - 1][channel]));
+            autoPeak = std::max(autoPeak,
+                std::abs(unequalAuto.output[i][channel] -
+                    unequalAuto.output[i - 1][channel]));
+        }
+        require(autoPeak <= dryPeak * 1.05 + 0.005,
+            "Loud stereo channel hid a quieter-channel repair click");
+    }
+    require(acceptedSpectral, "Repair Auto never accepted a spectral improvement");
+    const auto clean = cleanSine(1400);
+    require(render(clean, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, true).output == clean, "Repair changed clean signal");
 }
 
 void testCleanAudioIsBitTransparent()
@@ -730,6 +914,7 @@ int main()
 {
     try
     {
+        testConservativeSpectralRepair();
         testCleanAudioIsBitTransparent();
         testHardSeamIsDetectedAndSmoothed();
         testPlanWindowContainsTransition();

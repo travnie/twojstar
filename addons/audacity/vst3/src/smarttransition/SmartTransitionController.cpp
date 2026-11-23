@@ -26,6 +26,10 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::initialize(Steinberg::F
     mode->appendString(STR16("Music"));
     mode->appendString(STR16("Hard splice"));
     parameters.addParameter(mode);
+    auto* repair = new Steinberg::Vst::StringListParameter(STR16("Repair"), kSmartTransitionRepairId);
+    repair->appendString(STR16("Off"));
+    repair->appendString(STR16("Auto"));
+    parameters.addParameter(repair);
     return Steinberg::kResultOk;
 }
 
@@ -53,6 +57,11 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::setComponentState(Stein
         parameter->setNormalized(std::isfinite(savedMaxTransition)
             ? std::clamp(savedMaxTransition, 0.0, 1.0) : 1.0);
     }
+    double savedRepair = 0.0;
+    if (!streamer.readDouble(savedRepair)) savedRepair = 0.0;
+    if (auto* parameter = parameters.getParameter(kSmartTransitionRepairId))
+        parameter->setNormalized(std::isfinite(savedRepair)
+            ? std::clamp(savedRepair, 0.0, 1.0) : 0.0);
     if (auto* parameter = parameters.getParameter(kSmartTransitionModeId))
     {
         parameter->setNormalized(std::isfinite(savedMode)

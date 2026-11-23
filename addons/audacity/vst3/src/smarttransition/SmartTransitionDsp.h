@@ -25,6 +25,7 @@ enum class SmartTransitionMode : std::uint8_t
 enum class SmartRepairMode : std::uint8_t
 {
     None = 0,
+    Spectral = 1,
 };
 
 struct SmartEditPlan
@@ -64,6 +65,8 @@ public:
     [[nodiscard]] double strength() const noexcept { return strength_; }
     void setMaxTransitionMilliseconds(double milliseconds) noexcept;
     [[nodiscard]] double maxTransitionMilliseconds() const noexcept { return maxTransitionMilliseconds_; }
+    void setRepairAuto(bool enabled) noexcept { repairAuto_ = enabled; }
+    [[nodiscard]] bool repairAuto() const noexcept { return repairAuto_; }
     void setMode(SmartTransitionMode mode) noexcept;
     [[nodiscard]] SmartTransitionMode mode() const noexcept { return mode_; }
 
@@ -107,12 +110,15 @@ private:
     std::array<double, kRingCapacity> strengthRing_{};
     std::array<std::uint8_t, kRingCapacity> maxTransitionRing_{};
     std::array<std::uint8_t, kRingCapacity> modeRing_{};
+    std::array<std::uint8_t, kRingCapacity> repairRing_{};
+    std::array<std::array<double, 16>, kMaxChannels> spectralRepair_{};
     std::array<double, kMaxChannels> transitionPeak_{};
     std::int64_t inputCount_{0};
     double sampleRate_{48000.0};
     double strength_{1.0};
     double maxTransitionMilliseconds_{4.0};
     SmartTransitionMode mode_{SmartTransitionMode::Auto};
+    bool repairAuto_{false};
     std::size_t lookaheadSamples_{4800};
     std::size_t analysisRadius_{48};
     std::size_t fadeLengthSamples_{192};

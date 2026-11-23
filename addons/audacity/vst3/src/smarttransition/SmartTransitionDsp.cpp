@@ -156,6 +156,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
     strengthRing_[slot] = strength_;
     maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
     modeRing_[slot] = static_cast<std::uint8_t>(mode_);
+    repairRing_[slot] = repairAuto_ ? 1 : 0;
     for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
     {
         ring_[channel][slot] = channel < channels && input != nullptr && std::isfinite(input[channel])
@@ -428,6 +429,106 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
                         transitionPeak_[channel], std::abs(sampleAt(channel, index)));
             }
         }
+        // Source-aligned Repair Auto. Only strong seams get a 16-sample
+        // low-harmonic spectral bridge. Fixed arrays, no audio-thread allocation.
+        if (planCommitted_ && repairRing_[static_cast<std::size_t>(
+                committedAnchor_) % kRingCapacity] != 0 &&
+            plan_.confidence >= 0.85 && effectiveFadeLength >= 32 &&
+            committedAnchor_ >= 24 && committedAnchor_ + 24 < inputCount_)
+        {
+            bool severe = false;
+            for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+            {
+                if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) != 0)
+                    severe |= std::abs(sampleAt(channel, committedAnchor_) -
+                        sampleAt(channel, committedAnchor_ - 1)) >= 0.10;
+            }
+            if (severe)
+            {
+                constexpr int window = 16;
+                plan_.repairMode = SmartRepairMode::Spectral;
+                plan_.repairStartOffsetSamples = -8;
+                plan_.repairLengthSamples = window;
+                for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+                {
+                    if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                        continue;
+                    std::array<std::array<double, 4>, 2> real{};
+                    std::array<std::array<double, 4>, 2> imaginary{};
+                    for (int side = 0; side < 2; ++side)
+                    {
+                        const auto start = committedAnchor_ + (side == 0 ? -24 : 8);
+                        for (int n = 0; n < window; ++n)
+                        {
+                            const auto sample = sampleAt(channel, start + n) / window;
+                            for (int k = 0; k < 4; ++k)
+                            {
+                                const auto phase = 2.0 * kPi * k * n / window;
+                                real[side][k] += sample * std::cos(phase);
+                                imaginary[side][k] -= sample * std::sin(phase);
+                            }
+                        }
+                    }
+                    for (int n = 0; n < window; ++n)
+                    {
+                        std::array<double, 2> prediction{};
+                        for (int side = 0; side < 2; ++side)
+                        {
+                            const auto position = side == 0 ? window + n : n - window;
+                            prediction[side] = real[side][0];
+                            for (int k = 1; k < 4; ++k)
+                            {
+                                const auto phase = 2.0 * kPi * k * position / window;
+                                prediction[side] += 2.0 *
+                                    (real[side][k] * std::cos(phase) -
+                                     imaginary[side][k] * std::sin(phase));
+                            }
+                        }
+                        const auto t = static_cast<double>(n + 1) / (window + 1);
+                        spectralRepair_[channel][n] =
+                            prediction[0] * (1.0 - t) + prediction[1] * t;
+                    }
+                }
+
+                // Compare both complete renderings, including both edges,
+                // before accepting the spectral correction. A good ordinary
+                // fade must never gain a stronger transient from Repair Auto.
+                bool acceptable = true;
+                for (std::size_t channel = 0; channel < kMaxChannels; ++channel)
+                {
+                    if ((plan_.affectedChannelsMask & (std::uint8_t{1} << channel)) == 0)
+                        continue;
+                    double baselinePeak = 0.0;
+                    double repairedPeak = 0.0;
+                    plan_.repairMode = SmartRepairMode::None;
+                    auto baselinePrevious = renderSample(channel, committedAnchor_ - 9);
+                    plan_.repairMode = SmartRepairMode::Spectral;
+                    auto repairedPrevious = renderSample(channel, committedAnchor_ - 9);
+                    for (auto index = committedAnchor_ - 8;
+                         index <= committedAnchor_ + 8; ++index)
+                    {
+                        plan_.repairMode = SmartRepairMode::None;
+                        const auto baseline = renderSample(channel, index);
+                        plan_.repairMode = SmartRepairMode::Spectral;
+                        const auto repaired = renderSample(channel, index);
+                        baselinePeak = std::max(baselinePeak,
+                            std::abs(baseline - baselinePrevious));
+                        repairedPeak = std::max(repairedPeak,
+                            std::abs(repaired - repairedPrevious));
+                        baselinePrevious = baseline;
+                        repairedPrevious = repaired;
+                    }
+                    if (repairedPeak > baselinePeak * 1.05 + 0.005)
+                        acceptable = false;
+                }
+                if (!acceptable)
+                {
+                    plan_.repairMode = SmartRepairMode::None;
+                    plan_.repairStartOffsetSamples = 0;
+                    plan_.repairLengthSamples = 0;
+                }
+            }
+        }
     }
 
     clusterActive_ = false;
@@ -548,6 +649,24 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         const auto edgeTaper = edge * edge * (3.0 - 2.0 * edge);
         repaired = std::clamp(source + edgeTaper * (mixed - source),
             -peakLimit, peakLimit);
+    }
+    if (plan_.repairMode == SmartRepairMode::Spectral)
+    {
+        const auto index = outputIndex - (committedAnchor_ +
+            plan_.repairStartOffsetSamples);
+        if (index >= 0 && index < plan_.repairLengthSamples)
+        {
+            const auto t = static_cast<double>(index + 1) /
+                static_cast<double>(plan_.repairLengthSamples + 1);
+            const auto weight = 0.25 * std::pow(std::sin(kPi * t), 2.0);
+            const auto spectrum = spectralRepair_[channel][static_cast<std::size_t>(index)];
+            const auto bound = std::max({std::abs(source),
+                std::abs(sampleAt(channel, committedAnchor_ - 1)),
+                std::abs(sampleAt(channel, committedAnchor_)), 1e-6});
+            // Limit only the spectral contribution. Clamping the existing
+            // fade to the seam-local bound creates a click at window entry.
+            repaired += weight * (std::clamp(spectrum, -bound, bound) - repaired);
+        }
     }
     // This sample left the lookahead buffer later than it entered.
     // Use Strength captured alongside its source sample, not the current input.
