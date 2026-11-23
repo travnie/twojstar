@@ -20,6 +20,10 @@ within the editor's existing history limit.
 On phones, File details opens the active file's inspector as a bottom sheet.
 The same file properties and contextual actions appear inline on wider screens.
 
+ZIP folders list entries from the central directory. Preview entry reads one
+eligible stored or DEFLATE entry up to 8 MiB, verifies CRC-32 and uses the Files
+preview. Back to ZIP restores the folder and selection.
+
 ## Security
 
 URL opening needs HTTPS connections in the HTML CSP. Any injected script could use those connections; protect the page against script injection. Other assets retain their restricted policy.

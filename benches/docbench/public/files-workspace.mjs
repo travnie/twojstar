@@ -59,6 +59,12 @@ const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
 const MAX_IMAGE_BYTES = 48 * 1024 * 1024;
 const MAX_HEX_BYTES = 256;
+const MAX_ZIP_PREVIEW_BYTES = 8 * 1024 * 1024;
+const ZIP_PREVIEW_LIMITS = Object.freeze({
+  ...ZIP_EXTRACT_LIMITS,
+  maxEntryBytes: MAX_ZIP_PREVIEW_BYTES,
+  maxCompressedBytes: MAX_ZIP_PREVIEW_BYTES,
+});
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
 const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "ogg", "m4a"]);
 const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
@@ -66,6 +72,7 @@ const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
 const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
 const zipJobs = new Map();
+const zipPreviewClosers = new Map();
 let selectionRevision = 0;
 let viewMode = "list";
 let query = "";
@@ -131,6 +138,8 @@ function closeAudioDock() {
 }
 
 function releasePreview(target = preview) {
+  zipPreviewClosers.get(target)?.();
+  zipPreviewClosers.delete(target);
   const job = zipJobs.get(target);
   if (job) job.controller.abort();
   const media = target.querySelector("audio, video");
@@ -267,8 +276,9 @@ async function showZipContents(file, revision, target = preview) {
   const tree = createZipTree(result.entries);
   const box = element("section", "files-zip");
   const title = element("h3", "", `ZIP contents · ${tree.total} entries`);
+  title.tabIndex = -1;
   const note = element("p", "files-note",
-    "Read-only browser. Extraction is explicit, local, size-limited and CRC-verified.");
+    `Preview entries up to ${formatBytes(MAX_ZIP_PREVIEW_BYTES)}. Preview and extraction check CRC-32 locally.`);
   const warning = tree.skipped
     ? element("p", "files-unsafe-label", `${tree.skipped} unsafe, ambiguous or unsupported entries hidden.`)
     : null;
@@ -292,25 +302,40 @@ async function showZipContents(file, revision, target = preview) {
   const listNode = element("ol", "files-zip-list");
   const entryDetails = element("dl", "files-zip-entry-details");
   entryDetails.hidden = true;
+  const entryView = element("section", "files-zip-entry-preview");
+  entryView.hidden = true;
+  const entryHeader = element("div", "files-zip-entry-preview-header");
+  const entryTitle = element("h3", "");
+  entryTitle.dataset.i18nSkip = "";
+  const backToZip = element("button", "button compact", "Back to ZIP");
+  backToZip.type = "button";
+  entryHeader.append(backToZip, entryTitle);
+  const entryStatus = element("p", "files-note");
+  entryStatus.setAttribute("role", "status");
+  const entryBody = element("div", "files-zip-entry-preview-body");
+  entryView.append(entryHeader, entryStatus, entryBody);
   if (warning) box.append(title, note, warning, breadcrumb, tools, listNode, entryDetails);
   else box.append(title, note, breadcrumb, tools, listNode, entryDetails);
-  target.append(box);
+  target.append(box, entryView);
 
   const checked = new Set();
+  let entryController = null;
+  let entryTrigger = null;
   const eligible = (item) => !zipEntryEligibility(result.entries[item.sourceIndex]);
   const selectedEntries = () => [...checked].map((id) => result.entries[id]);
   function refreshActions() {
     const running = zipJobs.has(target);
     verifyChecked.disabled = !checked.size || running;
     extractChecked.disabled = !checked.size || running;
+    for (const button of listNode.querySelectorAll(".files-zip-preview-button")) button.disabled = running;
   }
   function report(message) {
     if (!isCurrentPreview(target, revision)) return;
     status.textContent = globalThis.BenchI18n?.t(message) || message;
   }
-  function beginJob(controller) {
+  function beginJob(controller, showCancel = true) {
     zipJobs.set(target, { controller, committing: false });
-    cancel.hidden = false;
+    cancel.hidden = !showCancel;
     cancel.disabled = false;
     refreshActions();
   }
@@ -324,6 +349,56 @@ async function showZipContents(file, revision, target = preview) {
     const job = zipJobs.get(target);
     if (job && !job.committing) job.controller.abort();
   });
+
+  function closeEntryPreview(restoreFocus = false) {
+    if (!entryController) return;
+    entryController.abort();
+    entryController = null;
+    releasePreview(entryBody);
+    entryView.hidden = true;
+    box.hidden = false;
+    if (restoreFocus) (entryTrigger.disabled ? title : entryTrigger).focus();
+    entryTrigger = null;
+  }
+  zipPreviewClosers.set(target, closeEntryPreview);
+  backToZip.addEventListener("click", () => closeEntryPreview(true));
+
+  async function previewZipEntry(entry, item, trigger) {
+    if (!isCurrentPreview(target, revision) || zipJobs.has(target)) return;
+    const controller = new AbortController();
+    entryController = controller;
+    entryTrigger = trigger;
+    const isCurrent = () => !controller.signal.aborted && isCurrentPreview(target, revision);
+    entryTitle.textContent = item.path;
+    entryStatus.textContent = "Preparing preview…";
+    box.hidden = true;
+    entryView.hidden = false;
+    backToZip.focus();
+    beginJob(controller, false);
+    try {
+      const { output } = await extractZipEntry(file, entry, {
+        zipApi: globalThis.fflate,
+        sink: createMemoryExtractSink({ maxBytes: MAX_ZIP_PREVIEW_BYTES }),
+        signal: controller.signal,
+        directoryOffset: result.directoryOffset,
+        limits: ZIP_PREVIEW_LIMITS,
+      });
+      if (!isCurrent()) return;
+      const extracted = new File([output], item.name);
+      const info = await inspectLocalFile(extracted);
+      if (!isCurrent()) return;
+      if (info.format === "zip") {
+        emptyPreview("Extract this archive to browse it separately.", entryBody);
+      } else {
+        await renderFileContent(extracted, info, entryBody, isCurrent);
+      }
+      if (isCurrent()) entryStatus.textContent = "CRC-32 verified";
+    } catch (error) {
+      if (isCurrent()) entryStatus.textContent = `Preview unavailable. ${error?.message || error}`;
+    } finally {
+      finishJob(controller);
+    }
+  }
 
   async function runEntries(items, mode) {
     if (!isCurrentPreview(target, revision) || zipJobs.has(target)) return;
@@ -422,6 +497,7 @@ async function showZipContents(file, revision, target = preview) {
     if (!isCurrentPreview(target, revision)) return;
     const view = tree.list(path);
     if (!view) return;
+    closeEntryPreview();
     entryDetails.hidden = true;
     entryDetails.replaceChildren();
     breadcrumb.replaceChildren();
@@ -511,7 +587,16 @@ async function showZipContents(file, revision, target = preview) {
         verify.type = download.type = "button";
         verify.addEventListener("click", () => void runEntries([entry], "verify"));
         download.addEventListener("click", () => void runEntries([entry], "download"));
-        actions.append(checkbox, verify, download);
+        actions.append(checkbox);
+        if (!zipEntryEligibility(entry, ZIP_PREVIEW_LIMITS)) {
+          const openEntry = element("button", "button compact files-zip-preview-button", "Preview entry");
+          openEntry.type = "button";
+          openEntry.disabled = zipJobs.has(target);
+          openEntry.setAttribute("aria-label", "Preview entry: " + item.name);
+          openEntry.addEventListener("click", () => void previewZipEntry(entry, item, openEntry));
+          actions.append(openEntry);
+        }
+        actions.append(verify, download);
         row.append(actions);
       }
       listNode.append(row);
@@ -567,14 +652,14 @@ function playAudioDock() {
   }
 }
 
-function mediaPreview(file, format, revision, target = preview) {
+function mediaPreview(file, format, target, isCurrent) {
   // Passive MIME + concrete media element. Never embed SVG or active documents.
   const blob = file.slice(0, file.size, MEDIA_MIME[format]);
   const url = URL.createObjectURL(blob);
   previewUrls.set(target, url);
   const fallback = element("p", "files-note", "Native browser preview. Codec availability varies.");
   const onError = () => {
-    if (isCurrentPreview(target, revision)) {
+    if (isCurrent()) {
       fallback.textContent = "This browser cannot decode the preview. The original file is unchanged.";
     }
   };
@@ -610,33 +695,38 @@ function mediaPreview(file, format, revision, target = preview) {
 
 async function renderPreview(file, info, revision, target = preview) {
   releasePreview(target);
+  const isCurrent = () => isCurrentPreview(target, revision);
   if (info.format === "zip") {
     try {
       await showZipContents(file, revision, target);
     } catch (error) {
-      if (isCurrentPreview(target, revision)) emptyPreview(error.message || "ZIP index unavailable.", target);
+      if (isCurrent()) emptyPreview(error.message || "ZIP index unavailable.", target);
     }
     return;
   }
+  await renderFileContent(file, info, target, isCurrent);
+}
+
+async function renderFileContent(file, info, target, isCurrent) {
   if (IMAGE_FORMATS.has(info.format)) {
     if (file.size > MAX_IMAGE_BYTES) {
       emptyPreview(`Image preview disabled above ${formatBytes(MAX_IMAGE_BYTES)} to protect browser memory.`, target);
     } else {
-      mediaPreview(file, info.format, revision, target);
+      mediaPreview(file, info.format, target, isCurrent);
     }
     return;
   }
   if (AUDIO_FORMATS.has(info.format)) {
-    mediaPreview(file, info.format, revision, target);
+    mediaPreview(file, info.format, target, isCurrent);
     return;
   }
   if (VIDEO_FORMATS.has(info.format)) {
-    mediaPreview(file, info.format, revision, target);
+    mediaPreview(file, info.format, target, isCurrent);
     return;
   }
   if (isTextFile(info)) {
     const source = await file.slice(0, MAX_TEXT_BYTES).text();
-    if (!isCurrentPreview(target, revision)) return;
+    if (!isCurrent()) return;
     const box = element("pre", "files-text", source);
     target.append(box);
     if (file.size > MAX_TEXT_BYTES) {
@@ -652,7 +742,7 @@ async function renderPreview(file, info, revision, target = preview) {
     return;
   }
   const bytes = new Uint8Array(await file.slice(0, MAX_HEX_BYTES).arrayBuffer());
-  if (!isCurrentPreview(target, revision)) return;
+  if (!isCurrent()) return;
   if (!bytes.length) {
     emptyPreview("Empty file.", target);
     return;
@@ -1024,6 +1114,10 @@ new MutationObserver(() => {
   if (filesPanel.hidden && inspectorSheet.open) inspectorSheet.close();
   if (filesPanel.hidden && audioDockId) closeAudioDock();
   if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
+  if (filesPanel.hidden) {
+    zipPreviewClosers.get(preview)?.();
+    zipPreviewClosers.get(dialogBody)?.();
+  }
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
