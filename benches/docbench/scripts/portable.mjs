@@ -101,11 +101,13 @@ const [
   readFile("public/vendor/qpdf/lib/qpdf.wasm"),
 ]);
 
-const [localFileUi, filesCss, fileSignatures, zipIndex, zipTree, zipExtract, fileStore, fileRouting, zipPack, filesWorkspace] = await Promise.all([
+const [localFileUi, filesCss, fileSignatures, zipIndex, tarIndex, zipTree, zipExtract,
+  fileStore, fileRouting, zipPack, filesWorkspace] = await Promise.all([
   readFile("public/local-files.js", "utf8"),
   readFile("public/files-workspace.css", "utf8"),
   readFile("public/file-signatures.mjs", "utf8"),
   readFile("public/zip-index.mjs", "utf8"),
+  readFile("public/tar-index.mjs", "utf8"),
   readFile("public/zip-tree.mjs", "utf8"),
   readFile("public/zip-extract.mjs", "utf8"),
   readFile("public/file-store.mjs", "utf8"),
@@ -125,6 +127,7 @@ const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:func
 const filesController = filesWorkspace
   .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
   .replace('import { readZipIndex } from "./zip-index.mjs";', "")
+  .replace('import { readTarIndex } from "./tar-index.mjs";', "")
   .replace('import { createZipTree } from "./zip-tree.mjs";', "")
   .replace('import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,\n  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";', "")
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")
@@ -135,6 +138,7 @@ const filesWorkspacePortable = [
   '"use strict";',
   withoutExports(fileSignatures),
   withoutExports(zipIndex),
+  withoutExports(tarIndex),
   withoutExports(zipTree),
   withoutExports(zipExtract),
   withoutExports(fileStore),
