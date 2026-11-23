@@ -363,6 +363,13 @@
   .files-inspector-sheet .button {
     min-height: 44px;
   }
+
+  .files-preview-summary {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 }
 
 .files-inspector-sheet {

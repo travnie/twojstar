@@ -22,7 +22,9 @@ frame.addEventListener("load", async () => {
     const inspector = doc.getElementById("files-inspector");
     const sheet = doc.getElementById("files-inspector-sheet");
     const closeInspector = doc.getElementById("files-inspect-close");
+    const inspectionStatus = doc.getElementById("files-status");
     if (!inspect.disabled || inspector.parentElement !== sheet) throw Error("Mobile inspector not initialized");
+    if (!inspectionStatus.closest("#files-preview-summary")) throw Error("Inspection status hidden behind closed sheet");
     const imported = win.DocBenchFiles.importFile(new win.File(["sample"], "notes.txt", { type: "text/plain" }));
     if (!imported.ok) throw Error("Could not import mobile inspector fixture");
     const tool = doc.getElementById("files-open-tool");
@@ -30,6 +32,7 @@ frame.addEventListener("load", async () => {
     inspect.click();
     if (!sheet.open || doc.activeElement !== closeInspector
       || !sheet.textContent.includes("notes.txt")
+      || !sheet.contains(inspectionStatus)
       || Math.abs(sheet.getBoundingClientRect().bottom - win.innerHeight) > 1) {
       throw Error("File details did not open at the bottom with the active file's metadata");
     }

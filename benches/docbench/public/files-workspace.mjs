@@ -24,6 +24,8 @@ const inspectorClose = getNode("#files-inspect-close");
 const inspector = getNode("#files-inspector");
 const inspectorHome = inspector.parentElement;
 const inspectorSheet = getNode("#files-inspector-sheet");
+const inspectorSummary = status.parentElement;
+const previewSummary = getNode("#files-preview-summary");
 const previewCaption = getNode("#files-preview-caption");
 const inspectorViewport = matchMedia("(max-width: 800px)");
 const filesPanel = getNode("#files-workspace");
@@ -99,6 +101,12 @@ function setStatus(message, failed = false) {
   status.classList.toggle("files-error", failed);
 }
 
+function syncInspectorStatus() {
+  const target = inspector.parentElement === inspectorSheet && !inspectorSheet.open
+    ? previewSummary : inspectorSummary;
+  if (status.parentElement !== target) target.append(status);
+}
+
 function syncInspectorLayout() {
   const useSheet = inspectorViewport.matches;
   if (!useSheet && inspectorSheet.open) inspectorSheet.close();
@@ -106,6 +114,7 @@ function syncInspectorLayout() {
   inspectButton.hidden = !useSheet;
   inspectorClose.hidden = !useSheet;
   previewCaption.hidden = useSheet;
+  syncInspectorStatus();
 }
 
 function closeAudioDock() {
@@ -944,8 +953,10 @@ if (typeof inspectorSheet.showModal === "function") {
     inspectButton.focus({ preventScroll: true });
     inspectorSheet.showModal();
     inspectorSheet.scrollTop = 0;
+    syncInspectorStatus();
   });
   inspectorClose.addEventListener("click", () => inspectorSheet.close());
+  inspectorSheet.addEventListener("close", syncInspectorStatus);
   inspectorSheet.addEventListener("click", (event) => {
     if (event.target === inspectorSheet && event.clientY < inspectorSheet.getBoundingClientRect().top) {
       inspectorSheet.close();
