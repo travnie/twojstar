@@ -681,6 +681,11 @@ void testMusicModeFadeExitDoesNotClick()
         const auto end = anchor + music.plan.fadeLengthSamples / 2;
         require(end > 1 && end < static_cast<std::int64_t>(input.size()),
                 "Music fade exits outside the input");
+        bool renderedRepair = false;
+        for (auto index = anchor - music.plan.fadeLengthSamples / 2;
+             index < anchor + music.plan.fadeLengthSamples / 2; ++index)
+            renderedRepair |= std::abs(music.output[index][0] - input[index][0]) > 1e-6;
+        require(renderedRepair, "streaming Music fixture did not actually render a repair");
         for (std::size_t channel = 0; channel < 2; ++channel)
         {
             const auto originalJump = std::abs(input[end][channel] - input[end - 1][channel]);
