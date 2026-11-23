@@ -660,30 +660,35 @@ void testMusicModeFadeEntranceDoesNotClick()
 void testMusicModeFadeExitDoesNotClick()
 {
     constexpr double pi = 3.14159265358979323846;
-    std::vector<Frame> input(1400);
-    for (std::size_t i = 0; i < input.size(); ++i)
+    // Exercise both drain-only short selections and normal streaming output.
+    for (const std::size_t seam : {std::size_t{500}, std::size_t{5500}})
     {
-        const auto left = i < 500;
-        const auto phase = left ? -0.5 * pi : 0.0;
-        const auto amplitude = left ? 0.6 : 0.9;
-        const auto value = amplitude * std::sin(2.0 * pi * 500.0 *
-            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
-        input[i] = {value, value * 0.7};
-    }
-    const auto music = render(input, 2, {11, 61}, 1.0, 1.0, 48000.0,
-        SmartTransitionMode::Music);
-    require(music.hasPlan, "Music exit-click fixture was not detected");
-    const auto anchor = globalAnchor(music);
-    const auto end = anchor + music.plan.fadeLengthSamples / 2;
-    require(end > 1 && end < static_cast<std::int64_t>(input.size()),
-            "Music fade exits outside the input");
-    for (std::size_t channel = 0; channel < 2; ++channel)
-    {
-        const auto originalJump = std::abs(input[end][channel] - input[end - 1][channel]);
-        const auto processedJump = std::abs(music.output[end][channel] -
-            music.output[end - 1][channel]);
-        require(processedJump < originalJump + 0.012,
-                "Music mode introduced a fade exit click");
+        const auto frames = seam + 900;
+        std::vector<Frame> input(frames);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            const auto left = i < seam;
+            const auto phase = left ? -0.5 * pi : 0.0;
+            const auto amplitude = left ? 0.6 : 0.9;
+            const auto value = amplitude * std::sin(2.0 * pi * 500.0 *
+                (static_cast<double>(i) - static_cast<double>(seam)) / 48000.0 + phase);
+            input[i] = {value, value * 0.7};
+        }
+        const auto music = render(input, 2, {11, 61}, 1.0, 1.0, 48000.0,
+            SmartTransitionMode::Music);
+        require(music.hasPlan, "Music exit-click fixture was not detected");
+        const auto anchor = globalAnchor(music);
+        const auto end = anchor + music.plan.fadeLengthSamples / 2;
+        require(end > 1 && end < static_cast<std::int64_t>(input.size()),
+                "Music fade exits outside the input");
+        for (std::size_t channel = 0; channel < 2; ++channel)
+        {
+            const auto originalJump = std::abs(input[end][channel] - input[end - 1][channel]);
+            const auto processedJump = std::abs(music.output[end][channel] -
+                music.output[end - 1][channel]);
+            require(processedJump < originalJump + 0.012,
+                    "Music mode introduced a fade exit click");
+        }
     }
 }
 
