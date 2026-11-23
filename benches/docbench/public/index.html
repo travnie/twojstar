@@ -59,17 +59,39 @@
 
     <section id="document-workspace" class="workspace" role="tabpanel" aria-labelledby="document-tab" hidden>
       <div class="toolbar document-toolbar">
-        <div class="toolbar-group document-file-group">
-          <button id="open-button" class="button compact primary" type="button">Open file</button>
-          <button id="open-url-toggle" class="button compact" type="button" aria-expanded="false" aria-controls="open-url-form">Open URL</button>
-          <button id="merge-files-button" class="button compact" type="button" title="Merge TXT/Markdown, JSON/JSONC or JSONL/NDJSON files">Merge files</button>
-          <button id="merge-now-button" class="button compact primary" type="button" hidden>Merge selected</button>
-          <button id="new-button" class="button compact" type="button">New</button>
-          <button id="undo-button" class="button compact" type="button" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
-          <button id="redo-button" class="button compact" type="button" aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z" disabled>Redo</button>
+        <div class="toolbar-group document-controls">
+          <button id="open-button" class="button compact" type="button">Open file</button>
+          <button id="find-toggle" class="button compact" type="button" aria-expanded="false" aria-controls="document-find" aria-keyshortcuts="Control+F Meta+F">Find</button>
+          <div class="document-history-controls">
+            <button id="undo-button" class="button compact" type="button" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
+            <button id="redo-button" class="button compact" type="button" aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z" disabled>Redo</button>
+          </div>
+          <div class="document-export-controls">
+            <button id="save-button" class="button compact primary" type="button" aria-keyshortcuts="Control+S Meta+S">Download</button>
+            <details id="document-more" class="document-more">
+              <summary class="button compact"><span class="document-more-icon" aria-hidden="true"></span><span>More</span></summary>
+              <div class="document-more-actions">
+                <div>
+                  <button id="new-button" class="button compact" type="button">New</button>
+                  <button id="open-url-toggle" class="button compact" type="button" aria-expanded="false" aria-controls="open-url-form">Open URL</button>
+                  <button id="merge-files-button" class="button compact" type="button" title="Merge TXT/Markdown, JSON/JSONC or JSONL/NDJSON files">Merge files</button>
+                </div>
+                <div>
+                  <button id="validate-button" class="button compact" type="button">Validate</button>
+                  <button id="inspect-button" class="button compact" type="button">Inspect</button>
+                  <button id="format-button" class="button compact" type="button">Auto-format</button>
+                  <button id="wrap-editor-button" class="button compact" type="button" aria-pressed="true">Wrap lines</button>
+                </div>
+                <div>
+                  <button id="copy-button" class="button compact" type="button">Copy</button>
+                  <button id="download-button" class="button compact" type="button" hidden>Download copy</button>
+                  <button id="print-button" class="button compact" type="button">Print</button>
+                </div>
+              </div>
+            </details>
+          </div>
           <input id="file-input" type="file" hidden>
           <input id="merge-files-input" type="file" hidden>
-          <span id="merge-files-feedback" class="merge-files-feedback" role="status" aria-live="polite" hidden></span>
         </div>
         <div class="toolbar-group fields-group">
           <label>Format
@@ -103,14 +125,9 @@
             </select>
           </label>
         </div>
-        <div class="toolbar-group action-group">
-          <button id="validate-button" class="button compact" type="button">Validate</button>
-          <button id="inspect-button" class="button compact" type="button">Inspect</button>
-          <button id="format-button" class="button compact" type="button">Auto-format</button>
-          <button id="copy-button" class="button compact" type="button">Copy</button>
-          <button id="save-button" class="button compact primary" type="button" aria-keyshortcuts="Control+S Meta+S">Save</button>
-          <button id="download-button" class="button compact" type="button">Download</button>
-          <button id="print-button" class="button compact" type="button">Print</button>
+        <div class="toolbar-group document-merge-controls" id="document-merge-controls" hidden>
+          <button id="merge-now-button" class="button compact primary" type="button" hidden>Merge selected</button>
+          <span id="merge-files-feedback" class="merge-files-feedback" role="status" aria-live="polite" hidden></span>
         </div>
       </div>
 
@@ -119,6 +136,28 @@
         <button id="open-url-submit" class="button compact primary" type="submit">Open</button>
         <span id="open-url-feedback" role="status" aria-live="polite">HTTPS · UTF-8 · up to 5 MB. The source must allow browser access (CORS).</span>
       </form>
+
+      <section id="document-find" class="toolbar document-find" aria-label="Find and replace" hidden>
+        <div class="document-find-row">
+          <label>Find <input id="find-query" type="search" autocomplete="off" spellcheck="false"></label>
+          <div class="document-find-buttons">
+            <button id="find-previous" class="button compact" type="button" aria-label="Previous match" disabled>↑</button>
+            <button id="find-next" class="button compact" type="button" aria-label="Next match" disabled>↓</button>
+            <button id="find-close" class="button compact" type="button">Close</button>
+          </div>
+        </div>
+        <div class="document-find-row">
+          <label>Replace with <input id="replace-value" type="text" autocomplete="off" spellcheck="false"></label>
+          <div class="document-find-buttons">
+            <button id="replace-one" class="button compact" type="button" disabled>Replace</button>
+            <button id="replace-all" class="button compact" type="button" disabled>Replace all</button>
+          </div>
+        </div>
+        <div class="document-find-feedback">
+          <label class="toggle-label"><input id="find-match-case" type="checkbox"> Match case</label>
+          <span id="find-status" role="status"></span>
+        </div>
+      </section>
 
       <section id="json-tools" class="json-tools" aria-label="JSON tools" hidden>
         <strong>JSON tools</strong>
@@ -142,7 +181,10 @@
             <strong id="filename-label" class="filename-editable" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Filename">untitled.txt</strong>
             <span id="encoding-label">UTF-8 · LF</span>
           </div>
-          <textarea id="editor" spellcheck="false" aria-label="Document editor" placeholder="Drop a file here or start typing…"></textarea>
+          <div class="editor-input">
+            <textarea id="editor" spellcheck="false" aria-label="Document editor" placeholder="Drop a file here or start typing…"></textarea>
+            <div id="editor-match-highlight" class="editor-match-highlight" aria-hidden="true" hidden><div></div></div>
+          </div>
         </section>
         <section class="panel preview-panel" aria-label="Parsed preview">
           <div class="panel-header">
@@ -438,6 +480,7 @@
   <script src="/app.js"></script>
   <script src="/document-history-core.js"></script>
   <script src="/document-history.js"></script>
+  <script src="/document-find.js"></script>
   <script type="module" src="/document-enhancements.mjs"></script>
   <script src="/text-inspector-core.js"></script>
   <script src="/text-repair-core.js"></script>

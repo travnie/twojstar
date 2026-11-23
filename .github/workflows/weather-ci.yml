@@ -42,3 +42,8 @@ jobs:
 
       - run: npm ci
       - run: npm run check
+      # Bundles the Worker and assets with the pinned Wrangler without deploying, so Wrangler bumps get exercised.
+      - name: Wrangler dry run
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/weather-dist"

@@ -73,6 +73,7 @@ input[type="url"] {
 }
 
 button:focus-visible,
+summary:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 input:focus-visible,
@@ -298,8 +299,154 @@ select {
   color: var(--text-soft);
 }
 
-.document-toolbar .action-group {
-  margin-left: auto;
+.document-toolbar {
+  gap: 8px 12px;
+}
+
+.document-controls {
+  flex: 1 1 auto;
+}
+
+.document-history-controls,
+.document-export-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.document-export-controls {
+  margin-inline-start: auto;
+}
+
+.document-more {
+  position: relative;
+}
+
+.document-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
+}
+
+.document-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.document-more-icon {
+  width: 13px;
+  height: 9px;
+  border-block: 1px solid currentColor;
+  background: linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
+}
+
+.document-more-actions {
+  position: absolute;
+  z-index: 5;
+  inset: calc(100% + 5px) 0 auto auto;
+  width: min(14rem, calc(100vw - 40px));
+  padding: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 40%);
+}
+
+.document-more-actions > div {
+  display: grid;
+}
+
+.document-more-actions > div + div {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.document-more-actions .button {
+  border-color: transparent;
+  background: transparent;
+  text-align: start;
+}
+
+.document-more-actions [aria-pressed="true"]::after {
+  content: "✓";
+  float: inline-end;
+  color: var(--ok);
+}
+
+.document-toolbar .document-merge-controls {
+  flex-basis: 100%;
+  padding: 0;
+  border: 0;
+}
+
+.document-find {
+  display: grid;
+  gap: 6px;
+}
+
+.document-find-row,
+.document-find-buttons,
+.document-find-feedback {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+}
+
+.document-find-row > label {
+  flex: 1;
+  max-width: 28rem;
+}
+
+.document-find-row input {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.document-find-feedback {
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.editor-position-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.editor-input {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.editor-match-highlight {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.editor-match-highlight > div,
+.editor-match-highlight span {
+  position: absolute;
+  inset: 0 auto auto 0;
+}
+
+.editor-match-highlight span {
+  border: 1px solid var(--warn);
+  border-radius: 2px;
+  background: rgb(223 172 109 / 20%);
 }
 
 .json-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 20px; border-bottom:1px solid var(--line); background:rgb(224 68 56 / 5%); }
@@ -418,6 +565,11 @@ select {
 #editor {
   caret-color: var(--focus);
   resize: none;
+}
+
+#editor.editor-no-wrap {
+  white-space: pre;
+  overflow-wrap: normal;
 }
 
 #preview {
@@ -930,9 +1082,19 @@ footer a:hover {
     border-left: 0;
   }
 
-  .document-toolbar .action-group,
   .pdf-toolbar .save-group {
     margin-left: 0;
+  }
+
+  .document-controls .button,
+  .document-find .button,
+  .document-find-row input {
+    min-height: 44px;
+  }
+
+  .document-more-actions {
+    max-height: 54dvh;
+    overflow-y: auto;
   }
 
   .action-group .button,
@@ -992,6 +1154,10 @@ footer a:hover {
     width: min(100% - 12px, 1460px);
   }
 
+  .mode-tab {
+    min-width: 0;
+  }
+
   .title-row {
     align-items: flex-start;
     flex-direction: column;
@@ -1004,6 +1170,28 @@ footer a:hover {
 
   .fields-group select {
     width: 100%;
+  }
+
+  .document-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .document-history-controls > .button {
+    flex: 1;
+  }
+
+  .document-export-controls {
+    justify-content: flex-end;
+  }
+
+  .document-export-controls > .button {
+    min-width: 0;
+    padding-inline: 7px;
+  }
+
+  .document-find-row > label {
+    min-width: 0;
   }
 
   .pdf-metadata-grid {
@@ -1021,6 +1209,22 @@ footer a:hover {
     justify-content: center;
     gap: 4px;
     padding-block: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .document-more > summary {
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .document-more > summary > :last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
