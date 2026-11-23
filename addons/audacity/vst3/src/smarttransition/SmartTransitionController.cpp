@@ -16,7 +16,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionController::initialize(Steinberg::F
 
     parameters.addParameter(new Steinberg::Vst::RangeParameter(
         STR16("Strength"), kSmartTransitionStrengthId, STR16("%"),
-        0.0, 100.0, 0.0, 100.0, Steinberg::Vst::ParameterInfo::kCanAutomate));
+        0.0, 100.0, 100.0, 0, Steinberg::Vst::ParameterInfo::kCanAutomate));
     return Steinberg::kResultOk;
 }
 
