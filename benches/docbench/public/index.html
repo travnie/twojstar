@@ -408,17 +408,22 @@
         </aside>
         <section class="files-details" aria-label="File workspace">
           <div class="files-preview-pane">
-            <div class="panel-header">
-              <strong>Preview</strong><span>Read-only inspection</span>
+            <div class="panel-header files-preview-header">
+              <strong>Preview</strong>
+              <span id="files-preview-caption">Read-only inspection</span>
+              <button id="files-inspect-open" class="button compact" type="button" aria-haspopup="dialog" aria-controls="files-inspector-sheet" hidden disabled>File details</button>
             </div>
             <div id="files-preview" class="files-preview" role="region" aria-label="Local file preview">
               <p class="files-empty">Open files or drop them here to inspect their headers.</p>
             </div>
           </div>
-          <aside class="files-inspector" aria-label="File inspector">
+          <aside id="files-inspector" class="files-inspector" aria-label="File inspector">
             <div class="panel-header files-inspector-header">
-              <strong id="files-selected">Choose a file</strong>
-              <span id="files-status" role="status" aria-live="polite">Files remain on this device.</span>
+              <div class="files-inspector-summary">
+                <strong id="files-selected">Choose a file</strong>
+                <span id="files-status" role="status" aria-live="polite">Files remain on this device.</span>
+              </div>
+              <button id="files-inspect-close" class="button compact" type="button" autofocus hidden>Close</button>
             </div>
             <div id="files-inspector-actions" class="files-inspector-actions" hidden>
               <button id="files-open-tool" class="button compact primary" type="button">Open in tool</button>
@@ -426,6 +431,7 @@
             </div>
             <dl id="files-metadata" class="files-metadata"></dl>
           </aside>
+          <dialog id="files-inspector-sheet" class="files-inspector-sheet" aria-labelledby="files-selected"></dialog>
         </section>
       </div>
       <div id="files-audio-dock" class="files-audio-dock" role="region" aria-label="Audio mini-player" hidden>

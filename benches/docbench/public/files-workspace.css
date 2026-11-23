@@ -136,6 +136,16 @@
   flex-wrap: wrap;
 }
 
+.files-inspector-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+  width: 100%;
+}
+
 .files-inspector-header strong {
   white-space: normal;
   overflow-wrap: anywhere;
@@ -340,6 +350,62 @@
   .files-list {
     max-height: 28vh;
   }
+
+  .files-preview-header,
+  .files-inspector-sheet .files-inspector-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .files-preview-header .button,
+  .files-inspector-sheet .button {
+    min-height: 44px;
+  }
+}
+
+.files-inspector-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: 78vh;
+  max-height: 78dvh;
+  margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line-strong);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.files-inspector-sheet::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+.files-inspector-sheet .files-inspector {
+  border: 0;
+}
+
+.files-inspector-sheet .files-inspector-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex-wrap: nowrap;
+  background: var(--surface);
+}
+
+.files-inspector-sheet .files-inspector-summary {
+  display: grid;
+  flex: 1;
+}
+
+.files-inspector-sheet .files-metadata {
+  grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
 }
 
 @media print {

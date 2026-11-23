@@ -64,7 +64,7 @@ jobs:
         working-directory: benches
         run: node --test scripts/agent-discovery.test.mjs
 
-      - name: Test Docbench editor and XML preview in Chrome
+      - name: Test Docbench Files and editor in Chrome
         working-directory: benches/docbench
         run: node tests/xml-preview.browser.mjs
 

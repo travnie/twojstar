@@ -17,7 +17,40 @@ frame.addEventListener("load", async () => {
     const format = doc.getElementById("format-select");
     const preview = doc.getElementById("preview");
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-    doc.getElementById("document-tab").click();
+    const win = frame.contentWindow;
+    const inspect = doc.getElementById("files-inspect-open");
+    const inspector = doc.getElementById("files-inspector");
+    const sheet = doc.getElementById("files-inspector-sheet");
+    const closeInspector = doc.getElementById("files-inspect-close");
+    if (!inspect.disabled || inspector.parentElement !== sheet) throw Error("Mobile inspector not initialized");
+    const imported = win.DocBenchFiles.importFile(new win.File(["sample"], "notes.txt", { type: "text/plain" }));
+    if (!imported.ok) throw Error("Could not import mobile inspector fixture");
+    const tool = doc.getElementById("files-open-tool");
+    for (let i = 0; i < 30 && tool.hidden; i++) await wait(40);
+    inspect.click();
+    if (!sheet.open || doc.activeElement !== closeInspector
+      || !sheet.textContent.includes("notes.txt")
+      || Math.abs(sheet.getBoundingClientRect().bottom - win.innerHeight) > 1) {
+      throw Error("File details did not open at the bottom with the active file's metadata");
+    }
+    closeInspector.click();
+    if (sheet.open || doc.activeElement !== inspect) throw Error("Closing file details did not restore focus");
+
+    inspect.click();
+    frame.width = "1120";
+    for (let i = 0; i < 30 && inspector.parentElement === sheet; i++) await wait(40);
+    if (sheet.open || !inspect.hidden || inspector.parentElement.className !== "files-details") {
+      throw Error("Desktop resize did not move the same inspector inline");
+    }
+    frame.width = "320";
+    for (let i = 0; i < 30 && inspector.parentElement !== sheet; i++) await wait(40);
+    inspect.click();
+    tool.click();
+    const documentWorkspace = doc.getElementById("document-workspace");
+    for (let i = 0; i < 30 && documentWorkspace.hidden; i++) await wait(40);
+    if (documentWorkspace.hidden || sheet.open || editor.value !== "sample") {
+      throw Error("Opening the text tool from File details did not dismiss the sheet");
+    }
     format.value = "xml";
     editor.value = '<root attr="&quot;"><script xmlns="http://www.w3.org/1999/xhtml">globalThis.xmlProbeExecuted=true;<\\/script><![CDATA[<img src=x onerror="globalThis.xmlProbeExecuted=true">]]>&amp;</root>';
     format.dispatchEvent(new frame.contentWindow.Event("change", { bubbles: true }));

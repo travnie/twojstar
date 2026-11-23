@@ -17,6 +17,9 @@ More holds import, inspection, wrapping and export actions. Find and replace
 matches literal text, supports case matching and groups Replace all as one undo
 within the editor's existing history limit.
 
+On phones, File details opens the active file's inspector as a bottom sheet.
+The same file properties and contextual actions appear inline on wider screens.
+
 ## Security
 
 URL opening needs HTTPS connections in the HTML CSP. Any injected script could use those connections; protect the page against script injection. Other assets retain their restricted policy.

@@ -508,6 +508,7 @@ drop/size helper and portable build. They are **not** a file manager yet.
 2. **Preview surfaces:** modal image lightbox and audio mini-player, video
    viewer, metadata drawer, same virtual-entry APIs, object URL cleanup and
    constrained native media handling. Keep browser feature fallbacks explicit.
+   Shipped for local files, including the mobile File details sheet.
 3. **First packing operation:** select multiple local files, stream a ZIP with
    progress/cancel, collision-safe paths and round-trip tests. Benchmark
    zip.js against existing fflate for constrained small files before picking
