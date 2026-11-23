@@ -33,14 +33,15 @@ template <typename Sample>
     return mask;
 }
 
-[[nodiscard]] Steinberg::Vst::IParamValueQueue* findStrengthQueue(
-    Steinberg::Vst::IParameterChanges* changes) noexcept
+[[nodiscard]] Steinberg::Vst::IParamValueQueue* findParameterQueue(
+    Steinberg::Vst::IParameterChanges* changes,
+    Steinberg::Vst::ParamID id) noexcept
 {
     if (!changes) return nullptr;
     for (Steinberg::int32 index = 0; index < changes->getParameterCount(); ++index)
     {
         auto* queue = changes->getParameterData(index);
-        if (queue && queue->getParameterId() == kSmartTransitionStrengthId)
+        if (queue && queue->getParameterId() == id)
             return queue;
     }
     return nullptr;
@@ -72,9 +73,17 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setState(Steinberg::IBSt
     Steinberg::IBStreamer streamer(state, kLittleEndian);
     double savedStrength = 1.0;
     if (!streamer.readDouble(savedStrength)) savedStrength = 1.0;
+    // Older presets contain only Strength.
+    double savedMaxTransition = 1.0;
+    if (!streamer.readDouble(savedMaxTransition)) savedMaxTransition = 1.0;
     const auto normalized = std::isfinite(savedStrength) ? std::clamp(savedStrength, 0.0, 1.0) : 1.0;
+    const auto maxNormalized = std::isfinite(savedMaxTransition)
+        ? std::clamp(savedMaxTransition, 0.0, 1.0) : 1.0;
+    restoreEpoch_.fetch_add(1, std::memory_order_acq_rel);
     pendingStrength_.store(normalized, std::memory_order_relaxed);
+    pendingMaxTransition_.store(maxNormalized, std::memory_order_relaxed);
     restoreGeneration_.fetch_add(1, std::memory_order_release);
+    restoreEpoch_.fetch_add(1, std::memory_order_release);
     return Steinberg::kResultOk;
 }
 
@@ -82,13 +91,42 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
 {
     if (!state) return Steinberg::kResultFalse;
     Steinberg::IBStreamer streamer(state, kLittleEndian);
-    // A restore supersedes the last audio snapshot until the audio thread
-    // publishes a value for the matching generation. No torn state pairs.
-    const auto generation = restoreGeneration_.load(std::memory_order_acquire);
-    const auto value = audioGeneration_.load(std::memory_order_acquire) == generation
-        ? audioStrength_.load(std::memory_order_acquire)
-        : pendingStrength_.load(std::memory_order_acquire);
-    return streamer.writeDouble(value) ? Steinberg::kResultOk : Steinberg::kResultFalse;
+    // Read a stable pair while the host may be processing audio or restoring state.
+    double strength = 1.0;
+    double maxTransition = 1.0;
+    for (;;)
+    {
+        const auto restoreStart = restoreEpoch_.load(std::memory_order_acquire);
+        const auto audioStart = audioEpoch_.load(std::memory_order_acquire);
+        if ((restoreStart & 1U) != 0 || (audioStart & 1U) != 0) continue;
+        const auto generation = restoreGeneration_.load(std::memory_order_acquire);
+        if (audioGeneration_.load(std::memory_order_acquire) == generation)
+        {
+            strength = audioStrength_.load(std::memory_order_relaxed);
+            maxTransition = audioMaxTransition_.load(std::memory_order_relaxed);
+        }
+        else
+        {
+            strength = pendingStrength_.load(std::memory_order_relaxed);
+            maxTransition = pendingMaxTransition_.load(std::memory_order_relaxed);
+        }
+        if (generation == restoreGeneration_.load(std::memory_order_acquire) &&
+            restoreStart == restoreEpoch_.load(std::memory_order_acquire) &&
+            audioStart == audioEpoch_.load(std::memory_order_acquire))
+            break;
+    }
+    return streamer.writeDouble(strength) && streamer.writeDouble(maxTransition)
+        ? Steinberg::kResultOk : Steinberg::kResultFalse;
+}
+
+void SmartTransitionProcessor::publishAudioState(Steinberg::uint64 generation) noexcept
+{
+    audioEpoch_.fetch_add(1, std::memory_order_acq_rel);
+    audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
+    audioMaxTransition_.store((dsp_.maxTransitionMilliseconds() - 1.0) / 3.0,
+        std::memory_order_relaxed);
+    audioGeneration_.store(generation, std::memory_order_release);
+    audioEpoch_.fetch_add(1, std::memory_order_release);
 }
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBool state)
@@ -245,10 +283,27 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     if (generation != appliedRestoreGeneration_)
     {
         dsp_.setStrength(pendingStrength_.load(std::memory_order_acquire));
+        dsp_.setMaxTransitionMilliseconds(
+            1.0 + 3.0 * pendingMaxTransition_.load(std::memory_order_acquire));
         appliedRestoreGeneration_ = generation;
     }
 
-    auto* strengthQueue = findStrengthQueue(data.inputParameterChanges);
+    auto* strengthQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionStrengthId);
+    // Non-automatable Max transition is applied at block boundaries.
+    if (auto* maxQueue = findParameterQueue(data.inputParameterChanges, kSmartTransitionMaxTransitionId))
+    {
+        for (Steinberg::int32 i = 0; i < maxQueue->getPointCount(); ++i)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue normalized = 1.0;
+            if (maxQueue->getPoint(i, offset, normalized) == Steinberg::kResultTrue &&
+                offset >= 0 && (data.numSamples <= 0 || offset < data.numSamples))
+            {
+                dsp_.setMaxTransitionMilliseconds(1.0 + 3.0 * (std::isfinite(normalized)
+                    ? std::clamp(normalized, 0.0, 1.0) : 1.0));
+            }
+        }
+    }
     if (data.numSamples <= 0)
     {
         // Hosts may flush only parameter changes without audio buffers.
@@ -259,8 +314,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             if (strengthQueue->getPoint(strengthQueue->getPointCount() - 1, offset, value) == Steinberg::kResultTrue)
                 dsp_.setStrength(value);
         }
-        audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
-        audioGeneration_.store(generation, std::memory_order_release);
+        publishAudioState(generation);
         return Steinberg::kResultOk;
     }
     if (data.numInputs == 0 || data.numOutputs == 0)
@@ -306,8 +360,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     }
 
     data.outputs[0].silenceFlags = allSilent ? silenceMask : unavailableOutputs;
-    audioStrength_.store(dsp_.strength(), std::memory_order_relaxed);
-    audioGeneration_.store(generation, std::memory_order_release);
+    publishAudioState(generation);
     return Steinberg::kResultOk;
 }
 
