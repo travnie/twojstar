@@ -29,7 +29,7 @@ Install the `Paint.NET-5.2+` DLL, restart Paint.NET 5.2, then verify:
 
 1. `Windows Icon (*.ico)` appears in the **Open** and **Save As** format lists (FileType plugins do not appear in the Effects menu).
 2. Open a multi-frame ICO with PNG-backed and BMP/DIB-backed frames. Confirm the decoded sizes are separate named layers, with transparency intact.
-3. Save an ICO with 16, 32, 48 and 256 px entries, reopen it, and verify frame sizes, alpha and aspect-ratio padding.
+3. Use a **non-square** source, save 16, 32, 48 and 256 px entries with **Preserve aspect ratio** on and off, then reopen and verify sizes, alpha and transparent padding.
 4. If the format is missing, inspect **Settings → Plugin Errors** before assuming the decoder is broken.
 
-The CI suite does not launch the Paint.NET UI, so this checklist remains a manual release gate.
+CI and the rolling release do **not** enforce this in-app check. Use the checklist for manual host verification; do not treat a successful build as proof of Paint.NET UI compatibility.
