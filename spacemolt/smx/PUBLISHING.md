@@ -12,7 +12,7 @@ Every pull request that touches SMX runs the build job. To build `main` or anoth
 2. Configure the GitHub environment `pypi` with appropriate approval protection, or review the release workflow trigger carefully. It does not store an API token.
 3. Merge the reviewed workflow; run it on `main` with **publish = true** only after checking the version and distribution files. Each new release requires a version bump (PyPI versions are immutable).
 
-For every release, also set `TESTED_BACKEND` in `src/smx/maintenance.py` to the official client version it was checked against, and keep `pyproject.toml` and `src/smx/__init__.py` versions equal.
+For every release, keep `pyproject.toml` and `src/smx/__init__.py` versions equal. Set `TESTED_BACKEND` in `src/smx/maintenance.py` **only** after exercising that exact official client binary with SMX (passthrough and relevant smoke tests). For source/contract review alone, update `SOURCE_REVIEWED_BACKEND`; do not suppress the newer-than-binary-tested warning.
 
 Users can run:
 
