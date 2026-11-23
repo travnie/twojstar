@@ -1,7 +1,49 @@
-// Plain TAR only. Read headers, then slice selected file data on demand.
+// TAR headers and slices. Inflate gzip containers within a separate byte budget.
 const TAR_BLOCK_BYTES = 512;
 const TAR_MAX_ENTRIES = 2000;
+const TAR_GZIP_LIMIT = 32 * 1024 * 1024;
+const TAR_GZIP_CHUNK = 8 * 1024;
 const tarTextDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+export async function decompressGzipTar(blob, signal) {
+  if (blob.size > TAR_GZIP_LIMIT) throw new Error("Compressed TAR exceeds the 32 MiB input limit.");
+  if (typeof DecompressionStream !== "function") throw new Error("This browser cannot open gzip-compressed TAR.");
+  signal?.throwIfAborted();
+
+  let offset = 0;
+  const source = new ReadableStream({
+    async pull(controller) {
+      if (offset === blob.size) {
+        controller.close();
+        return;
+      }
+      // Bound input per native inflate call, including before output accounting.
+      const end = Math.min(offset + TAR_GZIP_CHUNK, blob.size);
+      const bytes = new Uint8Array(await blob.slice(offset, end).arrayBuffer());
+      offset = end;
+      if (!signal?.aborted) controller.enqueue(bytes);
+    },
+  });
+  const reader = source.pipeThrough(new DecompressionStream("gzip"), { signal }).getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read().catch(() => {
+        signal?.throwIfAborted();
+        throw new Error("Gzip decoding failed. The stream is damaged or unsupported.");
+      });
+      signal?.throwIfAborted();
+      if (done) return new Blob(chunks);
+      total += value.byteLength;
+      if (total > TAR_GZIP_LIMIT) throw new Error("Expanded TAR exceeds the 32 MiB output limit.");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
 
 function invalidTar(reason) {
   throw new Error(`TAR index unavailable: ${reason}`);

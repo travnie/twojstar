@@ -127,7 +127,7 @@ const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:func
 const filesController = filesWorkspace
   .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
   .replace('import { readZipIndex } from "./zip-index.mjs";', "")
-  .replace('import { readTarIndex } from "./tar-index.mjs";', "")
+  .replace('import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";', "")
   .replace('import { createZipTree } from "./zip-tree.mjs";', "")
   .replace('import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,\n  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";', "")
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")

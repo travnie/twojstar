@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { gzipSync } from "node:zlib";
 import { tarFixture, tarRecord } from "./tar-fixture.mjs";
-import { readTarIndex } from "../public/tar-index.mjs";
+import { decompressGzipTar, readTarIndex } from "../public/tar-index.mjs";
 import { createZipTree } from "../public/zip-tree.mjs";
 
 test("TAR index skips payload reads and returns exact regular-file slices", async () => {
@@ -59,4 +60,37 @@ test("TAR bounds the header count and stops reading stale archives", async () =>
   const archive = new Blob([tarFixture(...Array(2001).fill(empty))]);
   await assert.rejects(readTarIndex(archive), /entry limit exceeded/u);
   await assert.rejects(readTarIndex(archive, () => false), { name: "AbortError" });
+});
+
+test("gzip TAR only returns after validating the complete stream", async () => {
+  const fixture = tarFixture(tarRecord("docs/readme.txt", "compressed TAR"));
+  const gzip = gzipSync(fixture);
+  const expanded = await decompressGzipTar(new Blob([gzip]));
+  assert.deepEqual(Buffer.from(await expanded.arrayBuffer()), fixture);
+  const { entries } = await readTarIndex(expanded);
+  assert.equal(entries[0].name, "docs/readme.txt");
+
+  await assert.rejects(decompressGzipTar(new Blob([gzip.subarray(0, -1)])), /Gzip decoding failed/u);
+  for (const offset of [gzip.length - 8, gzip.length - 4]) {
+    const corrupt = Buffer.from(gzip);
+    corrupt[offset] ^= 1;
+    await assert.rejects(decompressGzipTar(new Blob([corrupt])), /Gzip decoding failed/u);
+  }
+});
+
+test("gzip TAR caps input and expansion and cancels a pending read", async () => {
+  const limit = 32 * 1024 * 1024;
+  const oversized = { size: limit + 1, slice() { assert.fail("Read oversized gzip input"); } };
+  await assert.rejects(decompressGzipTar(oversized), /input limit/u);
+  const compressed = new Blob([gzipSync(Buffer.alloc(limit + 1))]);
+  await assert.rejects(decompressGzipTar(compressed), /output limit/u);
+
+  const controller = new AbortController();
+  const input = new Blob([gzipSync(Buffer.from("local data"))]);
+  const read = input.slice.bind(input);
+  input.slice = (...args) => {
+    controller.abort();
+    return read(...args);
+  };
+  await assert.rejects(decompressGzipTar(input, controller.signal), { name: "AbortError" });
 });

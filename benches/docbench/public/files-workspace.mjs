@@ -1,6 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
-import { readTarIndex } from "./tar-index.mjs";
+import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";
 import { createZipTree } from "./zip-tree.mjs";
 import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
   extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";
@@ -73,6 +73,7 @@ const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
 const zipJobs = new Map();
 const archiveViews = new Map();
+const gzipReads = new Map();
 let selectionRevision = 0;
 let viewMode = "list";
 let query = "";
@@ -138,6 +139,8 @@ function closeAudioDock() {
 }
 
 function releasePreview(target = preview) {
+  gzipReads.get(target)?.abort();
+  gzipReads.delete(target);
   archiveViews.get(target)?.close();
   archiveViews.delete(target);
   const job = zipJobs.get(target);
@@ -279,6 +282,10 @@ function downloadArchiveEntry(bytes, name) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+function isCompressedTar(file, info) {
+  return info.signature === "gzip" && /(?:\.tar\.gz|\.tgz)$/iu.test(file.name);
+}
+
 async function showArchiveContents(file, format, revision, target) {
   const zip = format === "zip";
   const label = zip ? "ZIP" : "TAR";
@@ -407,7 +414,7 @@ async function showArchiveContents(file, format, revision, target) {
       if (!isCurrent()) return;
       if (resolveFileTool(info, extracted.size)?.mode === "pdf") {
         emptyPreview("Extract this file to open it in PDF tools.", entryBody);
-      } else if (info.format === "zip" || info.format === "tar") {
+      } else if (info.format === "zip" || info.format === "tar" || isCompressedTar(extracted, info)) {
         emptyPreview("Extract this archive to browse it separately.", entryBody);
       } else {
         await renderFileContent(extracted, info, entryBody, isCurrent);
@@ -722,11 +729,29 @@ function mediaPreview(file, format, target, isCurrent) {
 async function renderPreview(file, info, revision, target = preview) {
   releasePreview(target);
   const isCurrent = () => isCurrentPreview(target, revision);
-  if (info.format === "zip" || info.format === "tar") {
+  const compressedTar = isCompressedTar(file, info);
+  if (info.format === "zip" || info.format === "tar" || compressedTar) {
+    let controller;
+    let pending;
     try {
-      await showArchiveContents(file, info.format, revision, target);
+      if (compressedTar) {
+        controller = new AbortController();
+        gzipReads.set(target, controller);
+        pending = element("p", "files-note", "Opening gzip-compressed TAR…");
+        pending.setAttribute("role", "status");
+        target.append(pending);
+        const tar = await decompressGzipTar(file, controller.signal);
+        if (!isCurrent()) return;
+        pending.remove();
+        await showArchiveContents(tar, "tar", revision, target);
+      } else {
+        await showArchiveContents(file, info.format, revision, target);
+      }
     } catch (error) {
+      pending?.remove();
       if (isCurrent()) emptyPreview(error.message || "Archive index unavailable.", target);
+    } finally {
+      if (controller && gzipReads.get(target) === controller) gzipReads.delete(target);
     }
     return;
   }

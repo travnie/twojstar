@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
+import { gzipSync } from "node:zlib";
 import { tarFixture, tarRecord } from "./tar-fixture.mjs";
 
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
@@ -10,7 +11,10 @@ const portable = (await readFile(new URL("../public/portable.html", import.meta.
 const browserTar = tarFixture(
   tarRecord("./docs/readme.html", "<img src=x>", { gnu: true }),
   tarRecord("./docs/link", "", { type: "2", gnu: true }),
-).toString("base64");
+);
+const browserGzip = gzipSync(browserTar);
+const badBrowserGzip = Buffer.from(browserGzip);
+badBrowserGzip[badBrowserGzip.length - 8] ^= 1;
 const harness = `<!doctype html><html data-result="pending"><body>
 <iframe id="app" src="/app" width="320" height="460"></iframe>
 <img src="/test-pending" alt="" hidden>
@@ -263,7 +267,8 @@ frame.addEventListener("load", async () => {
     }
 
     document.documentElement.dataset.stage = "tar-index";
-    const tar = win.Uint8Array.from(win.atob("${browserTar}"), char => char.charCodeAt(0));
+    const decodeFixture = data => win.Uint8Array.from(win.atob(data), char => char.charCodeAt(0));
+    const tar = decodeFixture("${browserTar.toString("base64")}");
     win.DocBenchFiles.importFile(new win.File([tar], "sample.tar", { type: "application/x-tar" }));
     const tarFolder = 'button[aria-label="Open TAR folder docs"]';
     await until(() => filesPreview.querySelector(tarFolder));
@@ -280,6 +285,26 @@ frame.addEventListener("load", async () => {
     }
     tarEntry.querySelector("button").click();
     if (!tarEntry.hidden || doc.activeElement !== openTarEntry) throw Error("Back to TAR lost focus");
+
+    document.documentElement.dataset.stage = "gzip-tar";
+    const gzip = decodeFixture("${browserGzip.toString("base64")}");
+    win.DocBenchFiles.importFile(new win.File([gzip], "sample.tgz"));
+    await until(() => filesPreview.querySelector(tarFolder));
+    filesPreview.querySelector(tarFolder).click();
+    filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]').click();
+    await until(() => filesPreview.querySelector('.files-zip-entry-preview [role="status"]')
+      ?.textContent === "TAR header checked");
+    if (filesPreview.querySelector(".files-text")?.textContent !== source || filesPreview.querySelector("img")) {
+      throw Error("Gzip TAR did not reuse the inert Files preview");
+    }
+
+    document.documentElement.dataset.stage = "gzip-checksum";
+    const badGzip = decodeFixture("${badBrowserGzip.toString("base64")}");
+    win.DocBenchFiles.importFile(new win.File([badGzip], "corrupt.tar.gz"));
+    await until(() => filesPreview.querySelector(".files-empty")?.textContent.includes("Gzip decoding failed"));
+    if (filesPreview.querySelector(tarFolder) || filesPreview.querySelector(".files-text")) {
+      throw Error("A gzip TAR with a damaged checksum exposed data");
+    }
 
     delete document.documentElement.dataset.stage;
     document.documentElement.dataset.result = "passed";

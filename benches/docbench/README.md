@@ -26,8 +26,11 @@ preview. Back to ZIP restores the folder and selection.
 
 TAR browses and downloads regular files from plain POSIX ustar and basic GNU
 archives. Previews up to 8 MiB. Checks header checksums; TAR has no file-data
-checksum. Skips links, special files and unsafe paths. Compressed TAR, PAX
-extensions, GNU long names and sparse files require another reader.
+checksum. Skips links, special files and unsafe paths. `.tar.gz` and `.tgz`
+use local browser gzip decoding before indexing, with a 32 MiB limit on both
+compressed and expanded data. Gzip CRC-32 and size must pass before entries
+appear. Single gzip member. PAX extensions, GNU long names and sparse files
+require another reader.
 
 ## Security
 
