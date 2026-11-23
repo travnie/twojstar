@@ -93,6 +93,12 @@ int main()
         if (processor->setupProcessing(setup) != Steinberg::kResultOk ||
             processor->setActive(true) != Steinberg::kResultOk) std::abort();
 
+        Steinberg::MemoryStream restoredState;
+        Steinberg::IBStreamer restoredWriter(&restoredState, kLittleEndian);
+        if (!restoredWriter.writeDouble(1.0)) std::abort();
+        restoredState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+        if (processor->setState(&restoredState) != Steinberg::kResultOk) std::abort();
+
         std::vector<double> output(kFrames);
         for (int begin = 0; begin < kFrames;)
         {
@@ -141,6 +147,39 @@ int main()
             data.inputParameterChanges = (step || ramp) ? &changes : nullptr;
             if (processor->process(data) != Steinberg::kResultOk) std::abort();
             begin = end;
+        }
+
+        // Audio automation must replace the restored value in a saved preset.
+        Steinberg::MemoryStream savedState;
+        if (processor->getState(&savedState) != Steinberg::kResultOk) std::abort();
+        savedState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+        Steinberg::IBStreamer savedReader(&savedState, kLittleEndian);
+        double savedStrength = -1.0;
+        const auto expected = (step || ramp) ? 0.0 : 1.0;
+        if (!savedReader.readDouble(savedStrength) || std::abs(savedStrength - expected) > 1e-12)
+        {
+            std::cerr << "Saved state ignored processed Strength automation\n";
+            std::abort();
+        }
+
+        // Zero-sample parameter flushes must also update the saved state.
+        Steinberg::Vst::ParameterChanges flushChanges;
+        Steinberg::int32 parameterIndex = 0;
+        auto* flushQueue = flushChanges.addParameterData(kSmartTransitionStrengthId, parameterIndex);
+        Steinberg::int32 pointIndex = 0;
+        flushQueue->addPoint(0, 0.25, pointIndex);
+        Steinberg::Vst::ProcessData flush{};
+        flush.numSamples = 0;
+        flush.inputParameterChanges = &flushChanges;
+        if (processor->process(flush) != Steinberg::kResultOk) std::abort();
+        Steinberg::MemoryStream flushedState;
+        if (processor->getState(&flushedState) != Steinberg::kResultOk) std::abort();
+        flushedState.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+        Steinberg::IBStreamer flushedReader(&flushedState, kLittleEndian);
+        if (!flushedReader.readDouble(savedStrength) || std::abs(savedStrength - 0.25) > 1e-12)
+        {
+            std::cerr << "Parameter-only Strength flush was not persisted\n";
+            std::abort();
         }
         processor->setActive(false);
         processor->terminate();
