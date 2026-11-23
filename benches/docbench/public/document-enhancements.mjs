@@ -139,6 +139,7 @@ function updateMeta() {
 function updateSaveButton() {
   const directSave = canWriteHandle(state.handle);
   saveButton.textContent = directSave ? "Save" : nativeSaveSupported ? "Save as…" : "Download";
+  downloadButton.hidden = !directSave && !nativeSaveSupported;
   saveButton.title = directSave
     ? `Save directly to ${state.filename}`
     : nativeSaveSupported

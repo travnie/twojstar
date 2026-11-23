@@ -292,6 +292,7 @@ for (const saveGuard of [
   'typeof handle.createWritable === "function"',
   'state.handle = canWriteHandle(handle) ? handle : null',
   'saveButton.textContent = directSave ? "Save" : nativeSaveSupported ? "Save as…" : "Download"',
+  "downloadButton.hidden = !directSave && !nativeSaveSupported",
   "This browser cannot overwrite the opened file",
 ]) {
   if (!documentEnhancements.includes(saveGuard)) {
