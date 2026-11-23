@@ -160,6 +160,51 @@ frame.addEventListener("load", async () => {
     doc.getElementById("minify-button").click();
     if (next.disabled) throw Error("Find did not refresh after Minify");
 
+    const source = "<img src=x>";
+    const payload = "CRC fixture";
+    const zip = win.fflate.zipSync({
+      "docs/readme.html": win.fflate.strToU8(source),
+      "docs/corrupt.txt": [win.fflate.strToU8(payload), { level: 0 }],
+    });
+    // Locate the stored payload by bytes, independent of UTF-8 replacement.
+    const payloadBytes = win.fflate.strToU8(payload);
+    const index = zip.findIndex((byte, offset) =>
+      byte === payloadBytes[0] && payloadBytes.every((value, i) => zip[offset + i] === value));
+    if (index < 0) throw Error("Missing stored ZIP fixture payload");
+    zip[index] ^= 1;
+    const filesPreview = doc.getElementById("files-preview");
+    const until = (ready) => ready() ? Promise.resolve() : new Promise(resolve => {
+      const observer = new win.MutationObserver(() => {
+        if (!ready()) return;
+        observer.disconnect();
+        resolve();
+      });
+      observer.observe(filesPreview, { childList: true, subtree: true, attributes: true });
+    });
+    const archive = win.DocBenchFiles.importFile(new win.File([zip], "preview.zip", { type: "application/zip" }));
+    if (!archive.ok) throw Error("Could not import ZIP preview fixture");
+    const folderSelector = 'button[aria-label="Open ZIP folder docs"]';
+    await until(() => filesPreview.querySelector(folderSelector));
+    filesPreview.querySelector(folderSelector).click();
+    const openEntry = filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]');
+    const keepChecked = filesPreview.querySelector('input[aria-label="Select ZIP entry readme.html"]');
+    keepChecked.click();
+    openEntry.click();
+    const entry = filesPreview.querySelector(".files-zip-entry-preview");
+    await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
+    if (entry.querySelector(".files-text").textContent !== source || entry.querySelector("img")) {
+      throw Error("ZIP entry was not previewed as inert source");
+    }
+    entry.querySelector("button").click();
+    if (!entry.hidden || !keepChecked.checked || doc.activeElement !== openEntry) {
+      throw Error("Back to ZIP lost selection or focus");
+    }
+    filesPreview.querySelector('button[aria-label="Preview entry: corrupt.txt"]').click();
+    await until(() => entry.querySelector('[role="status"]').textContent.includes("CRC-32 mismatch"));
+    if (entry.querySelector(".files-zip-entry-preview-body").childElementCount) {
+      throw Error("Preview published bytes from a corrupt ZIP entry");
+    }
+
     document.documentElement.dataset.result = "passed";
   } catch (error) {
     document.documentElement.dataset.result = "failed";

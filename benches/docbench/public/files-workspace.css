@@ -245,6 +245,22 @@
   font-size: 0.94rem;
 }
 
+.files-zip-entry-preview-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.files-zip-entry-preview-header h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 600 0.84rem "Space Mono", ui-monospace, monospace;
+}
+
 .files-zip-list {
   display: grid;
   gap: 5px;
@@ -349,6 +365,11 @@
 
   .files-list {
     max-height: 28vh;
+  }
+
+  .files-zip-entry-preview-header .button,
+  .files-zip-preview-button {
+    min-height: 44px;
   }
 
   .files-preview-header,
