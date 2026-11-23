@@ -217,7 +217,14 @@ frame.addEventListener("load", async () => {
     await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
     const image = entry.querySelector("img");
     document.documentElement.dataset.stage = "zip-image";
-    await image.decode();
+    // Keep virtual time from ending the dump before Chromium decodes the Blob image.
+    const decodeGate = fetch("/image-decode-wait");
+    try {
+      await image.decode();
+    } finally {
+      await fetch("/image-decode-done");
+      await decodeGate;
+    }
     if (image.naturalWidth !== 1) throw Error("ZIP image did not decode");
     const mediaUrl = image.src;
     const revoke = win.URL.revokeObjectURL;
@@ -264,10 +271,23 @@ frame.addEventListener("load", async () => {
   }
 });
 </script></body></html>`;
+let releaseDecode;
+let decodeDone = false;
 const server = createServer((req, res) => {
   if (req.url === "/app" || req.url === "/") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(req.url === "/app" ? portable : harness);
+  } else if (req.url === "/image-decode-wait" && !decodeDone) {
+    const deadline = setTimeout(() => res.end(), 5000);
+    releaseDecode = () => {
+      clearTimeout(deadline);
+      res.end();
+    };
+    res.once("close", () => clearTimeout(deadline));
+  } else if (req.url === "/image-decode-done" || req.url === "/image-decode-wait") {
+    decodeDone = true;
+    releaseDecode?.();
+    res.end();
   } else {
     res.writeHead(404).end();
   }
