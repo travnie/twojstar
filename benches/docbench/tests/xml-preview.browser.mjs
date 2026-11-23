@@ -8,6 +8,7 @@ const portable = (await readFile(new URL("../public/portable.html", import.meta.
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
 const harness = `<!doctype html><html data-result="pending"><body>
 <iframe id="app" src="/app" width="320" height="460"></iframe>
+<img src="/test-pending" alt="" hidden>
 <script>
 const frame = document.getElementById("app");
 frame.addEventListener("load", async () => {
@@ -217,14 +218,7 @@ frame.addEventListener("load", async () => {
     await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
     const image = entry.querySelector("img");
     document.documentElement.dataset.stage = "zip-image";
-    // Keep virtual time from ending the dump before Chromium decodes the Blob image.
-    const decodeGate = fetch("/image-decode-wait");
-    try {
-      await image.decode();
-    } finally {
-      await fetch("/image-decode-done");
-      await decodeGate;
-    }
+    await image.decode();
     if (image.naturalWidth !== 1) throw Error("ZIP image did not decode");
     const mediaUrl = image.src;
     const revoke = win.URL.revokeObjectURL;
@@ -268,26 +262,25 @@ frame.addEventListener("load", async () => {
   } catch (error) {
     document.documentElement.dataset.result = "failed";
     document.body.append(String(error));
+  } finally {
+    void fetch("/test-finished", { method: "POST" });
   }
 });
 </script></body></html>`;
-let releaseDecode;
-let decodeDone = false;
+// Hold the parent load until the iframe finishes real browser I/O.
+let pending;
+let finished = false;
 const server = createServer((req, res) => {
   if (req.url === "/app" || req.url === "/") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(req.url === "/app" ? portable : harness);
-  } else if (req.url === "/image-decode-wait" && !decodeDone) {
-    const deadline = setTimeout(() => res.end(), 5000);
-    releaseDecode = () => {
-      clearTimeout(deadline);
-      res.end();
-    };
-    res.once("close", () => clearTimeout(deadline));
-  } else if (req.url === "/image-decode-done" || req.url === "/image-decode-wait") {
-    decodeDone = true;
-    releaseDecode?.();
-    res.end();
+  } else if (req.url === "/test-pending") {
+    if (finished) res.writeHead(204).end();
+    else pending = res;
+  } else if (req.url === "/test-finished") {
+    finished = true;
+    pending?.writeHead(204).end();
+    res.writeHead(204).end();
   } else {
     res.writeHead(404).end();
   }
@@ -297,9 +290,12 @@ try {
   const { port } = server.address();
   const { stdout } = await promisify(execFile)("google-chrome", [
     "--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
-    "--virtual-time-budget=15000", "--dump-dom", "http://127.0.0.1:" + port + "/",
+    "--timeout=20000", "--dump-dom", "http://127.0.0.1:" + port + "/",
   ], { timeout: 90000, maxBuffer: 2 * 1024 * 1024 });
   assert.match(stdout, /<html data-result="passed">/, stdout.slice(-2000));
 } finally {
-  await new Promise(resolve => server.close(resolve));
+  await new Promise(resolve => {
+    server.close(resolve);
+    server.closeAllConnections();
+  });
 }
