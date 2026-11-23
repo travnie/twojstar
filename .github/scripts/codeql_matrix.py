@@ -51,10 +51,10 @@ def choose(paths):
             return matrix(lang for lang, _, _ in LANGUAGES)
         if path.startswith((".github/workflows/", ".github/actions/")):
             selected.add("actions")
-        if path.startswith("intent-keyboard/"):
+        if path.startswith("intent-keyboard/") and Path(path).suffix not in {".md", ".mdx"}:
             # Shared KMP sources feed Android, desktop and iOS framework.
             selected.update(("java-kotlin", "swift"))
-        if path.startswith("xiaomi-adb-tools/"):
+        if path.startswith("xiaomi-adb-tools/") and Path(path).suffix not in {".md", ".mdx"}:
             selected.add("java-kotlin")
         lang = SUFFIX_LANGUAGES.get(Path(path).suffix)
         if lang:
@@ -67,7 +67,7 @@ def plan(event, base_sha):
         return matrix(lang for lang, _, _ in LANGUAGES)
     try:
         changed = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=ACMRT", base_sha, "HEAD"],
+            ["git", "diff", "--name-only", "--no-renames", base_sha, "HEAD"],
             check=True, text=True, capture_output=True,
         )
         return choose(changed.stdout.splitlines())
