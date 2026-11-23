@@ -21,7 +21,7 @@ Or use `/plugin` and choose the `twojstar` marketplace to browse the ten availab
 - `openai-dev-kit`
 - `google-dev-kit` (ten declared remote MCP endpoints, many requiring separate credentials)
 - `google` (shown as **Android & Chrome**; Android/Compose and Chrome/web skills, Google Developer Knowledge MCP)
-- `allin` (docs-lookup, skill-creator-v2, plugin-dev, mcp-dev; seven docs MCPs; formerly `claudin`, `szwajcar` and `devkit-claude`, migrated via the generated `renames` map; Git-marketplace users run `/plugin install allin@twojstar` once if Claude Code reports it not cached)
+- `allin` (docs-lookup, skill-creator-v2, plugin-dev, mcp-dev; eight docs MCPs; formerly `claudin`, `szwajcar` and `devkit-claude`, migrated via the generated `renames` map; Git-marketplace users run `/plugin install allin@twojstar` once if Claude Code reports it not cached)
 - `desktop-commander`
 - `cloudflare`
 - `github`
