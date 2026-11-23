@@ -251,11 +251,11 @@ void testConservativeSpectralRepair()
     for (std::size_t i = 0; i < unequal.size(); ++i)
     {
         const auto sample = static_cast<double>(i) - 500.0;
-        const auto leftPhase = i < 500 ? 1.5 * pi : (5.0 / 6.0) * pi;
-        const auto rightPhase = i < 500 ? (2.0 / 3.0) * pi : 0.0;
+        const auto leftPhase = (i < 500 ? 244.0 : 132.0) * pi / 180.0;
+        const auto rightPhase = (i < 500 ? 326.0 : 88.0) * pi / 180.0;
         unequal[i] = {
-            0.8 * std::sin(2.0 * pi * 200.0 * sample / 48000.0 + leftPhase),
-            0.8 * std::sin(2.0 * pi * 500.0 * sample / 48000.0 + rightPhase)
+            0.6 * std::sin(2.0 * pi * 256.0 * sample / 48000.0 + leftPhase),
+            0.42 * std::sin(2.0 * pi * 703.0 * sample / 48000.0 + rightPhase)
         };
     }
     const auto unequalOff = render(unequal, 2);
@@ -263,6 +263,9 @@ void testConservativeSpectralRepair()
         SmartTransitionMode::Auto, true);
     require(unequalOff.hasPlan && unequalAuto.hasPlan,
         "Unequal stereo splice was not detected");
+    require(unequalAuto.plan.repairMode == SmartRepairMode::None &&
+        unequalAuto.output == unequalOff.output,
+        "Unequal stereo bypass must protect the quieter channel");
     const auto unequalEntry = globalAnchor(unequalOff) - 8;
     for (std::size_t channel = 0; channel < 2; ++channel)
     {
