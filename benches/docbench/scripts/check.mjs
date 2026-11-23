@@ -11,6 +11,7 @@ for (const path of [
   "public/local-files.js",
   "public/file-signatures.mjs",
   "public/zip-index.mjs",
+  "public/tar-index.mjs",
   "public/zip-tree.mjs",
   "public/zip-extract.mjs",
   "public/zip-pack.mjs",
@@ -160,6 +161,9 @@ for (const marker of ['zipEntryEligibility(entry)', 'planZipExtraction(items)',
 }
 if (!portableFiles.includes("function createVerifySink()")) {
   throw new Error("ZIP extraction engine missing in portable build.");
+}
+if (!portableFiles.includes("async function readTarIndex(")) {
+  throw new Error("TAR index missing in portable build.");
 }
 if (!filesWorkspaceSource.includes("createZipTree(result.entries)")
   || !filesWorkspaceSource.includes("tree.list(path)")

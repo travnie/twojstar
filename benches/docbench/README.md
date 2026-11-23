@@ -24,6 +24,11 @@ ZIP folders list entries from the central directory. Preview entry reads one
 eligible stored or DEFLATE entry up to 8 MiB, verifies CRC-32 and uses the Files
 preview. Back to ZIP restores the folder and selection.
 
+TAR browses and downloads regular files from plain POSIX ustar and basic GNU
+archives. Previews up to 8 MiB. Checks header checksums; TAR has no file-data
+checksum. Skips links, special files and unsafe paths. Compressed TAR, PAX
+extensions, GNU long names and sparse files require another reader.
+
 ## Security
 
 URL opening needs HTTPS connections in the HTML CSP. Any injected script could use those connections; protect the page against script injection. Other assets retain their restricted policy.
@@ -34,7 +39,7 @@ URL opening needs HTTPS connections in the HTML CSP. Any injected script could u
 | --- | --- |
 | File selection/preview | `public/file-store.mjs`, `public/file-routing.mjs`, `public/files-workspace.mjs` |
 | Local ZIP packing | `public/zip-pack.mjs` |
-| ZIP folder index | `public/zip-index.mjs`, `public/zip-tree.mjs` |
+| Archive indexes and folder tree | `public/zip-index.mjs`, `public/tar-index.mjs`, `public/zip-tree.mjs` |
 | ZIP validation/extraction | `public/zip-extract.mjs` |
 | Document formats, merges and JSON conversion | `public/document-formats.js`, `public/document-merge.mjs`, `public/document-json-convert.mjs` |
 | Undo/Redo | `public/document-history.js` |

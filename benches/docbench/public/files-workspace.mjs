@@ -1,5 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
+import { readTarIndex } from "./tar-index.mjs";
 import { createZipTree } from "./zip-tree.mjs";
 import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
   extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";
@@ -59,10 +60,10 @@ const MAX_FILES = 100;
 const MAX_TEXT_BYTES = 128 * 1024;
 const MAX_IMAGE_BYTES = 48 * 1024 * 1024;
 const MAX_HEX_BYTES = 256;
-const MAX_ZIP_PREVIEW_BYTES = 8 * 1024 * 1024;
+const MAX_ARCHIVE_PREVIEW_BYTES = 8 * 1024 * 1024;
 const ZIP_PREVIEW_LIMITS = Object.freeze({
   ...ZIP_EXTRACT_LIMITS,
-  maxEntryBytes: MAX_ZIP_PREVIEW_BYTES,
+  maxEntryBytes: MAX_ARCHIVE_PREVIEW_BYTES,
 });
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
 const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "ogg", "m4a"]);
@@ -71,7 +72,7 @@ const VIDEO_FORMATS = new Set(["mp4", "webm", "mov", "matroska"]);
 const store = createFileStore({ limit: 100 });
 const previewUrls = new Map();
 const zipJobs = new Map();
-const zipViews = new Map();
+const archiveViews = new Map();
 let selectionRevision = 0;
 let viewMode = "list";
 let query = "";
@@ -137,8 +138,8 @@ function closeAudioDock() {
 }
 
 function releasePreview(target = preview) {
-  zipViews.get(target)?.close();
-  zipViews.delete(target);
+  archiveViews.get(target)?.close();
+  archiveViews.delete(target);
   const job = zipJobs.get(target);
   if (job) job.controller.abort();
   const media = target.querySelector("audio, video");
@@ -269,20 +270,34 @@ function renderList() {
   viewGrid.setAttribute("aria-pressed", String(viewMode === "grid"));
 }
 
-async function showZipContents(file, revision, target = preview) {
-  const result = await readZipIndex(file);
+function downloadArchiveEntry(bytes, name) {
+  const url = URL.createObjectURL(bytes);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+async function showArchiveContents(file, format, revision, target) {
+  const zip = format === "zip";
+  const label = zip ? "ZIP" : "TAR";
+  const result = zip ? await readZipIndex(file)
+    : await readTarIndex(file, () => isCurrentPreview(target, revision));
   if (!isCurrentPreview(target, revision)) return;
   const tree = createZipTree(result.entries);
   const box = element("section", "files-zip");
-  const title = element("h3", "", `ZIP contents · ${tree.total} entries`);
+  const title = element("h3", "", `${label} contents · ${tree.total} entries`);
   title.tabIndex = -1;
   const note = element("p", "files-note",
-    `Preview entries up to ${formatBytes(MAX_ZIP_PREVIEW_BYTES)}. Preview and extraction check CRC-32 locally.`);
+    zip
+      ? `Preview entries up to ${formatBytes(MAX_ARCHIVE_PREVIEW_BYTES)}. Preview and extraction check CRC-32 locally.`
+      : "Preview entries up to 8 MiB. TAR checks headers only; file data has no checksum.");
   const warning = tree.skipped
     ? element("p", "files-unsafe-label", `${tree.skipped} unsafe, ambiguous or unsupported entries hidden.`)
     : null;
   const breadcrumb = element("nav", "files-zip-breadcrumbs");
-  breadcrumb.setAttribute("aria-label", "ZIP folder navigation");
+  breadcrumb.setAttribute("aria-label", label + " folder navigation");
   const tools = element("div", "files-zip-actions");
   tools.setAttribute("role", "group");
   tools.setAttribute("aria-label", "ZIP archive actions");
@@ -306,21 +321,23 @@ async function showZipContents(file, revision, target = preview) {
   const entryHeader = element("div", "files-zip-entry-preview-header");
   const entryTitle = element("h3", "");
   entryTitle.dataset.i18nSkip = "";
-  const backToZip = element("button", "button compact", "Back to ZIP");
-  backToZip.type = "button";
-  entryHeader.append(backToZip, entryTitle);
+  const backToArchive = element("button", "button compact", zip ? "Back to ZIP" : "Back to TAR");
+  backToArchive.type = "button";
+  entryHeader.append(backToArchive, entryTitle);
   const entryStatus = element("p", "files-note");
   entryStatus.setAttribute("role", "status");
   const entryBody = element("div", "files-zip-entry-preview-body");
   entryView.append(entryHeader, entryStatus, entryBody);
-  if (warning) box.append(title, note, warning, breadcrumb, tools, listNode, entryDetails);
-  else box.append(title, note, breadcrumb, tools, listNode, entryDetails);
+  box.append(title, note);
+  if (warning) box.append(warning);
+  box.append(breadcrumb);
+  if (zip) box.append(tools);
+  box.append(listNode, entryDetails);
   target.append(box, entryView);
 
   const checked = new Set();
   let entryController = null;
   let entryTrigger = null;
-  const eligible = (item) => !zipEntryEligibility(result.entries[item.sourceIndex]);
   const selectedEntries = () => [...checked].map((id) => result.entries[id]);
   function refreshActions() {
     const running = zipJobs.has(target);
@@ -342,7 +359,7 @@ async function showZipContents(file, revision, target = preview) {
     if (zipJobs.get(target)?.controller !== controller) return;
     zipJobs.delete(target);
     cancel.hidden = true;
-    zipViews.get(target)?.refreshActions();
+    archiveViews.get(target)?.refreshActions();
   }
   cancel.addEventListener("click", () => {
     const job = zipJobs.get(target);
@@ -359,10 +376,10 @@ async function showZipContents(file, revision, target = preview) {
     if (restoreFocus) (entryTrigger.disabled ? title : entryTrigger).focus();
     entryTrigger = null;
   }
-  zipViews.set(target, { close: closeEntryPreview, refreshActions });
-  backToZip.addEventListener("click", () => closeEntryPreview(true));
+  archiveViews.set(target, { close: closeEntryPreview, refreshActions });
+  backToArchive.addEventListener("click", () => closeEntryPreview(true));
 
-  async function previewZipEntry(entry, item, trigger) {
+  async function previewArchiveEntry(entry, item, trigger) {
     if (!isCurrentPreview(target, revision) || zipJobs.has(target)) return;
     const controller = new AbortController();
     entryController = controller;
@@ -372,30 +389,30 @@ async function showZipContents(file, revision, target = preview) {
     entryStatus.textContent = "Preparing preview…";
     box.hidden = true;
     entryView.hidden = false;
-    backToZip.focus();
+    backToArchive.focus();
     beginJob(controller, false);
     // Bound output allocated before the inflater callback. Stored entries skip inflation.
     const limits = entry.method === 8 ? { ...ZIP_PREVIEW_LIMITS, chunkBytes: 4 * 1024 } : ZIP_PREVIEW_LIMITS;
     try {
-      const { output } = await extractZipEntry(file, entry, {
+      const output = zip ? (await extractZipEntry(file, entry, {
         zipApi: globalThis.fflate,
-        sink: createMemoryExtractSink({ maxBytes: MAX_ZIP_PREVIEW_BYTES }),
+        sink: createMemoryExtractSink({ maxBytes: MAX_ARCHIVE_PREVIEW_BYTES }),
         signal: controller.signal,
         directoryOffset: result.directoryOffset,
         limits,
-      });
+      })).output : file.slice(entry.start, entry.start + entry.originalSize);
       if (!isCurrent()) return;
       const extracted = new File([output], item.name);
       const info = await inspectLocalFile(extracted);
       if (!isCurrent()) return;
       if (resolveFileTool(info, extracted.size)?.mode === "pdf") {
         emptyPreview("Extract this file to open it in PDF tools.", entryBody);
-      } else if (info.format === "zip") {
+      } else if (info.format === "zip" || info.format === "tar") {
         emptyPreview("Extract this archive to browse it separately.", entryBody);
       } else {
         await renderFileContent(extracted, info, entryBody, isCurrent);
       }
-      if (isCurrent()) entryStatus.textContent = "CRC-32 verified";
+      if (isCurrent()) entryStatus.textContent = zip ? "CRC-32 verified" : "TAR header checked";
     } catch (error) {
       if (isCurrent()) entryStatus.textContent = `Preview unavailable. ${error?.message || error}`;
     } finally {
@@ -472,12 +489,7 @@ async function showZipContents(file, revision, target = preview) {
           },
         });
         if (mode === "download" && outcome.output) {
-          const url = URL.createObjectURL(outcome.output);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = entry.name.replaceAll("\\", "/").split("/").at(-1);
-          link.click();
-          setTimeout(() => URL.revokeObjectURL(url), 30_000);
+          downloadArchiveEntry(outcome.output, entry.name.replaceAll("\\", "/").split("/").at(-1));
         }
         finished += 1;
         if (job) job.committing = false;
@@ -533,17 +545,17 @@ async function showZipContents(file, revision, target = preview) {
       const row = element("li", "files-zip-folder");
       const button = element("button", "files-zip-entry-button");
       button.type = "button";
-      const label = element("span", "files-zip-name", folder.name + "/");
-      label.dataset.i18nSkip = "";
-      button.append(element("span", "files-zip-icon", "▣ "), label);
-      button.setAttribute("aria-label", "Open ZIP folder " + folder.name);
+      const folderLabel = element("span", "files-zip-name", folder.name + "/");
+      folderLabel.dataset.i18nSkip = "";
+      button.append(element("span", "files-zip-icon", "▣ "), folderLabel);
+      button.setAttribute("aria-label", `Open ${label} folder ${folder.name}`);
       button.addEventListener("click", () => navigate(folder.path, true));
       row.append(button);
       listNode.append(row);
     }
     for (const item of view.files) {
       const entry = result.entries[item.sourceIndex];
-      const reason = zipEntryEligibility(entry);
+      const reason = zip ? zipEntryEligibility(entry) : null;
       const row = element("li", "files-zip-file");
       const name = element("button", "files-zip-entry-button", item.name);
       name.type = "button";
@@ -551,7 +563,7 @@ async function showZipContents(file, revision, target = preview) {
       name.addEventListener("click", () => {
         if (!isCurrentPreview(target, revision)) return;
         entryDetails.replaceChildren();
-        const properties = [
+        const properties = zip ? [
           ["Path", item.path],
           ["Original size", item.zip64 ? "ZIP64 size unsupported" : formatBytes(item.originalSize)],
           ["Compressed size", item.zip64 ? "ZIP64 size unsupported" : formatBytes(item.compressedSize)],
@@ -559,7 +571,7 @@ async function showZipContents(file, revision, target = preview) {
           ["Encrypted", item.encrypted ? "Yes" : "No"],
           ["ZIP64", item.zip64 ? "Unsupported" : "No"],
           ["Extraction", reason || "Supported · CRC-32 checked"],
-        ];
+        ] : [["Path", item.path], ["Size", formatBytes(item.originalSize)]];
         for (const [keyName, value] of properties) {
           const field = element("div", "files-zip-property");
           const key = element("dt", "", keyName);
@@ -570,36 +582,47 @@ async function showZipContents(file, revision, target = preview) {
         }
         entryDetails.hidden = false;
       });
-      const size = element("small", "", reason
-        ? reason
-        : `${formatBytes(item.originalSize)} · method ${item.method}`);
+      const size = element("small", "", reason || (zip
+        ? `${formatBytes(item.originalSize)} · method ${item.method}` : formatBytes(item.originalSize)));
       row.append(name, size);
       if (!reason) {
         const actions = element("div", "files-zip-row-actions");
-        const checkbox = element("input", "files-zip-checkbox");
-        checkbox.type = "checkbox";
-        checkbox.checked = checked.has(item.sourceIndex);
-        checkbox.setAttribute("aria-label", "Select ZIP entry " + item.name);
-        checkbox.addEventListener("change", () => {
-          if (checkbox.checked) checked.add(item.sourceIndex);
-          else checked.delete(item.sourceIndex);
-          refreshActions();
-        });
-        const verify = element("button", "button compact", "Verify CRC");
+        if (zip) {
+          const checkbox = element("input", "files-zip-checkbox");
+          checkbox.type = "checkbox";
+          checkbox.checked = checked.has(item.sourceIndex);
+          checkbox.setAttribute("aria-label", "Select ZIP entry " + item.name);
+          checkbox.addEventListener("change", () => {
+            if (checkbox.checked) checked.add(item.sourceIndex);
+            else checked.delete(item.sourceIndex);
+            refreshActions();
+          });
+          actions.append(checkbox);
+        }
         const download = element("button", "button compact", "Extract file");
-        verify.type = download.type = "button";
-        verify.addEventListener("click", () => void runEntries([entry], "verify"));
-        download.addEventListener("click", () => void runEntries([entry], "download"));
-        actions.append(checkbox);
-        if (!zipEntryEligibility(entry, ZIP_PREVIEW_LIMITS)) {
+        download.type = "button";
+        if (zip ? !zipEntryEligibility(entry, ZIP_PREVIEW_LIMITS) : item.originalSize <= MAX_ARCHIVE_PREVIEW_BYTES) {
           const openEntry = element("button", "button compact files-zip-preview-button", "Preview entry");
           openEntry.type = "button";
           openEntry.disabled = zipJobs.has(target);
           openEntry.setAttribute("aria-label", "Preview entry: " + item.name);
-          openEntry.addEventListener("click", () => void previewZipEntry(entry, item, openEntry));
+          openEntry.addEventListener("click", () => void previewArchiveEntry(entry, item, openEntry));
           actions.append(openEntry);
         }
-        actions.append(verify, download);
+        if (zip) {
+          const verify = element("button", "button compact", "Verify CRC");
+          verify.type = "button";
+          verify.addEventListener("click", () => void runEntries([entry], "verify"));
+          download.addEventListener("click", () => void runEntries([entry], "download"));
+          actions.append(verify);
+        } else {
+          download.addEventListener("click", () => {
+            if (isCurrentPreview(target, revision)) {
+              downloadArchiveEntry(file.slice(entry.start, entry.start + entry.originalSize), item.name);
+            }
+          });
+        }
+        actions.append(download);
         row.append(actions);
       }
       listNode.append(row);
@@ -699,11 +722,11 @@ function mediaPreview(file, format, target, isCurrent) {
 async function renderPreview(file, info, revision, target = preview) {
   releasePreview(target);
   const isCurrent = () => isCurrentPreview(target, revision);
-  if (info.format === "zip") {
+  if (info.format === "zip" || info.format === "tar") {
     try {
-      await showZipContents(file, revision, target);
+      await showArchiveContents(file, info.format, revision, target);
     } catch (error) {
-      if (isCurrent()) emptyPreview(error.message || "ZIP index unavailable.", target);
+      if (isCurrent()) emptyPreview(error.message || "Archive index unavailable.", target);
     }
     return;
   }
@@ -1118,8 +1141,8 @@ new MutationObserver(() => {
   if (filesPanel.hidden && audioDockId) closeAudioDock();
   if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
   if (filesPanel.hidden) {
-    zipViews.get(preview)?.close();
-    zipViews.get(dialogBody)?.close();
+    archiveViews.get(preview)?.close();
+    archiveViews.get(dialogBody)?.close();
   }
 }).observe(filesPanel, { attributes: true, attributeFilter: ["hidden"] });
 window.addEventListener("pagehide", (event) => {

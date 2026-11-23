@@ -3,9 +3,14 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
+import { tarFixture, tarRecord } from "./tar-fixture.mjs";
 
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
+const browserTar = tarFixture(
+  tarRecord("./docs/readme.html", "<img src=x>", { gnu: true }),
+  tarRecord("./docs/link", "", { type: "2", gnu: true }),
+).toString("base64");
 const harness = `<!doctype html><html data-result="pending"><body>
 <iframe id="app" src="/app" width="320" height="460"></iframe>
 <img src="/test-pending" alt="" hidden>
@@ -256,6 +261,25 @@ frame.addEventListener("load", async () => {
     if (!filesPreview.querySelector(".files-zip-entry-preview").hidden) {
       throw Error("Canceled ZIP preview leaked into a replacement archive");
     }
+
+    document.documentElement.dataset.stage = "tar-index";
+    const tar = win.Uint8Array.from(win.atob("${browserTar}"), char => char.charCodeAt(0));
+    win.DocBenchFiles.importFile(new win.File([tar], "sample.tar", { type: "application/x-tar" }));
+    const tarFolder = 'button[aria-label="Open TAR folder docs"]';
+    await until(() => filesPreview.querySelector(tarFolder));
+    filesPreview.querySelector(tarFolder).click();
+    const openTarEntry = filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]');
+    if (!openTarEntry || filesPreview.querySelector(".files-zip-list").textContent.includes("link")) {
+      throw Error("TAR regular file missing or a link was exposed");
+    }
+    openTarEntry.click();
+    const tarEntry = filesPreview.querySelector(".files-zip-entry-preview");
+    await until(() => tarEntry.querySelector('[role="status"]').textContent === "TAR header checked");
+    if (tarEntry.querySelector(".files-text")?.textContent !== source || tarEntry.querySelector("img")) {
+      throw Error("TAR entry was not previewed as inert source");
+    }
+    tarEntry.querySelector("button").click();
+    if (!tarEntry.hidden || doc.activeElement !== openTarEntry) throw Error("Back to TAR lost focus");
 
     delete document.documentElement.dataset.stage;
     document.documentElement.dataset.result = "passed";

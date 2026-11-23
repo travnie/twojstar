@@ -517,7 +517,8 @@ drop/size helper and portable build. They are **not** a file manager yet.
    inflation, then 7z/RAR/TAR/modern compression through tested read adapters.
    Apply safety budgets before extraction, and do not advertise unsupported
    encryption or writable formats.
-   Shipped for ZIP folders and single-entry previews with an 8 MiB limit.
+   Shipped for ZIP and plain ustar/basic GNU TAR. Folder tree, individual
+   extraction, 8 MiB previews. TAR validates headers only.
 5. **Inspector plugins:** exifr / music-metadata / Mediabunny for richer image
    and audio/video reports. Add JXL/AVIF/HEIC/QOI via lazily loaded decoders
    only where needed. Preserve baseline browser and portable UX.
