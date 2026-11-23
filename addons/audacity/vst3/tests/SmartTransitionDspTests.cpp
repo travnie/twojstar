@@ -133,6 +133,31 @@ void testConservativeSpectralRepair()
             require(std::isfinite(value), "Repair produced non-finite audio");
     }
     require(changed, "spectral repair was a no-op");
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> phaseSplice(1400);
+    for (std::size_t i = 0; i < phaseSplice.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 12.0 : 13.0 * pi / 12.0;
+        const auto value = 0.9 * std::sin(2.0 * pi * 125.0 * i / 48000.0 + phase);
+        phaseSplice[i] = {value, value * 0.85};
+    }
+    const auto musicOff = render(phaseSplice, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music, false);
+    const auto musicAuto = render(phaseSplice, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music, true);
+    require(musicAuto.plan.repairMode == SmartRepairMode::Spectral,
+        "phase splice did not exercise spectral Repair Auto");
+    const auto entry = globalAnchor(musicAuto) - 8;
+    require(entry > 1, "invalid repair entry");
+    for (std::size_t channel = 0; channel < 2; ++channel)
+    {
+        const auto dryJump = std::abs(musicOff.output[entry][channel] -
+            musicOff.output[entry - 1][channel]);
+        const auto autoJump = std::abs(musicAuto.output[entry][channel] -
+            musicAuto.output[entry - 1][channel]);
+        require(autoJump <= dryJump + 0.02,
+            "spectral peak guard created a new repair-entry click");
+    }
     const auto clean = cleanSine(1400);
     require(render(clean, 2, {}, 1.0, 4.0, 48000.0,
         SmartTransitionMode::Auto, true).output == clean, "Repair changed clean signal");

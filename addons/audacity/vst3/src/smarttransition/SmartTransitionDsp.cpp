@@ -625,9 +625,9 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
             const auto bound = std::max({std::abs(source),
                 std::abs(sampleAt(channel, committedAnchor_ - 1)),
                 std::abs(sampleAt(channel, committedAnchor_)), 1e-6});
-            repaired = std::clamp(repaired * (1.0 - weight) +
-                std::clamp(spectrum, -bound, bound) * weight,
-                -1.5 * bound, 1.5 * bound);
+            // Limit only the spectral contribution. Clamping the existing
+            // fade to the seam-local bound creates a click at window entry.
+            repaired += weight * (std::clamp(spectrum, -bound, bound) - repaired);
         }
     }
     // This sample left the lookahead buffer later than it entered.
