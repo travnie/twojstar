@@ -9,7 +9,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>Travny.PaintDotNet.IcoFileType.Modern</AssemblyName>
     <RootNamespace>Travny.PaintDotNetIco</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <NoWarn>MSB3277</NoWarn>
     <PaintDotNetDir Condition="'$(PaintDotNetDir)' == ''">C:\Program Files\Paint.NET</PaintDotNetDir>
