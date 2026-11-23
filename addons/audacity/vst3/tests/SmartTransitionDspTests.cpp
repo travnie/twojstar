@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -31,10 +32,11 @@ struct RenderResult
     bool hasPlan{false};
 };
 
-RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {})
+RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0)
 {
     SmartTransitionDsp dsp;
     dsp.configure(48000.0);
+    dsp.setStrength(strength);
 
     std::vector<Frame> raw;
     raw.reserve(input.size() + dsp.latencySamples());
@@ -377,6 +379,33 @@ void testResetStartsFreshRun()
     require(!dsp.hasPlan(), "fresh run inherited seam state");
 }
 
+void testStrengthBlendsWithoutChangingDetection()
+{
+    const auto input = withHardSeam(1400, 500);
+    const auto dry = render(input, 2, {17, 31, 47}, 0.0);
+    const auto half = render(input, 2, {1, 5, 13, 31}, 0.5);
+    const auto full = render(input, 2, {1400}, 1.0);
+    require(dry.hasPlan && half.hasPlan && full.hasPlan, "strength changed seam detection");
+    require(globalAnchor(dry) == globalAnchor(full) && globalAnchor(half) == globalAnchor(full),
+            "strength changed seam selection");
+    require(dry.output == input, "0% strength changed source samples");
+    for (std::size_t i = 0; i < input.size(); ++i)
+        for (std::size_t channel = 0; channel < 2; ++channel)
+        {
+            const auto midpoint = input[i][channel] + 0.5 * (full.output[i][channel] - input[i][channel]);
+            require(std::abs(half.output[i][channel] - midpoint) < 1e-12,
+                    "50% strength is not the half-wet blend");
+        }
+
+    SmartTransitionDsp dsp;
+    dsp.setStrength(-0.5);
+    require(dsp.strength() == 0.0, "negative strength was not clamped");
+    dsp.setStrength(2.0);
+    require(dsp.strength() == 1.0, "strength above unity was not clamped");
+    dsp.setStrength(std::numeric_limits<double>::quiet_NaN());
+    require(dsp.strength() == 1.0, "non-finite strength was not rejected");
+}
+
 } // namespace
 
 int main()
@@ -396,6 +425,7 @@ int main()
         testSingleChannelStereoSeamQualifies();
         testMonoPath();
         testResetStartsFreshRun();
+        testStrengthBlendsWithoutChangingDetection();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }
