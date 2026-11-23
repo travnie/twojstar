@@ -18,6 +18,7 @@ const [
   app,
   historyCore,
   historyUi,
+  documentFind,
   documentMerge,
   documentJsonConvert,
   documentEnhancements,
@@ -66,6 +67,7 @@ const [
   readFile("public/app.js", "utf8"),
   readFile("public/document-history-core.js", "utf8"),
   readFile("public/document-history.js", "utf8"),
+  readFile("public/document-find.js", "utf8"),
   readFile("public/document-merge.mjs", "utf8"),
   readFile("public/document-json-convert.mjs", "utf8"),
   readFile("public/document-enhancements.mjs", "utf8"),
@@ -303,6 +305,7 @@ const portable = html
   .replace('<script src="/app.js"></script>', `<script>${safeScript(portableApp)}</script>`)
   .replace('<script src="/document-history-core.js"></script>', `<script>${safeScript(historyCore)}</script>`)
   .replace('<script src="/document-history.js"></script>', `<script>${safeScript(historyUi)}</script>`)
+  .replace('<script src="/document-find.js"></script>', `<script>${safeScript(documentFind)}</script>`)
   .replace(
     '<script type="module" src="/document-enhancements.mjs"></script>',
     `<script type="module">${safeScript(documentEnhancementsPortable)}</script>`,

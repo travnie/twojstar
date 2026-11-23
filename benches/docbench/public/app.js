@@ -15,6 +15,10 @@
   const mergeFilesButton = $("#merge-files-button");
   const mergeNowButton = $("#merge-now-button");
   const mergeFilesFeedback = $("#merge-files-feedback");
+  const mergeControls = $("#document-merge-controls");
+  const more = $("#document-more");
+  const moreSummary = more.querySelector("summary");
+  const wrapEditorButton = $("#wrap-editor-button");
   const dropZone = $("#drop-zone");
 
   const state = { filename: "untitled.txt", bom: false, mixedEol: false };
@@ -389,6 +393,7 @@
   }
 
   function setMergeFeedback(kind, text, title = text) {
+    mergeControls.hidden = !text;
     mergeFilesFeedback.hidden = !text;
     mergeFilesFeedback.dataset.kind = kind || "";
     mergeFilesFeedback.textContent = text || "";
@@ -611,6 +616,29 @@
   $("#format-button").addEventListener("click", formatDocument);
   $("#save-button").addEventListener("click", saveFile);
   $("#copy-button").addEventListener("click", async () => navigator.clipboard.writeText(editor.value));
+  wrapEditorButton.addEventListener("click", () => {
+    const wrapping = !editor.classList.toggle("editor-no-wrap");
+    wrapEditorButton.setAttribute("aria-pressed", String(wrapping));
+  });
+
+  function closeMore(restoreFocus = false) {
+    if (!more.open) return;
+    if (restoreFocus && more.contains(document.activeElement)) moreSummary.focus({ preventScroll: true });
+    more.open = false;
+  }
+
+  more.addEventListener("click", (event) => {
+    if (event.target.closest("button:enabled")) setTimeout(() => closeMore(true), 0);
+  }, true);
+  document.addEventListener("pointerdown", (event) => {
+    if (!more.contains(event.target)) closeMore();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (more.open && event.key === "Escape" && !event.defaultPrevented) {
+      event.preventDefault();
+      closeMore(true);
+    }
+  });
   fileInput.addEventListener("change", async () => {
     if (!fileInput.files?.[0]) return;
     try { await openFile(fileInput.files[0]); }
@@ -667,6 +695,7 @@
       item.tabIndex = active ? 0 : -1;
     });
     const mode = tab.dataset.mode;
+    if (mode !== "document") closeMore();
     documentWorkspace.hidden = mode !== "document";
     pdfWorkspace.hidden = mode !== "pdf";
     filesWorkspace.hidden = mode !== "files";

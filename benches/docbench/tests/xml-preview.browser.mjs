@@ -4,9 +4,10 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
 
-const portable = await readFile(new URL("../public/portable.html", import.meta.url));
+const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
+  .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
 const harness = `<!doctype html><html data-result="pending"><body>
-<iframe id="app" src="/app"></iframe>
+<iframe id="app" src="/app" width="320" height="720"></iframe>
 <script>
 const frame = document.getElementById("app");
 frame.addEventListener("load", async () => {
@@ -30,6 +31,38 @@ frame.addEventListener("load", async () => {
     if (preview.querySelector("script,img,svg") || frame.contentWindow.xmlProbeExecuted) {
       throw Error("XML content became active markup");
     }
+
+    const save = doc.getElementById("save-button");
+    const copy = doc.getElementById("download-button");
+    if (save.textContent !== "Download" || !copy.hidden) throw Error("Duplicate Download actions");
+    const more = doc.getElementById("document-more");
+    more.querySelector("summary").click();
+    const actions = more.querySelector(".document-more-actions").getBoundingClientRect();
+    if (!more.open || actions.left < 0 || actions.right > frame.contentWindow.innerWidth) {
+      throw Error("More menu clipped at 320px");
+    }
+    doc.getElementById("wrap-editor-button").click();
+    await wait(0);
+    if (more.open || frame.contentWindow.getComputedStyle(editor).whiteSpace !== "pre") {
+      throw Error("Wrap toggle did not update the editor and close the menu");
+    }
+
+    editor.value = "a. b A. c a.";
+    editor.setSelectionRange(0, 0);
+    editor.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    doc.getElementById("find-toggle").click();
+    const find = doc.getElementById("find-query");
+    find.value = "a.";
+    find.dispatchEvent(new frame.contentWindow.Event("input", { bubbles: true }));
+    doc.getElementById("find-next").click();
+    if (editor.selectionStart !== 0 || editor.selectionEnd !== 2) throw Error("Find did not select the exact match");
+    doc.getElementById("find-match-case").click();
+    doc.getElementById("replace-value").value = "$&";
+    doc.getElementById("replace-all").click();
+    if (editor.value !== "$& b A. c $&") throw Error("Replace all lost case or literal replacement");
+    doc.getElementById("undo-button").click();
+    if (editor.value !== "a. b A. c a.") throw Error("Replace all was not a single undo step");
+
     document.documentElement.dataset.result = "passed";
   } catch (error) {
     document.documentElement.dataset.result = "failed";
