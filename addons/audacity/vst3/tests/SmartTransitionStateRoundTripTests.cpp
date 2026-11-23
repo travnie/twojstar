@@ -149,6 +149,13 @@ int main()
             begin = end;
         }
 
+        // Non-finite audio must not make tolerance assertions pass vacuously.
+        if (!std::all_of(output.begin(), output.end(), [](double value) { return std::isfinite(value); }))
+        {
+            std::cerr << "Rendered audio contains a non-finite sample\n";
+            std::abort();
+        }
+
         // Audio automation must replace the restored value in a saved preset.
         Steinberg::MemoryStream savedState;
         if (processor->getState(&savedState) != Steinberg::kResultOk) std::abort();
