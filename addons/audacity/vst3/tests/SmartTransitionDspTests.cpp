@@ -175,7 +175,8 @@ void testConservativeSpectralRepair()
     for (std::size_t i = 0; i < softerPhase.size(); ++i)
     {
         const auto phase = i < 500 ? pi / 12.0 : pi / 3.0;
-        const auto value = 0.9 * std::sin(2.0 * pi * 300.0 * i / 48000.0 + phase);
+        const auto value = 0.9 * std::sin(2.0 * pi * 300.0 *
+            (static_cast<double>(i) - 500.0) / 48000.0 + phase);
         softerPhase[i] = {value, value * 0.85};
     }
     const auto softerOff = render(softerPhase, 2, {}, 1.0, 4.0, 48000.0,
