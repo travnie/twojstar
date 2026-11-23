@@ -94,7 +94,7 @@ internal static class Program
 
         using Bitmap dibFrame = icon.Decode(frames[0]);
         Color dibPixel = dibFrame.GetPixel(8, 8);
-        Assert(dibPixel.ToArgb() == Color.FromArgb(255, 44, 155, 44).ToArgb(),
+        Assert(dibPixel.ToArgb() == Color.FromArgb(255, 233, 155, 19).ToArgb(),
             "Legacy DIB frame colors changed during decoding.");
 
         using Bitmap pngFrame = icon.Decode(frames[1]);
@@ -135,9 +135,9 @@ internal static class Program
 
             for (int pixel = 0; pixel < 16 * 16; pixel++)
             {
-                writer.Write((byte)44);
+                writer.Write((byte)19);
                 writer.Write((byte)155);
-                writer.Write((byte)44);
+                writer.Write((byte)233);
                 writer.Write((byte)255);
             }
 
