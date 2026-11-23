@@ -57,14 +57,14 @@ jobs:
           persist-credentials: false
 
       - name: Set up Intent Keyboard JDK
-        if: matrix.build-mode == 'manual'
+        if: matrix.language == 'swift' || (matrix.language == 'java-kotlin' && matrix.keyboard)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Intent Keyboard Gradle
-        if: matrix.build-mode == 'manual'
+        if: matrix.language == 'swift' || (matrix.language == 'java-kotlin' && matrix.keyboard)
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           gradle-version: "9.6.0"
@@ -92,7 +92,7 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
 
       - name: Compile Intent Keyboard Kotlin
-        if: matrix.language == 'java-kotlin'
+        if: matrix.language == 'java-kotlin' && matrix.keyboard
         working-directory: intent-keyboard
         run: >-
           gradle --no-daemon --no-build-cache --no-configuration-cache --stacktrace
@@ -102,14 +102,14 @@ jobs:
           :platforms:desktop:test
 
       - name: Set up Xiaomi ADB Tools JDK
-        if: matrix.language == 'java-kotlin'
+        if: matrix.language == 'java-kotlin' && matrix.xiaomi
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "25"
 
       - name: Compile Xiaomi ADB Tools Kotlin
-        if: matrix.language == 'java-kotlin'
+        if: matrix.language == 'java-kotlin' && matrix.xiaomi
         working-directory: xiaomi-adb-tools
         run: ./gradlew --no-daemon --no-build-cache --no-configuration-cache --stacktrace classes
 

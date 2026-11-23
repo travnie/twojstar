@@ -20,6 +20,7 @@ SUFFIX_LANGUAGES = {
     ".c": "c-cpp", ".cc": "c-cpp", ".cpp": "c-cpp", ".cxx": "c-cpp",
     ".h": "c-cpp", ".hh": "c-cpp", ".hpp": "c-cpp", ".hxx": "c-cpp",
     ".cs": "csharp", ".csproj": "csharp", ".sln": "csharp",
+    ".props": "csharp", ".targets": "csharp", ".slnx": "csharp",
     ".js": "javascript-typescript", ".jsx": "javascript-typescript",
     ".ts": "javascript-typescript", ".tsx": "javascript-typescript",
     ".mjs": "javascript-typescript", ".cjs": "javascript-typescript",
@@ -33,34 +34,54 @@ SUFFIX_LANGUAGES = {
 }
 
 
-def matrix(languages):
-    selected = set(languages)
-    return [
-        {"language": language, "build-mode": mode, "runner": runner}
-        for language, mode, runner in LANGUAGES
-        if language in selected
-    ]
+JS_MANIFESTS = {
+    "package.json", "package-lock.json", "npm-shrinkwrap.json",
+    "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb",
+}
+PY_MANIFESTS = {"pyproject.toml", "uv.lock", "poetry.lock", "pipfile", "pipfile.lock"}
 
+
+def matrix(languages, keyboard=True, xiaomi=True):
+    selected = set(languages)
+    rows = []
+    for language, mode, runner in LANGUAGES:
+        if language not in selected:
+            continue
+        row = {"language": language, "build-mode": mode, "runner": runner}
+        if language == "java-kotlin":
+            row.update(keyboard=keyboard, xiaomi=xiaomi)
+        rows.append(row)
+    return rows
 
 def choose(paths):
     """Return relevant rows in stable order."""
     selected = set()
+    keyboard = xiaomi = False
     for raw_path in paths:
         path = raw_path.lower().replace("\\", "/")
         if path.startswith(".github/codeql/"):
             return matrix(lang for lang, _, _ in LANGUAGES)
         if path.startswith((".github/workflows/", ".github/actions/")):
             selected.add("actions")
-        if path.startswith("intent-keyboard/") and Path(path).suffix not in {".md", ".mdx"}:
+        source = Path(path)
+        is_doc = source.suffix in {".md", ".mdx"}
+        if path.startswith("intent-keyboard/") and not is_doc:
             # Shared KMP sources feed Android, desktop and iOS framework.
             selected.update(("java-kotlin", "swift"))
-        if path.startswith("xiaomi-adb-tools/") and Path(path).suffix not in {".md", ".mdx"}:
+            keyboard = True
+        if path.startswith("xiaomi-adb-tools/") and not is_doc:
             selected.add("java-kotlin")
-        lang = SUFFIX_LANGUAGES.get(Path(path).suffix)
+            xiaomi = True
+        lang = SUFFIX_LANGUAGES.get(source.suffix)
         if lang:
             selected.add(lang)
-    return matrix(selected)
-
+            if lang == "java-kotlin" and not path.startswith(("intent-keyboard/", "xiaomi-adb-tools/")):
+                keyboard = xiaomi = True
+        if source.name in JS_MANIFESTS or (source.suffix == ".json" and source.name.startswith(("tsconfig", "jsconfig"))):
+            selected.add("javascript-typescript")
+        if source.name in PY_MANIFESTS or (source.name.startswith("requirements") and source.suffix == ".txt"):
+            selected.add("python")
+    return matrix(selected, keyboard=keyboard, xiaomi=xiaomi)
 
 def plan(event, base_sha):
     if event != "pull_request":
@@ -71,10 +92,10 @@ def plan(event, base_sha):
             continue
         try:
             changed = subprocess.run(
-                ["git", "diff", "--name-only", "--no-renames", base, "HEAD"],
-                check=True, text=True, capture_output=True,
+                ["git", "diff", "--name-only", "--no-renames", "-z", base, "HEAD"],
+                check=True, capture_output=True,
             )
-            return choose(changed.stdout.splitlines())
+            return choose(os.fsdecode(p) for p in changed.stdout.split(b"\\0") if p)
         except subprocess.CalledProcessError:
             continue
     # Never lose coverage if both Git references are unavailable.

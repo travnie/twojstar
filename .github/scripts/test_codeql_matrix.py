@@ -53,7 +53,7 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_deletion_passes_through_planner(self):
         from unittest.mock import patch
         with patch.object(codeql_matrix.subprocess, "run") as run:
-            run.return_value.stdout = "xiaomi-adb-tools/src/main/kotlin/Old.kt\\n"
+            run.return_value.stdout = b"xiaomi-adb-tools/src/main/kotlin/Old.kt\\0"
             selected = codeql_matrix.plan("pull_request", "abc123")
             self.assertEqual([row["language"] for row in selected], ["java-kotlin"])
             args = run.call_args.args[0]
@@ -63,10 +63,30 @@ class MatrixSelectionTests(unittest.TestCase):
     def test_stale_event_base_does_not_scan_unrelated_main_changes(self):
         from unittest.mock import patch
         with patch.object(codeql_matrix.subprocess, "run") as run:
-            run.return_value.stdout = "spacemolt/smx/src/smx/contract.py\\n"
+            run.return_value.stdout = b"spacemolt/smx/src/smx/contract.py\\0"
             selected = codeql_matrix.plan("pull_request", "stale-base-sha")
             self.assertEqual([row["language"] for row in selected], ["python"])
             self.assertEqual(run.call_args.args[0][-2:], ["HEAD^1", "HEAD"])
+
+    def test_dependency_only_changes(self):
+        self.assertEqual(names(["spacemolt/gateway/package-lock.json", "benches/docbench/tsconfig.json"]),
+                         ["javascript-typescript"])
+        self.assertEqual(names(["addons/paintdotnet/ai/Directory.Build.props"]), ["csharp"])
+        self.assertEqual(names(["spacemolt/smx/pyproject.toml"]), ["python"])
+
+    def test_kotlin_builds_only_affected_project(self):
+        xiaomi = codeql_matrix.choose(["xiaomi-adb-tools/src/main/kotlin/Foo.kt"])
+        self.assertEqual((xiaomi[0]["keyboard"], xiaomi[0]["xiaomi"]), (False, True))
+        keyboard = codeql_matrix.choose(["intent-keyboard/core/src/main/Foo.kt"])
+        java = next(row for row in keyboard if row["language"] == "java-kotlin")
+        self.assertEqual((java["keyboard"], java["xiaomi"]), (True, False))
+
+    def test_accented_path_in_git_diff(self):
+        from unittest.mock import patch
+        with patch.object(codeql_matrix.subprocess, "run") as run:
+            run.return_value.stdout = "intent-keyboard/zażółć.kt".encode() + b"\\0"
+            result = codeql_matrix.plan("pull_request", "old-sha")
+            self.assertEqual([row["language"] for row in result], ["java-kotlin", "swift"])
 
     def test_full_scans_outside_pull_requests(self):
         for event in ("push", "schedule", "workflow_dispatch"):
