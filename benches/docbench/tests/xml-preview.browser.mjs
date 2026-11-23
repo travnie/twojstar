@@ -290,6 +290,9 @@ frame.addEventListener("load", async () => {
     const gzip = decodeFixture("${browserGzip.toString("base64")}");
     win.DocBenchFiles.importFile(new win.File([gzip], "sample.tgz"));
     await until(() => filesPreview.querySelector(tarFolder));
+    if (!filesPreview.textContent.includes("Gzip CRC-32 and expanded size verified.")) {
+      throw Error("Gzip TAR did not identify the verified stream");
+    }
     filesPreview.querySelector(tarFolder).click();
     filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]').click();
     await until(() => filesPreview.querySelector('.files-zip-entry-preview [role="status"]')
@@ -304,6 +307,43 @@ frame.addEventListener("load", async () => {
     await until(() => filesPreview.querySelector(".files-empty")?.textContent.includes("Gzip decoding failed"));
     if (filesPreview.querySelector(tarFolder) || filesPreview.querySelector(".files-text")) {
       throw Error("A gzip TAR with a damaged checksum exposed data");
+    }
+
+    document.documentElement.dataset.stage = "gzip-cancel";
+    const delayed = new win.File([gzip], "delayed.tgz");
+    const gzipSlice = delayed.slice.bind(delayed);
+    let signal;
+    let started;
+    let release;
+    const delayedRead = new Promise(resolve => { release = resolve; });
+    const reading = new Promise(resolve => { started = resolve; });
+    delayed.slice = (start, end) => {
+      const part = gzipSlice(start, end);
+      if (end === gzip.byteLength) {
+        const read = part.arrayBuffer.bind(part);
+        part.arrayBuffer = () => {
+          started();
+          return delayedRead.then(read);
+        };
+      }
+      return part;
+    };
+    const pipeThrough = win.ReadableStream.prototype.pipeThrough;
+    win.ReadableStream.prototype.pipeThrough = function (transform, options) {
+      signal = options?.signal;
+      return pipeThrough.call(this, transform, options);
+    };
+    try {
+      win.DocBenchFiles.importFile(delayed);
+      await reading;
+      win.DocBenchFiles.importFile(new win.File(["replacement"], "replacement.txt"));
+      if (!signal?.aborted) throw Error("Replacing a gzip TAR left its decoder running");
+      release();
+      await until(() => filesPreview.querySelector(".files-text")?.textContent === "replacement");
+      if (filesPreview.querySelector(tarFolder)) throw Error("A stale gzip preview replaced the current file");
+    } finally {
+      win.ReadableStream.prototype.pipeThrough = pipeThrough;
+      release();
     }
 
     delete document.documentElement.dataset.stage;

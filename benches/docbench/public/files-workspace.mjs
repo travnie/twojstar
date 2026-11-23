@@ -296,10 +296,11 @@ async function showArchiveContents(file, format, revision, target) {
   const box = element("section", "files-zip");
   const title = element("h3", "", `${label} contents · ${tree.total} entries`);
   title.tabIndex = -1;
+  let integrityNote = "TAR checks headers only; file data has no checksum.";
+  if (zip) integrityNote = "Preview and extraction check CRC-32 locally.";
+  if (format === "tar.gz") integrityNote = "Gzip CRC-32 and expanded size verified.";
   const note = element("p", "files-note",
-    zip
-      ? `Preview entries up to ${formatBytes(MAX_ARCHIVE_PREVIEW_BYTES)}. Preview and extraction check CRC-32 locally.`
-      : "Preview entries up to 8 MiB. TAR checks headers only; file data has no checksum.");
+    `Preview entries up to ${formatBytes(MAX_ARCHIVE_PREVIEW_BYTES)}. ${integrityNote}`);
   const warning = tree.skipped
     ? element("p", "files-unsafe-label", `${tree.skipped} unsafe, ambiguous or unsupported entries hidden.`)
     : null;
@@ -743,7 +744,7 @@ async function renderPreview(file, info, revision, target = preview) {
         const tar = await decompressGzipTar(file, controller.signal);
         if (!isCurrent()) return;
         pending.remove();
-        await showArchiveContents(tar, "tar", revision, target);
+        await showArchiveContents(tar, "tar.gz", revision, target);
       } else {
         await showArchiveContents(file, info.format, revision, target);
       }
