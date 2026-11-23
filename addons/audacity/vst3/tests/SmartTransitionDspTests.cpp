@@ -258,9 +258,10 @@ void testConservativeSpectralRepair()
             0.42 * std::sin(2.0 * pi * 703.0 * sample / 48000.0 + rightPhase)
         };
     }
-    const auto unequalOff = render(unequal, 2);
+    const auto unequalOff = render(unequal, 2, {}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
     const auto unequalAuto = render(unequal, 2, {}, 1.0, 4.0, 48000.0,
-        SmartTransitionMode::Auto, true);
+        SmartTransitionMode::Music, true);
     require(unequalOff.hasPlan && unequalAuto.hasPlan,
         "Unequal stereo splice was not detected");
     require(unequalAuto.plan.repairMode == SmartRepairMode::None &&
