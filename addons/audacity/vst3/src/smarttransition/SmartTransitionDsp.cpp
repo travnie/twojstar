@@ -546,7 +546,7 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         // reinforcement at the first sample creates a new onset click.
         const auto edge = std::clamp(std::min(t, 1.0 - t) / 0.25, 0.0, 1.0);
         const auto edgeTaper = edge * edge * (3.0 - 2.0 * edge);
-        repaired = std::clamp(corrected + edgeTaper * (mixed - corrected),
+        repaired = std::clamp(source + edgeTaper * (mixed - source),
             -peakLimit, peakLimit);
     }
     // This sample left the lookahead buffer later than it entered.
