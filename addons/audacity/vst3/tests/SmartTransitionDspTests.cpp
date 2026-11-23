@@ -539,6 +539,34 @@ void testModePoliciesAreSourceAlignedAndDeterministic()
     require(dsp.mode() == SmartTransitionMode::Auto, "invalid mode did not select Auto");
 }
 
+void testMusicModeDoesNotIntroduceFullScaleOvers()
+{
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<Frame> input(1400);
+    double peak = 0.0;
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        const auto phase = i < 500 ? pi / 6.0 : (285.0 * pi / 180.0);
+        const auto value = 0.9 * std::sin(2.0 * pi * 500.0 *
+            static_cast<double>(i) / 48000.0 + phase);
+        input[i] = {value, value * 0.85};
+        peak = std::max(peak, std::abs(value));
+    }
+    const auto music = render(input, 2, {1, 31, 127}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Music);
+    require(music.hasPlan, "phase-jump fixture did not trigger Music mode");
+    for (const auto& frame : music.output)
+        for (const auto value : frame)
+            require(std::isfinite(value) && std::abs(value) <= peak + 1e-10,
+                    "Music mode introduced a peak above the source envelope");
+
+    const auto seam = static_cast<std::size_t>(globalAnchor(music));
+    require(seam > 0 && seam < input.size(), "Music mode selected an invalid seam");
+    const auto beforeJump = std::abs(input[seam][0] - input[seam - 1][0]);
+    const auto afterJump = std::abs(music.output[seam][0] - music.output[seam - 1][0]);
+    require(afterJump < beforeJump, "Music equal-power bridge did not smooth the seam");
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -589,6 +617,7 @@ int main()
         testMaxTransitionCapsFadeWithoutMovingSeam();
         testUnrepairableCapKeepsLaterSplicesDry();
         testModePoliciesAreSourceAlignedAndDeterministic();
+        testMusicModeDoesNotIntroduceFullScaleOvers();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }

@@ -515,7 +515,15 @@ double SmartTransitionDsp::renderSample(std::size_t channel, std::int64_t output
         corrected = corrected * dbToGain(plan_.rightGainDb * taper) - plan_.dcDelta * taper;
     }
 
-    const auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    auto repaired = corrected * (1.0 - bridgeWeight) + bridge * bridgeWeight;
+    if (plan_.fadeCurve == SmartFadeCurve::EqualPower)
+    {
+        // Equal-power gains preserve squared gain sum. Guard local peak
+        // against coherent reinforcement and Hermite overshoot.
+        const auto dryGain = std::cos(0.5 * kPi * bridgeWeight);
+        const auto wetGain = std::sin(0.5 * kPi * bridgeWeight);
+        repaired = std::clamp(corrected * dryGain + bridge * wetGain, -envelope, envelope);
+    }
     // This sample left the lookahead buffer later than it entered.
     // Use Strength captured alongside its source sample, not the current input.
     const auto strength = strengthRing_[static_cast<std::size_t>(outputIndex) % kRingCapacity];
