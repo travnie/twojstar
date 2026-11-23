@@ -711,6 +711,7 @@ async function openInTool() {
       setStatus(result?.error || "File opening was canceled.", !result?.cancelled);
       return;
     }
+    if (inspectorSheet.open) inspectorSheet.close();
     document.dispatchEvent(new CustomEvent("docbench:activate-workspace", {
       detail: { mode: action.mode },
     }));
