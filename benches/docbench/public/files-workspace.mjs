@@ -63,8 +63,6 @@ const MAX_ZIP_PREVIEW_BYTES = 8 * 1024 * 1024;
 const ZIP_PREVIEW_LIMITS = Object.freeze({
   ...ZIP_EXTRACT_LIMITS,
   maxEntryBytes: MAX_ZIP_PREVIEW_BYTES,
-  // Smaller pushes bound output allocated before the inflater callback.
-  chunkBytes: 4 * 1024,
 });
 const IMAGE_FORMATS = new Set(["jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "jxl", "heic", "heif", "tiff", "qoi"]);
 const AUDIO_FORMATS = new Set(["mp3", "opus", "vorbis", "flac", "wav", "aiff", "ogg", "m4a"]);
@@ -376,13 +374,15 @@ async function showZipContents(file, revision, target = preview) {
     entryView.hidden = false;
     backToZip.focus();
     beginJob(controller, false);
+    // Bound output allocated before the inflater callback. Stored entries skip inflation.
+    const limits = entry.method === 8 ? { ...ZIP_PREVIEW_LIMITS, chunkBytes: 4 * 1024 } : ZIP_PREVIEW_LIMITS;
     try {
       const { output } = await extractZipEntry(file, entry, {
         zipApi: globalThis.fflate,
         sink: createMemoryExtractSink({ maxBytes: MAX_ZIP_PREVIEW_BYTES }),
         signal: controller.signal,
         directoryOffset: result.directoryOffset,
-        limits: ZIP_PREVIEW_LIMITS,
+        limits,
       });
       if (!isCurrent()) return;
       const extracted = new File([output], item.name);

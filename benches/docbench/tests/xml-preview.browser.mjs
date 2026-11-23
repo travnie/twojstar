@@ -160,13 +160,14 @@ frame.addEventListener("load", async () => {
     doc.getElementById("minify-button").click();
     if (next.disabled) throw Error("Find did not refresh after Minify");
 
+    document.documentElement.dataset.stage = "zip-index";
     const source = "<img src=x>";
     const payload = "CRC fixture";
     const zip = win.fflate.zipSync({
       "docs/readme.html": win.fflate.strToU8(source),
       "docs/corrupt.txt": [win.fflate.strToU8(payload), { level: 0 }],
       "docs/pixel.png": win.Uint8Array.from(win.atob(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/T1sAAAAASUVORK5CYII="
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR4AQEFAPr/AOBEOP8FwAJc8vdILQAAAABJRU5ErkJggg=="
       ), char => char.charCodeAt(0)),
     });
     // Locate the stored payload by bytes, independent of UTF-8 replacement.
@@ -193,6 +194,7 @@ frame.addEventListener("load", async () => {
     const openEntry = filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]');
     const keepChecked = filesPreview.querySelector('input[aria-label="Select ZIP entry readme.html"]');
     keepChecked.click();
+    document.documentElement.dataset.stage = "zip-text";
     openEntry.click();
     const entry = filesPreview.querySelector(".files-zip-entry-preview");
     await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
@@ -203,6 +205,7 @@ frame.addEventListener("load", async () => {
     if (!entry.hidden || !keepChecked.checked || doc.activeElement !== openEntry) {
       throw Error("Back to ZIP lost selection or focus");
     }
+    document.documentElement.dataset.stage = "zip-crc";
     filesPreview.querySelector('button[aria-label="Preview entry: corrupt.txt"]').click();
     await until(() => entry.querySelector('[role="status"]').textContent.includes("CRC-32 mismatch"));
     if (entry.querySelector(".files-zip-entry-preview-body").childElementCount) {
@@ -212,7 +215,11 @@ frame.addEventListener("load", async () => {
     entry.querySelector("button").click();
     filesPreview.querySelector('button[aria-label="Preview entry: pixel.png"]').click();
     await until(() => entry.querySelector('[role="status"]').textContent === "CRC-32 verified");
-    const mediaUrl = entry.querySelector("img").src;
+    const image = entry.querySelector("img");
+    document.documentElement.dataset.stage = "zip-image";
+    await image.decode();
+    if (image.naturalWidth !== 1) throw Error("ZIP image did not decode");
+    const mediaUrl = image.src;
     const revoke = win.URL.revokeObjectURL;
     let revokedMedia = false;
     win.URL.revokeObjectURL = (url) => {
@@ -227,25 +234,29 @@ frame.addEventListener("load", async () => {
     }
     const originalSlice = original.slice.bind(original);
     let releaseRead;
-    original.slice = (...args) => {
-      const part = originalSlice(...args);
-      if (releaseRead) return part;
-      const read = part.arrayBuffer.bind(part);
-      part.arrayBuffer = () => new Promise(resolve => { releaseRead = () => resolve(read()); });
+    original.slice = (start, end) => {
+      const part = originalSlice(start, end);
+      const bytes = zip.slice(start, end).buffer;
+      part.arrayBuffer = () => releaseRead ? Promise.resolve(bytes) : new Promise(resolve => {
+        releaseRead = () => resolve(bytes);
+      });
       return part;
     };
+    document.documentElement.dataset.stage = "zip-cancel";
     openEntry.click();
     if (!releaseRead) throw Error("ZIP preview did not start reading");
     win.DocBenchFiles.importFile(new win.File([zip], "replacement.zip", { type: "application/zip" }));
     await until(() => filesPreview.querySelector(folderSelector));
     filesPreview.querySelector(folderSelector).click();
     const newTrigger = filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]');
+    document.documentElement.dataset.stage = "zip-replacement";
     releaseRead();
     await until(() => !newTrigger.disabled);
     if (!filesPreview.querySelector(".files-zip-entry-preview").hidden) {
       throw Error("Canceled ZIP preview leaked into a replacement archive");
     }
 
+    delete document.documentElement.dataset.stage;
     document.documentElement.dataset.result = "passed";
   } catch (error) {
     document.documentElement.dataset.result = "failed";
