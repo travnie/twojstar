@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace Travny::Vst3 {
 namespace {
@@ -30,6 +31,19 @@ template <typename Sample>
         }
     }
     return mask;
+}
+
+[[nodiscard]] Steinberg::Vst::IParamValueQueue* findStrengthQueue(
+    Steinberg::Vst::IParameterChanges* changes) noexcept
+{
+    if (!changes) return nullptr;
+    for (Steinberg::int32 index = 0; index < changes->getParameterCount(); ++index)
+    {
+        auto* queue = changes->getParameterData(index);
+        if (queue && queue->getParameterId() == kSmartTransitionStrengthId)
+            return queue;
+    }
+    return nullptr;
 }
 
 } // namespace
@@ -67,22 +81,6 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::getState(Steinberg::IBSt
     if (!state) return Steinberg::kResultFalse;
     Steinberg::IBStreamer streamer(state, kLittleEndian);
     return streamer.writeDouble(dsp_.strength()) ? Steinberg::kResultOk : Steinberg::kResultFalse;
-}
-
-void SmartTransitionProcessor::applyParameterChanges(Steinberg::Vst::IParameterChanges* changes) noexcept
-{
-    if (!changes) return;
-    for (Steinberg::int32 index = 0; index < changes->getParameterCount(); ++index)
-    {
-        auto* queue = changes->getParameterData(index);
-        if (!queue || queue->getParameterId() != kSmartTransitionStrengthId || queue->getPointCount() <= 0)
-            continue;
-
-        Steinberg::int32 sampleOffset = 0;
-        Steinberg::Vst::ParamValue value = 1.0;
-        if (queue->getPoint(queue->getPointCount() - 1, sampleOffset, value) == Steinberg::kResultTrue)
-            dsp_.setStrength(value);
-    }
 }
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBool state)
@@ -155,13 +153,54 @@ bool SmartTransitionProcessor::processBlock(
     Sample** output,
     Steinberg::int32 channels,
     Steinberg::int32 samples,
-    Steinberg::uint64 inputSilenceFlags) noexcept
+    Steinberg::uint64 inputSilenceFlags,
+    Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept
 {
+    // Process continuous VST3 automation at its sample offsets, not per block.
+    auto previousOffset = Steinberg::int32{-1};
+    auto previousValue = dsp_.strength();
+    auto nextOffset = Steinberg::int32{0};
+    auto nextValue = previousValue;
+    auto pointIndex = Steinberg::int32{0};
+    const auto pointCount = strengthQueue ? strengthQueue->getPointCount() : 0;
+    auto hasNext = false;
+    const auto advancePoint = [&]() noexcept
+    {
+        hasNext = false;
+        while (pointIndex < pointCount)
+        {
+            Steinberg::int32 offset = 0;
+            Steinberg::Vst::ParamValue value = 1.0;
+            if (strengthQueue->getPoint(pointIndex++, offset, value) != Steinberg::kResultTrue ||
+                offset < 0 || offset >= samples || offset < previousOffset)
+                continue;
+            nextOffset = offset;
+            nextValue = std::isfinite(value) ? std::clamp(value, 0.0, 1.0) : 1.0;
+            hasNext = true;
+            break;
+        }
+    };
+    advancePoint();
+
     bool allSilent = true;
     const auto channelCount = std::clamp<Steinberg::int32>(channels, 1, 2);
 
     for (Steinberg::int32 sample = 0; sample < samples; ++sample)
     {
+        while (hasNext && nextOffset <= sample)
+        {
+            previousOffset = nextOffset;
+            previousValue = nextValue;
+            advancePoint();
+        }
+
+        const auto strength = hasNext && nextOffset > previousOffset
+            ? previousValue + (nextValue - previousValue) *
+                static_cast<double>(sample - previousOffset) /
+                static_cast<double>(nextOffset - previousOffset)
+            : previousValue;
+        dsp_.setStrength(strength);
+
         std::array<double, Travny::Audio::SmartTransitionDsp::kMaxChannels> inputFrame{};
         std::array<double, Travny::Audio::SmartTransitionDsp::kMaxChannels> outputFrame{};
         for (Steinberg::int32 channel = 0; channel < channelCount; ++channel)
@@ -194,7 +233,7 @@ bool SmartTransitionProcessor::processBlock(
 
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::ProcessData& data)
 {
-    applyParameterChanges(data.inputParameterChanges);
+    auto* strengthQueue = findStrengthQueue(data.inputParameterChanges);
 
     if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
     {
@@ -220,7 +259,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             output,
             channels,
             data.numSamples,
-            inputSilenceFlags);
+            inputSilenceFlags,
+            strengthQueue);
     }
     else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
     {
@@ -231,7 +271,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
             output,
             channels,
             data.numSamples,
-            inputSilenceFlags);
+            inputSilenceFlags,
+            strengthQueue);
     }
     else
     {

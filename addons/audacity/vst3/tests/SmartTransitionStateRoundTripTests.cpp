@@ -33,7 +33,7 @@ int main()
     SmartTransitionProcessor source;
     if (source.initialize(nullptr) != Steinberg::kResultOk) return EXIT_FAILURE;
     Steinberg::MemoryStream input;
-    Steinberg::IBStreamer writer(&input, Steinberg::kLittleEndian);
+    Steinberg::IBStreamer writer(&input, kLittleEndian);
     if (!writer.writeDouble(0.35)) return EXIT_FAILURE;
     input.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
     if (source.setState(&input) != Steinberg::kResultOk) return EXIT_FAILURE;

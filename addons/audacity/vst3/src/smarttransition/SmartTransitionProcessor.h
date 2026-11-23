@@ -34,15 +34,14 @@ public:
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) SMTG_OVERRIDE;
 
 private:
-    void applyParameterChanges(Steinberg::Vst::IParameterChanges* changes) noexcept;
-
     template <typename Sample>
     bool processBlock(
         Sample** input,
         Sample** output,
         Steinberg::int32 channels,
         Steinberg::int32 samples,
-        Steinberg::uint64 inputSilenceFlags) noexcept;
+        Steinberg::uint64 inputSilenceFlags,
+        Steinberg::Vst::IParamValueQueue* strengthQueue) noexcept;
 
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
