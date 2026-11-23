@@ -27,8 +27,10 @@ from .profiles import default_profile, list_profiles
 RELEASES_API = "https://api.github.com/repos/SpaceMolt/client-v2/releases"
 VERSION_RE = re.compile(r"SpaceMolt CLI v?([0-9]+(?:\.[0-9]+)+)", re.IGNORECASE)
 USER_AGENT = f"spacemolt-smx/{__version__}"
-# Newest official client this smx release was checked against; bump on release.
-TESTED_BACKEND = "1.5.127"
+# Last backend release exercised end-to-end, versus newest source-reviewed v2.
+# Do not call source review a binary smoke test.
+TESTED_BACKEND = "1.5.93"
+SOURCE_REVIEWED_BACKEND = "1.5.127"
 
 
 @dataclass(frozen=True)
@@ -331,6 +333,7 @@ def backend_status(*, online: bool = True) -> dict[str, Any]:
         "managed_exists": managed.is_file(),
         "current": current,
         "tested": TESTED_BACKEND,
+        "source_reviewed": SOURCE_REVIEWED_BACKEND,
         "newer_than_tested": current is not None and compare_versions(current, TESTED_BACKEND) > 0,
         "error": error,
     }

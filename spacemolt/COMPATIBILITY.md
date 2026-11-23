@@ -4,7 +4,7 @@
 
 - Official game server v0.734.0 (published changelog); official client-v2 v1.5.127 (release and generated OpenAPI).
 - Upstream added `spacemolt_battle/default_stance`, `spacemolt_shipping/list_all`, and `spacemolt_shipping/reclaim`. SMX's universal passthrough already reaches official commands; no duplicate implementation needed.
-- SMX checked-backend baseline moved from 1.5.93 to 1.5.127. Endpoint-presence contracts and offline safety regressions now cover the new surfaces. This marker records source review, **not** a claim that a new binary was executed.
+- SMX retains v1.5.93 as its last binary-tested baseline and separately records v1.5.127 as the latest source-reviewed release. Endpoint-presence contracts and offline safety regressions cover the new surfaces. No newer binary was executed.
 - Plugin guidance and the SMX trade card cover freight recovery. `reclaim` changes storage; `watch` must refuse it. Official gameplay/full and docs/read-only MCPs stay the sources of truth.
 - Final verification: offline tests, packaging, CI contract job and review on the final PR head. No pilot login, live game mutation, credentials, or silent backend replacement performed.
 

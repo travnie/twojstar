@@ -264,7 +264,7 @@ Managed updates only use official `SpaceMolt/client-v2` releases. Before replaci
 
 Each update keeps the replaced binary next to the managed one. `rollback` swaps the two, so running it twice undoes it. `update --version X` installs that exact official release, including downgrades; plain `update` only moves forward.
 
-`status` and `check` show the newest backend this smx release was tested with; `doctor` warns when the active one is newer. A newer backend still runs.
+`status` and `check` distinguish the last **binary-tested** backend (v1.5.93) from the latest **source-reviewed** upstream release (v1.5.127). `doctor` warns when the active version exceeds the binary-tested baseline. A newer backend still runs; review is not a smoke test.
 
 In a terminal, a command that needs the missing backend offers to install it. Non-interactive callers get an error instead and never trigger a download.
 

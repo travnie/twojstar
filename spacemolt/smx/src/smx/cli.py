@@ -642,6 +642,7 @@ def _backend_status(ns: argparse.Namespace) -> int:
         print(f"managed   {payload['managed']}")
         print(f"version   {payload.get('current') or '?'}")
         print(f"tested    {payload.get('tested') or '?'}")
+        print(f"reviewed  {payload.get('source_reviewed') or '?'}")
         if payload.get("newer_than_tested"):
             print("warning   active backend is newer than the tested release", file=sys.stderr)
         if payload.get("error"):
