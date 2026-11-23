@@ -56,6 +56,7 @@ void SmartTransitionDsp::reset() noexcept
     clusterActive_ = false;
     plan_ = {};
     planCommitted_ = false;
+    rejectedByCap_ = false;
     committedAnchor_ = -1;
     planWindowStart_ = 0;
 }
@@ -109,7 +110,7 @@ void SmartTransitionDsp::processFrameInternal(
     storeFrame(input, channels, inputIndex);
     ++inputCount_;
 
-    if (analyze && !planCommitted_)
+    if (analyze && !planCommitted_ && !rejectedByCap_)
     {
         const auto rightContext = static_cast<std::int64_t>(analysisRadius_);
         if (inputIndex >= rightContext + static_cast<std::int64_t>(analysisRadius_) + 2)
@@ -263,7 +264,7 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
 
 void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int64_t currentInputIndex) noexcept
 {
-    if (planCommitted_)
+    if (planCommitted_ || rejectedByCap_)
     {
         return;
     }
@@ -303,7 +304,7 @@ void SmartTransitionDsp::considerCandidate(const Candidate& candidate, std::int6
 
 void SmartTransitionDsp::scanShortSelection(std::size_t channels) noexcept
 {
-    if (planCommitted_ || clusterActive_ || inputCount_ <= 0 ||
+    if (planCommitted_ || rejectedByCap_ || clusterActive_ || inputCount_ <= 0 ||
         inputCount_ >= static_cast<std::int64_t>(2 * analysisRadius_ + 4))
     {
         return;
@@ -364,6 +365,16 @@ void SmartTransitionDsp::finalizeCluster(std::int64_t currentInputIndex) noexcep
         static_cast<std::size_t>(clusterBest_.anchor) % kRingCapacity];
     const auto maxSamples = static_cast<std::size_t>(std::floor(sampleRate_ * 0.001 * durationMs));
     const auto cappedFade = std::min(fadeLengthSamples_, maxSamples) & ~std::size_t{1};
+    if (cappedFade < kMinFadeLengthSamples)
+    {
+        // One accepted seam per run: an unrepairable cap means bypass, not
+        // an opportunistic repair of a later unrelated splice.
+        rejectedByCap_ = true;
+        clusterActive_ = false;
+        clusterBest_ = {};
+        clusterSeedAnchor_ = -1;
+        return;
+    }
     const auto preferredHalfFade = static_cast<std::int64_t>(cappedFade / 2);
     const auto halfFade = std::min({preferredHalfFade, leftCapacity, rightCapacity});
     const auto effectiveFadeLength = halfFade > 0 ? static_cast<std::size_t>(halfFade * 2) : 0;

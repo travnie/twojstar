@@ -109,6 +109,7 @@ private:
     bool clusterActive_{false};
     SmartEditPlan plan_{};
     bool planCommitted_{false};
+    bool rejectedByCap_{false};
     std::int64_t committedAnchor_{-1};
     std::int64_t planWindowStart_{0};
 };

@@ -452,6 +452,39 @@ void testMaxTransitionCapsFadeWithoutMovingSeam()
     require(dsp.maxTransitionMilliseconds() == 4.0, "non-finite cap did not restore default");
 }
 
+void testUnrepairableCapKeepsLaterSplicesDry()
+{
+    SmartTransitionDsp dsp;
+    dsp.configure(8000.0);
+    std::vector<Frame> input(1600);
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        const auto value = i < 500 ? 0.30 : (i < 1000 ? -0.50 : 0.70);
+        input[i] = {value, value * 0.85};
+    }
+
+    dsp.setMaxTransitionMilliseconds(1.0);
+    std::vector<Frame> raw;
+    raw.reserve(input.size() + dsp.latencySamples());
+    for (std::size_t i = 0; i < input.size(); ++i)
+    {
+        if (i == 950) dsp.setMaxTransitionMilliseconds(4.0);
+        Frame out{};
+        dsp.processFrame(input[i].data(), out.data(), 2);
+        raw.push_back(out);
+    }
+    for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
+    {
+        Frame out{};
+        dsp.drainFrame(out.data(), 2);
+        raw.push_back(out);
+    }
+    require(!dsp.hasPlan(), "unrepairable first seam incorrectly committed a later seam");
+    for (std::size_t i = 0; i < input.size(); ++i)
+        require(raw[i + dsp.latencySamples()] == input[i],
+                "later splice changed after the first seam was rejected by cap");
+}
+
 void testStrengthBlendsWithoutChangingDetection()
 {
     const auto input = withHardSeam(1400, 500);
@@ -500,6 +533,7 @@ int main()
         testResetStartsFreshRun();
         testStrengthBlendsWithoutChangingDetection();
         testMaxTransitionCapsFadeWithoutMovingSeam();
+        testUnrepairableCapKeepsLaterSplicesDry();
         std::cout << "SmartTransition DSP tests passed\n";
         return EXIT_SUCCESS;
     }
