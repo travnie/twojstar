@@ -387,8 +387,14 @@ jobs:
           # EXIF orientation=6 (rotate 90 CW). Use tiny asymmetric JPEG,
           # insert standard EXIF APP1 marker, validate upright PNG dimensions.
           $oriented = Join-Path $dist 'upscale-orientation.jpg'
-          $bitmap = [System.Drawing.Bitmap]::new(5, 3)
+          $bitmap = [System.Drawing.Bitmap]::new(24, 12)
           try {
+            for ($y = 0; $y -lt 12; $y++) {
+              for ($x = 0; $x -lt 24; $x++) {
+                $color = if ($x -lt 12) { [System.Drawing.Color]::Red } else { [System.Drawing.Color]::Green }
+                $bitmap.SetPixel($x, $y, $color)
+              }
+            }
             $bitmap.Save($oriented, [System.Drawing.Imaging.ImageFormat]::Jpeg)
           } finally { $bitmap.Dispose() }
           $jpeg = [IO.File]::ReadAllBytes($oriented)
@@ -403,8 +409,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Exif orientation upscale failed' }
           $rotated = [System.Drawing.Bitmap]::new($orientedResult)
           try {
-            if ($rotated.Width -ne 6 -or $rotated.Height -ne 10) {
+            if ($rotated.Width -ne 24 -or $rotated.Height -ne 48) {
               throw "EXIF orientation ignored, got $($rotated.Width)x$($rotated.Height)"
+            }
+            $top = $rotated.GetPixel(12, 3)
+            $bottom = $rotated.GetPixel(12, 44)
+            if ($top.R -lt ($bottom.R + 10) -or $bottom.G -lt ($top.G + 10)) {
+              throw 'EXIF rotation direction or source colors are wrong'
             }
           } finally { $rotated.Dispose() }
 
