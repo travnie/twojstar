@@ -376,8 +376,37 @@ jobs:
               if ($result.GetPixel(0, 0).A -ne 255 -or $result.GetPixel(8 * $factor - 1, 0).A -ne 64) {
                 throw "Upscale $factor alpha changed"
               }
+              $solid = $result.GetPixel(1, 1)
+              $edge = $result.GetPixel(7 * $factor, 1)
+              if ($solid.R -lt 10 -or $edge.R -lt 10 -or $edge.R -gt 255) {
+                throw "Upscale $factor lost foreground RGB"
+              }
             } finally { $result.Dispose() }
           }
+
+          # EXIF orientation=6 (rotate 90 CW). Use tiny asymmetric JPEG,
+          # insert standard EXIF APP1 marker, validate upright PNG dimensions.
+          $oriented = Join-Path $dist 'upscale-orientation.jpg'
+          $bitmap = [System.Drawing.Bitmap]::new(5, 3)
+          try {
+            $bitmap.Save($oriented, [System.Drawing.Imaging.ImageFormat]::Jpeg)
+          } finally { $bitmap.Dispose() }
+          $jpeg = [IO.File]::ReadAllBytes($oriented)
+          [byte[]]$exif = @(0x45,0x78,0x69,0x66,0,0,0x49,0x49,0x2a,0,8,0,0,0,
+            1,0,0x12,1,3,0,1,0,0,0,6,0,0,0,0,0,0,0)
+          $length = $exif.Length + 2
+          [byte[]]$app1 = @(0xff,0xe1,[byte]($length -shr 8),[byte]($length -band 255)) + $exif
+          [byte[]]$combined = @( $jpeg[0], $jpeg[1] ) + $app1 + $jpeg[2..($jpeg.Length - 1)]
+          [IO.File]::WriteAllBytes($oriented, $combined)
+          $orientedResult = Join-Path $dist 'upscale-orientation-2x.png'
+          & (Join-Path $common 'TravnyAIUpscale.exe') $oriented '2' $orientedResult
+          if ($LASTEXITCODE -ne 0) { throw 'Exif orientation upscale failed' }
+          $rotated = [System.Drawing.Bitmap]::new($orientedResult)
+          try {
+            if ($rotated.Width -ne 6 -or $rotated.Height -ne 10) {
+              throw "EXIF orientation ignored, got $($rotated.Width)x$($rotated.Height)"
+            }
+          } finally { $rotated.Dispose() }
 
           @'
           Paint.NET AI Restore / DeJPEG / Denoise / Smart Transparency / Upscale 2x/4x

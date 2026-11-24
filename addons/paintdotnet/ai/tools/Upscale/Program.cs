@@ -40,7 +40,30 @@ Console.CancelKeyPress += (_, e) =>
 };
 try
 {
-    using Bitmap original = new(inputPath);
+    // GDI+ reads embedded ICC data when useIcm=true. Render into an sRGB
+    // output bitmap; never reinterpret wide-gamut source bytes as sRGB.
+    using Bitmap original = new(inputPath, useIcm: true);
+    // EXIF orientation must be baked into pixels before measuring dimensions.
+    if (original.PropertyIdList.Contains(0x0112))
+    {
+        byte[] bytes = original.GetPropertyItem(0x0112)?.Value ?? Array.Empty<byte>();
+        if (bytes.Length >= 2)
+        {
+            ushort orientation = BitConverter.ToUInt16(bytes, 0);
+            RotateFlipType flip = orientation switch
+            {
+                2 => RotateFlipType.RotateNoneFlipX,
+                3 => RotateFlipType.Rotate180FlipNone,
+                4 => RotateFlipType.Rotate180FlipX,
+                5 => RotateFlipType.Rotate90FlipX,
+                6 => RotateFlipType.Rotate90FlipNone,
+                7 => RotateFlipType.Rotate270FlipX,
+                8 => RotateFlipType.Rotate270FlipNone,
+                _ => RotateFlipType.RotateNoneFlipNone
+            };
+            original.RotateFlip(flip);
+        }
+    }
     int width = original.Width;
     int height = original.Height;
     if (width < 1 || height < 1 || (long)width * height * scale * scale > 64_000_000)
