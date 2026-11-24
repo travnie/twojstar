@@ -292,6 +292,10 @@ jobs:
           foreach ($item in @('TravnyAIUpscale.exe', 'TravnyAIUpscale.dll', 'TravnyAIUpscale.deps.json', 'TravnyAIUpscale.runtimeconfig.json')) {
             Copy-Item (Join-Path $upscaleBuild $item) $common
           }
+          # Bring CLI-specific managed dependencies; retain one shared Windows ML runtime.
+          Get-ChildItem $upscaleBuild -File -Filter '*.dll' |
+            Where-Object { $_.Name -notin @('TravnyAIUpscale.dll', 'Microsoft.ML.OnnxRuntime.dll', 'Microsoft.Windows.AI.MachineLearning.dll') } |
+            Copy-Item -Destination $common
           Copy-Item ./tools/Upscale/Upscale-2x.cmd "$common/"
           Copy-Item ./tools/Upscale/Upscale-4x.cmd "$common/"
           Copy-Item .\Install.bat "$package/Install.bat"
