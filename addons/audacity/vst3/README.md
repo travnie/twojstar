@@ -84,7 +84,7 @@ Recorded destructive host export:
 
 - Stereo 48 kHz PCM16, 12 s, 440 Hz sine at 0.2 amplitude; DC step +0.45 exactly at 6.000 s.
 - Select 5.57–6.50 s, Preview, Apply, export whole project to stereo 48 kHz PCM16 WAV.
-- Only large alteration at 5.56529–5.56629 s, 1 ms before selection; peak 11,889 PCM16 LSB, 49 frames above 100-LSB tolerance. At 6.000 s target join, max delta in +/-4 ms is 6 LSB (export dithering).
+- Only large alteration at 5.56529–5.56629 s, a 1-ms region ending 3.7 ms before the selection; peak 11,889 PCM16 LSB, 49 frames above 100-LSB tolerance. At 6.000 s target join, max delta in +/-4 ms is 6 LSB (export dithering), and the discontinuity's peak derivative is not reduced.
 - tests/SmartTransitionHostSelectionFixture.py generates the fixture and verifies no out-of-selection damage and actual target-seam modification. It currently FAILS on this host export, by design.
 
 Reproduce:

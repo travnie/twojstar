@@ -14,7 +14,6 @@ SELECTION_END = 6.50
 CHANNELS = 2
 # PCM16 tolerates re-export/dither up to a few LSB, not a new audio transient.
 EXTERNAL_TOLERANCE = 100
-SEAM_CHANGE_THRESHOLD = 100
 
 
 def make_audio(path: Path) -> None:
@@ -39,7 +38,13 @@ def read_wav(path: Path) -> list[tuple[int, int]]:
         expected = (RATE, CHANNELS, 2, RATE * SECONDS)
         if shape != expected or wav.getcomptype() != "NONE":
             raise ValueError(f"{path.name}: unexpected WAV shape {shape}, expected {expected}")
-        return list(struct.iter_unpack("<hh", wav.readframes(wav.getnframes())))
+        raw = wav.readframes(wav.getnframes())
+        if len(raw) != RATE * SECONDS * CHANNELS * 2:
+            raise ValueError(f"{path.name}: truncated WAV payload ({len(raw)} bytes)")
+        values = list(struct.iter_unpack("<hh", raw))
+        if len(values) != RATE * SECONDS:
+            raise ValueError(f"{path.name}: decoded frame count mismatch")
+        return values
 
 
 def verify(source: Path, output: Path) -> None:
@@ -51,22 +56,29 @@ def verify(source: Path, output: Path) -> None:
                for x, y in zip(before, after)]
     outside = [(i, delta) for i, delta in enumerate(changed)
                if (i < start or i >= end) and delta > EXTERNAL_TOLERANCE]
-    seam_span = changed[SEAM - 192:SEAM + 192]
-    join_changed = max(seam_span)
+    # Repair is supposed to *reduce* the abrupt first derivative of this
+    # deterministic hard join, not merely alter unrelated nearby samples.
+    def peak_derivative(values: list[tuple[int, int]]) -> int:
+        return max(
+            max(abs(values[i][ch] - values[i - 1][ch]) for ch in range(CHANNELS))
+            for i in range(SEAM - 192, SEAM + 193)
+        )
+    original_jump = peak_derivative(before)
+    processed_jump = peak_derivative(after)
     largest = max(range(len(changed)), key=changed.__getitem__)
     print(
         f"frames={len(after)}, selection={SELECTION_START:.2f}-{SELECTION_END:.2f}s, "
         f"max_delta={changed[largest]} at {largest / RATE:.6f}s, "
-        f"out_of_selection={len(outside)}, max_join_delta={join_changed}"
+        f"out_of_selection={len(outside)}, join_derivative={original_jump}->{processed_jump}"
     )
     if outside:
         i, delta = max(outside, key=lambda row: row[1])
         raise AssertionError(
             f"FAIL: selection boundary leaked ({delta} PCM16 LSB at {i / RATE:.6f}s)"
         )
-    if join_changed <= SEAM_CHANGE_THRESHOLD:
+    if processed_jump >= original_jump * 0.8:
         raise AssertionError(
-            "FAIL: 6.000s hard join effectively unchanged; inspect host latency/selection"
+            f"FAIL: hard join not smoothed at 6.000s ({original_jump}->{processed_jump})"
         )
     print("PASS: no external damage, target join affected, frame count stable")
 
