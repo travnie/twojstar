@@ -307,6 +307,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "ModelSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
             dotnet publish .\tests\ExecutionProviderSmoke\ExecutionProviderSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
             if ($LASTEXITCODE -ne 0) { throw "ExecutionProviderSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
+            dotnet publish ./tests/TransparencyModelSmoke/TransparencyModelSmoke.csproj -c Release -f $tfm --no-self-contained -o $smoke --nologo
+            if ($LASTEXITCODE -ne 0) { throw "TransparencyModelSmoke publish failed for $tfm with exit code $LASTEXITCODE" }
 
             Get-ChildItem $smoke -Recurse -File |
               Where-Object {
@@ -321,11 +323,14 @@ jobs:
             Get-ChildItem $common -File -Filter '*.dll' | Copy-Item -Destination $smoke
             New-Item -ItemType Directory -Force -Path (Join-Path $smoke 'model') | Out-Null
             Copy-Item "$common/model/realesr-general-x4v3.onnx" (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
+            Copy-Item "$common/model/u2netp.onnx" (Join-Path $smoke 'model/u2netp.onnx')
 
             dotnet (Join-Path $smoke 'ExecutionProviderSmoke.dll')
             if ($LASTEXITCODE -ne 0) { throw "Packaged EP smoke failed for $tfm with exit code $LASTEXITCODE" }
             dotnet (Join-Path $smoke 'ModelSmoke.dll') (Join-Path $smoke 'model/realesr-general-x4v3.onnx')
             if ($LASTEXITCODE -ne 0) { throw "Packaged model smoke failed for $tfm with exit code $LASTEXITCODE" }
+            dotnet (Join-Path $smoke 'TransparencyModelSmoke.dll') (Join-Path $smoke 'model/u2netp.onnx')
+            if ($LASTEXITCODE -ne 0) { throw "Packaged transparency smoke failed for $tfm with exit code $LASTEXITCODE" }
           }
 
           @'
