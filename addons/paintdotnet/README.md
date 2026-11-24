@@ -5,7 +5,7 @@ Shared home for Paint.NET extensions maintained in this repository.
 ## Current plugins
 
 - [`ico/`](ico/) — ICO import/export FileType plugin for Paint.NET 5.1 and 5.2+.
-- [`ai/`](ai/) — local AI restoration pack with Real-ESRGAN **AI Restore**, FBCNN **AI DeJPEG**, and SCUNet **AI Denoise**. Smart Transparency/matting remains a proposal, not shipped. SVG is handled by an existing external plugin.
+- [`ai/`](ai/) — local AI restoration pack with Real-ESRGAN **AI Restore**, FBCNN **AI DeJPEG**, and SCUNet **AI Denoise**. Smart Transparency adds local U2Net-p subject matting with alpha preservation. SVG is handled by an existing external plugin.
 
 Stable release assets remain separate so users can install only what they need:
 

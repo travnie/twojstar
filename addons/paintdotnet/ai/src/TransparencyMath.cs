@@ -6,6 +6,30 @@ internal static class TransparencyMath
 {
     public const int ModelSize = 320;
 
+    // Match U2Net-p's resized-image max normalization, with a black-image guard.
+    // Input planes must hold unnormalized 0..1 RGB until this call.
+    public static void NormalizeInput(float[] input)
+    {
+        int plane = ModelSize * ModelSize;
+        if (input.Length != plane * 3)
+            throw new ArgumentException("Unexpected U2Net-p input length.", nameof(input));
+        float peak = 0f;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (!float.IsFinite(input[i]))
+                throw new ArgumentException("Input has nonfinite channel.", nameof(input));
+            peak = Math.Max(peak, input[i]);
+        }
+        float denominator = Math.Max(peak, 1e-6f);
+        float[] mean = { 0.485f, 0.456f, 0.406f };
+        float[] deviation = { 0.229f, 0.224f, 0.225f };
+        for (int i = 0; i < input.Length; i++)
+        {
+            int channel = i / plane;
+            input[i] = ((input[i] / denominator) - mean[channel]) / deviation[channel];
+        }
+    }
+
     public static float Normalize(float value, float min, float max)
     {
         if (!float.IsFinite(value) || !float.IsFinite(min) || !float.IsFinite(max) ||

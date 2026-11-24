@@ -18,6 +18,14 @@ for (int y = 0; y < 320; y++) for (int x = 0; x < 320; x++) {
     input[102400 + i] = (v - 0.456f) / 0.224f;
     input[204800 + i] = (v - 0.406f) / 0.225f;
 }
+float[] dark = input.Select(v => v * 0.3f).ToArray();
+TransparencyMath.NormalizeInput(input);
+TransparencyMath.NormalizeInput(dark);
+Assert(input.Zip(dark).All(pair => Math.Abs(pair.First - pair.Second) < 1e-5f),
+    "Dark image normalization changed the subject tensor");
+float[] black = new float[3 * 320 * 320];
+TransparencyMath.NormalizeInput(black);
+Assert(black.All(float.IsFinite), "Black image preprocessing produced nonfinite input");
 using var model = new TransparencyModelSession(args[0]);
 try {
     model.Run(input, () => true);

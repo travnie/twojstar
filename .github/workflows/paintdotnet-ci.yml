@@ -242,6 +242,8 @@ jobs:
           }
           dotnet run --project ./tests/TransparencyModelSmoke/TransparencyModelSmoke.csproj -c Release -f net9.0-windows10.0.18362.0 -- $model
           if ($LASTEXITCODE -ne 0) { throw "Transparency model smoke failed with exit code $LASTEXITCODE" }
+          dotnet run --project ./tests/TransparencyModelSmoke/TransparencyModelSmoke.csproj -c Release -f net11.0-windows10.0.18362.0 -- $model
+          if ($LASTEXITCODE -ne 0) { throw "Transparency .NET 11 model smoke failed with exit code $LASTEXITCODE" }
 
       - name: Package release asset and smoke-test shared runtime
         working-directory: ${{ env.PLUGIN_DIR }}

@@ -20,7 +20,7 @@ internal sealed class TransparencyModelSession : IDisposable
         using SessionOptions options = InferenceSessionOptions.Create();
         session = new InferenceSession(modelPath, options);
         var input = session.InputMetadata.Single();
-        var output = session.OutputMetadata.First();
+        var output = session.OutputMetadata.Single();
         if (input.Value.ElementDataType != TensorElementType.Float ||
             output.Value.ElementDataType != TensorElementType.Float ||
             !input.Value.Dimensions.SequenceEqual(new[] { 1, 3, 320, 320 }) ||
@@ -65,8 +65,18 @@ internal sealed class TransparencyModelSession : IDisposable
                     throw new InvalidDataException("Invalid U2Net-p matte.");
                 float min = mask.Min();
                 float max = mask.Max();
-                for (int i = 0; i < mask.Length; i++)
-                    mask[i] = TransparencyMath.Normalize(mask[i], min, max);
+                // rembg's U2Net-p reference applies min/max matting; avoid
+                // magnifying near-uniform sigmoid noise into false cutouts.
+                if (max - min >= 0.05f)
+                {
+                    for (int i = 0; i < mask.Length; i++)
+                        mask[i] = TransparencyMath.Normalize(mask[i], min, max);
+                }
+                else
+                {
+                    for (int i = 0; i < mask.Length; i++)
+                        mask[i] = Math.Clamp(mask[i], 0f, 1f);
+                }
                 return mask;
             }
             catch (OnnxRuntimeException) when (cancelRequested())

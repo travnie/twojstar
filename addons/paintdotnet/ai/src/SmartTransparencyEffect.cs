@@ -76,11 +76,12 @@ public sealed class SmartTransparencyEffect : PropertyBasedBitmapEffect
                 ColorBgra32 pixel = row[sourceX, 0];
                 float alpha = pixel.A / 255f;
                 int i = y * size + x;
-                input[i] = ((pixel.R / 255f) * alpha - 0.485f) / 0.229f;
-                input[plane + i] = ((pixel.G / 255f) * alpha - 0.456f) / 0.224f;
-                input[2 * plane + i] = ((pixel.B / 255f) * alpha - 0.406f) / 0.225f;
+                input[i] = (pixel.R / 255f) * alpha;
+                input[plane + i] = (pixel.G / 255f) * alpha;
+                input[2 * plane + i] = (pixel.B / 255f) * alpha;
             }
         }
+        TransparencyMath.NormalizeInput(input);
         return SharedSession.Value.Run(input, () => IsCancelRequested);
     }
 
@@ -121,9 +122,16 @@ public sealed class SmartTransparencyEffect : PropertyBasedBitmapEffect
                 }
             }
         }
-        catch (OperationCanceledException) when (IsCancelRequested)
+        catch (OperationCanceledException)
         {
-            return;
+            // Lazy caches exceptions, including cancellation. Evict only the
+            // failed instance so another render can perform inference again.
+            Interlocked.CompareExchange(
+                ref matte,
+                new Lazy<float[]>(BuildMatte, LazyThreadSafetyMode.ExecutionAndPublication),
+                matte);
+            if (IsCancelRequested) return;
+            throw;
         }
     }
 }
