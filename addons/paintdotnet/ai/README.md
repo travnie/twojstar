@@ -40,15 +40,17 @@ The models are not tiny: FBCNN is about 144 MB and SCUNet about 38 MB. They are 
 - The runtime stays self-contained: no execution-provider or model downloads happen while Paint.NET is running.
 - Windows ML requires Windows 10 19H1 (build 18362) or newer.
 
-## Upscaling
+## AI Upscale 2x/4x companion
 
-A normal Paint.NET effect renders into the current document bounds, so true 2x/4x document enlargement must not be faked inside an effect.
+True new-resolution PNG export, without pretending a Paint.NET effect can resize the document.
 
-For Paint.NET 5.x the safe paths are:
-
-1. **Restore at current size** — all current AI effects keep the existing canvas dimensions.
-2. **Resize then refine** — user resizes the image with Paint.NET, then runs AI Restore to reconstruct detail and suppress interpolation artifacts.
-3. **True one-click upscale later** — only when there is a stable host/document API that can create or resize the destination document without relying on private internals. Paint.NET 5.2's modern FileType system is useful infrastructure, but a FileType plugin is not a general document-resize command.
+- Drag an image onto Upscale-2x.cmd or Upscale-4x.cmd in the installed Travny.PaintDotNet.AI Effects folder. Open the output PNG in Paint.NET.
+- CLI alternative: TravnyAIUpscale.exe input.png 2 [output.png] (or 4).
+- Reuses the bundled Real-ESRGAN x4 model with 34 px receptive-field overlap and 128 px tiles. x2 is an area reduction of the native x4 result.
+- Alpha resampled separately. RGB computed from alpha-weighted source, then unpremultiplied before PNG export.
+- Output saved beside source by default; no overwrites. Cap 64 MP. Ctrl+C cancels; incomplete output never published.
+- Requires .NET 9 Desktop Runtime on Windows; processing stays local.
+- Does not resize the active Paint.NET document. Direct one-click document enlargement awaits supported host API.
 
 ## Smart Transparency
 
@@ -82,6 +84,9 @@ Common/
         ├── fbcnn_color_fp16.onnx
         ├── scunet_color_real_psnr_fp16.onnx
         └── u2netp.onnx
+    ├── TravnyAIUpscale.exe
+    ├── Upscale-2x.cmd
+    └── Upscale-4x.cmd
 Paint.NET-5.1/
 Paint.NET-5.2+/
 licenses/
