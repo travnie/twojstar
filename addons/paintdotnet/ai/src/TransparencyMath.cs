@@ -1,0 +1,99 @@
+using System;
+
+namespace Travny.PaintDotNet.AI;
+
+internal static class TransparencyMath
+{
+    public const int ModelSize = 320;
+
+    // Match U2Net-p's resized-image max normalization, with a black-image guard.
+    // Input planes must hold unnormalized 0..1 RGB until this call.
+    public static void NormalizeInput(float[] input)
+    {
+        int plane = ModelSize * ModelSize;
+        if (input.Length != plane * 3)
+            throw new ArgumentException("Unexpected U2Net-p input length.", nameof(input));
+        float peak = 0f;
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (!float.IsFinite(input[i]))
+                throw new ArgumentException("Input has nonfinite channel.", nameof(input));
+            peak = Math.Max(peak, input[i]);
+        }
+        float denominator = Math.Max(peak, 1e-6f);
+        float[] mean = { 0.485f, 0.456f, 0.406f };
+        float[] deviation = { 0.229f, 0.224f, 0.225f };
+        for (int i = 0; i < input.Length; i++)
+        {
+            int channel = i / plane;
+            input[i] = ((input[i] / denominator) - mean[channel]) / deviation[channel];
+        }
+    }
+
+    // U2Net-p's reference uses per-image min/max; suppress amplification
+    // when the model predicts almost the same confidence everywhere.
+    public static void NormalizeMask(float[] mask)
+    {
+        if (mask.Length == 0 || Array.Exists(mask, v => !float.IsFinite(v)))
+            throw new ArgumentException("Invalid matte.", nameof(mask));
+        float min = 1f;
+        float max = 0f;
+        foreach (float value in mask)
+        {
+            min = Math.Min(min, value);
+            max = Math.Max(max, value);
+        }
+        if (max - min >= 0.05f)
+        {
+            for (int i = 0; i < mask.Length; i++)
+                mask[i] = Normalize(mask[i], min, max);
+        }
+        else
+        {
+            for (int i = 0; i < mask.Length; i++)
+                mask[i] = Math.Clamp(mask[i], 0f, 1f);
+        }
+    }
+
+    public static float Normalize(float value, float min, float max)
+    {
+        if (!float.IsFinite(value) || !float.IsFinite(min) || !float.IsFinite(max) ||
+            max - min < 1e-6f)
+        {
+            return 0f;
+        }
+
+        return Math.Clamp((value - min) / (max - min), 0f, 1f);
+    }
+
+    public static float Sample(float[] mask, int width, int height, float x, float y)
+    {
+        float fx = Math.Clamp(x, 0f, width - 1f);
+        float fy = Math.Clamp(y, 0f, height - 1f);
+        int left = (int)fx;
+        int top = (int)fy;
+        int right = Math.Min(left + 1, width - 1);
+        int bottom = Math.Min(top + 1, height - 1);
+        float dx = fx - left;
+        float dy = fy - top;
+        float topValue = mask[top * width + left] * (1 - dx) +
+            mask[top * width + right] * dx;
+        float bottomValue = mask[bottom * width + left] * (1 - dx) +
+            mask[bottom * width + right] * dx;
+        return Math.Clamp(topValue * (1 - dy) + bottomValue * dy, 0f, 1f);
+    }
+
+    public static byte Alpha(byte original, float mask, int strength, int softness)
+    {
+        if (strength <= 0) return original;
+        float normalized = Math.Clamp(mask, 0f, 1f);
+        float width = Math.Clamp(softness / 100f, 0.02f, 1f);
+        float low = 0.5f - width * 0.5f;
+        float t = Math.Clamp((normalized - low) / width, 0f, 1f);
+        float smooth = t * t * (3f - 2f * t);
+        float target = Math.Min(original / 255f, smooth);
+        float mixed = original / 255f +
+            (target - original / 255f) * Math.Clamp(strength / 100f, 0f, 1f);
+        return (byte)Math.Clamp((int)MathF.Round(mixed * 255f), 0, original);
+    }
+}

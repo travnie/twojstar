@@ -50,16 +50,15 @@ For Paint.NET 5.x the safe paths are:
 2. **Resize then refine** — user resizes the image with Paint.NET, then runs AI Restore to reconstruct detail and suppress interpolation artifacts.
 3. **True one-click upscale later** — only when there is a stable host/document API that can create or resize the destination document without relying on private internals. Paint.NET 5.2's modern FileType system is useful infrastructure, but a FileType plugin is not a general document-resize command.
 
-## Smart Transparency (proposed, not shipped)
+## Smart Transparency
 
-The first useful version should produce a matte, not delete pixels blindly:
-
-- preserve existing alpha when it is already cleaner than the predicted matte,
-- expose `Subject / Portrait / Auto` modes rather than pretending one segmentation model fits everything,
-- keep hair/fur/soft edges semi-transparent,
-- optional edge decontamination for background colour spill,
-- preview through the normal Paint.NET effect pipeline,
-- no network dependency.
+- **Smart Transparency** uses the lightweight U2Net-p model for a local foreground matte.
+- **Strength** controls cutout opacity (0 = untouched, 100 = remove background).
+- **Edge softness** retains soft hair/fur boundaries through bilinear mask upsampling.
+- Existing alpha is an upper bound: never makes transparent pixels more opaque.
+- Inference on a 320x320 full-image mask; no change to canvas dimensions, no network calls.
+- Initial subject segmentation only. Dedicated portrait model and colour-spill cleanup remain future options.
+- Small subjects and very fine details may require manual touch-up.
 
 ## SVG support (external)
 
@@ -81,7 +80,8 @@ Common/
     └── model/
         ├── realesr-general-x4v3.onnx
         ├── fbcnn_color_fp16.onnx
-        └── scunet_color_real_psnr_fp16.onnx
+        ├── scunet_color_real_psnr_fp16.onnx
+        └── u2netp.onnx
 Paint.NET-5.1/
 Paint.NET-5.2+/
 licenses/
@@ -109,5 +109,6 @@ CI pins and verifies every bundled model before packaging:
 - Real-ESRGAN `realesr-general-x4v3.onnx`: SHA-256 `1940a93ee08283a0a7286183186357b1688fe9fa8ede74604b424586aaddf112`.
 - FBCNN Color FP16: SHA-256 `1a678ff4f721b557fd8a7e560b99cb94ba92f201545c7181c703e7808b93e922`.
 - SCUNet Color Real-PSNR FP16: SHA-256 `8923b09e240e0078b3247964e9b105cbfbb4da01e260b29a961d038f8fa7791a`.
+- U2Net-p rembg v0.0.0, SHA-256 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8 (U2-Net weights Apache-2.0, distributed by rembg under MIT).
 
 FBCNN and SCUNet upstream projects are Apache-2.0 licensed. Their license texts, ONNX Runtime and Real-ESRGAN notices, plus the Windows ML runtime license and third-party notices are shipped in `licenses/`. The DeJPEG Android application itself is only a model/behavior reference; its AGPL application code is not copied into this plugin.
