@@ -20,7 +20,9 @@ internal sealed class TransparencyModelSession : IDisposable
         using SessionOptions options = InferenceSessionOptions.Create();
         session = new InferenceSession(modelPath, options);
         var input = session.InputMetadata.Single();
-        var output = session.OutputMetadata.Single();
+        // Pinned U2Net-p exports six auxiliary supervision heads. Only 1959
+        // is the final foreground matte, regardless of metadata enumeration.
+        var output = session.OutputMetadata.Single(entry => entry.Key == "1959");
         if (input.Value.ElementDataType != TensorElementType.Float ||
             output.Value.ElementDataType != TensorElementType.Float ||
             !input.Value.Dimensions.SequenceEqual(new[] { 1, 3, 320, 320 }) ||
