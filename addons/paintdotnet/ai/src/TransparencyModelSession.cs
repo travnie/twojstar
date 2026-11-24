@@ -63,20 +63,7 @@ internal sealed class TransparencyModelSession : IDisposable
                 if (mask.Length != 320 * 320 ||
                     mask.Any(value => !float.IsFinite(value)))
                     throw new InvalidDataException("Invalid U2Net-p matte.");
-                float min = mask.Min();
-                float max = mask.Max();
-                // rembg's U2Net-p reference applies min/max matting; avoid
-                // magnifying near-uniform sigmoid noise into false cutouts.
-                if (max - min >= 0.05f)
-                {
-                    for (int i = 0; i < mask.Length; i++)
-                        mask[i] = TransparencyMath.Normalize(mask[i], min, max);
-                }
-                else
-                {
-                    for (int i = 0; i < mask.Length; i++)
-                        mask[i] = Math.Clamp(mask[i], 0f, 1f);
-                }
+                TransparencyMath.NormalizeMask(mask);
                 return mask;
             }
             catch (OnnxRuntimeException) when (cancelRequested())

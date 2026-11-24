@@ -30,6 +30,31 @@ internal static class TransparencyMath
         }
     }
 
+    // U2Net-p's reference uses per-image min/max; suppress amplification
+    // when the model predicts almost the same confidence everywhere.
+    public static void NormalizeMask(float[] mask)
+    {
+        if (mask.Length == 0 || Array.Exists(mask, v => !float.IsFinite(v)))
+            throw new ArgumentException("Invalid matte.", nameof(mask));
+        float min = 1f;
+        float max = 0f;
+        foreach (float value in mask)
+        {
+            min = Math.Min(min, value);
+            max = Math.Max(max, value);
+        }
+        if (max - min >= 0.05f)
+        {
+            for (int i = 0; i < mask.Length; i++)
+                mask[i] = Normalize(mask[i], min, max);
+        }
+        else
+        {
+            for (int i = 0; i < mask.Length; i++)
+                mask[i] = Math.Clamp(mask[i], 0f, 1f);
+        }
+    }
+
     public static float Normalize(float value, float min, float max)
     {
         if (!float.IsFinite(value) || !float.IsFinite(min) || !float.IsFinite(max) ||

@@ -95,9 +95,10 @@ public sealed class SmartTransparencyEffect : PropertyBasedBitmapEffect
         }
         if (IsCancelRequested) return;
 
+        Lazy<float[]> currentMatte = matte!;
         try
         {
-            float[] mask = matte!.Value;
+            float[] mask = currentMatte.Value;
             RegionPtr<ColorBgra32> destination = outputLock.AsRegionPtr();
             using IBitmap<ColorBgra32> clip = source!.CreateClipper(
                 output.Bounds, BitmapExtendMode.Clamp).ToBitmap();
@@ -129,7 +130,7 @@ public sealed class SmartTransparencyEffect : PropertyBasedBitmapEffect
             Interlocked.CompareExchange(
                 ref matte,
                 new Lazy<float[]>(BuildMatte, LazyThreadSafetyMode.ExecutionAndPublication),
-                matte);
+                currentMatte);
             if (IsCancelRequested) return;
             throw;
         }

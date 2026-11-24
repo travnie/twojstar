@@ -10,6 +10,18 @@ Assert(TransparencyMath.Alpha(200, 0f, 0, 70) == 200, "Strength zero changed alp
 float[] pixels = { 0f, 1f, 1f, 0f };
 Assert(Math.Abs(TransparencyMath.Sample(pixels, 2, 2, 0.5f, 0.5f) - 0.5f) < 1e-6,
     "Bilinear sampling failed");
+float[] almostBlack = { 0.001f, 0.003f, 0.005f };
+TransparencyMath.NormalizeMask(almostBlack);
+Assert(almostBlack.All(v => v < 0.01f),
+    "Near-constant background noise became false foreground");
+float[] almostWhite = { 0.95f, 0.97f, 0.99f };
+TransparencyMath.NormalizeMask(almostWhite);
+Assert(almostWhite.All(v => v > 0.9f),
+    "Near-constant foreground gained transparent holes");
+float[] highContrast = { 0.1f, 0.5f, 0.9f };
+TransparencyMath.NormalizeMask(highContrast);
+Assert(highContrast[0] == 0f && highContrast[2] == 1f,
+    "Reference min-max mask normalization changed");
 float[] input = new float[3 * 320 * 320];
 for (int y = 0; y < 320; y++) for (int x = 0; x < 320; x++) {
     int i = y * 320 + x;
