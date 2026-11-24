@@ -76,7 +76,23 @@ Generic VST3 `ProcessData` does not provide a portable end-of-selection marker. 
 
 Windows host validation on **Audacity 3.7.9** now passes discovery, Preview, Apply, Undo, cancellation, and host responsiveness. An 80-frame stereo fixture at 48 kHz with its seam at frame 40 was processed end-to-end: Apply preserved all 80 output frames and repaired the seam, validating Audacity's observed output for this specific case. Preview → Stop → Cancel left no Smart Transition undo entry, and the next Apply produced byte-identical PCM to the earlier Apply, confirming state reset and deterministic reprocessing for the same fixture.
 
-Audacity 4.0 has not yet been claimed as equivalent Smart Transition processing validation here. Any 4.0 scan/discovery evidence should be treated as host recognition only until Preview/Apply behavior and the end-of-selection contract are explicitly exercised there.
+### Audacity 4.0.2 host QA: release blocker (2026-11-24)
+
+Windows portable Audacity 4.0.2 with the PR #565 VST3 artifact (CI run 45276632836) discovers the plug-in and opens Preview/Apply. Host UI exposes no Strength, Max transition, Mode or Repair controls. Apply completes without crash, but export proves incorrect processing.
+
+Recorded destructive host export:
+
+- Stereo 48 kHz PCM16, 12 s, 440 Hz sine at 0.2 amplitude; DC step +0.45 exactly at 6.000 s.
+- Select 5.57–6.50 s, Preview, Apply, export whole project to stereo 48 kHz PCM16 WAV.
+- Only large alteration at 5.56529–5.56629 s, 1 ms before selection; peak 11,889 PCM16 LSB, 49 frames above 100-LSB tolerance. At 6.000 s target join, max delta in +/-4 ms is 6 LSB (export dithering).
+- tests/SmartTransitionHostSelectionFixture.py generates the fixture and verifies no out-of-selection damage and actual target-seam modification. It currently FAILS on this host export, by design.
+
+Reproduce:
+1. python tests/SmartTransitionHostSelectionFixture.py generate input.wav
+2. Audacity 4.0.2: import, select 5.57–6.50 s, Preview, Apply; export entire project as stereo PCM16 WAV, 48 kHz.
+3. python tests/SmartTransitionHostSelectionFixture.py verify input.wav exported.wav
+
+Do not promote to stable/Latest. Investigate host latency compensation, selection pre-roll, DSP plan anchoring and generated VST3 parameter UI. Then verify short/late selections, Undo, cancel, and block-size-independent host output. The portable test did not alter Audacity 3.7.9.
 
 Before promotion, the adapter or host test harness must explicitly exercise end-of-selection handling for late seams and short selections, different real host block sizes must produce the same plan/output contract, and Audacity 4 host Preview/Apply and selection-end QA remain release gates. `Repair Off/Auto` is implemented but stays experimental. Until those gates pass, the workflow ZIP stays a development artifact rather than a supported release.
 
