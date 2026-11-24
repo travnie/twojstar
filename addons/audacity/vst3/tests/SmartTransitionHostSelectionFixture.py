@@ -58,13 +58,13 @@ def verify(source: Path, output: Path) -> None:
                if (i < start or i >= end) and delta > EXTERNAL_TOLERANCE]
     # Repair is supposed to *reduce* the abrupt first derivative of this
     # deterministic hard join, not merely alter unrelated nearby samples.
-    def peak_derivative(values: list[tuple[int, int]]) -> int:
+    def peak_derivative(values: list[tuple[int, int]], channel: int) -> int:
         return max(
-            max(abs(values[i][ch] - values[i - 1][ch]) for ch in range(CHANNELS))
+            abs(values[i][channel] - values[i - 1][channel])
             for i in range(SEAM - 192, SEAM + 193)
         )
-    original_jump = peak_derivative(before)
-    processed_jump = peak_derivative(after)
+    original_jump = [peak_derivative(before, ch) for ch in range(CHANNELS)]
+    processed_jump = [peak_derivative(after, ch) for ch in range(CHANNELS)]
     largest = max(range(len(changed)), key=changed.__getitem__)
     print(
         f"frames={len(after)}, selection={SELECTION_START:.2f}-{SELECTION_END:.2f}s, "
@@ -76,10 +76,12 @@ def verify(source: Path, output: Path) -> None:
         raise AssertionError(
             f"FAIL: selection boundary leaked ({delta} PCM16 LSB at {i / RATE:.6f}s)"
         )
-    if processed_jump >= original_jump * 0.8:
-        raise AssertionError(
-            f"FAIL: hard join not smoothed at 6.000s ({original_jump}->{processed_jump})"
-        )
+    for channel in range(CHANNELS):
+        if processed_jump[channel] >= original_jump[channel] * 0.8:
+            raise AssertionError(
+                f"FAIL: channel {channel} hard join not smoothed at 6.000s "
+                f"({original_jump[channel]}->{processed_jump[channel]})"
+            )
     print("PASS: no external damage, target join affected, frame count stable")
 
 
