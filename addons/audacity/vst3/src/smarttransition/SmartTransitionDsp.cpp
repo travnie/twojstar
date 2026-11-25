@@ -51,6 +51,7 @@ void SmartTransitionDsp::reset() noexcept
 {
     inputCount_ = 0;
     firstProgramSample_ = -1;
+    firstChannelProgramSample_.fill(-1);
     drainStarted_ = false;
     clusterBest_ = {};
     clusterSeedAnchor_ = -1;
@@ -156,14 +157,16 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
     // The host may prime with zero-filled samples before selected audio.
     // Remember the first real sample so only that boundary is ignored.
-    if (firstProgramSample_ < 0 && input != nullptr)
+    if (input != nullptr)
     {
         for (std::size_t channel = 0; channel < channels; ++channel)
         {
-            if (std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-8)
+            if (firstChannelProgramSample_[channel] < 0 &&
+                std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-8)
             {
-                firstProgramSample_ = index;
-                break;
+                firstChannelProgramSample_[channel] = index;
+                if (firstProgramSample_ < 0)
+                    firstProgramSample_ = index;
             }
         }
     }
@@ -212,19 +215,20 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         return candidate;
     }
 
-    // Only ignore the onset after a substantial *leading* silent prefix.
-    // Do not suppress legitimate later audio -> silence edits or hard pans.
-    if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
-        anchor >= firstProgramSample_ - 4 &&
-        anchor < firstProgramSample_ + static_cast<std::int64_t>(analysisRadius_))
-    {
-        return candidate;
-    }
-
     double strongestScore = 0.0;
     std::size_t affectedChannels = 0;
     for (std::size_t channel = 0; channel < channels; ++channel)
     {
+        // Suppress only each channel's own first audio onset after the host
+        // priming silence. Delayed startup channels are handled independently;
+        // real cuts just a few samples later still compete normally.
+        const auto first = firstChannelProgramSample_[channel];
+        if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
+            first >= firstProgramSample_ &&
+            first - firstProgramSample_ < static_cast<std::int64_t>(analysisRadius_) &&
+            anchor >= first - 1 && anchor <= first + 1)
+            continue;
+
         double leftSum = 0.0;
         double rightSum = 0.0;
         double leftSquares = 0.0;
