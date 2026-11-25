@@ -223,11 +223,11 @@ int main()
         // A different host with an actual silent selection onset must not
         // be classified as Audacity's offline 64-sample primer.
         std::vector<Frame> otherHostSignal(1400);
-        for (int i = 500; i < 1400; ++i)
+        for (int i = 64; i < 1400; ++i)
             otherHostSignal[static_cast<std::size_t>(i)] = {0.35f, 0.27f};
         const auto otherHostOutput = run(otherHostSignal, 64, u"Other DAW", false);
         bool otherHostRepaired = false;
-        for (int i = 490; i < 515; ++i)
+        for (int i = 60; i < 80; ++i)
             otherHostRepaired |= otherHostOutput[static_cast<std::size_t>(i)] !=
                 otherHostSignal[static_cast<std::size_t>(i)];
         if (!otherHostRepaired)
