@@ -215,8 +215,8 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
     // Only ignore the onset after a substantial *leading* silent prefix.
     // Do not suppress legitimate later audio -> silence edits or hard pans.
     if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
-        anchor >= firstProgramSample_ - radius &&
-        anchor <= firstProgramSample_ + radius)
+        anchor >= firstProgramSample_ - 4 &&
+        anchor <= firstProgramSample_ + 4)
     {
         return candidate;
     }
