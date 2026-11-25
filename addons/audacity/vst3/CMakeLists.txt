@@ -185,4 +185,13 @@ if(BUILD_TESTING)
     target_compile_features(SmartTransitionStateRoundTripTests PRIVATE cxx_std_20)
     target_link_libraries(SmartTransitionStateRoundTripTests PRIVATE sdk TravnySmartTransitionDsp)
     add_test(NAME SmartTransitionStateRoundTripTests COMMAND SmartTransitionStateRoundTripTests)
+
+    add_executable(SmartTransitionVst3PrimerTests
+        tests/SmartTransitionVst3PrimerTests.cpp
+        src/smarttransition/SmartTransitionProcessor.cpp
+    )
+    target_include_directories(SmartTransitionVst3PrimerTests PRIVATE src/smarttransition)
+    target_compile_features(SmartTransitionVst3PrimerTests PRIVATE cxx_std_20)
+    target_link_libraries(SmartTransitionVst3PrimerTests PRIVATE sdk TravnySmartTransitionDsp)
+    add_test(NAME SmartTransitionVst3PrimerTests COMMAND SmartTransitionVst3PrimerTests)
 endif()
