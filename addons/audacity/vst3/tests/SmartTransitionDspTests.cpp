@@ -112,6 +112,29 @@ std::int64_t globalAnchor(const RenderResult& result)
     return result.planWindowStart + result.plan.seamAnchorSamples;
 }
 
+void testEarlyRealSpliceAfterSilentPrimer()
+{
+    SmartTransitionDsp dsp;
+    dsp.configure(48000.0);
+    constexpr int prefix = 64;
+    constexpr int seam = prefix + 48;
+    for (int i = 0; i < 1400; ++i)
+    {
+        Frame input = i < prefix ? Frame{0.0, 0.0}
+            : (i < seam ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
+        Frame output{};
+        dsp.processFrame(input.data(), output.data(), 2);
+    }
+    for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
+    {
+        Frame output{};
+        dsp.drainFrame(output.data(), 2);
+    }
+    require(dsp.hasPlan(), "Real seam 1 ms after priming onset was rejected");
+    require(std::abs(dsp.planWindowStartSamples() + dsp.plan().seamAnchorSamples -
+        seam) <= 8, "Early real seam was displaced by priming guard");
+}
+
 void testInternalAudioToSilenceJoinStillQualifies()
 {
     std::vector<Frame> signal(1400);
@@ -943,6 +966,7 @@ int main()
 {
     try
     {
+        testEarlyRealSpliceAfterSilentPrimer();
         testInternalAudioToSilenceJoinStillQualifies();
         testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
