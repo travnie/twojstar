@@ -40,7 +40,8 @@ export default {
       headers.get("content-type")?.includes("text/html") || pathname === "/" || pathname === "/index.html"
     );
     const isQpdfWorker = (asset.ok || asset.status === 304) && pathname === "/vendor/qpdf-run/worker.js";
-    if (isHtml || isCachedHtml || isQpdfWorker) {
+    const isArchiveWorker = (asset.ok || asset.status === 304) && pathname === "/archive-worker.mjs";
+    if (isHtml || isCachedHtml || isQpdfWorker || isArchiveWorker) {
       headers.set("content-security-policy", SECURITY_HEADERS["content-security-policy"].replace(
         "script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
       ));

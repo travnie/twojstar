@@ -1,5 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
+import { runWasmArchiveJob, wasmArchiveEntryReason } from "./archive-engine.mjs";
 import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";
 import { createZipTree } from "./zip-tree.mjs";
 import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
@@ -286,11 +287,12 @@ function isCompressedTar(file, info) {
   return info.signature === "gzip" && /(?:\.tar\.gz|\.tgz)$/iu.test(file.name);
 }
 
-async function showArchiveContents(file, format, revision, target) {
+async function showArchiveContents(file, format, revision, target, prepared = null, password = "") {
   const zip = format === "zip";
-  const label = zip ? "ZIP" : "TAR";
-  const result = zip ? await readZipIndex(file)
-    : await readTarIndex(file, () => isCurrentPreview(target, revision));
+  const wasm = Boolean(prepared);
+  const label = wasm ? (format === "sevenz" ? "7z" : "RAR") : zip ? "ZIP" : "TAR";
+  const result = prepared || (zip ? await readZipIndex(file)
+    : await readTarIndex(file, () => isCurrentPreview(target, revision)));
   if (!isCurrentPreview(target, revision)) return;
   const tree = createZipTree(result.entries);
   const box = element("section", "files-zip");
@@ -299,6 +301,7 @@ async function showArchiveContents(file, format, revision, target) {
   let integrityNote = "TAR checks headers only; file data has no checksum.";
   if (zip) integrityNote = "Preview and extraction check CRC-32 locally.";
   if (format === "tar.gz") integrityNote = "Gzip CRC-32 and expanded size verified.";
+  if (wasm) integrityNote = "Local WASM decoder; solid archives may require decoding preceding entries. Individual extraction up to 32 MiB.";
   const note = element("p", "files-note",
     `Preview entries up to ${formatBytes(MAX_ARCHIVE_PREVIEW_BYTES)}. ${integrityNote}`);
   const warning = tree.skipped
@@ -308,7 +311,7 @@ async function showArchiveContents(file, format, revision, target) {
   breadcrumb.setAttribute("aria-label", label + " folder navigation");
   const tools = element("div", "files-zip-actions");
   tools.setAttribute("role", "group");
-  tools.setAttribute("aria-label", "ZIP archive actions");
+  tools.setAttribute("aria-label", label + " archive actions");
   const verifyChecked = element("button", "button compact", "Verify checked");
   const extractChecked = element("button", "button compact", "Extract checked to folder");
   const cancel = element("button", "button compact", "Cancel extraction");
@@ -329,7 +332,7 @@ async function showArchiveContents(file, format, revision, target) {
   const entryHeader = element("div", "files-zip-entry-preview-header");
   const entryTitle = element("h3", "");
   entryTitle.dataset.i18nSkip = "";
-  const backToArchive = element("button", "button compact", zip ? "Back to ZIP" : "Back to TAR");
+  const backToArchive = element("button", "button compact", "Back to " + label);
   backToArchive.type = "button";
   entryHeader.append(backToArchive, entryTitle);
   const entryStatus = element("p", "files-note");
@@ -339,7 +342,8 @@ async function showArchiveContents(file, format, revision, target) {
   box.append(title, note);
   if (warning) box.append(warning);
   box.append(breadcrumb);
-  if (zip) box.append(tools);
+  if (wasm) { verifyChecked.hidden = true; extractChecked.hidden = true; }
+  if (zip || wasm) box.append(tools);
   box.append(listNode, entryDetails);
   target.append(box, entryView);
 
@@ -408,7 +412,8 @@ async function showArchiveContents(file, format, revision, target) {
         signal: controller.signal,
         directoryOffset: result.directoryOffset,
         limits,
-      })).output : file.slice(entry.start, entry.start + entry.originalSize);
+      })).output : wasm ? await runWasmArchiveJob(file, "extract", { entry, password, signal: controller.signal })
+        : file.slice(entry.start, entry.start + entry.originalSize);
       if (!isCurrent()) return;
       const extracted = new File([output], item.name);
       const info = await inspectLocalFile(extracted);
@@ -420,7 +425,7 @@ async function showArchiveContents(file, format, revision, target) {
       } else {
         await renderFileContent(extracted, info, entryBody, isCurrent);
       }
-      if (isCurrent()) entryStatus.textContent = zip ? "CRC-32 verified" : "TAR header checked";
+      if (isCurrent()) entryStatus.textContent = zip ? "CRC-32 verified" : wasm ? "Entry decoded locally" : "TAR header checked";
     } catch (error) {
       if (isCurrent()) entryStatus.textContent = `Preview unavailable. ${error?.message || error}`;
     } finally {
@@ -513,6 +518,24 @@ async function showArchiveContents(file, format, revision, target) {
     }
   }
 
+  async function downloadWasmEntry(entry, item) {
+    if (!isCurrentPreview(target, revision) || zipJobs.has(target)) return;
+    const controller = new AbortController();
+    beginJob(controller);
+    report("Decoding archive entry…");
+    try {
+      const output = await runWasmArchiveJob(file, "extract", { entry, password, signal: controller.signal });
+      if (!controller.signal.aborted && isCurrentPreview(target, revision)) {
+        downloadArchiveEntry(new Blob([output]), item.name);
+        report("Entry decoded locally.");
+      }
+    } catch (error) {
+      report(error?.name === "AbortError" ? "Archive operation canceled." : error?.message || "Extraction failed.");
+    } finally {
+      finishJob(controller);
+    }
+  }
+
   verifyChecked.addEventListener("click", () => void runEntries(selectedEntries(), "verify"));
   extractChecked.addEventListener("click", () => void runEntries(selectedEntries(), "folder"));
 
@@ -563,7 +586,7 @@ async function showArchiveContents(file, format, revision, target) {
     }
     for (const item of view.files) {
       const entry = result.entries[item.sourceIndex];
-      const reason = zip ? zipEntryEligibility(entry) : null;
+      const reason = zip ? zipEntryEligibility(entry) : wasm ? wasmArchiveEntryReason(entry) : null;
       const row = element("li", "files-zip-file");
       const name = element("button", "files-zip-entry-button", item.name);
       name.type = "button";
@@ -623,6 +646,8 @@ async function showArchiveContents(file, format, revision, target) {
           verify.addEventListener("click", () => void runEntries([entry], "verify"));
           download.addEventListener("click", () => void runEntries([entry], "download"));
           actions.append(verify);
+        } else if (wasm) {
+          download.addEventListener("click", () => void downloadWasmEntry(entry, item));
         } else {
           download.addEventListener("click", () => {
             if (isCurrentPreview(target, revision)) {
@@ -727,9 +752,50 @@ function mediaPreview(file, format, target, isCurrent) {
   target.append(video, fallback);
 }
 
+async function renderWasmArchive(file, info, revision, target, password = "") {
+  releasePreview(target);
+  const form = element("form", "files-zip-actions");
+  const field = element("input", "");
+  field.type = "password";
+  field.autocomplete = "off";
+  field.placeholder = "Archive password (optional)";
+  field.setAttribute("aria-label", field.placeholder);
+  field.maxLength = 1024;
+  const unlock = element("button", "button compact", "Unlock / reopen");
+  unlock.type = "submit";
+  form.append(field, unlock);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const supplied = field.value;
+    field.value = "";
+    void renderWasmArchive(file, info, revision, target, supplied);
+  });
+  const pending = element("p", "files-note", "Opening archive locally…");
+  pending.setAttribute("role", "status");
+  target.append(form, pending);
+  const controller = new AbortController();
+  gzipReads.set(target, controller);
+  try {
+    const result = await runWasmArchiveJob(file, "list", { password, signal: controller.signal });
+    if (controller.signal.aborted || !isCurrentPreview(target, revision)) return;
+    pending.remove();
+    await showArchiveContents(file, info.format, revision, target, result, password);
+  } catch (error) {
+    if (!controller.signal.aborted && isCurrentPreview(target, revision)) {
+      pending.textContent = error?.message || "Archive index unavailable.";
+    }
+  } finally {
+    if (gzipReads.get(target) === controller) gzipReads.delete(target);
+  }
+}
+
 async function renderPreview(file, info, revision, target = preview) {
   releasePreview(target);
   const isCurrent = () => isCurrentPreview(target, revision);
+  if (info.signature === "sevenz" || info.signature === "rar") {
+    await renderWasmArchive(file, info, revision, target);
+    return;
+  }
   const compressedTar = isCompressedTar(file, info);
   if (info.format === "zip" || info.format === "tar" || compressedTar) {
     let controller;

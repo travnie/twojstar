@@ -11,13 +11,15 @@ const fetchAsset = async (path, type = "application/javascript", status = 200) =
 
 const html = await fetchAsset("/", "text/html");
 const qpdfWorker = await fetchAsset("/vendor/qpdf-run/worker.js");
+const archiveWorker = await fetchAsset("/archive-worker.mjs");
+const cachedArchiveWorker = await fetchAsset("/archive-worker.mjs", "application/javascript", 304);
 const cachedHtml = await fetchAsset("/", "text/html", 304);
 const cachedHtmlWithoutType = await fetchAsset("/", "", 304);
 const cachedQpdfWorker = await fetchAsset("/vendor/qpdf-run/worker.js", "application/javascript", 304);
 const otherScript = await fetchAsset("/app.js");
 const cachedOtherScript = await fetchAsset("/app.js", "application/javascript", 304);
 const missing = await fetchAsset("/vendor/qpdf-run/worker.js", "text/html", 404);
-for (const response of [html, qpdfWorker, cachedHtml, cachedHtmlWithoutType, cachedQpdfWorker]) {
+for (const response of [html, qpdfWorker, archiveWorker, cachedArchiveWorker, cachedHtml, cachedHtmlWithoutType, cachedQpdfWorker]) {
   const policy = response.headers.get("content-security-policy");
   assert.match(policy, /'wasm-unsafe-eval'/);
   assert.doesNotMatch(policy, /(?:^|\s)'unsafe-eval'/);
@@ -28,7 +30,7 @@ for (const response of [otherScript, cachedOtherScript, missing]) {
 for (const response of [html, cachedHtml, cachedHtmlWithoutType]) {
   assert.match(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
 }
-for (const response of [qpdfWorker, cachedQpdfWorker, otherScript, cachedOtherScript, missing]) {
+for (const response of [qpdfWorker, cachedQpdfWorker, archiveWorker, cachedArchiveWorker, otherScript, cachedOtherScript, missing]) {
   assert.doesNotMatch(response.headers.get("content-security-policy"), /connect-src 'self' https:/);
 }
 assert.match(html.headers.get("link"), /llms\.txt/);
