@@ -39,7 +39,7 @@ preview and extraction. Batch extraction to a new folder or download as ZIP.
 Limits: 32 MiB archive input and extracted entry, 128 MiB total expanded data,
 8 MiB preview, 2,000 index
 entries, 100 entries / 32 MiB output per batch. Decoder jobs time out after
-30 seconds. Unsupported methods and damaged archives fail closed. Links/special files and ambiguous paths are not exported. WASM internal dictionary memory is engine-dependent.
+30 seconds. The pinned WASM binary is SHA-256 verified before execution. Unsupported methods and damaged archives fail closed. Links/special files and ambiguous paths are not exported. WASM internal dictionary memory is engine-dependent.
 
 ## Security
 
@@ -52,7 +52,7 @@ URL opening needs HTTPS connections in the HTML CSP. Any injected script could u
 | File selection/preview | `public/file-store.mjs`, `public/file-routing.mjs`, `public/files-workspace.mjs` |
 | Local ZIP packing | `public/zip-pack.mjs` |
 | Archive indexes and folder tree | `public/zip-index.mjs`, `public/tar-index.mjs`, `public/zip-tree.mjs` |
-| 7z/RAR decoder | `public/archive-engine.mjs`, `public/archive-worker.mjs` |
+| 7z/RAR decoder | `public/archive-engine.mjs`, `public/archive-worker.mjs`, `public/archive-7zip-core.mjs` |
 | ZIP validation/extraction | `public/zip-extract.mjs` |
 | Document formats, merges and JSON conversion | `public/document-formats.js`, `public/document-merge.mjs`, `public/document-json-convert.mjs` |
 | Undo/Redo | `public/document-history.js` |

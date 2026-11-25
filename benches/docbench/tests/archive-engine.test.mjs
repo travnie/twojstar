@@ -1,16 +1,20 @@
 import assert from "node:assert/strict";
 import createSevenZip from "sevenzip-wasm";
 import { readFile } from "node:fs/promises";
-import { runSevenZipOperation, parseSevenZipListing } from "../public/archive-7zip-core.mjs";
+import { runSevenZipOperation, parseSevenZipListing, verifySevenZipBinary } from "../public/archive-7zip-core.mjs";
 import { normalizeArchiveMembers, validateArchiveOutput, validateArchiveBatch,
   wasmArchiveEntryReason, wasmArchiveBatchReason } from "../public/archive-engine.mjs";
 import { sevenzFixture, sevenzEdgeFixtures, rarFixtures } from "./archive-fixture.mjs";
 import { createZipTree } from "../public/zip-tree.mjs";
-const wasmModule = await WebAssembly.compile(await readFile(new URL("sevenzip-wasm.wasm", import.meta.resolve("sevenzip-wasm"))));
+const wasmBinary = await readFile(new URL("sevenzip-wasm.wasm", import.meta.resolve("sevenzip-wasm")));
+await verifySevenZipBinary(wasmBinary);
+const altered = new Uint8Array(wasmBinary);
+altered[100] ^= 1;
+await assert.rejects(verifySevenZipBinary(altered), /integrity/);
 const run = async (base64, operation, options = {}) => {
   const previous = process.exitCode;
   try {
-    return await runSevenZipOperation(createSevenZip, new Uint8Array(Buffer.from(base64, "base64")), operation, { ...options, wasmModule });
+    return await runSevenZipOperation(createSevenZip, new Uint8Array(Buffer.from(base64, "base64")), operation, { ...options, wasmBinary });
   } finally {
     // The Emscripten Node shim sets process.exitCode even on expected bad input.
     process.exitCode = previous;
@@ -65,9 +69,7 @@ assert.throws(() => parseSevenZipListing("Path = test\nPath = duplicate\n"));
 // Generate a large valid batch and an archive with metadata disabled.
 async function generatedArchive(attributeFree) {
   const zip = await createSevenZip({
-    instantiateWasm(imports, receive) {
-      receive(new WebAssembly.Instance(wasmModule, imports), wasmModule);
-    },
+    wasmBinary,
     print() {}, printErr() {}, stdin: () => null,
   });
   zip.FS.mkdir("/source");

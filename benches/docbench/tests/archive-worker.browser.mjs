@@ -83,7 +83,7 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 try {
   const { port } = server.address();
-  const { stdout } = await promisify(execFile)(process.env.CHROME_BIN || "google-chrome", [
+  const { stdout } = await promisify(execFile)("google-chrome", [
     "--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
     "--timeout=20000", "--dump-dom", "http://127.0.0.1:" + port + "/",
   ], { timeout: 90000, maxBuffer: 2 * 1024 * 1024 });

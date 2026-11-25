@@ -2,6 +2,19 @@
 import { WASM_ARCHIVE_LIMITS, normalizeArchiveMembers, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";
 
 const LIST_LIMIT = 4 * 1024 * 1024;
+// sevenzip-wasm@26.6.0; reject anything but the pinned executable payload.
+const WASM_BYTES = 1167997;
+const WASM_SHA256 = "17377908271e4eafa36e53fda9d668147712cb4ca0557b2aac95564e7e1bc421";
+
+export async function verifySevenZipBinary(input) {
+  if (!(input instanceof ArrayBuffer || input instanceof Uint8Array)
+    || input.byteLength !== WASM_BYTES) throw new Error("Invalid archive engine binary.");
+  const bytes = new Uint8Array(input instanceof ArrayBuffer ? input.slice(0) : input);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const hex = Array.from(digest, byte => byte.toString(16).padStart(2, "0")).join("");
+  if (hex !== WASM_SHA256) throw new Error("Archive engine integrity check failed.");
+  return bytes;
+}
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
 const fields = new Set([
   "Path", "Size", "Packed Size", "Folder", "Modified", "Created", "Accessed",
@@ -120,13 +133,14 @@ function sameMember(a, b) {
     && a.crc === b.crc && a.checksum === b.checksum;
 }
 export async function runSevenZipOperation(createSevenZip, bytes, operation, {
-  index, password = "", wasmModule,
+  index, password = "", wasmBinary,
 } = {}) {
   if (!(bytes instanceof Uint8Array) || bytes.length > WASM_ARCHIVE_LIMITS.maxInputBytes) throw new Error("Archive input limit exceeded.");
   const type = archiveType(bytes);
   const path = type === "7z" ? "/input.7z" : "/input.rar";
+  const verifiedBinary = await verifySevenZipBinary(wasmBinary);
   // callMain does not restore its argument stack. Fresh runtime per command;
-  // reuse the compiled module, not mutable WASM state.
+  // reuse verified executable bytes, never mutable WASM state.
   async function command(args, capacity, names) {
     const output = new Uint8Array(capacity);
     let cursor = 0;
@@ -139,10 +153,7 @@ export async function runSevenZipOperation(createSevenZip, bytes, operation, {
         output[cursor++] = byte;
       },
       stderr: byte => { if (byte !== null && byte !== 10 && byte !== 13) errors = true; },
-      ...(wasmModule ? { instantiateWasm(imports, receive) {
-        const instance = new WebAssembly.Instance(wasmModule, imports);
-        receive(instance, wasmModule);
-      } } : {}),
+      wasmBinary: verifiedBinary,
     });
     mod.FS.writeFile(path, bytes, { canOwn: true });
     if (names) {
