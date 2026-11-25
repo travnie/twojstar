@@ -115,6 +115,7 @@ private:
     std::array<double, kMaxChannels> transitionPeak_{};
     std::int64_t inputCount_{0};
     std::int64_t firstProgramSample_{-1};
+    std::array<std::int64_t, kMaxChannels> firstChannelProgramSample_{{-1, -1}};
     double sampleRate_{48000.0};
     double strength_{1.0};
     double maxTransitionMilliseconds_{4.0};
