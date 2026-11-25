@@ -32,6 +32,7 @@ std::vector<Frame> fixture()
 struct Result
 {
     std::vector<Frame> audio;
+    std::vector<Frame> primer;
     std::int64_t anchor{-1};
 };
 
@@ -69,6 +70,10 @@ Result processSelection(const std::vector<Frame>& source,
     }
 
     Result result;
+    // Check the compensated prefix independently. A real host can also map
+    // samples outside the selection, which remains a separate host QA gate.
+    result.primer.assign(raw.begin() + static_cast<std::ptrdiff_t>(dsp.latencySamples()),
+        raw.begin() + static_cast<std::ptrdiff_t>(dsp.latencySamples()) + prefixSilence);
     result.audio.assign(raw.begin() + static_cast<std::ptrdiff_t>(dsp.latencySamples())
                        + prefixSilence,
         raw.begin() + static_cast<std::ptrdiff_t>(dsp.latencySamples())
@@ -116,6 +121,9 @@ int main()
                       << " expected=" << expected
                       << " start_delta=" << maxStartChange
                       << " seam_delta=" << maxSeamChange << '\n';
+            for (const auto& frame : padded.primer)
+                require(frame == Frame{0.0, 0.0},
+                    "Compensated priming prefix contains non-silent output");
             require(padded.anchor >= expected - 8 &&
                         padded.anchor <= expected + 8,
                     "Priming silence stole the real splice candidate");
