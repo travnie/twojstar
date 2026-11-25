@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
-import { tarFixture, tarRecord } from "./tar-fixture.mjs";
+import { paxRecord, tarFixture, tarRecord } from "./tar-fixture.mjs";
 
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
@@ -12,7 +12,13 @@ const browserTar = tarFixture(
   tarRecord("./docs/readme.html", "<img src=x>", { gnu: true }),
   tarRecord("./docs/link", "", { type: "2", gnu: true }),
 );
-const browserGzip = gzipSync(browserTar);
+const paxName = "résumé-".repeat(18) + "readme.html";
+const browserPax = tarFixture(
+  tarRecord("PaxHeader", paxRecord("mtime", "123.5"), { type: "g" }),
+  tarRecord("PaxHeader", paxRecord("path", "docs/" + paxName), { type: "x" }),
+  tarRecord("fallback.html", "<img src=x>"),
+);
+const browserGzip = gzipSync(browserPax);
 const badBrowserGzip = Buffer.from(browserGzip);
 badBrowserGzip[badBrowserGzip.length - 8] ^= 1;
 const harness = `<!doctype html><html data-result="pending"><body>
@@ -286,6 +292,16 @@ frame.addEventListener("load", async () => {
     tarEntry.querySelector("button").click();
     if (!tarEntry.hidden || doc.activeElement !== openTarEntry) throw Error("Back to TAR lost focus");
 
+    document.documentElement.dataset.stage = "pax-tar";
+    const pax = decodeFixture("${browserPax.toString("base64")}");
+    win.DocBenchFiles.importFile(new win.File([pax], "pax.tar"));
+    await until(() => filesPreview.querySelector(tarFolder));
+    filesPreview.querySelector(tarFolder).click();
+    const paxEntry = 'button[aria-label="Preview entry: ${paxName}"]';
+    if (!filesPreview.querySelector(paxEntry) || filesPreview.querySelector(".files-zip-list").textContent.includes("fallback.html")) {
+      throw Error("Plain TAR did not use the PAX path");
+    }
+
     document.documentElement.dataset.stage = "gzip-tar";
     const gzip = decodeFixture("${browserGzip.toString("base64")}");
     win.DocBenchFiles.importFile(new win.File([gzip], "sample.tgz"));
@@ -294,7 +310,7 @@ frame.addEventListener("load", async () => {
       throw Error("Gzip TAR did not identify the verified stream");
     }
     filesPreview.querySelector(tarFolder).click();
-    filesPreview.querySelector('button[aria-label="Preview entry: readme.html"]').click();
+    filesPreview.querySelector(paxEntry).click();
     await until(() => filesPreview.querySelector('.files-zip-entry-preview [role="status"]')
       ?.textContent === "TAR header checked");
     if (filesPreview.querySelector(".files-text")?.textContent !== source || filesPreview.querySelector("img")) {

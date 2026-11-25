@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { gzipSync } from "node:zlib";
-import { tarFixture, tarRecord } from "./tar-fixture.mjs";
+import { paxRecord, tarFixture, tarRecord } from "./tar-fixture.mjs";
 import { decompressGzipTar, readTarIndex } from "../public/tar-index.mjs";
 import { createZipTree } from "../public/zip-tree.mjs";
 
@@ -43,13 +43,66 @@ test("TAR omits unsafe paths, links and special files", async () => {
   assert.deepEqual(tree.list("docs").files.map(({ name }) => name), ["ok.txt"]);
 });
 
+test("PAX uses UTF-8 byte lengths and the effective size when locating files", async () => {
+  const body = "a".repeat(515);
+  const longPath = "docs/" + "résumé-".repeat(25) + "notes.txt";
+  const archive = new Blob([tarFixture(
+    tarRecord("GlobalHead", paxRecord("path", "docs/global.txt") + paxRecord("mtime", "123.45"), { type: "g" }),
+    tarRecord("ExtendedHead", paxRecord("path", "discarded.txt") + paxRecord("path", longPath)
+      + paxRecord("size", body.length), { type: "x" }),
+    tarRecord("fallback.txt", body, { size: 0 }),
+    tarRecord("second.txt", "second"),
+    tarRecord("GlobalHead", paxRecord("path", "docs/updated.txt"), { type: "g" }),
+    tarRecord("third.txt", "third"),
+  )]);
+  const { entries } = await readTarIndex(archive);
+  assert.deepEqual(entries.map(({ name }) => name), [longPath, "docs/global.txt", "docs/updated.txt"]);
+  const expected = [body, "second", "third"];
+  for (const [index, entry] of entries.entries()) {
+    assert.equal(await archive.slice(entry.start, entry.start + entry.originalSize).text(), expected[index]);
+  }
+});
+
+test("PAX applies path validation after overrides and consumes local headers on hidden entries", async () => {
+  const { entries } = await readTarIndex(new Blob([tarFixture(
+    tarRecord("GlobalHead", paxRecord("path", "docs/kept.txt"), { type: "g" }),
+    tarRecord("ExtendedHead", paxRecord("path", "../outside.txt"), { type: "x" }),
+    tarRecord("safe-fallback.txt", "bad"),
+    tarRecord("ExtendedHead", paxRecord("path", ""), { type: "x" }),
+    tarRecord("deleted-fallback.txt", "bad"),
+    tarRecord("ExtendedHead", paxRecord("path", "link.txt"), { type: "x" }),
+    tarRecord("link-placeholder", "hard link data", { type: "1" }),
+    tarRecord("ExtendedHead", paxRecord("path", "binary-name.txt") + paxRecord("hdrcharset", "BINARY"), { type: "x" }),
+    tarRecord("binary-placeholder", "bad"),
+    tarRecord("following.txt", "ok"),
+  )]));
+  const tree = createZipTree(entries);
+  assert.equal(tree.skipped, 4);
+  assert.deepEqual(tree.list("docs").files.map(({ name }) => name), ["kept.txt"]);
+});
+
+test("PAX rejects malformed, excessive and sparse metadata", async () => {
+  const archive = (...records) => new Blob([tarFixture(...records)]);
+  const extended = (data, type = "x") => tarRecord("ExtendedHead", data, { type });
+  const file = tarRecord("file.txt", "ok");
+  await assert.rejects(readTarIndex(archive(extended("999 path=wrong.txt\n"), file)), /PAX record length/u);
+  await assert.rejects(readTarIndex(archive(extended("8 path=a"), file)), /malformed PAX record/u);
+  await assert.rejects(readTarIndex(archive(extended(paxRecord("path", "orphan.txt")))), /no following entry/u);
+  await assert.rejects(readTarIndex(archive(extended(paxRecord("size", "9007199254740993")), file)), /PAX file size/u);
+  await assert.rejects(readTarIndex(archive(extended(paxRecord("size", "4096")), file)), /beyond archive/u);
+  await assert.rejects(readTarIndex(archive(extended(paxRecord("GNU.sparse.major", "1")), file)), /sparse PAX/u);
+  await assert.rejects(readTarIndex(archive(extended(paxRecord("comment", "a".repeat(65536))), file)), /PAX metadata limit/u);
+  const bigGlobal = extended(paxRecord("comment", "a".repeat(64000)), "g");
+  await assert.rejects(readTarIndex(archive(...Array(33).fill(bigGlobal), file)), /PAX metadata limit/u);
+});
+
 test("TAR fails closed on corrupt or truncated headers and unsupported extensions", async () => {
   const corrupt = tarRecord("hello.txt", "data");
   corrupt[0] ^= 1;
   await assert.rejects(readTarIndex(new Blob([tarFixture(corrupt)])), /header checksum mismatch/u);
   await assert.rejects(readTarIndex(new Blob([tarRecord("file", "data").subarray(0, 600)])), /beyond archive/u);
   await assert.rejects(readTarIndex(new Blob([Buffer.alloc(512)])), /invalid end blocks/u);
-  for (const type of ["x", "g", "L", "K", "S"]) {
+  for (const type of ["L", "K", "S"]) {
     const extended = new Blob([tarFixture(tarRecord("extended", "data", { type }))]);
     await assert.rejects(readTarIndex(extended), /extended, sparse or unknown/u);
   }

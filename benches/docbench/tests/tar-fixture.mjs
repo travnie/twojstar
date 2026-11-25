@@ -1,11 +1,11 @@
-export function tarRecord(name, content = "", { prefix = "", type = "0", gnu = false } = {}) {
+export function tarRecord(name, content = "", { prefix = "", type = "0", gnu = false, size } = {}) {
   const data = Buffer.from(content);
   const record = Buffer.alloc(512 + Math.ceil(data.length / 512) * 512);
   record.write(name, 0, 100);
   record.write("0000644\0", 100);
   record.write("0000000\0", 108);
   record.write("0000000\0", 116);
-  record.write(data.length.toString(8).padStart(11, "0") + "\0", 124);
+  record.write((size ?? data.length).toString(8).padStart(11, "0") + "\0", 124);
   record.write("00000000000\0", 136);
   record.fill(32, 148, 156);
   record.write(type, 156);
@@ -15,6 +15,14 @@ export function tarRecord(name, content = "", { prefix = "", type = "0", gnu = f
   record.write(sum.toString(8).padStart(6, "0") + "\0 ", 148);
   data.copy(record, 512);
   return record;
+}
+
+export function paxRecord(key, value) {
+  const tail = ` ${key}=${value}\n`;
+  const bytes = Buffer.byteLength(tail);
+  let length = bytes + 1;
+  while (length !== bytes + String(length).length) length = bytes + String(length).length;
+  return length + tail;
 }
 
 export function tarFixture(...records) {
