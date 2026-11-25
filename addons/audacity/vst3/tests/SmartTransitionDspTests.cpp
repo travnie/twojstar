@@ -37,7 +37,8 @@ struct RenderResult
 
 RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
                     SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false,
-                    std::int64_t repairEnableAt = -1)
+                    std::int64_t repairEnableAt = -1,
+                    std::int64_t hostPrimerSamples = -1)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
@@ -58,6 +59,9 @@ RenderResult render(const std::vector<Frame>& input, std::size_t channels, const
         for (std::size_t i = 0; i < count; ++i)
         {
             Frame out{};
+            if (hostPrimerSamples >= 0 &&
+                static_cast<std::int64_t>(position + i) == hostPrimerSamples)
+                dsp.markHostPrimer(hostPrimerSamples);
             if (repairEnableAt >= 0 &&
                 static_cast<std::int64_t>(position + i) == repairEnableAt)
                 dsp.setRepairAuto(true);
@@ -121,7 +125,8 @@ void testEarlyRealSpliceAfterSilentPrimer()
         signal[i] = i < prefix ? Frame{0.0, 0.0}
             : (i < seam ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
 
-    const auto result = render(signal, 2, {13, 41, 67});
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
     require(result.hasPlan, "Real seam 1 ms after priming onset was rejected");
     require(std::abs(globalAnchor(result) - seam) <= 8,
         "Early real seam was displaced by priming guard");
@@ -151,7 +156,8 @@ void testRealSpliceThreeSamplesAfterPrimer()
     for (int i = 0; i < 1400; ++i)
         signal[i] = i < 64 ? Frame{0.0, 0.0}
             : (i < 67 ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
-    const auto result = render(signal, 2, {13, 41, 67});
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
     require(result.hasPlan, "Real splice 3 samples after onset was rejected");
     require(std::abs(globalAnchor(result) - 67) <= 2,
         "Real splice 3 samples after onset was displaced");
@@ -173,7 +179,8 @@ void testStaggeredStereoOnsetCannotStealSplice()
         else if (i < 500) signal[i] = {0.35, 0.27};
         else signal[i] = {-0.6, -0.4};
     }
-    const auto result = render(signal, 2, {13, 41, 67});
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
     require(result.hasPlan, "Staggered-onset fixture missed later splice");
     require(std::abs(globalAnchor(result) - 500) <= 8,
         "Staggered channel onset stole the later splice");
