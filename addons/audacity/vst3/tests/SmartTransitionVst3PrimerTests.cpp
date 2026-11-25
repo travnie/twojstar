@@ -163,6 +163,19 @@ int main()
             if (run(staggered, chunk) != staggeredReference)
                 throw std::runtime_error("Staggered-onset VST3 chunk drift");
         }
+        // PCM16-scale dither in the right lead-in is not established audio.
+        // Do not allow its subsequent full-level onset to steal the seam.
+        auto noisy = input;
+        for (int i = 0; i < 16; ++i)
+            noisy[static_cast<std::size_t>(i)][1] =
+                i % 2 == 0 ? 1.0f / 32768.0f : -1.0f / 32768.0f;
+        const auto noisyReference = run(noisy, 1024);
+        verify(noisy, noisyReference);
+        for (const int chunk : {13, 64, 256, 511})
+        {
+            if (run(noisy, chunk) != noisyReference)
+                throw std::runtime_error("Noisy stereo onset VST3 chunk drift");
+        }
         std::cout << "VST3 priming and block-boundary regression passed\n";
         return EXIT_SUCCESS;
     }
