@@ -51,9 +51,12 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize)
     setup.sampleRate = kRate;
     setup.maxSamplesPerBlock = 1024;
     if (processor->setupProcessing(setup) != Steinberg::kResultOk ||
-        processor->setActive(true) != Steinberg::kResultOk ||
-        processor->setProcessing(true) == Steinberg::kResultFalse)
+        processor->setActive(true) != Steinberg::kResultOk)
         throw std::runtime_error("activate");
+    const auto startResult = processor->setProcessing(true);
+    if (startResult != Steinberg::kResultOk &&
+        startResult != Steinberg::kNotImplemented)
+        throw std::runtime_error("start processing");
     const auto latency = static_cast<int>(processor->getLatencySamples());
     if (latency <= 0) throw std::runtime_error("latency unreported");
 
@@ -101,7 +104,9 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize)
     processRegion(signal, blockSize);
     processRegion(std::vector<Frame>(static_cast<std::size_t>(latency)), blockSize);
 
-    if (processor->setProcessing(false) == Steinberg::kResultFalse ||
+    const auto stopResult = processor->setProcessing(false);
+    if ((stopResult != Steinberg::kResultOk &&
+         stopResult != Steinberg::kNotImplemented) ||
         processor->setActive(false) != Steinberg::kResultOk ||
         processor->terminate() != Steinberg::kResultOk)
         throw std::runtime_error("deactivate");
