@@ -162,7 +162,7 @@ void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, s
         for (std::size_t channel = 0; channel < channels; ++channel)
         {
             if (firstChannelProgramSample_[channel] < 0 &&
-                std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-8)
+                std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-3)
             {
                 firstChannelProgramSample_[channel] = index;
                 if (firstProgramSample_ < 0)
@@ -224,6 +224,7 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         // real cuts just a few samples later still compete normally.
         const auto first = firstChannelProgramSample_[channel];
         if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
+            firstProgramSample_ <= 128 &&
             first >= firstProgramSample_ &&
             first - firstProgramSample_ < static_cast<std::int64_t>(analysisRadius_) &&
             anchor >= first - 1 && anchor <= first + 1)
