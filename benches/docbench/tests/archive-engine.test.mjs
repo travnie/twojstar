@@ -47,10 +47,14 @@ for (const sample of rarFixtures) {
     const decoded = await rar.extract(member.index, passwords);
     assert.equal(validateArchiveOutput(member, { ...decoded, data: decoded.bytes }).length, 2048, sample.name);
     if (sample.password) {
-      await assert.rejects(async () => {
-        const bad = await rar.extract(member.index, ["wrong-password"]);
-        validateArchiveOutput(member, { ...bad, data: bad.bytes });
-      });
+      // Production uses a fresh decoder per operation, without cached passwords.
+      const locked = await Archive.open(new Uint8Array(Buffer.from(sample.base64, "base64")), { allowedFormats: ["Rar"] });
+      try {
+        await assert.rejects(async () => {
+          const bad = await locked.extract(member.index, ["wrong-password"]);
+          validateArchiveOutput(member, { ...bad, data: bad.bytes });
+        });
+      } finally { await locked.close(); }
     }
   } finally { await rar.close(); }
 }
