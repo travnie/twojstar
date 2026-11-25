@@ -112,6 +112,23 @@ std::int64_t globalAnchor(const RenderResult& result)
     return result.planWindowStart + result.plan.seamAnchorSamples;
 }
 
+void testHardPannedStereoJoinStillQualifies()
+{
+    // Both sides carry sound, but never in the same channel.
+    // The host-priming safety filter must not reject this real stereo edit.
+    std::vector<Frame> signal(1400);
+    for (std::size_t i = 0; i < signal.size(); ++i)
+        signal[i] = i < 500 ? Frame{0.35, 0.0} : Frame{0.0, -0.4};
+
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Hard-pan stereo seam was incorrectly rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Hard-pan stereo plan moved away from the edit");
+    const auto whole = render(signal, 2, {1400});
+    require(result.output == whole.output,
+        "Hard-pan stereo repair changed across block partitions");
+}
+
 void testConservativeSpectralRepair()
 {
     const auto input = withHardSeam(1400, 500);
@@ -914,6 +931,7 @@ int main()
 {
     try
     {
+        testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
         testCleanAudioIsBitTransparent();
         testHardSeamIsDetectedAndSmoothed();
