@@ -55,13 +55,13 @@ await assert.rejects(run(sevenzEdgeFixtures.link, "extractAll"));
 await assert.rejects(run(sevenzEdgeFixtures.corrupt, "extract", { index: 0 }));
 await assert.rejects(run(sevenzEdgeFixtures.corrupt, "extractAll"));
 for (const sample of rarFixtures) {
-  const indexed = await list(sample.base64, sample.password);
+  const indexed = await list(sample.base64, sample.unlockText);
   const member = indexed.find(entry => entry.name === "stest2.txt");
   assert.ok(member, sample.name + " member missing");
-  const decoded = await run(sample.base64, "extract", { index: member.index, password: sample.password });
+  const decoded = await run(sample.base64, "extract", { index: member.index, password: sample.unlockText });
   assert.equal(validateArchiveOutput(member, decoded).length, 2048, sample.name);
-  assert.equal(validateArchiveBatch(indexed, await run(sample.base64, "extractAll", { password: sample.password })).length, 2);
-  if (sample.password) await assert.rejects(run(sample.base64, "extract", { index: member.index, password: "wrong-password" }));
+  assert.equal(validateArchiveBatch(indexed, await run(sample.base64, "extractAll", { password: sample.unlockText })).length, 2);
+  if (sample.unlockText) await assert.rejects(run(sample.base64, "extract", { index: member.index, password: sample.unlockText + "-wrong" }));
 }
 assert.throws(() => normalizeArchiveMembers([{ name: "<limit>", unsupported: "limit" }]));
 assert.equal(normalizeArchiveMembers([{ name: "../escape", index: 0, uncompressedSize: 1 }]).entries[0].safe, false);

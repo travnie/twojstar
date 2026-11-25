@@ -557,5 +557,9 @@ and why it wins.
 
 ### Archive engine evaluation (2026-11-25)
 
-- exav 0.0.3 rejected: corrupt bytes can pass; missing empty 7z entries; links indistinguishable; wrong-password test failed.
-- 7-Zip WASM 26.6.0: decoder status checks, literal re-selection, raw stdout and entry metadata. Regression fixtures: 7z, RAR3/RAR5, encrypted RAR5, bad CRC, zero-byte files, empty directories, symlinks. No host filesystem mount.
+- exav 0.0.3 rejected: corrupt bytes can pass; missing empty 7z entries;
+  links indistinguishable; wrong-password test failed.
+- Selected 7-Zip WASM 26.6.0: decoder status checks, literal re-selection,
+  raw stdout, entry metadata, pinned binary hash. Regression fixtures: 7z,
+  RAR3/RAR5, encrypted RAR5, bad CRC, zero-byte files, empty directories,
+  symlinks. No host filesystem mount.

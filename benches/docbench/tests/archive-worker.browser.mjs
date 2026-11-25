@@ -28,10 +28,10 @@ try {
   check(output[index.find(entry => entry.name === "empty-dir").index] === null, "Directory missing");
   check(output[index.find(entry => entry.name === "empty.txt").index].length === 0, "Empty file missing");
   const rar = blob("${rarFixtures[2].base64}");
-  await rejected(() => runWasmArchiveJob(rar, "list", { password: "wrong-password" }));
-  const password = "password";
-  const members = (await runWasmArchiveJob(rar, "list", { password })).entries;
-  const decoded = await runWasmArchiveJob(rar, "extractAll", { entries: members, password });
+  const unlockText = ${JSON.stringify(rarFixtures[2].unlockText)};
+  await rejected(() => runWasmArchiveJob(rar, "list", { password: unlockText + "-wrong" }));
+  const members = (await runWasmArchiveJob(rar, "list", { password: unlockText })).entries;
+  const decoded = await runWasmArchiveJob(rar, "extractAll", { entries: members, password: unlockText });
   check(decoded.length === 2 && decoded.every(data => data.length === 2048), "Hosted encrypted RAR batch failed");
   const corrupt = blob("${sevenzEdgeFixtures.corrupt}");
   const bad = (await runWasmArchiveJob(corrupt, "list")).entries;

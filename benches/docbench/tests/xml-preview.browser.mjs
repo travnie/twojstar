@@ -420,7 +420,8 @@ frame.addEventListener("load", async () => {
     win.DocBenchFiles.importFile(new win.File([decodeFixture("${rarFixtures[2].base64}")], "locked.rar"));
     await until(() => filesPreview.querySelector('input[type="password"]'));
     const passwordField = filesPreview.querySelector('input[type="password"]');
-    passwordField.value = "password";
+    const unlockText = ${JSON.stringify(rarFixtures[2].unlockText)};
+    passwordField.value = unlockText;
     passwordField.form.requestSubmit();
     await until(() => filesPreview.querySelector('button[aria-label="Preview entry: stest2.txt"]'));
     filesPreview.querySelector('button[aria-label="Preview entry: stest2.txt"]').click();

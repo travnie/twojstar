@@ -93,10 +93,12 @@ merge, lossless structural optimization and linearization.
 ## 7-Zip WASM
 
 - Package: `sevenzip-wasm` 26.6.0
-- Source/build scripts: https://github.com/arktronic/sevenzip-wasm/tree/26.6.0
-- Upstream: https://github.com/ip7z/7zip/tree/26.06
+- Source/build scripts: <https://github.com/arktronic/sevenzip-wasm/tree/26.6.0>
+- Upstream: <https://github.com/ip7z/7zip/tree/26.06>
 - License: LGPL 2.1 with unRAR restriction (separate engine).
-- License text: `public/vendor/sevenzip/LICENSE` (generated from npm); full LGPL and unRAR notices in `licenses/`, copied into hosted assets and portable releases.
+- License text: `public/vendor/sevenzip/LICENSE` (generated from npm).
+  Full LGPL and unRAR notices in `licenses/`; copied into hosted assets and
+  portable releases.
 
 Local archive reading; no user data sent to an external service.
 
