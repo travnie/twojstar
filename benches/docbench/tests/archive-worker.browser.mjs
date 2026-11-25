@@ -17,23 +17,23 @@ const rejected = async action => {
   throw Error("Invalid archive was accepted");
 };
 try {
-  const zip = blob("FIX_7Z");
+  const zip = blob("${sevenzFixture}");
   const { entries } = await runWasmArchiveJob(zip, "list");
   const hello = entries.find(entry => entry.name === "folder/hello.txt");
   check(hello, "Missing 7z member");
   check(new TextDecoder().decode(await runWasmArchiveJob(zip, "extract", { entry: hello })) === "hello Docbench\\n", "Hosted 7z extraction failed");
-  const mixed = blob("FIX_MIXED");
+  const mixed = blob("${sevenzEdgeFixtures.mixed}");
   const index = (await runWasmArchiveJob(mixed, "list")).entries;
   const output = await runWasmArchiveJob(mixed, "extractAll", { entries: index });
   check(output[index.find(entry => entry.name === "empty-dir").index] === null, "Directory missing");
   check(output[index.find(entry => entry.name === "empty.txt").index].length === 0, "Empty file missing");
-  const rar = blob("FIX_RAR");
+  const rar = blob("${rarFixtures[2].base64}");
   await rejected(() => runWasmArchiveJob(rar, "list", { password: "wrong-password" }));
   const password = "password";
   const members = (await runWasmArchiveJob(rar, "list", { password })).entries;
   const decoded = await runWasmArchiveJob(rar, "extractAll", { entries: members, password });
   check(decoded.length === 2 && decoded.every(data => data.length === 2048), "Hosted encrypted RAR batch failed");
-  const corrupt = blob("FIX_CORRUPT");
+  const corrupt = blob("${sevenzEdgeFixtures.corrupt}");
   const bad = (await runWasmArchiveJob(corrupt, "list")).entries;
   await rejected(() => runWasmArchiveJob(corrupt, "extractAll", { entries: bad }));
   document.documentElement.dataset.result = "passed";
