@@ -24,13 +24,15 @@ ZIP folders list entries from the central directory. Preview entry reads one
 eligible stored or DEFLATE entry up to 8 MiB, verifies CRC-32 and uses the Files
 preview. Back to ZIP restores the folder and selection.
 
-TAR browses and downloads regular files from plain POSIX ustar and basic GNU
-archives. Previews up to 8 MiB. Checks header checksums; TAR has no file-data
-checksum. Skips links, special files and unsafe paths. `.tar.gz` and `.tgz`
+TAR browses and downloads regular files from POSIX ustar, basic GNU TAR,
+and POSIX PAX with UTF-8 paths and size overrides. PAX applies global and
+per-entry headers, with a 64 KiB per-header and 2 MiB total metadata budget.
+Previews up to 8 MiB. Checks header checksums. Skips links, special files and
+unsafe paths. `.tar.gz` and `.tgz`
 use local browser gzip decoding before indexing, with a 32 MiB limit on both
 compressed and expanded data. Gzip CRC-32 and size must pass before entries
-appear. Single gzip member. PAX extensions, GNU long names and sparse files
-require another reader.
+appear. Single gzip member. GNU long-name records and sparse files require
+another reader.
 
 ## Security
 
