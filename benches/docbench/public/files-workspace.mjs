@@ -1,6 +1,6 @@
 import { inspectLocalFile } from "./file-signatures.mjs";
 import { readZipIndex } from "./zip-index.mjs";
-import { runWasmArchiveJob, wasmArchiveEntryReason } from "./archive-engine.mjs";
+import { runWasmArchiveJob, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";
 import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";
 import { createZipTree } from "./zip-tree.mjs";
 import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
@@ -314,16 +314,19 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   tools.setAttribute("aria-label", label + " archive actions");
   const verifyChecked = element("button", "button compact", "Verify checked");
   const extractChecked = element("button", "button compact", "Extract checked to folder");
+  const downloadAllZip = element("button", "button compact", "Download all as ZIP");
   const cancel = element("button", "button compact", "Cancel extraction");
   const status = element("span", "files-zip-status");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
-  for (const button of [verifyChecked, extractChecked, cancel]) button.type = "button";
+  for (const button of [verifyChecked, extractChecked, downloadAllZip, cancel]) button.type = "button";
   verifyChecked.disabled = true;
   extractChecked.disabled = true;
   extractChecked.hidden = typeof globalThis.showDirectoryPicker !== "function";
   cancel.hidden = true;
-  tools.append(verifyChecked, extractChecked, cancel, status);
+  downloadAllZip.hidden = !wasm;
+  if (wasm) extractChecked.textContent = "Extract all to folder";
+  tools.append(verifyChecked, extractChecked, downloadAllZip, cancel, status);
   const listNode = element("ol", "files-zip-list");
   const entryDetails = element("dl", "files-zip-entry-details");
   entryDetails.hidden = true;
@@ -342,11 +345,14 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   box.append(title, note);
   if (warning) box.append(warning);
   box.append(breadcrumb);
-  if (wasm) { verifyChecked.hidden = true; extractChecked.hidden = true; }
+  if (wasm) verifyChecked.hidden = true;
   if (zip || wasm) box.append(tools);
   box.append(listNode, entryDetails);
   target.append(box, entryView);
 
+  const batchReason = wasm && (tree.skipped || !tree.indexedFiles
+    ? "Batch extraction requires a complete safe file tree." : wasmArchiveBatchReason(result.entries));
+  if (wasm && batchReason) status.textContent = batchReason;
   const checked = new Set();
   let entryController = null;
   let entryTrigger = null;
@@ -354,7 +360,8 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   function refreshActions() {
     const running = zipJobs.has(target);
     verifyChecked.disabled = !checked.size || running;
-    extractChecked.disabled = !checked.size || running;
+    extractChecked.disabled = (wasm ? Boolean(batchReason) : !checked.size) || running;
+    downloadAllZip.disabled = Boolean(batchReason) || running;
     for (const button of listNode.querySelectorAll(".files-zip-preview-button")) button.disabled = running;
   }
   function report(message) {
@@ -537,7 +544,60 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   }
 
   verifyChecked.addEventListener("click", () => void runEntries(selectedEntries(), "verify"));
-  extractChecked.addEventListener("click", () => void runEntries(selectedEntries(), "folder"));
+  async function extractWasmBatch(toFolder) {
+    if (!isCurrentPreview(target, revision) || zipJobs.has(target) || batchReason) return;
+    const controller = new AbortController();
+    beginJob(controller);
+    let finished = 0;
+    try {
+      const destination = toFolder ? await globalThis.showDirectoryPicker({ mode: "readwrite" }) : null;
+      controller.signal.throwIfAborted();
+      report("Decoding archive contents…");
+      const outputs = await runWasmArchiveJob(file, "extractAll", { entries: result.entries, password, signal: controller.signal });
+      controller.signal.throwIfAborted();
+      // Validate every path before creating output; reuse the existing ZIP path planner.
+      const plan = planZipEntries(result.entries.flatMap((entry, i) => entry.directory ? [] : [{
+        id: entry.index, path: entry.name.replaceAll("\\", "/"), file: new Blob([outputs[i]]),
+      }]));
+      if (destination) {
+        const unique = globalThis.crypto?.randomUUID?.() || String(Date.now());
+        const root = await destination.getDirectoryHandle("DocBench-extract-" + unique.slice(0, 12), { create: true });
+        for (const item of plan.items) {
+          controller.signal.throwIfAborted();
+          const parts = item.path.split("/");
+          let folder = root;
+          for (const part of parts.slice(0, -1)) folder = await folder.getDirectoryHandle(part, { create: true });
+          const handle = await folder.getFileHandle(parts.at(-1), { create: true });
+          const writable = await handle.createWritable();
+          try {
+            await writable.write(item.file);
+            controller.signal.throwIfAborted();
+            await writable.close();
+            finished += 1;
+            report(`Extracted ${finished}/${plan.items.length} files.`);
+          } catch (error) {
+            await writable.abort().catch(() => {});
+            throw error;
+          }
+        }
+      } else {
+        report("Packaging decoded files as ZIP…");
+        const packed = await packZip(plan.items, { zipApi: globalThis.fflate, sink: createMemoryZipSink(),
+          signal: controller.signal, profile: "store" });
+        controller.signal.throwIfAborted();
+        if (isCurrentPreview(target, revision)) downloadArchiveEntry(packed.output, file.name.replace(/\\.(?:7z|rar)$/iu, "") + ".zip");
+        finished = plan.items.length;
+      }
+      report(`Decoded ${finished} files locally.`);
+    } catch (error) {
+      report(`Archive operation ${controller.signal.aborted || error?.name === "AbortError" ? "canceled" : "failed"} · ${finished} completed.`);
+    } finally {
+      finishJob(controller);
+    }
+  }
+
+  extractChecked.addEventListener("click", () => wasm ? void extractWasmBatch(true) : void runEntries(selectedEntries(), "folder"));
+  downloadAllZip.addEventListener("click", () => void extractWasmBatch(false));
 
   function navigate(path, moveFocus = false) {
     if (!isCurrentPreview(target, revision)) return;

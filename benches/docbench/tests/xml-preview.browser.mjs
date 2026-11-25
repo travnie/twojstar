@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
 import { paxRecord, tarFixture, tarRecord } from "./tar-fixture.mjs";
+import { sevenzFixture } from "./archive-fixture.mjs";
 
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
@@ -362,6 +363,20 @@ frame.addEventListener("load", async () => {
       release();
     }
 
+    document.documentElement.dataset.stage = "7z-portable";
+    win.DocBenchFiles.importFile(new win.File([decodeFixture("${sevenzFixture}")], "sample.7z"));
+    const sevenzFolder = 'button[aria-label="Open 7z folder folder"]';
+    await until(() => filesPreview.querySelector(sevenzFolder));
+    filesPreview.querySelector(sevenzFolder).click();
+    const sevenzEntry = filesPreview.querySelector('button[aria-label="Preview entry: hello.txt"]');
+    sevenzEntry.click();
+    const sevenzView = filesPreview.querySelector(".files-zip-entry-preview");
+    await until(() => sevenzView.querySelector('[role="status"]').textContent === "Entry decoded locally");
+    if (sevenzView.querySelector(".files-text")?.textContent !== "hello Docbench\\n") {
+      throw Error("7z entry failed to decode in the portable browser");
+    }
+    sevenzView.querySelector("button").click();
+    if (!sevenzView.hidden || doc.activeElement !== sevenzEntry) throw Error("Back to 7z lost focus");
     delete document.documentElement.dataset.stage;
     document.documentElement.dataset.result = "passed";
   } catch (error) {

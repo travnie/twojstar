@@ -8,7 +8,7 @@ self.onmessage = async ({ data: { file, operation, index, password } }) => {
     await init();
     archive = Archive.open(file, {
       maxBufferBytes: WASM_ARCHIVE_LIMITS.maxBufferBytes,
-      maxExtractedBytes: WASM_ARCHIVE_LIMITS.maxExtractedBytes,
+      maxExtractedBytes: operation === "extractAll" ? WASM_ARCHIVE_LIMITS.maxBatchBytes : WASM_ARCHIVE_LIMITS.maxExtractedBytes,
       maxScannedBytes: WASM_ARCHIVE_LIMITS.maxExtractedBytes,
       maxMembers: WASM_ARCHIVE_LIMITS.maxMembers,
       maxRecursion: 1,
@@ -19,6 +19,9 @@ self.onmessage = async ({ data: { file, operation, index, password } }) => {
     else if (operation === "extract" && Number.isSafeInteger(index) && index >= 0) {
       const value = archive.extract(index, passwords);
       self.postMessage({ ok: true, value }, [value.data.buffer]);
+    } else if (operation === "extractAll") {
+      const value = archive.extractAll(passwords);
+      self.postMessage({ ok: true, value }, [...new Set(value.map((entry) => entry.data.buffer))]);
     } else throw new Error("Unsupported archive operation.");
   } catch (error) {
     self.postMessage({ ok: false, error: "Archive unreadable. Check format, password and size limits." });

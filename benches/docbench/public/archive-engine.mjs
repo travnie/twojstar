@@ -4,6 +4,8 @@ export const WASM_ARCHIVE_LIMITS = Object.freeze({
   maxBufferBytes: 32 * 1024 * 1024,
   maxExtractedBytes: 128 * 1024 * 1024,
   maxMembers: 2000,
+  maxBatchBytes: 32 * 1024 * 1024,
+  maxBatchEntries: 100,
   timeoutMs: 30000,
 });
 
@@ -44,15 +46,41 @@ export function validateArchiveOutput(entry, result) {
   return result.data;
 }
 
-export async function runWasmArchiveJob(file, operation, { entry, password = "", signal } = {}) {
-  if (globalThis.__docbenchPortable || globalThis.location?.protocol === "file:") {
-    throw new Error("7z/RAR decoding is not available in the portable build yet.");
+export function wasmArchiveBatchReason(entries) {
+  if (!Array.isArray(entries) || entries.length === 0 || entries.length > WASM_ARCHIVE_LIMITS.maxBatchEntries) {
+    return "Batch extraction supports up to 100 entries.";
   }
+  let size = 0;
+  for (const entry of entries) {
+    if (!entry.safe || (!entry.directory && wasmArchiveEntryReason(entry))) return "Unsafe or unsupported archive entry.";
+    if (!entry.directory) size += entry.originalSize;
+  }
+  return size > WASM_ARCHIVE_LIMITS.maxBatchBytes ? "Batch output exceeds 32 MiB." : null;
+}
+
+export function validateArchiveBatch(entries, result) {
+  if (!Array.isArray(result) || result.length !== entries.length) throw new Error("Archive batch is incomplete.");
+  return entries.map((entry, i) => {
+    if (entry.directory) {
+      if (result[i]?.name !== entry.name || result[i]?.unsupported) throw new Error("Archive directory mismatch.");
+      return null;
+    }
+    return validateArchiveOutput(entry, result[i]);
+  });
+}
+
+export async function runWasmArchiveJob(file, operation, { entry, entries, password = "", signal } = {}) {
   if (file.size > WASM_ARCHIVE_LIMITS.maxInputBytes) throw new Error("Archive exceeds the 32 MiB input limit.");
   if (operation === "extract" && wasmArchiveEntryReason(entry)) throw new Error(wasmArchiveEntryReason(entry));
+  if (operation === "extractAll" && wasmArchiveBatchReason(entries)) throw new Error(wasmArchiveBatchReason(entries));
   signal?.throwIfAborted();
-  const worker = new Worker("/archive-worker.mjs", { type: "module" });
+  let worker;
+  let blobUrl;
   try {
+    if (globalThis.__docbenchArchiveWorkerSource) {
+      blobUrl = URL.createObjectURL(new Blob([globalThis.__docbenchArchiveWorkerSource], { type: "text/javascript" }));
+    }
+    worker = new Worker(blobUrl || "/archive-worker.mjs", { type: "module" });
     const result = await new Promise((resolve, reject) => {
       const finish = (callback, value) => {
         clearTimeout(timer);
@@ -71,8 +99,11 @@ export async function runWasmArchiveJob(file, operation, { entry, password = "",
       catch (error) { finish(reject, error); }
     });
     signal?.throwIfAborted();
-    return operation === "list" ? normalizeArchiveMembers(result) : validateArchiveOutput(entry, result);
+    if (operation === "list") return normalizeArchiveMembers(result);
+    if (operation === "extractAll") return validateArchiveBatch(entries, result);
+    return validateArchiveOutput(entry, result);
   } finally {
-    worker.terminate();
+    worker?.terminate();
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
   }
 }

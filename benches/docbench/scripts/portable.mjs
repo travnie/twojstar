@@ -128,17 +128,33 @@ const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:func
 const filesController = filesWorkspace
   .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
   .replace('import { readZipIndex } from "./zip-index.mjs";', "")
-  .replace('import { runWasmArchiveJob, wasmArchiveEntryReason } from "./archive-engine.mjs";', "")
+  .replace('import { runWasmArchiveJob, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";', "")
   .replace('import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";', "")
   .replace('import { createZipTree } from "./zip-tree.mjs";', "")
   .replace('import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,\n  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";', "")
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")
   .replace('import { isTextFile, resolveFileTool } from "./file-routing.mjs";', "")
   .replace('import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";', "");
+const [archiveGlue, archiveWasm, archiveWorker] = await Promise.all([
+  readFile("public/vendor/exav/pkg/exav_unpack_wasm.js", "utf8"),
+  readFile("public/vendor/exav/pkg/exav_unpack_wasm_bg.wasm"),
+  readFile("public/archive-worker.mjs", "utf8"),
+]);
+const archiveInit = archiveGlue.match(/export default\s+([\w$]+)\s*;/u)?.[1];
+if (!archiveInit) throw new Error("Archive WASM module default export changed.");
+const inlineArchiveWorker = [
+  archiveGlue,
+  archiveEngine,
+  archiveWorker
+    .replace('import init, { Archive } from "./vendor/exav/pkg/exav_unpack_wasm.js";',
+      `const init = () => ${archiveInit}({ module_or_path: Uint8Array.from(atob(${JSON.stringify(archiveWasm.toString("base64"))}), char => char.charCodeAt(0)) });`)
+    .replace('import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";', ""),
+].join("\n");
+
 const filesWorkspacePortable = [
   "(() => {",
   '"use strict";',
-  "globalThis.__docbenchPortable = true;",
+  `globalThis.__docbenchArchiveWorkerSource = ${JSON.stringify(inlineArchiveWorker)};`,
   withoutExports(fileSignatures),
   withoutExports(archiveEngine),
   withoutExports(zipIndex),
