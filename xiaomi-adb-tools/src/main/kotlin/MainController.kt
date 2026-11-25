@@ -38,6 +38,15 @@ class MainController : Initializable {
     private lateinit var appManagerMenu: Menu
 
     @FXML
+    private lateinit var appFilterBar: HBox
+
+    @FXML
+    private lateinit var appSearch: TextField
+
+    @FXML
+    private lateinit var showAllPackages: CheckBox
+
+    @FXML
     private lateinit var secondSpaceButton: CheckMenuItem
 
     @FXML
@@ -424,6 +433,9 @@ class MainController : Initializable {
         AppManager.progress = progressBar
         AppManager.progressInd = progressIndicator
         AppManager.outputTextArea = outputTextArea
+        appFilterBar.disableProperty().bind(appManagerPane.disableProperty())
+        appSearch.textProperty().addListener { _, _, value -> AppManager.filterTables(value, showAllPackages.isSelected) }
+        showAllPackages.selectedProperty().addListener { _, _, value -> AppManager.filterTables(appSearch.text, value) }
 
         GlobalScope.launch(Dispatchers.IO) {
             if (!Command.check()) {
