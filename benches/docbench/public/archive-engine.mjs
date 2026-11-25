@@ -15,26 +15,38 @@ export function normalizeArchiveMembers(members) {
       || typeof m.name !== "string" || !Number.isSafeInteger(m.uncompressedSize))) {
     throw new Error("Archive index incomplete, damaged or over its limits.");
   }
-  return { entries: members.map((member) => {
-    const name = member.name;
-    const directory = name.endsWith("/") || name.endsWith("\\");
-    const safe = name.length > 0 && name.length <= 2048
-      && !name.startsWith("/") && !name.startsWith("\\") && !/^[A-Za-z]:/u.test(name)
-      && !/[\x00-\x1f\x7f]/u.test(name)
-      && !name.replaceAll("\\", "/").split("/").some((part) => part === ".." || part === ".");
-    return {
-      index: member.index, name, directory, safe,
-      originalSize: member.uncompressedSize,
-      compressedSize: member.compressedSize,
-      encrypted: Boolean(member.encrypted),
+  const names = new Map();
+  let total = 0;
+  const entries = members.map(member => {
+    const directory = member.directory === true;
+    const name = directory ? member.name.replace(/\/$/u, "") : member.name;
+    const safe = !member.special && name.length > 0 && name.length <= 2048
+      && !name.startsWith("/") && !name.includes("\\") && !/^[A-Za-z]:/u.test(name)
+      && !/[\x00-\x1f\x7f<>:"|?*\p{Bidi_Control}\u200b-\u200d\u2060\ufeff]/u.test(name)
+      && name.split("/").length <= 20 && name.split("/").every(part =>
+        part && part !== ".." && part !== "." && !/[. ]$/u.test(part)
+        && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/iu.test(part));
+    const entry = {
+      index: member.index, name, directory, safe, special: Boolean(member.special),
+      originalSize: member.uncompressedSize, compressedSize: member.compressedSize,
+      encrypted: Boolean(member.encrypted), crc: member.crc || "", checksum: Boolean(member.checksum),
     };
-  }) };
+    if (entry.originalSize < 0) throw new Error("Unknown archive member size.");
+    total += entry.originalSize;
+    if (total > WASM_ARCHIVE_LIMITS.maxExtractedBytes) throw new Error("Archive expanded size exceeds 128 MiB.");
+    const key = name.normalize("NFC").toLowerCase();
+    if (names.has(key)) { entry.safe = false; names.get(key).safe = false; }
+    names.set(key, entry);
+    return entry;
+  });
+  return { entries };
 }
 
 export function wasmArchiveEntryReason(entry, maxBytes = WASM_ARCHIVE_LIMITS.maxBufferBytes) {
-  if (!entry.safe || entry.directory) return "Not a safe file entry.";
+  if (!entry?.safe || entry.directory) return "Not a safe file entry.";
   if (!Number.isSafeInteger(entry.originalSize) || entry.originalSize < 0) return "Unknown entry size.";
   if (entry.originalSize > maxBytes) return "Entry exceeds the decoder limit.";
+  if (entry.originalSize && !entry.checksum) return "Entry has no supported integrity checksum.";
   return null;
 }
 
@@ -95,7 +107,13 @@ export async function runWasmArchiveJob(file, operation, { entry, entries, passw
         : finish(reject, new Error(data.error || "Archive decoder failed."));
       worker.onerror = () => finish(reject, new Error("Archive worker failed."));
       worker.onmessageerror = () => finish(reject, new Error("Invalid archive worker response."));
-      try { worker.postMessage({ file, operation, index: entry?.index, password }); }
+      try {
+        const wasmBinary = globalThis.__docbenchArchiveWasmBase64
+          ? Uint8Array.from(atob(globalThis.__docbenchArchiveWasmBase64), char => char.charCodeAt(0))
+          : undefined;
+        worker.postMessage({ file, operation, index: entry?.index, password, wasmBinary },
+          wasmBinary ? [wasmBinary.buffer] : []);
+      }
       catch (error) { finish(reject, error); }
     });
     signal?.throwIfAborted();

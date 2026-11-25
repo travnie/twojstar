@@ -34,11 +34,11 @@ compressed and expanded data. Gzip CRC-32 and size must pass before entries
 appear. Single gzip member. GNU long-name records and sparse files require
 another reader.
 
-7z and RAR: lazy local WASM decoder, tree navigation, password input, file
+7z and RAR: pinned 7-Zip 26.06 WASM decoder, tree navigation, password input, file
 preview and extraction. Batch extraction to a new folder or download as ZIP.
 Limits: 32 MiB archive input and extracted entry, 8 MiB preview, 2,000 index
 entries, 100 entries / 32 MiB output per batch. Decoder jobs time out after
-30 seconds. Unsupported methods and damaged archives fail closed.
+30 seconds. Unsupported methods and damaged archives fail closed. Links/special files and ambiguous paths are not exported. WASM internal dictionary memory is engine-dependent.
 
 ## Security
 

@@ -1,34 +1,21 @@
-import init, { Archive } from "./vendor/exav/pkg/exav_unpack_wasm.js";
+import createSevenZip from "./vendor/sevenzip/sevenzip-wasm.mjs";
 import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";
+import { runSevenZipOperation } from "./archive-7zip-core.mjs";
 
 self.onmessage = async (event) => {
-  // Dedicated worker: empty origin is normal for its owning page.
   if (event.origin !== "" && event.origin !== self.location.origin) return;
-  const { file, operation, index, password } = event.data ?? {};
-  let archive;
+  const { file, operation, index, password, wasmBinary } = event.data ?? {};
   try {
-    if (!(file instanceof Blob) || file.size > WASM_ARCHIVE_LIMITS.maxInputBytes) throw new Error("Archive input limit exceeded.");
-    await init();
-    archive = Archive.open(file, {
-      maxBufferBytes: WASM_ARCHIVE_LIMITS.maxBufferBytes,
-      maxExtractedBytes: operation === "extractAll" ? WASM_ARCHIVE_LIMITS.maxBatchBytes : WASM_ARCHIVE_LIMITS.maxExtractedBytes,
-      maxScannedBytes: WASM_ARCHIVE_LIMITS.maxExtractedBytes,
-      maxMembers: WASM_ARCHIVE_LIMITS.maxMembers,
-      maxRecursion: 1,
-      allowedFormats: ["SevenZip", "Rar"],
+    if (!(file instanceof Blob) || file.size > WASM_ARCHIVE_LIMITS.maxInputBytes
+      || typeof password !== "string" || password.length > 1024) throw new Error("Archive input limit exceeded.");
+    const value = await runSevenZipOperation(createSevenZip, new Uint8Array(await file.arrayBuffer()), operation, {
+      index, password, wasmBinary,
+      wasmUrl: wasmBinary ? undefined : new URL("./vendor/sevenzip/sevenzip-wasm.wasm", import.meta.url).href,
     });
-    const passwords = password ? [password] : [];
-    if (operation === "list") self.postMessage({ ok: true, value: archive.list(passwords) });
-    else if (operation === "extract" && Number.isSafeInteger(index) && index >= 0) {
-      const value = archive.extract(index, passwords);
-      self.postMessage({ ok: true, value }, [value.data.buffer]);
-    } else if (operation === "extractAll") {
-      const value = archive.extractAll(passwords);
-      self.postMessage({ ok: true, value }, [...new Set(value.map((entry) => entry.data.buffer))]);
-    } else throw new Error("Unsupported archive operation.");
+    const transfer = operation === "extract" ? [value.data.buffer]
+      : operation === "extractAll" ? value.map(entry => entry.data.buffer) : [];
+    self.postMessage({ ok: true, value }, transfer);
   } catch {
-    self.postMessage({ ok: false, error: "Archive unreadable. Check format, password and size limits." });
-  } finally {
-    archive?.free();
+    self.postMessage({ ok: false, error: "Archive unreadable. Check password, integrity and size limits." });
   }
 };

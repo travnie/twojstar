@@ -48,13 +48,6 @@ jobs:
         working-directory: benches
         run: npm ci
 
-      - name: Probe 7-Zip WASM candidate
-        working-directory: benches/docbench
-        run: |
-          npm view sevenzip-wasm@26.6.0 dist.integrity
-          npm install --prefix "$RUNNER_TEMP/docbench-archive-probe" --no-save --ignore-scripts --no-audit --no-fund sevenzip-wasm@26.6.0
-          node tests/archive-7zip-probe.mjs "$RUNNER_TEMP/docbench-archive-probe/node_modules/sevenzip-wasm/sevenzip-wasm.js"
-
       - name: Check Codebench
         working-directory: benches
         run: npm run check:codebench

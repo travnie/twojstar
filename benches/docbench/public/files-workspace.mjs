@@ -301,7 +301,7 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   let integrityNote = "TAR checks headers only; file data has no checksum.";
   if (zip) integrityNote = "Preview and extraction check CRC-32 locally.";
   if (format === "tar.gz") integrityNote = "Gzip CRC-32 and expanded size verified.";
-  if (wasm) integrityNote = "Local WASM decoder; solid archives may require decoding preceding entries. Individual extraction up to 32 MiB.";
+  if (wasm) integrityNote = "7-Zip verifies decoded entries locally. Solid archives may require decoding preceding entries. Individual extraction up to 32 MiB.";
   const note = element("p", "files-note",
     `Preview entries up to ${formatBytes(MAX_ARCHIVE_PREVIEW_BYTES)}. ${integrityNote}`);
   const warning = tree.skipped
@@ -350,8 +350,22 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
   box.append(listNode, entryDetails);
   target.append(box, entryView);
 
-  const batchReason = wasm && (tree.skipped || !tree.indexedFiles
-    ? "Batch extraction requires a complete safe file tree." : wasmArchiveBatchReason(result.entries));
+  function archiveDestinationPlan(outputs) {
+    const plan = planZipEntries(result.entries.map((entry, i) => ({
+      id: entry.index, path: entry.name, directory: entry.directory,
+      file: new Blob(outputs && !entry.directory ? [outputs[i]] : []),
+    })));
+    if (plan.items.some((item, i) => item.path !== result.entries[i].name + (item.directory ? "/" : ""))) {
+      throw new Error("Archive destinations are ambiguous.");
+    }
+    return plan;
+  }
+  let batchReason = wasm && (tree.skipped ? "Batch extraction requires a complete safe file tree."
+    : wasmArchiveBatchReason(result.entries));
+  if (wasm && !batchReason) {
+    try { archiveDestinationPlan(); }
+    catch (error) { batchReason = error?.message || "Unsupported archive destination paths."; }
+  }
   if (wasm && batchReason) status.textContent = batchReason;
   const checked = new Set();
   let entryController = null;
@@ -427,7 +441,7 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
       if (!isCurrent()) return;
       if (resolveFileTool(info, extracted.size)?.mode === "pdf") {
         emptyPreview("Extract this file to open it in PDF tools.", entryBody);
-      } else if (info.format === "zip" || info.format === "tar" || isCompressedTar(extracted, info)) {
+      } else if (["zip", "tar", "sevenz", "rar"].includes(info.format) || isCompressedTar(extracted, info)) {
         emptyPreview("Extract this archive to browse it separately.", entryBody);
       } else {
         await renderFileContent(extracted, info, entryBody, isCurrent);
@@ -555,18 +569,17 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
       report("Decoding archive contents…");
       const outputs = await runWasmArchiveJob(file, "extractAll", { entries: result.entries, password, signal: controller.signal });
       controller.signal.throwIfAborted();
-      // Validate every path before creating output; reuse the existing ZIP path planner.
-      const plan = planZipEntries(result.entries.flatMap((entry, i) => entry.directory ? [] : [{
-        id: entry.index, path: entry.name.replaceAll("\\", "/"), file: new Blob([outputs[i]]),
-      }]));
+      // Reuse the same destination plan; keep explicit empty directories.
+      const plan = archiveDestinationPlan(outputs);
       if (destination) {
         const unique = globalThis.crypto?.randomUUID?.() || String(Date.now());
         const root = await destination.getDirectoryHandle("DocBench-extract-" + unique.slice(0, 12), { create: true });
         for (const item of plan.items) {
           controller.signal.throwIfAborted();
-          const parts = item.path.split("/");
+          const parts = item.path.replace(/\/$/u, "").split("/");
           let folder = root;
-          for (const part of parts.slice(0, -1)) folder = await folder.getDirectoryHandle(part, { create: true });
+          for (const part of parts.slice(0, item.directory ? parts.length : -1)) folder = await folder.getDirectoryHandle(part, { create: true });
+          if (item.directory) { finished += 1; continue; }
           const handle = await folder.getFileHandle(parts.at(-1), { create: true });
           const writable = await handle.createWritable();
           try {
@@ -574,7 +587,7 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
             controller.signal.throwIfAborted();
             await writable.close();
             finished += 1;
-            report(`Extracted ${finished}/${plan.items.length} files.`);
+            report(`Extracted ${finished}/${plan.items.length} entries.`);
           } catch (error) {
             await writable.abort().catch(() => {});
             throw error;
@@ -588,7 +601,7 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
         if (isCurrentPreview(target, revision)) downloadArchiveEntry(packed.output, file.name.replace(/\\.(?:7z|rar)$/iu, "") + ".zip");
         finished = plan.items.length;
       }
-      report(`Decoded ${finished} files locally.`);
+      report(`Decoded ${finished} entries locally.`);
     } catch (error) {
       report(`Archive operation ${controller.signal.aborted || error?.name === "AbortError" ? "canceled" : "failed"} · ${finished} completed.`);
     } finally {

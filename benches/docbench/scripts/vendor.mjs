@@ -122,10 +122,8 @@ await cp(
   "public/vendor/qpdf/lib/qpdf.wasm",
 );
 
-await mkdir("public/vendor/exav/pkg", { recursive: true });
-for (const file of ["exav_unpack_wasm.js", "exav_unpack_wasm_bg.wasm"]) {
-  await cp(dep(`@exav/unpack-wasm/pkg/${file}`), `public/vendor/exav/pkg/${file}`);
-}
-for (const file of ["LICENSE", "NOTICE"]) {
-  await cp(dep(`@exav/unpack-wasm/${file}`), `public/vendor/exav/${file}`);
-}
+await mkdir("public/vendor/sevenzip", { recursive: true });
+const sevenZipGlue = await readFile(dep("sevenzip-wasm/sevenzip-wasm.js"), "utf8");
+await writeFile("public/vendor/sevenzip/sevenzip-wasm.mjs", sevenZipGlue + "\nexport default SevenZipWasm;\n");
+await cp(dep("sevenzip-wasm/sevenzip-wasm.wasm"), "public/vendor/sevenzip/sevenzip-wasm.wasm");
+await cp(dep("sevenzip-wasm/LICENSE"), "public/vendor/sevenzip/LICENSE");

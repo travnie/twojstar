@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
 import { paxRecord, tarFixture, tarRecord } from "./tar-fixture.mjs";
-import { sevenzFixture } from "./archive-fixture.mjs";
+import { sevenzFixture, sevenzEdgeFixtures, rarFixtures } from "./archive-fixture.mjs";
 
 const portable = (await readFile(new URL("../public/portable.html", import.meta.url), "utf8"))
   .replace("<body>", "<body><script>globalThis.showSaveFilePicker = undefined;</script>");
@@ -377,6 +377,43 @@ frame.addEventListener("load", async () => {
     }
     sevenzView.querySelector("button").click();
     if (!sevenzView.hidden || doc.activeElement !== sevenzEntry) throw Error("Back to 7z lost focus");
+    document.documentElement.dataset.stage = "7z-batch";
+    win.DocBenchFiles.importFile(new win.File([decodeFixture("${sevenzEdgeFixtures.mixed}")], "mixed.7z"));
+    await until(() => filesPreview.querySelector('button[aria-label="Open 7z folder empty-dir"]'));
+    if (!filesPreview.textContent.includes("empty.txt")) throw Error("Empty file missing");
+    let exported;
+    const originalCreate = win.URL.createObjectURL;
+    const originalClick = win.HTMLAnchorElement.prototype.click;
+    win.URL.createObjectURL = function(blob) {
+      if (blob.type === "application/zip") exported = blob;
+      return originalCreate.call(this, blob);
+    };
+    win.HTMLAnchorElement.prototype.click = function() { if (!exported) originalClick.call(this); };
+    try {
+      const batch = [...filesPreview.querySelectorAll("button")].find(button => button.textContent === "Download all as ZIP");
+      if (!batch || batch.disabled) throw Error("7z batch action unavailable");
+      batch.click();
+      for (let i = 0; i < 200 && !exported; i++) await wait(50);
+      if (!exported) throw Error("7z batch ZIP not exported");
+      const unpacked = win.fflate.unzipSync(new win.Uint8Array(await exported.arrayBuffer()));
+      if (!("empty-dir/" in unpacked) || unpacked["empty.txt"]?.length !== 0
+        || new win.TextDecoder().decode(unpacked["folder/file.txt"]) !== "hello Docbench\\n") {
+        throw Error("7z batch export lost empty files or folders");
+      }
+    } finally {
+      win.URL.createObjectURL = originalCreate;
+      win.HTMLAnchorElement.prototype.click = originalClick;
+    }
+    document.documentElement.dataset.stage = "rar-password";
+    win.DocBenchFiles.importFile(new win.File([decodeFixture("${rarFixtures[2].base64}")], "locked.rar"));
+    await until(() => filesPreview.querySelector('input[type="password"]'));
+    const passwordField = filesPreview.querySelector('input[type="password"]');
+    passwordField.value = "password";
+    passwordField.form.requestSubmit();
+    await until(() => filesPreview.querySelector('button[aria-label="Preview entry: stest2.txt"]'));
+    filesPreview.querySelector('button[aria-label="Preview entry: stest2.txt"]').click();
+    await until(() => filesPreview.querySelector('.files-zip-entry-preview [role="status"]')?.textContent === "Entry decoded locally");
+
     delete document.documentElement.dataset.stage;
     document.documentElement.dataset.result = "passed";
   } catch (error) {

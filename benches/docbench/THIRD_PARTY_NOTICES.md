@@ -90,6 +90,16 @@ Used to rebuild bookmark trees after structural page operations.
 Used to run qpdf locally in a Web Worker for content-preserving page selection,
 merge, lossless structural optimization and linearization.
 
+## 7-Zip WASM
+
+- Package: `sevenzip-wasm` 26.6.0
+- Source/build scripts: https://github.com/arktronic/sevenzip-wasm
+- Upstream: https://github.com/ip7z/7zip
+- License: LGPL 2.1 with unRAR restriction (separate engine).
+- License text: `public/vendor/sevenzip/LICENSE` (generated from npm).
+
+Local archive reading; no user data sent to an external service.
+
 ## Space Grotesk / Space Mono
 
 - Packages: `@fontsource-variable/space-grotesk` 5.3.0 and

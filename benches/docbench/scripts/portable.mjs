@@ -135,28 +135,27 @@ const filesController = filesWorkspace
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")
   .replace('import { isTextFile, resolveFileTool } from "./file-routing.mjs";', "")
   .replace('import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";', "");
-const [archiveGlue, archiveWasm, archiveWorker] = await Promise.all([
-  readFile("public/vendor/exav/pkg/exav_unpack_wasm.js", "utf8"),
-  readFile("public/vendor/exav/pkg/exav_unpack_wasm_bg.wasm"),
+const [archiveGlue, archiveWasm, archiveWorker, archiveCore] = await Promise.all([
+  readFile("public/vendor/sevenzip/sevenzip-wasm.mjs", "utf8"),
+  readFile("public/vendor/sevenzip/sevenzip-wasm.wasm"),
   readFile("public/archive-worker.mjs", "utf8"),
+  readFile("public/archive-7zip-core.mjs", "utf8"),
 ]);
-const archiveInit = archiveGlue.match(/export\s+default\s+(?:async\s+)?(?:function\s+)?([\w$]+)/u)?.[1]
-  ?? archiveGlue.match(/\b([\w$]+)\s+as\s+default\b/u)?.[1];
-if (archiveInit !== "__wbg_init") throw new Error("Archive WASM module default export changed.");
 const inlineArchiveWorker = [
   archiveGlue,
   archiveEngine,
+  archiveCore.replace('import { WASM_ARCHIVE_LIMITS, normalizeArchiveMembers, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";', ""),
   archiveWorker
-    .replace('import init, { Archive } from "./vendor/exav/pkg/exav_unpack_wasm.js";',
-      `const initArchiveWasm = () => __wbg_init({ module_or_path: Uint8Array.from(atob(${JSON.stringify(archiveWasm.toString("base64"))}), char => char.charCodeAt(0)) });`)
-    .replace('await init()', 'await initArchiveWasm()')
-    .replace('import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";', ""),
+    .replace('import createSevenZip from "./vendor/sevenzip/sevenzip-wasm.mjs";', "const createSevenZip = SevenZipWasm;")
+    .replace('import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";', "")
+    .replace('import { runSevenZipOperation } from "./archive-7zip-core.mjs";', ""),
 ].join("\n");
 
 const filesWorkspacePortable = [
   "(() => {",
   '"use strict";',
   `globalThis.__docbenchArchiveWorkerSource = ${JSON.stringify(inlineArchiveWorker)};`,
+  `globalThis.__docbenchArchiveWasmBase64 = ${JSON.stringify(archiveWasm.toString("base64"))};`,
   withoutExports(fileSignatures),
   withoutExports(archiveEngine),
   withoutExports(zipIndex),
