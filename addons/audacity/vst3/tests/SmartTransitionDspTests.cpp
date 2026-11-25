@@ -132,6 +132,22 @@ void testEarlyRealSpliceAfterSilentPrimer()
     require(changed, "Early real seam plan did not change rendered audio");
 }
 
+void testRealSpliceThreeSamplesAfterPrimer()
+{
+    std::vector<Frame> signal(1400);
+    for (int i = 0; i < 1400; ++i)
+        signal[i] = i < 64 ? Frame{0.0, 0.0}
+            : (i < 67 ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Real splice 3 samples after onset was rejected");
+    require(std::abs(globalAnchor(result) - 67) <= 2,
+        "Real splice 3 samples after onset was displaced");
+    bool changed = false;
+    for (int i = 64; i < 76; ++i)
+        changed |= result.output[i] != signal[i];
+    require(changed, "Real 3-sample splice produced no repair");
+}
+
 void testStaggeredStereoOnsetCannotStealSplice()
 {
     // Audacity's 64 zero frames are followed by two staggered channel onsets.
@@ -983,6 +999,7 @@ int main()
     {
         testEarlyRealSpliceAfterSilentPrimer();
         testStaggeredStereoOnsetCannotStealSplice();
+        testRealSpliceThreeSamplesAfterPrimer();
         testInternalAudioToSilenceJoinStillQualifies();
         testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
