@@ -1,4 +1,5 @@
 #include "SmartTransitionProcessor.h"
+#include "pluginterfaces/vst/ivsthostapplication.h"
 
 #include "SmartTransitionParams.h"
 #include "base/source/fstreamer.h"
@@ -76,6 +77,25 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::initialize(Steinberg::FU
     if (result != Steinberg::kResultOk)
     {
         return result;
+    }
+
+    if (context)
+    {
+        Steinberg::FUnknownPtr<Steinberg::Vst::IHostApplication> host(context);
+        if (host)
+        {
+            Steinberg::Vst::String128 name{};
+            if (host->getName(name) == Steinberg::kResultOk)
+            {
+                // VST3 provides host identity through initialize(context).
+                // Only Audacity's known offline 64-zero-frame handshake
+                // should modify candidate selection after a silent block.
+                const auto* prefix = STR16("Audacity");
+                audacityHost_ = true;
+                for (std::size_t i = 0; prefix[i] != 0; ++i)
+                    audacityHost_ &= name[i] == prefix[i];
+            }
+        }
     }
 
     addAudioInput(STR16("Input"), Steinberg::Vst::SpeakerArr::kStereo);
@@ -493,7 +513,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
     // Audacity 4 primes offline VST3 processors with one 64-frame silent
     // ProcessData block after activation. Identify it at the adapter boundary,
     // never infer host metadata from arbitrary DSP source silence.
-    bool hostPrimer = firstAudioBlock_ &&
+    bool hostPrimer = audacityHost_ && firstAudioBlock_ &&
         data.processMode == Steinberg::Vst::kOffline &&
         data.numSamples == 64;
     if (hostPrimer)
