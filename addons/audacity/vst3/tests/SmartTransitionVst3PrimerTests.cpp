@@ -41,6 +41,7 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize)
     auto processor = std::make_unique<SmartTransitionProcessor>();
     if (processor->initialize(nullptr) != Steinberg::kResultOk)
         throw std::runtime_error("initialize");
+    processor->setAudacityHostForTest();
     auto arrangement = Steinberg::Vst::SpeakerArr::kStereo;
     if (processor->setBusArrangements(&arrangement, 1, &arrangement, 1)
         != Steinberg::kResultOk)
