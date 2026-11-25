@@ -67,6 +67,7 @@ export function planZipEntries(entries, { maxSourceBytes = ZIP_PACK_LIMITS.maxSo
   }
   const used = new Set();
   const folders = new Map();
+  const explicitFolders = new Set();
   const planned = [];
   let totalBytes = 0;
 
@@ -77,14 +78,24 @@ export function planZipEntries(entries, { maxSourceBytes = ZIP_PACK_LIMITS.maxSo
       || !Number.isSafeInteger(size) || size < 0 || size > ZIP_PACK_LIMITS.maxSourceBytes) {
       throw new Error("A selected source is missing or too large.");
     }
-    const parts = pathSegments(entry.path || entry.name || file.name);
-    for (let i = 1; i < parts.length; i += 1) {
+    const directory = entry.directory === true;
+    const rawPath = entry.path || entry.name || file.name;
+    const parts = pathSegments(directory ? rawPath.replace(/\/$/u, "") : rawPath);
+    for (let i = 1; i < parts.length + (directory ? 1 : 0); i += 1) {
       const folder = parts.slice(0, i).join("/");
       const key = folder.toLowerCase();
       if (used.has(key) || (folders.has(key) && folders.get(key) !== folder)) {
         throw new Error("Conflicting ZIP folder path: " + folder);
       }
       folders.set(key, folder);
+    }
+    if (directory) {
+      const path = parts.join("/") + "/";
+      const key = path.normalize("NFC").toLowerCase();
+      if (size !== 0 || explicitFolders.has(key)) throw new Error("Invalid or duplicate ZIP directory.");
+      explicitFolders.add(key);
+      planned.push(Object.freeze({ id: entry.id, path, file, size, directory: true }));
+      continue;
     }
     const parent = parts.slice(0, -1).join("/");
     const filename = parts.at(-1);
@@ -177,7 +188,7 @@ export async function packZip(entries, {
 
     for (const [index, item] of plan.items.entries()) {
       abortIfRequested(signal);
-      const compression = zipCompressionFor(item.path, profile);
+      const compression = zipCompressionFor(item.path, item.directory ? "store" : profile);
       if (compression.method === 0 && !zipApi.ZipPassThrough) {
         throw new Error("ZIP store encoder unavailable.");
       }

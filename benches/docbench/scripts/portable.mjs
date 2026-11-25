@@ -101,11 +101,12 @@ const [
   readFile("public/vendor/qpdf/lib/qpdf.wasm"),
 ]);
 
-const [localFileUi, filesCss, fileSignatures, zipIndex, tarIndex, zipTree, zipExtract,
+const [localFileUi, filesCss, fileSignatures, archiveEngine, zipIndex, tarIndex, zipTree, zipExtract,
   fileStore, fileRouting, zipPack, filesWorkspace] = await Promise.all([
   readFile("public/local-files.js", "utf8"),
   readFile("public/files-workspace.css", "utf8"),
   readFile("public/file-signatures.mjs", "utf8"),
+  readFile("public/archive-engine.mjs", "utf8"),
   readFile("public/zip-index.mjs", "utf8"),
   readFile("public/tar-index.mjs", "utf8"),
   readFile("public/zip-tree.mjs", "utf8"),
@@ -127,16 +128,36 @@ const withoutExports = (source) => source.replace(/^export (?=(?:async )?(?:func
 const filesController = filesWorkspace
   .replace('import { inspectLocalFile } from "./file-signatures.mjs";', "")
   .replace('import { readZipIndex } from "./zip-index.mjs";', "")
+  .replace('import { runWasmArchiveJob, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";', "")
   .replace('import { decompressGzipTar, readTarIndex } from "./tar-index.mjs";', "")
   .replace('import { createZipTree } from "./zip-tree.mjs";', "")
   .replace('import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,\n  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";', "")
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")
   .replace('import { isTextFile, resolveFileTool } from "./file-routing.mjs";', "")
   .replace('import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";', "");
+const [archiveGlue, archiveWasm, archiveWorker, archiveCore] = await Promise.all([
+  readFile("public/vendor/sevenzip/sevenzip-wasm.mjs", "utf8"),
+  readFile("public/vendor/sevenzip/sevenzip-wasm.wasm"),
+  readFile("public/archive-worker.mjs", "utf8"),
+  readFile("public/archive-7zip-core.mjs", "utf8"),
+]);
+const inlineArchiveWorker = [
+  archiveGlue,
+  archiveEngine,
+  archiveCore.replace('import { WASM_ARCHIVE_LIMITS, normalizeArchiveMembers, wasmArchiveEntryReason, wasmArchiveBatchReason } from "./archive-engine.mjs";', ""),
+  archiveWorker
+    .replace('import createSevenZip from "./vendor/sevenzip/sevenzip-wasm.mjs";', "const createSevenZip = SevenZipWasm;")
+    .replace('import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";', "")
+    .replace('import { runSevenZipOperation } from "./archive-7zip-core.mjs";', ""),
+].join("\n");
+
 const filesWorkspacePortable = [
   "(() => {",
   '"use strict";',
+  `globalThis.__docbenchArchiveWorkerSource = ${JSON.stringify(inlineArchiveWorker)};`,
+  `globalThis.__docbenchArchiveWasmBase64 = ${JSON.stringify(archiveWasm.toString("base64"))};`,
   withoutExports(fileSignatures),
+  withoutExports(archiveEngine),
   withoutExports(zipIndex),
   withoutExports(tarIndex),
   withoutExports(zipTree),
@@ -338,4 +359,12 @@ const portable = html
   .replace('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">', "")
   .replace('<link rel="mask-icon" href="/favicon.svg" color="#f59e0b">', "");
 
-await writeFile("public/portable.html", portable);
+const archiveNotices = [
+  "7-Zip WASM 26.6.0; LGPL 2.1 or later with unRAR restriction.",
+  "Source/build: https://github.com/arktronic/sevenzip-wasm/tree/26.6.0",
+  "Upstream: https://github.com/ip7z/7zip/tree/26.06",
+  ...await Promise.all(["LICENSE", "7zip-LGPL.txt", "7zip-unRAR.txt"].map(name =>
+    readFile("public/vendor/sevenzip/" + name, "utf8"))),
+].join("\n\n");
+await writeFile("public/portable.html", portable.replace("</body>", () =>
+  '<script type="text/plain" id="sevenzip-license">' + archiveNotices.replaceAll("</script", "<\\/script") + "</script>\n</body>"));

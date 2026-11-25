@@ -34,6 +34,15 @@ compressed and expanded data. Gzip CRC-32 and size must pass before entries
 appear. Single gzip member. GNU long-name records and sparse files require
 another reader.
 
+7z and RAR: pinned 7-Zip 26.06 WASM decoder, tree navigation, password input, file
+preview and extraction. Batch extraction to a new folder or download as ZIP.
+Limits: 32 MiB archive input and extracted entry, 128 MiB total expanded data,
+8 MiB preview, 2,000 index entries, 100 entries / 32 MiB output per batch.
+Decoder jobs time out after 30 seconds. The pinned WASM binary is SHA-256
+verified before execution. Unsupported methods and damaged archives fail closed.
+Links/special files and ambiguous paths are not exported. WASM internal
+dictionary memory is engine-dependent.
+
 ## Security
 
 URL opening needs HTTPS connections in the HTML CSP. Any injected script could use those connections; protect the page against script injection. Other assets retain their restricted policy.
@@ -45,6 +54,8 @@ URL opening needs HTTPS connections in the HTML CSP. Any injected script could u
 | File selection/preview | `public/file-store.mjs`, `public/file-routing.mjs`, `public/files-workspace.mjs` |
 | Local ZIP packing | `public/zip-pack.mjs` |
 | Archive indexes and folder tree | `public/zip-index.mjs`, `public/tar-index.mjs`, `public/zip-tree.mjs` |
+| 7z/RAR job runner | `public/archive-engine.mjs` |
+| 7z/RAR CLI | `public/archive-7zip-core.mjs`, `public/archive-worker.mjs` |
 | ZIP validation/extraction | `public/zip-extract.mjs` |
 | Document formats, merges and JSON conversion | `public/document-formats.js`, `public/document-merge.mjs`, `public/document-json-convert.mjs` |
 | Undo/Redo | `public/document-history.js` |
@@ -61,7 +72,17 @@ npm run check:docbench
 npm run dev --workspace=docbench
 ```
 
-Build also produces ignored `public/portable.html`. Cloudflare Workers Builds: root `benches`, commands `npm run build:docbench`, `npm run deploy:docbench`, `npm run preview:docbench`. Watch `benches/docbench/**`, `benches/shared/**`, `benches/scripts/**`, `benches/package.json` and `benches/package-lock.json`. ZIP64, encrypted ZIP extraction, non-DEFLATE codecs, PAR2 recovery data, and broader archive/media engines are not implemented yet. ZIP extraction validates local headers, advertised sizes, compression ratios and CRC-32; single-file downloads use bounded memory or native Save As, and multi-file extraction requires a writable folder picker. Extracted files are never silently overwritten: multi-file output goes into a new dedicated folder.
+Build also produces ignored `public/portable.html`. Cloudflare Workers Builds:
+root `benches`, commands `npm run build:docbench`, `npm run deploy:docbench`,
+`npm run preview:docbench`. Watch `benches/docbench/**`, `benches/shared/**`,
+`benches/scripts/**`, `benches/package.json` and `benches/package-lock.json`.
+
+ZIP64, encrypted ZIP extraction, non-DEFLATE codecs, PAR2 recovery data, and
+other archive/media codecs are not implemented yet. ZIP extraction validates
+local headers, advertised sizes, compression ratios and CRC-32; single-file
+downloads use bounded memory or native Save As, and multi-file extraction
+requires a writable folder picker. Extracted files are never silently
+overwritten: multi-file output goes into a new dedicated folder.
 
 ## Embedded file ingress (v1)
 

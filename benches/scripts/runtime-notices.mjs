@@ -54,7 +54,12 @@ for (const workspace of workspaces) {
       license: licenseLabel(pkg),
       source: sourceUrl(pkg),
       usedBy: new Set([workspace]),
-      licenseFiles: await licenseFiles(dirname(manifestPath)),
+      licenseFiles: [
+        ...await licenseFiles(dirname(manifestPath)),
+        ...(pkg.name === "sevenzip-wasm" ? await Promise.all(["7zip-LGPL.txt", "7zip-unRAR.txt"].map(async name => ({
+          name, text: await readFile(resolve(benchesRoot, "docbench", "licenses", name), "utf8"),
+        }))) : []),
+      ],
     });
   }
 }

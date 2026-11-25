@@ -204,3 +204,19 @@ test("ZIP sink enforces a bounded fallback output", async () => {
     zipApi, sink: createMemoryZipSink({ maxBytes: 8 }),
   }), /memory export limit/);
 });
+
+test("ZIP preserves explicit empty directories and zero-byte files", async () => {
+  const entries = [
+    { ...source("empty-dir", ""), directory: true },
+    source("empty.txt", ""),
+    source("folder/file.txt", "data"),
+    { ...source("folder", ""), directory: true },
+  ];
+  const result = await packZip(entries, { zipApi, sink: createMemoryZipSink() });
+  const index = await readZipIndex(result.output);
+  assert.equal(index.count, 4);
+  assert.equal(index.entries.find(entry => entry.name === "empty-dir/").directory, true);
+  assert.equal(index.entries.find(entry => entry.name === "empty.txt").directory, false);
+  assert.equal(index.entries.find(entry => entry.name === "folder/").directory, true);
+  assert.throws(() => planZipEntries([entries[0], entries[0]]), /duplicate ZIP directory/i);
+});
