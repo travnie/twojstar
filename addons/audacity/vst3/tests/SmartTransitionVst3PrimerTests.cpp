@@ -76,7 +76,8 @@ std::vector<Frame> selection()
 }
 
 std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize,
-                       const char16_t* hostName = u"Audacity")
+                       const char16_t* hostName = u"Audacity",
+                       bool providePrimer = true)
 {
     auto processor = std::make_unique<SmartTransitionProcessor>();
     TestHost host(hostName);
@@ -102,7 +103,8 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize,
     if (latency <= 0) throw std::runtime_error("latency unreported");
 
     std::vector<Frame> raw;
-    raw.reserve(kPrime + signal.size() + latency);
+    const int primerLength = providePrimer ? kPrime : 0;
+    raw.reserve(primerLength + signal.size() + latency);
     auto processRegion = [&](const std::vector<Frame>& input, int chunk)
     {
         for (std::size_t start = 0; start < input.size();)
@@ -141,7 +143,8 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize,
 
     // Audacity VST3Wrapper::Initialize() always feeds this distinct 64-frame
     // silence block *after* setProcessing(true), before the actual selection.
-    processRegion(std::vector<Frame>(kPrime), kPrime);
+    if (providePrimer)
+        processRegion(std::vector<Frame>(kPrime), kPrime);
     processRegion(signal, blockSize);
     processRegion(std::vector<Frame>(static_cast<std::size_t>(latency)), blockSize);
 
@@ -151,7 +154,7 @@ std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize,
         processor->setActive(false) != Steinberg::kResultOk ||
         processor->terminate() != Steinberg::kResultOk)
         throw std::runtime_error("deactivate");
-    const auto begin = raw.begin() + static_cast<std::ptrdiff_t>(kPrime + latency);
+    const auto begin = raw.begin() + static_cast<std::ptrdiff_t>(primerLength + latency);
     return {begin, begin + static_cast<std::ptrdiff_t>(signal.size())};
 }
 
@@ -217,6 +220,19 @@ int main()
             if (run(noisy, chunk) != noisyReference)
                 throw std::runtime_error("Noisy stereo onset VST3 chunk drift");
         }
+        // A different host with an actual silent selection onset must not
+        // be classified as Audacity's offline 64-sample primer.
+        std::vector<Frame> otherHostSignal(1400);
+        for (int i = 500; i < 1400; ++i)
+            otherHostSignal[static_cast<std::size_t>(i)] = {0.35f, 0.27f};
+        const auto otherHostOutput = run(otherHostSignal, 64, u"Other DAW", false);
+        bool otherHostRepaired = false;
+        for (int i = 490; i < 515; ++i)
+            otherHostRepaired |= otherHostOutput[static_cast<std::size_t>(i)] !=
+                otherHostSignal[static_cast<std::size_t>(i)];
+        if (!otherHostRepaired)
+            throw std::runtime_error("Non-Audacity real silence cut was skipped");
+
         std::cout << "VST3 priming and block-boundary regression passed\n";
         return EXIT_SUCCESS;
     }
