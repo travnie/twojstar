@@ -145,7 +145,7 @@ void testStaggeredStereoOnsetCannotStealSplice()
         else signal[i] = {-0.6, -0.4};
     }
     const auto result = render(signal, 2, {13, 41, 67});
-    require(result.hasPlan(), "Staggered-onset fixture missed later splice");
+    require(result.hasPlan, "Staggered-onset fixture missed later splice");
     require(std::abs(globalAnchor(result) - 500) <= 8,
         "Staggered channel onset stole the later splice");
 }
