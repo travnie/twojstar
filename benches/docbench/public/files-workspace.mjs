@@ -742,6 +742,7 @@ async function showArchiveContents(file, format, revision, target, prepared = nu
     }
   }
   navigate("");
+  refreshActions();
 }
 
 

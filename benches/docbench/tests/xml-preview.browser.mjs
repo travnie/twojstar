@@ -386,6 +386,8 @@ frame.addEventListener("load", async () => {
     win.DocBenchFiles.importFile(new win.File([decodeFixture("${sevenzEdgeFixtures.mixed}")], "mixed.7z"));
     await until(() => filesPreview.querySelector('button[aria-label="Open 7z folder empty-dir"]'));
     if (!filesPreview.textContent.includes("empty.txt")) throw Error("Empty file missing");
+    const folderExport = [...filesPreview.querySelectorAll("button")].find(button => button.textContent === "Extract all to folder");
+    if (!folderExport || folderExport.disabled) throw Error("7z folder extraction not enabled initially");
     let exported;
     const originalCreate = win.URL.createObjectURL;
     const originalClick = win.HTMLAnchorElement.prototype.click;
@@ -409,6 +411,11 @@ frame.addEventListener("load", async () => {
       win.URL.createObjectURL = originalCreate;
       win.HTMLAnchorElement.prototype.click = originalClick;
     }
+    document.documentElement.dataset.stage = "7z-unsafe-batch";
+    win.DocBenchFiles.importFile(new win.File([decodeFixture("${sevenzEdgeFixtures.link}")], "links.7z"));
+    await until(() => filesPreview.querySelector('button[aria-label="Preview entry: report.txt"]'));
+    const blockedBatch = [...filesPreview.querySelectorAll("button")].find(button => button.textContent === "Download all as ZIP");
+    if (!blockedBatch?.disabled) throw Error("Unsafe 7z batch action enabled initially");
     document.documentElement.dataset.stage = "rar-password";
     win.DocBenchFiles.importFile(new win.File([decodeFixture("${rarFixtures[2].base64}")], "locked.rar"));
     await until(() => filesPreview.querySelector('input[type="password"]'));
