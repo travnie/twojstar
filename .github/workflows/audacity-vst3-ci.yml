@@ -35,6 +35,8 @@ jobs:
         run: cmake --build addons/audacity/vst3/build --config Release
       - name: Run DSP tests
         run: ctest --test-dir addons/audacity/vst3/build -C Release --output-on-failure
+      - name: Diagnose Smart Transition host pre-roll
+        run: ctest --test-dir addons/audacity/vst3/build -C Release -R SmartTransitionSelectionIsolationTests -V
       - name: Run quality harness unit tests
         run: python -m unittest discover -s addons/audacity/vst3/tests/quality -p "test_*.py" -v
 
@@ -60,7 +62,7 @@ jobs:
       - name: Configure VST3
         run: cmake -S addons/audacity/vst3 -B addons/audacity/vst3/build-sdk -DVST3_SDK_ROOT="${{ github.workspace }}/vst3sdk" -DBUILD_TESTING=ON -DSMTG_CREATE_PLUGIN_LINK=OFF
       - name: Build VST3 effects, validator, and DSP tests
-        run: cmake --build addons/audacity/vst3/build-sdk --config Release --target TravnyAutoDeclip TravnySmartTransition validator AutoDeclipDspTests AutoDeclipParameterStateTests AutoDeclipControllerTests AutoDeclipStateRoundTripTests AutoDeclipProcessorTests DeClickDspTests DeHumDspTests DeNoiseDspTests SmartTransitionDspTests SmartTransitionStateRoundTripTests
+        run: cmake --build addons/audacity/vst3/build-sdk --config Release --target TravnyAutoDeclip TravnySmartTransition validator AutoDeclipDspTests AutoDeclipParameterStateTests AutoDeclipControllerTests AutoDeclipStateRoundTripTests AutoDeclipProcessorTests DeClickDspTests DeHumDspTests DeNoiseDspTests SmartTransitionDspTests SmartTransitionSelectionIsolationTests SmartTransitionStateRoundTripTests
       - name: Run DSP tests in SDK build
         run: ctest --test-dir addons/audacity/vst3/build-sdk -C Release --output-on-failure
       - name: Run Steinberg validator on both VST3 effects
