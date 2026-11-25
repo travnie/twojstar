@@ -20,6 +20,8 @@ public:
     }
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) SMTG_OVERRIDE;
+    // Test harness uses the exact Audacity offline priming contract.
+    void setAudacityHostForTest() noexcept { audacityHost_ = true; }
     Steinberg::tresult PLUGIN_API setActive(Steinberg::TBool state) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setProcessing(Steinberg::TBool state) SMTG_OVERRIDE;
     Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) SMTG_OVERRIDE;
@@ -66,6 +68,7 @@ private:
     std::atomic<Steinberg::uint64> audioEpoch_{0};
     void publishAudioState(Steinberg::uint64 generation) noexcept;
     Steinberg::uint64 appliedRestoreGeneration_{0};
+    bool audacityHost_{false};
     bool firstAudioBlock_{true};
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
