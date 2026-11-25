@@ -48,9 +48,6 @@ jobs:
         working-directory: benches
         run: npm ci
 
-      - name: Resolve prototype dependency integrity
-        run: npm view @exav/unpack-wasm@0.0.3 dist.integrity
-
       - name: Check Codebench
         working-directory: benches
         run: npm run check:codebench

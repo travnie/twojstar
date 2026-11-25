@@ -140,14 +140,16 @@ const [archiveGlue, archiveWasm, archiveWorker] = await Promise.all([
   readFile("public/vendor/exav/pkg/exav_unpack_wasm_bg.wasm"),
   readFile("public/archive-worker.mjs", "utf8"),
 ]);
-const archiveInit = archiveGlue.match(/export default\s+([\w$]+)\s*;/u)?.[1];
+const archiveInit = archiveGlue.match(/export\s+default\s+(?:async\s+)?(?:function\s+)?([\w$]+)/u)?.[1]
+  ?? archiveGlue.match(/\b([\w$]+)\s+as\s+default\b/u)?.[1];
 if (!archiveInit) throw new Error("Archive WASM module default export changed.");
 const inlineArchiveWorker = [
   archiveGlue,
   archiveEngine,
   archiveWorker
     .replace('import init, { Archive } from "./vendor/exav/pkg/exav_unpack_wasm.js";',
-      `const init = () => ${archiveInit}({ module_or_path: Uint8Array.from(atob(${JSON.stringify(archiveWasm.toString("base64"))}), char => char.charCodeAt(0)) });`)
+      `const initArchiveWasm = () => ${archiveInit}({ module_or_path: Uint8Array.from(atob(${JSON.stringify(archiveWasm.toString("base64"))}), char => char.charCodeAt(0)) });`)
+    .replace('await init()', 'await initArchiveWasm()')
     .replace('import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";', ""),
 ].join("\n");
 
