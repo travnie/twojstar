@@ -114,25 +114,40 @@ std::int64_t globalAnchor(const RenderResult& result)
 
 void testEarlyRealSpliceAfterSilentPrimer()
 {
-    SmartTransitionDsp dsp;
-    dsp.configure(48000.0);
     constexpr int prefix = 64;
     constexpr int seam = prefix + 48;
+    std::vector<Frame> signal(1400);
+    for (int i = 0; i < 1400; ++i)
+        signal[i] = i < prefix ? Frame{0.0, 0.0}
+            : (i < seam ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
+
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Real seam 1 ms after priming onset was rejected");
+    require(std::abs(globalAnchor(result) - seam) <= 8,
+        "Early real seam was displaced by priming guard");
+
+    bool changed = false;
+    for (int i = seam - 8; i <= seam + 8; ++i)
+        changed |= result.output[i] != signal[i];
+    require(changed, "Early real seam plan did not change rendered audio");
+}
+
+void testStaggeredStereoOnsetCannotStealSplice()
+{
+    // Audacity's 64 zero frames are followed by two staggered channel onsets.
+    // Neither onset may steal the later true stereo cut.
+    std::vector<Frame> signal(1400);
     for (int i = 0; i < 1400; ++i)
     {
-        Frame input = i < prefix ? Frame{0.0, 0.0}
-            : (i < seam ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
-        Frame output{};
-        dsp.processFrame(input.data(), output.data(), 2);
+        if (i < 64) signal[i] = {0.0, 0.0};
+        else if (i < 80) signal[i] = {0.35, 0.0};
+        else if (i < 500) signal[i] = {0.35, 0.27};
+        else signal[i] = {-0.6, -0.4};
     }
-    for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
-    {
-        Frame output{};
-        dsp.drainFrame(output.data(), 2);
-    }
-    require(dsp.hasPlan(), "Real seam 1 ms after priming onset was rejected");
-    require(std::abs(dsp.planWindowStartSamples() + dsp.plan().seamAnchorSamples -
-        seam) <= 8, "Early real seam was displaced by priming guard");
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan(), "Staggered-onset fixture missed later splice");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Staggered channel onset stole the later splice");
 }
 
 void testInternalAudioToSilenceJoinStillQualifies()
@@ -967,6 +982,7 @@ int main()
     try
     {
         testEarlyRealSpliceAfterSilentPrimer();
+        testStaggeredStereoOnsetCannotStealSplice();
         testInternalAudioToSilenceJoinStillQualifies();
         testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
