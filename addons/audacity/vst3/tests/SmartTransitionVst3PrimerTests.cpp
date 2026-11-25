@@ -1,5 +1,6 @@
 #include "SmartTransitionProcessor.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
+#include "pluginterfaces/vst/ivsthostapplication.h"
 #include "pluginterfaces/vst/vstspeaker.h"
 
 #include <algorithm>
@@ -22,6 +23,44 @@ constexpr double kPi = 3.14159265358979323846;
 
 using Frame = std::array<float, 2>;
 
+class TestHost final : public Steinberg::Vst::IHostApplication
+{
+public:
+    explicit TestHost(const char16_t* title) : title_(title) {}
+
+    Steinberg::tresult PLUGIN_API queryInterface(
+        const Steinberg::TUID iid, void** obj) override
+    {
+        QUERY_INTERFACE(iid, obj, Steinberg::Vst::IHostApplication::iid,
+            Steinberg::Vst::IHostApplication)
+        QUERY_INTERFACE(iid, obj, Steinberg::FUnknown::iid,
+            Steinberg::Vst::IHostApplication)
+        *obj = nullptr;
+        return Steinberg::kNoInterface;
+    }
+    Steinberg::uint32 PLUGIN_API addRef() override { return ++refs_; }
+    Steinberg::uint32 PLUGIN_API release() override { return --refs_; }
+    Steinberg::tresult PLUGIN_API getName(Steinberg::Vst::String128 name) override
+    {
+        std::size_t i = 0;
+        while (i < 127 && title_[i] != 0)
+        {
+            name[i] = title_[i];
+            ++i;
+        }
+        name[i] = 0;
+        return Steinberg::kResultOk;
+    }
+    Steinberg::tresult PLUGIN_API createInstance(
+        Steinberg::TUID, Steinberg::TUID, void**) override
+    {
+        return Steinberg::kNotImplemented;
+    }
+private:
+    const char16_t* title_{};
+    Steinberg::uint32 refs_{1};
+};
+
 std::vector<Frame> selection()
 {
     std::vector<Frame> signal;
@@ -36,12 +75,13 @@ std::vector<Frame> selection()
     return signal;
 }
 
-std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize)
+std::vector<Frame> run(const std::vector<Frame>& signal, int blockSize,
+                       const char16_t* hostName = u"Audacity")
 {
     auto processor = std::make_unique<SmartTransitionProcessor>();
-    if (processor->initialize(nullptr) != Steinberg::kResultOk)
+    TestHost host(hostName);
+    if (processor->initialize(&host) != Steinberg::kResultOk)
         throw std::runtime_error("initialize");
-    processor->setAudacityHostForTest();
     auto arrangement = Steinberg::Vst::SpeakerArr::kStereo;
     if (processor->setBusArrangements(&arrangement, 1, &arrangement, 1)
         != Steinberg::kResultOk)
