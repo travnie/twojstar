@@ -359,4 +359,12 @@ const portable = html
   .replace('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">', "")
   .replace('<link rel="mask-icon" href="/favicon.svg" color="#f59e0b">', "");
 
-await writeFile("public/portable.html", portable);
+const archiveNotices = [
+  "7-Zip WASM 26.6.0; LGPL 2.1 or later with unRAR restriction.",
+  "Source/build: https://github.com/arktronic/sevenzip-wasm/tree/26.6.0",
+  "Upstream: https://github.com/ip7z/7zip/tree/26.06",
+  ...await Promise.all(["LICENSE", "7zip-LGPL.txt", "7zip-unRAR.txt"].map(name =>
+    readFile("public/vendor/sevenzip/" + name, "utf8"))),
+].join("\n\n");
+await writeFile("public/portable.html", portable.replace("</body>", () =>
+  '<script type="text/plain" id="sevenzip-license">' + archiveNotices.replaceAll("</script", "<\\/script") + "</script>\n</body>"));

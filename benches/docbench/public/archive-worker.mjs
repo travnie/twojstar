@@ -8,9 +8,10 @@ self.onmessage = async (event) => {
   try {
     if (!(file instanceof Blob) || file.size > WASM_ARCHIVE_LIMITS.maxInputBytes
       || typeof password !== "string" || password.length > 1024) throw new Error("Archive input limit exceeded.");
+    const binary = wasmBinary ?? await (await fetch(new URL("./vendor/sevenzip/sevenzip-wasm.wasm", import.meta.url))).arrayBuffer();
+    const wasmModule = await WebAssembly.compile(binary);
     const value = await runSevenZipOperation(createSevenZip, new Uint8Array(await file.arrayBuffer()), operation, {
-      index, password, wasmBinary,
-      wasmUrl: wasmBinary ? undefined : new URL("./vendor/sevenzip/sevenzip-wasm.wasm", import.meta.url).href,
+      index, password, wasmModule,
     });
     const transfer = operation === "extract" ? [value.data.buffer]
       : operation === "extractAll" ? value.map(entry => entry.data.buffer) : [];

@@ -68,6 +68,10 @@ jobs:
         working-directory: benches/docbench
         run: node tests/xml-preview.browser.mjs
 
+      - name: Test hosted archive worker under production CSP
+        working-directory: benches/docbench
+        run: node tests/archive-worker.browser.mjs
+
       - name: Fail on stale generated files
         # Builds regenerate synced/emitted files; any tracked diff means a committed copy is stale.
         run: |

@@ -22,11 +22,11 @@ export function parseSevenZipListing(source) {
   function commit() {
     if (!values.size) return;
     if (entries.length >= WASM_ARCHIVE_LIMITS.maxMembers || !values.has("Path")
-      || !values.has("Size") || !values.has("Attributes") || !values.has("Encrypted")) {
+      || !values.has("Size") || !values.has("Encrypted")) {
       throw new Error("Incomplete or oversized archive index.");
     }
     const name = values.get("Path");
-    const attributes = values.get("Attributes");
+    const attributes = values.get("Attributes") || "";
     const mode = attributes.match(/(?:^| )([bcdlps-][rwxstST-]{9})(?:$| )/u);
     const dos = (mode ? attributes.slice(0, mode.index) : attributes).trim();
     const folder = values.get("Folder");
@@ -50,6 +50,7 @@ export function parseSevenZipListing(source) {
     if (directory && size !== 0) throw new Error("Invalid archive directory.");
     entries.push({
       index: entries.length, name, directory, special, uncompressedSize: size,
+      directoryKnown: folder !== undefined || Boolean(mode) || dos.includes("D"),
       compressedSize: values.get("Packed Size") ? numberField(values.get("Packed Size")) : -1,
       encrypted: encrypted === "+", crc: crc.toUpperCase(),
       checksum: Boolean(crc || values.get("Checksum") || /\bCRC\b/u.test(values.get("Characteristics") || "")),
@@ -69,6 +70,23 @@ export function parseSevenZipListing(source) {
   }
   commit();
   return entries;
+}
+// The standard listing always includes the folder flag, even with -mtr=off.
+function mergeDirectoryFlags(entries, source) {
+  const rows = source.split("\n").filter(line => line.trim());
+  if (rows.length !== entries.length) throw new Error("Archive listings disagree.");
+  return entries.map((entry, i) => {
+    const row = rows[i];
+    const flags = row.slice(20, 25);
+    const directory = flags[0] === "D";
+    if (row.length < 54 || !/^[D.][R.][H.][S.][A.]$/u.test(flags)
+      || row.slice(25, 26) !== " " || row.slice(38, 39) !== " " || row.slice(51, 53) !== "  "
+      || row.slice(53) !== entry.name || numberField(row.slice(26, 38).trim()) !== entry.uncompressedSize
+      || entry.directoryKnown && directory !== entry.directory || directory && entry.uncompressedSize !== 0) {
+      throw new Error("Archive listings disagree.");
+    }
+    return { ...entry, directory };
+  });
 }
 function archiveType(bytes) {
   if (bytes[0] === 0x37 && bytes[1] === 0x7a && bytes[2] === 0xbc
@@ -102,34 +120,44 @@ function sameMember(a, b) {
     && a.crc === b.crc && a.checksum === b.checksum;
 }
 export async function runSevenZipOperation(createSevenZip, bytes, operation, {
-  index, password = "", wasmBinary, wasmUrl,
+  index, password = "", wasmModule,
 } = {}) {
   if (!(bytes instanceof Uint8Array) || bytes.length > WASM_ARCHIVE_LIMITS.maxInputBytes) throw new Error("Archive input limit exceeded.");
   const type = archiveType(bytes);
   const path = type === "7z" ? "/input.7z" : "/input.rar";
-  let output, cursor = 0, errors = false;
-  const mod = await createSevenZip({
-    stdin: () => null,
-    stdout: byte => {
-      if (byte === null) return;
-      if (!output || cursor >= output.length) throw new Error("Archive output exceeds its limit.");
-      output[cursor++] = byte;
-    },
-    stderr: byte => { if (byte !== null && byte !== 10 && byte !== 13) errors = true; },
-    ...(wasmBinary ? { wasmBinary } : {}),
-    ...(wasmUrl ? { locateFile: () => wasmUrl } : {}),
-  });
-  mod.FS.writeFile(path, bytes);
-  function command(args, capacity) {
-    output = new Uint8Array(capacity);
-    cursor = 0;
-    errors = false;
+  // callMain does not restore its argument stack. Fresh runtime per command;
+  // reuse the compiled module, not mutable WASM state.
+  async function command(args, capacity, names) {
+    const output = new Uint8Array(capacity);
+    let cursor = 0;
+    let errors = false;
+    const mod = await createSevenZip({
+      stdin: () => null,
+      stdout: byte => {
+        if (byte === null) return;
+        if (cursor >= output.length) throw new Error("Archive output exceeds its limit.");
+        output[cursor++] = byte;
+      },
+      stderr: byte => { if (byte !== null && byte !== 10 && byte !== 13) errors = true; },
+      ...(wasmModule ? { instantiateWasm(imports, receive) {
+        const instance = new WebAssembly.Instance(wasmModule, imports);
+        receive(instance, wasmModule);
+      } } : {}),
+    });
+    mod.FS.writeFile(path, bytes, { canOwn: true });
+    if (names) {
+      mod.FS.writeFile("/selection.txt", names.join("\n") + "\n");
+      args = [...args, "-spd", "-i@/selection.txt", "-scsUTF-8"];
+    }
     const status = mod.callMain([...args, "-t" + type, "-bsp0", "-sccUTF-8",
       ...(password ? ["-p" + password] : []), "--", path]);
     if (status !== 0 || errors) throw new Error("Archive decoding failed. Check password or integrity.");
     return output.subarray(0, cursor);
   }
-  const raw = fullListing(textDecoder.decode(command(["l", "-slt"], LIST_LIMIT)), type, bytes.length);
+  const raw = mergeDirectoryFlags(
+    fullListing(textDecoder.decode(await command(["l", "-slt"], LIST_LIMIT)), type, bytes.length),
+    textDecoder.decode(await command(["l", "-ba"], LIST_LIMIT)),
+  );
   const { entries } = normalizeArchiveMembers(raw);
   if (operation === "list") return raw;
   const targets = operation === "extract" ? [entries[index]] : operation === "extractAll" ? entries : null;
@@ -138,18 +166,21 @@ export async function runSevenZipOperation(createSevenZip, bytes, operation, {
     || operation === "extractAll" && wasmArchiveBatchReason(targets)) throw new Error("Unsupported archive selection.");
   // 7-Zip normalizes some control characters when listing. Re-select exact names
   // and verify matching metadata before extracting; never write archive paths to FS.
-  const selection = targets.map(entry => "-i!" + entry.name);
-  const exact = normalizeArchiveMembers(parseSevenZipListing(textDecoder.decode(
-    command(["l", "-slt", "-ba", "-spd", ...selection], LIST_LIMIT)))).entries;
+  const names = targets.map(entry => entry.name);
+  const exact = normalizeArchiveMembers(mergeDirectoryFlags(
+    parseSevenZipListing(textDecoder.decode(await command(["l", "-slt", "-ba"], LIST_LIMIT, names))),
+    textDecoder.decode(await command(["l", "-ba"], LIST_LIMIT, names)),
+  )).entries;
   if (exact.length !== targets.length || exact.some((entry, i) => !sameMember(entry, targets[i]))) {
     throw new Error("Archive names or entry metadata are ambiguous.");
   }
-  if (operation === "extractAll") command(["t"], LIST_LIMIT);
-  const result = targets.map(entry => {
-    if (entry.directory) return { name: entry.name, data: new Uint8Array(0) };
-    const data = command(["x", "-so", "-bso0", "-bse2", "-spd", "-i!" + entry.name], entry.originalSize);
+  if (operation === "extractAll") await command(["t"], LIST_LIMIT);
+  const result = [];
+  for (const entry of targets) {
+    const data = entry.directory ? new Uint8Array(0)
+      : await command(["x", "-so", "-bso0", "-bse2"], entry.originalSize, [entry.name]);
     if (data.length !== entry.originalSize) throw new Error("Archive entry size mismatch.");
-    return { name: entry.name, data };
-  });
+    result.push({ name: entry.name, data });
+  }
   return operation === "extract" ? result[0] : result;
 }

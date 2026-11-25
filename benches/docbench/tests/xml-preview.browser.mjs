@@ -194,9 +194,14 @@ frame.addEventListener("load", async () => {
     if (index < 0) throw Error("Missing stored ZIP fixture payload");
     zip[index] ^= 1;
     const filesPreview = doc.getElementById("files-preview");
-    const until = (ready) => ready() ? Promise.resolve() : new Promise(resolve => {
+    const until = (ready) => ready() ? Promise.resolve() : new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        observer.disconnect();
+        reject(Error("Timed out at " + document.documentElement.dataset.stage + ": " + filesPreview.textContent.slice(0, 500)));
+      }, 12000);
       const observer = new win.MutationObserver(() => {
         if (!ready()) return;
+        clearTimeout(timer);
         observer.disconnect();
         resolve();
       });

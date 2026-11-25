@@ -127,3 +127,6 @@ const sevenZipGlue = await readFile(dep("sevenzip-wasm/sevenzip-wasm.js"), "utf8
 await writeFile("public/vendor/sevenzip/sevenzip-wasm.mjs", sevenZipGlue + "\nexport default SevenZipWasm;\n");
 await cp(dep("sevenzip-wasm/sevenzip-wasm.wasm"), "public/vendor/sevenzip/sevenzip-wasm.wasm");
 await cp(dep("sevenzip-wasm/LICENSE"), "public/vendor/sevenzip/LICENSE");
+for (const name of ["7zip-LGPL.txt", "7zip-unRAR.txt"]) {
+  await cp("licenses/" + name, "public/vendor/sevenzip/" + name);
+}
