@@ -50,6 +50,7 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
 void SmartTransitionDsp::reset() noexcept
 {
     inputCount_ = 0;
+    hostPrimerSamples_ = 0;
     firstProgramSample_ = -1;
     firstChannelProgramSample_.fill(-1);
     drainStarted_ = false;
@@ -223,10 +224,9 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         // priming silence. Delayed startup channels are handled independently;
         // real cuts just a few samples later still compete normally.
         const auto first = firstChannelProgramSample_[channel];
-        if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
-            firstProgramSample_ <= 128 &&
-            first >= firstProgramSample_ &&
-            first - firstProgramSample_ < static_cast<std::int64_t>(analysisRadius_) &&
+        if (hostPrimerSamples_ > 0 &&
+            first >= hostPrimerSamples_ &&
+            first - hostPrimerSamples_ < static_cast<std::int64_t>(analysisRadius_) &&
             anchor >= first - 1 && anchor <= first + 1)
             continue;
 
