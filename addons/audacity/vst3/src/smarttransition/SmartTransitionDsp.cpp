@@ -221,6 +221,13 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         const auto leftRms = std::sqrt(leftSquares / static_cast<double>(radius));
         const auto rightRms = std::sqrt(rightSquares / static_cast<double>(radius));
 
+        // Audacity may prime VST3 processors with a silent block before the
+        // actual selection. Its transition into program audio is not a splice.
+        // Conservatively ignore candidates without real signal on both sides.
+        // This also leaves genuine silence-to-audio onsets untouched.
+        if (leftRms <= 1e-8 || rightRms <= 1e-8)
+            continue;
+
         double derivativeSum = 0.0;
         std::int64_t derivativeCount = 0;
         for (std::int64_t i = anchor - radius + 1; i < anchor; ++i)
