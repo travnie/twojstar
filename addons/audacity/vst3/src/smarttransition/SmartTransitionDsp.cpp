@@ -50,6 +50,7 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
 void SmartTransitionDsp::reset() noexcept
 {
     inputCount_ = 0;
+    firstProgramSample_ = -1;
     drainStarted_ = false;
     clusterBest_ = {};
     clusterSeedAnchor_ = -1;
@@ -153,6 +154,19 @@ void SmartTransitionDsp::processFrameInternal(
 void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, std::int64_t index) noexcept
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
+    // The host may prime with zero-filled samples before selected audio.
+    // Remember the first real sample so only that boundary is ignored.
+    if (firstProgramSample_ < 0 && input != nullptr)
+    {
+        for (std::size_t channel = 0; channel < channels; ++channel)
+        {
+            if (std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-8)
+            {
+                firstProgramSample_ = index;
+                break;
+            }
+        }
+    }
     strengthRing_[slot] = strength_;
     maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
     modeRing_[slot] = static_cast<std::uint8_t>(mode_);
@@ -198,10 +212,17 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         return candidate;
     }
 
+    // Only ignore the onset after a substantial *leading* silent prefix.
+    // Do not suppress legitimate later audio -> silence edits or hard pans.
+    if (firstProgramSample_ >= static_cast<std::int64_t>(kMinAnalysisRadiusSamples) &&
+        anchor >= firstProgramSample_ - radius &&
+        anchor <= firstProgramSample_ + radius)
+    {
+        return candidate;
+    }
+
     double strongestScore = 0.0;
     std::size_t affectedChannels = 0;
-    bool leftSignalPresent = false;
-    bool rightSignalPresent = false;
     for (std::size_t channel = 0; channel < channels; ++channel)
     {
         double leftSum = 0.0;
@@ -222,12 +243,6 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         const auto rightMean = rightSum / static_cast<double>(radius);
         const auto leftRms = std::sqrt(leftSquares / static_cast<double>(radius));
         const auto rightRms = std::sqrt(rightSquares / static_cast<double>(radius));
-
-        // Audacity may prime the processor with silence before a selection.
-        // Detect absent program audio across the whole bus, not per channel:
-        // a real hard-left -> hard-right join must remain eligible.
-        leftSignalPresent |= leftRms > 1e-8;
-        rightSignalPresent |= rightRms > 1e-8;
 
         double derivativeSum = 0.0;
         std::int64_t derivativeCount = 0;
@@ -285,7 +300,7 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
     candidate.scoreKey = static_cast<std::int64_t>(std::llround(score * static_cast<double>(kScoreScale)));
     candidate.confidence = static_cast<double>(candidate.scoreKey) / static_cast<double>(kScoreScale);
     candidate.valid = candidate.confidence >= kCandidateThreshold &&
-        candidate.affectedChannelsMask != 0 && leftSignalPresent && rightSignalPresent;
+        candidate.affectedChannelsMask != 0;
     return candidate;
 }
 
