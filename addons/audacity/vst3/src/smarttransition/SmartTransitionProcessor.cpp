@@ -1,4 +1,5 @@
 #include "SmartTransitionProcessor.h"
+#include "pluginterfaces/vst/ivsthostapplication.h"
 
 #include "SmartTransitionParams.h"
 #include "base/source/fstreamer.h"
@@ -76,6 +77,25 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::initialize(Steinberg::FU
     if (result != Steinberg::kResultOk)
     {
         return result;
+    }
+
+    if (context)
+    {
+        Steinberg::FUnknownPtr<Steinberg::Vst::IHostApplication> host(context);
+        if (host)
+        {
+            Steinberg::Vst::String128 name{};
+            if (host->getName(name) == Steinberg::kResultOk)
+            {
+                // VST3 provides host identity through initialize(context).
+                // Only Audacity's known offline 64-zero-frame handshake
+                // should modify candidate selection after a silent block.
+                const auto* prefix = STR16("Audacity");
+                audacityHost_ = true;
+                for (std::size_t i = 0; prefix[i] != 0; ++i)
+                    audacityHost_ &= name[i] == prefix[i];
+            }
+        }
     }
 
     addAudioInput(STR16("Input"), Steinberg::Vst::SpeakerArr::kStereo);
@@ -171,6 +191,7 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setActive(Steinberg::TBo
 Steinberg::tresult PLUGIN_API SmartTransitionProcessor::setProcessing(Steinberg::TBool state)
 {
     dsp_.reset();
+    firstAudioBlock_ = true;
     return AudioEffect::setProcessing(state);
 }
 
@@ -488,6 +509,38 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
 
     const auto silenceMask = channelMask(channels);
     const auto inputSilenceFlags = data.inputs[0].silenceFlags;
+
+    // Audacity 4 primes offline VST3 processors with one 64-frame silent
+    // ProcessData block after activation. Identify it at the adapter boundary,
+    // never infer host metadata from arbitrary DSP source silence.
+    bool hostPrimer = audacityHost_ && firstAudioBlock_ &&
+        data.processMode == Steinberg::Vst::kOffline &&
+        data.numSamples == 64;
+    if (hostPrimer)
+    {
+        for (Steinberg::int32 channel = 0; channel < channels; ++channel)
+        {
+            const auto bit = Steinberg::uint64{1} << static_cast<Steinberg::uint32>(channel);
+            if ((inputSilenceFlags & bit) != 0) continue;
+            if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
+            {
+                auto* const* buffers = data.inputs[0].channelBuffers32;
+                if (!buffers || !buffers[channel]) continue;
+                for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
+                    hostPrimer &= buffers[channel][i] == 0.0f;
+            }
+            else if (data.symbolicSampleSize == Steinberg::Vst::kSample64)
+            {
+                auto* const* buffers = data.inputs[0].channelBuffers64;
+                if (!buffers || !buffers[channel]) continue;
+                for (Steinberg::int32 i = 0; i < data.numSamples; ++i)
+                    hostPrimer &= buffers[channel][i] == 0.0;
+            }
+            else hostPrimer = false;
+        }
+    }
+    firstAudioBlock_ = false;
+
     Steinberg::uint64 unavailableOutputs = 0;
     bool allSilent = false;
     if (data.symbolicSampleSize == Steinberg::Vst::kSample32)
@@ -525,6 +578,8 @@ Steinberg::tresult PLUGIN_API SmartTransitionProcessor::process(Steinberg::Vst::
         return Steinberg::kResultFalse;
     }
 
+    if (hostPrimer)
+        dsp_.markHostPrimer(data.numSamples);
     data.outputs[0].silenceFlags = allSilent ? silenceMask : unavailableOutputs;
     publishAudioState(generation);
     return Steinberg::kResultOk;

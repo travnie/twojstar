@@ -66,6 +66,8 @@ private:
     std::atomic<Steinberg::uint64> audioEpoch_{0};
     void publishAudioState(Steinberg::uint64 generation) noexcept;
     Steinberg::uint64 appliedRestoreGeneration_{0};
+    bool audacityHost_{false};
+    bool firstAudioBlock_{true};
     Travny::Audio::SmartTransitionDsp dsp_{};
 };
 

@@ -37,7 +37,8 @@ struct RenderResult
 
 RenderResult render(const std::vector<Frame>& input, std::size_t channels, const std::vector<std::size_t>& chunks = {}, double strength = 1.0, double maxTransitionMilliseconds = 4.0, double sampleRate = 48000.0,
                     SmartTransitionMode mode = SmartTransitionMode::Auto, bool repairAuto = false,
-                    std::int64_t repairEnableAt = -1)
+                    std::int64_t repairEnableAt = -1,
+                    std::int64_t hostPrimerSamples = -1)
 {
     SmartTransitionDsp dsp;
     dsp.configure(sampleRate);
@@ -58,6 +59,9 @@ RenderResult render(const std::vector<Frame>& input, std::size_t channels, const
         for (std::size_t i = 0; i < count; ++i)
         {
             Frame out{};
+            if (hostPrimerSamples >= 0 &&
+                static_cast<std::int64_t>(position + i) == hostPrimerSamples)
+                dsp.markHostPrimer(hostPrimerSamples);
             if (repairEnableAt >= 0 &&
                 static_cast<std::int64_t>(position + i) == repairEnableAt)
                 dsp.setRepairAuto(true);
@@ -110,6 +114,105 @@ std::vector<Frame> withHardSeam(std::size_t count, std::size_t seam)
 std::int64_t globalAnchor(const RenderResult& result)
 {
     return result.planWindowStart + result.plan.seamAnchorSamples;
+}
+
+void testEarlyRealSpliceAfterSilentPrimer()
+{
+    constexpr int prefix = 64;
+    constexpr int seam = prefix + 48;
+    std::vector<Frame> signal(1400);
+    for (int i = 0; i < 1400; ++i)
+        signal[i] = i < prefix ? Frame{0.0, 0.0}
+            : (i < seam ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
+
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
+    require(result.hasPlan, "Real seam 1 ms after priming onset was rejected");
+    require(std::abs(globalAnchor(result) - seam) <= 8,
+        "Early real seam was displaced by priming guard");
+
+    bool changed = false;
+    for (int i = seam - 8; i <= seam + 8; ++i)
+        changed |= result.output[i] != signal[i];
+    require(changed, "Early real seam plan did not change rendered audio");
+}
+
+void testRealSilenceToAudioAfterLongSilence()
+{
+    // Silence longer than Audacity's 64-frame initialization primer is
+    // legitimate selected content, not an excuse to discard a real edit.
+    std::vector<Frame> signal(1600);
+    for (int i = 500; i < 1600; ++i)
+        signal[i] = {0.35, 0.27};
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Real silence-to-audio seam was rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Silence-to-audio repair plan displaced");
+}
+
+void testRealSpliceThreeSamplesAfterPrimer()
+{
+    std::vector<Frame> signal(1400);
+    for (int i = 0; i < 1400; ++i)
+        signal[i] = i < 64 ? Frame{0.0, 0.0}
+            : (i < 67 ? Frame{0.35, 0.27} : Frame{-0.6, -0.4});
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
+    require(result.hasPlan, "Real splice 3 samples after onset was rejected");
+    require(std::abs(globalAnchor(result) - 67) <= 2,
+        "Real splice 3 samples after onset was displaced");
+    bool changed = false;
+    for (int i = 64; i < 76; ++i)
+        changed |= result.output[i] != signal[i];
+    require(changed, "Real 3-sample splice produced no repair");
+}
+
+void testStaggeredStereoOnsetCannotStealSplice()
+{
+    // Audacity's 64 zero frames are followed by two staggered channel onsets.
+    // Neither onset may steal the later true stereo cut.
+    std::vector<Frame> signal(1400);
+    for (int i = 0; i < 1400; ++i)
+    {
+        if (i < 64) signal[i] = {0.0, 0.0};
+        else if (i < 80) signal[i] = {0.35, 0.0};
+        else if (i < 500) signal[i] = {0.35, 0.27};
+        else signal[i] = {-0.6, -0.4};
+    }
+    const auto result = render(signal, 2, {13, 41, 67}, 1.0, 4.0, 48000.0,
+        SmartTransitionMode::Auto, false, -1, 64);
+    require(result.hasPlan, "Staggered-onset fixture missed later splice");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Staggered channel onset stole the later splice");
+}
+
+void testInternalAudioToSilenceJoinStillQualifies()
+{
+    std::vector<Frame> signal(1400);
+    for (std::size_t i = 0; i < signal.size(); ++i)
+        signal[i] = i < 500 ? Frame{0.35, -0.24} : Frame{0.0, 0.0};
+
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "In-selection audio-to-silence cut rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "In-selection silence cut moved away from edit");
+}
+
+void testHardPannedStereoJoinStillQualifies()
+{
+    // Both sides carry sound, but never in the same channel.
+    // The host-priming safety filter must not reject this real stereo edit.
+    std::vector<Frame> signal(1400);
+    for (std::size_t i = 0; i < signal.size(); ++i)
+        signal[i] = i < 500 ? Frame{0.35, 0.0} : Frame{0.0, -0.4};
+
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Hard-pan stereo seam was incorrectly rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Hard-pan stereo plan moved away from the edit");
+    const auto whole = render(signal, 2, {1400});
+    require(result.output == whole.output,
+        "Hard-pan stereo repair changed across block partitions");
 }
 
 void testConservativeSpectralRepair()
@@ -914,6 +1017,12 @@ int main()
 {
     try
     {
+        testEarlyRealSpliceAfterSilentPrimer();
+        testStaggeredStereoOnsetCannotStealSplice();
+        testRealSpliceThreeSamplesAfterPrimer();
+        testRealSilenceToAudioAfterLongSilence();
+        testInternalAudioToSilenceJoinStillQualifies();
+        testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
         testCleanAudioIsBitTransparent();
         testHardSeamIsDetectedAndSmoothed();

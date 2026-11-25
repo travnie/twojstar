@@ -61,6 +61,7 @@ public:
 
     void configure(double sampleRate) noexcept;
     void reset() noexcept;
+    void markHostPrimer(std::int64_t frames) noexcept { hostPrimerSamples_ = frames; }
     void setStrength(double normalized) noexcept;
     [[nodiscard]] double strength() const noexcept { return strength_; }
     void setMaxTransitionMilliseconds(double milliseconds) noexcept;
@@ -114,6 +115,9 @@ private:
     std::array<std::array<double, 16>, kMaxChannels> spectralRepair_{};
     std::array<double, kMaxChannels> transitionPeak_{};
     std::int64_t inputCount_{0};
+    std::int64_t hostPrimerSamples_{0};
+    std::int64_t firstProgramSample_{-1};
+    std::array<std::int64_t, kMaxChannels> firstChannelProgramSample_{{-1, -1}};
     double sampleRate_{48000.0};
     double strength_{1.0};
     double maxTransitionMilliseconds_{4.0};

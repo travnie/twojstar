@@ -50,6 +50,9 @@ void SmartTransitionDsp::configure(double sampleRate) noexcept
 void SmartTransitionDsp::reset() noexcept
 {
     inputCount_ = 0;
+    hostPrimerSamples_ = 0;
+    firstProgramSample_ = -1;
+    firstChannelProgramSample_.fill(-1);
     drainStarted_ = false;
     clusterBest_ = {};
     clusterSeedAnchor_ = -1;
@@ -153,6 +156,21 @@ void SmartTransitionDsp::processFrameInternal(
 void SmartTransitionDsp::storeFrame(const double* input, std::size_t channels, std::int64_t index) noexcept
 {
     const auto slot = static_cast<std::size_t>(index) % kRingCapacity;
+    // The host may prime with zero-filled samples before selected audio.
+    // Remember the first real sample so only that boundary is ignored.
+    if (input != nullptr)
+    {
+        for (std::size_t channel = 0; channel < channels; ++channel)
+        {
+            if (firstChannelProgramSample_[channel] < 0 &&
+                std::isfinite(input[channel]) && std::abs(input[channel]) > 1e-3)
+            {
+                firstChannelProgramSample_[channel] = index;
+                if (firstProgramSample_ < 0)
+                    firstProgramSample_ = index;
+            }
+        }
+    }
     strengthRing_[slot] = strength_;
     maxTransitionRing_[slot] = static_cast<std::uint8_t>(maxTransitionMilliseconds_);
     modeRing_[slot] = static_cast<std::uint8_t>(mode_);
@@ -202,6 +220,16 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
     std::size_t affectedChannels = 0;
     for (std::size_t channel = 0; channel < channels; ++channel)
     {
+        // Suppress only each channel's own first audio onset after the host
+        // priming silence. Delayed startup channels are handled independently;
+        // real cuts just a few samples later still compete normally.
+        const auto first = firstChannelProgramSample_[channel];
+        if (hostPrimerSamples_ > 0 &&
+            first >= hostPrimerSamples_ &&
+            first - hostPrimerSamples_ < static_cast<std::int64_t>(analysisRadius_) &&
+            anchor >= first - 1 && anchor <= first + 1)
+            continue;
+
         double leftSum = 0.0;
         double rightSum = 0.0;
         double leftSquares = 0.0;
@@ -276,7 +304,8 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
 
     candidate.scoreKey = static_cast<std::int64_t>(std::llround(score * static_cast<double>(kScoreScale)));
     candidate.confidence = static_cast<double>(candidate.scoreKey) / static_cast<double>(kScoreScale);
-    candidate.valid = candidate.confidence >= kCandidateThreshold && candidate.affectedChannelsMask != 0;
+    candidate.valid = candidate.confidence >= kCandidateThreshold &&
+        candidate.affectedChannelsMask != 0;
     return candidate;
 }
 
