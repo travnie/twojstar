@@ -151,6 +151,18 @@ int main()
             if (single != other)
                 throw std::runtime_error("VST3 block partition changed audio");
         }
+        // The right channel starts 16 samples after the left. Its onboarding
+        // boundary must not steal the true 6-second join.
+        auto staggered = input;
+        for (int i = 0; i < 16; ++i)
+            staggered[static_cast<std::size_t>(i)][1] = 0.0f;
+        const auto staggeredReference = run(staggered, 1024);
+        verify(staggered, staggeredReference);
+        for (const int chunk : {13, 64, 256, 511})
+        {
+            if (run(staggered, chunk) != staggeredReference)
+                throw std::runtime_error("Staggered-onset VST3 chunk drift");
+        }
         std::cout << "VST3 priming and block-boundary regression passed\n";
         return EXIT_SUCCESS;
     }
