@@ -132,6 +132,19 @@ void testEarlyRealSpliceAfterSilentPrimer()
     require(changed, "Early real seam plan did not change rendered audio");
 }
 
+void testRealSilenceToAudioAfterLongSilence()
+{
+    // Silence longer than Audacity's 64-frame initialization primer is
+    // legitimate selected content, not an excuse to discard a real edit.
+    std::vector<Frame> signal(1600);
+    for (int i = 500; i < 1600; ++i)
+        signal[i] = {0.35, 0.27};
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "Real silence-to-audio seam was rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "Silence-to-audio repair plan displaced");
+}
+
 void testRealSpliceThreeSamplesAfterPrimer()
 {
     std::vector<Frame> signal(1400);
@@ -1000,6 +1013,7 @@ int main()
         testEarlyRealSpliceAfterSilentPrimer();
         testStaggeredStereoOnsetCannotStealSplice();
         testRealSpliceThreeSamplesAfterPrimer();
+        testRealSilenceToAudioAfterLongSilence();
         testInternalAudioToSilenceJoinStillQualifies();
         testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
