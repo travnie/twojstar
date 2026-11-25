@@ -1,6 +1,7 @@
 // TAR headers and slices. Inflate gzip containers within a separate byte budget.
 const TAR_BLOCK_BYTES = 512;
 const TAR_MAX_ENTRIES = 2000;
+const TAR_MAX_HEADERS = 2 * TAR_MAX_ENTRIES;
 const PAX_HEADER_LIMIT = 64 * 1024;
 const PAX_TOTAL_LIMIT = 2 * 1024 * 1024;
 const TAR_GZIP_LIMIT = 32 * 1024 * 1024;
@@ -68,7 +69,7 @@ function paxDecimal(bytes, limit, reason) {
   return value;
 }
 
-function readPaxFields(bytes, fields) {
+function readPaxFields(bytes, fields, globalHeader) {
   for (let offset = 0; offset < bytes.length;) {
     const space = bytes.indexOf(32, offset);
     if (space < 0) invalidTar("invalid PAX record length");
@@ -85,7 +86,10 @@ function readPaxFields(bytes, fields) {
       || (key === "SCHILY.filetype" && tarTextDecoder.decode(value) === "sparse")) {
       invalidTar("sparse PAX entries are unsupported");
     }
-    if (key === "path" || key === "size" || key === "hdrcharset") fields.set(key, value);
+    if (key === "path" || key === "size" || key === "hdrcharset") {
+      if (globalHeader && !value.length) fields.delete(key);
+      else fields.set(key, value);
+    }
     offset = end;
   }
 }
@@ -127,6 +131,7 @@ export async function readTarIndex(blob, isCurrent = () => true) {
   let paxBytes = 0;
   let offset = 0;
   let headerCount = 0;
+  let entryCount = 0;
   while (offset + TAR_BLOCK_BYTES <= blob.size) {
     const header = new Uint8Array(await blob.slice(offset, offset + TAR_BLOCK_BYTES).arrayBuffer());
     if (!isCurrent()) throw new DOMException("TAR indexing canceled.", "AbortError");
@@ -136,7 +141,7 @@ export async function readTarIndex(blob, isCurrent = () => true) {
       if (next.length !== TAR_BLOCK_BYTES || next.some((byte) => byte !== 0)) invalidTar("invalid end blocks");
       return { entries };
     }
-    if (++headerCount > TAR_MAX_ENTRIES) invalidTar("entry limit exceeded");
+    if (++headerCount > TAR_MAX_HEADERS) invalidTar("header limit exceeded");
 
     const marker = String.fromCharCode(...header.subarray(257, 265));
     const posix = marker === "ustar\x0000";
@@ -147,10 +152,13 @@ export async function readTarIndex(blob, isCurrent = () => true) {
     const kind = String.fromCharCode(header[156]);
     const pax = posix && (kind === "x" || kind === "g");
     if (!pax && !"\x0001234567".includes(kind)) invalidTar("extended, sparse or unknown entry type");
-    const paxSize = pax ? undefined : nextPax?.get("size") ?? globalPax.get("size");
-    const size = paxSize === undefined ? tarOctal(header.subarray(124, 136))
-      : paxDecimal(paxSize, Number.MAX_SAFE_INTEGER, "invalid PAX file size");
+    if (!pax && ++entryCount > TAR_MAX_ENTRIES) invalidTar("entry limit exceeded");
     const directory = kind === "5";
+    const paxSize = pax ? undefined : nextPax?.get("size") ?? globalPax.get("size");
+    // POSIX directory sizes do not describe stored payload blocks.
+    const size = posix && directory ? 0 : (paxSize?.length
+      ? paxDecimal(paxSize, Number.MAX_SAFE_INTEGER, "invalid PAX file size")
+      : tarOctal(header.subarray(124, 136)));
     const regular = kind === "0" || kind === "\x00";
     // PAX hard links can carry data. Skip it along with the link.
     const linkData = posix && kind === "1";
@@ -165,8 +173,9 @@ export async function readTarIndex(blob, isCurrent = () => true) {
       if (size > PAX_HEADER_LIMIT || paxBytes > PAX_TOTAL_LIMIT) invalidTar("PAX metadata limit exceeded");
       const data = new Uint8Array(await blob.slice(start, start + size).arrayBuffer());
       if (!isCurrent()) throw new DOMException("TAR indexing canceled.", "AbortError");
-      const fields = kind === "g" ? globalPax : (nextPax ??= new Map());
-      readPaxFields(data, fields);
+      const globalHeader = kind === "g";
+      const fields = globalHeader ? globalPax : (nextPax ??= new Map());
+      readPaxFields(data, fields, globalHeader);
       continue;
     }
 
