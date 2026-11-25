@@ -114,6 +114,7 @@ private:
     std::array<std::array<double, 16>, kMaxChannels> spectralRepair_{};
     std::array<double, kMaxChannels> transitionPeak_{};
     std::int64_t inputCount_{0};
+    std::int64_t firstProgramSample_{-1};
     double sampleRate_{48000.0};
     double strength_{1.0};
     double maxTransitionMilliseconds_{4.0};
