@@ -81,6 +81,36 @@ test("PAX applies path validation after overrides and consumes local headers on 
   assert.deepEqual(tree.list("docs").files.map(({ name }) => name), ["kept.txt"]);
 });
 
+test("PAX clears global values and falls back to the ustar size for empty local values", async () => {
+  const archive = new Blob([tarFixture(
+    tarRecord("GlobalHead", paxRecord("path", "global.txt") + paxRecord("size", "4"), { type: "g" }),
+    tarRecord("first.txt", "four"),
+    tarRecord("ExtendedHead", paxRecord("size", ""), { type: "x" }),
+    tarRecord("local.txt", "bb"),
+    tarRecord("GlobalHead", paxRecord("path", "") + paxRecord("size", ""), { type: "g" }),
+    tarRecord("restored.txt", "ccc"),
+    tarRecord("ExtendedHead", paxRecord("size", "0"), { type: "x" }),
+    tarRecord("empty.txt", "", { size: 512 }),
+  )]);
+  const { entries } = await readTarIndex(archive);
+  assert.deepEqual(entries.map(({ name, originalSize }) => [name, originalSize]),
+    [["global.txt", 4], ["global.txt", 2], ["restored.txt", 3], ["empty.txt", 0]]);
+  assert.equal(await archive.slice(entries[2].start, entries[2].start + entries[2].originalSize).text(), "ccc");
+});
+
+test("TAR directory size consumes no POSIX payload blocks", async () => {
+  const body = "a".repeat(779);
+  const archive = new Blob([tarFixture(
+    tarRecord("GlobalHead", paxRecord("size", body.length), { type: "g" }),
+    tarRecord("docs/", "", { size: 512, type: "5" }),
+    tarRecord("docs/file.txt", body, { size: 0 }),
+  )]);
+  const { entries: [directory, file] } = await readTarIndex(archive);
+  assert.equal(directory.originalSize, 0);
+  assert.equal(file.name, "docs/file.txt");
+  assert.equal(await archive.slice(file.start, file.start + file.originalSize).text(), body);
+});
+
 test("PAX rejects malformed, excessive and sparse metadata", async () => {
   const archive = (...records) => new Blob([tarFixture(...records)]);
   const extended = (data, type = "x") => tarRecord("ExtendedHead", data, { type });
@@ -113,6 +143,10 @@ test("TAR bounds the header count and stops reading stale archives", async () =>
   const archive = new Blob([tarFixture(...Array(2001).fill(empty))]);
   await assert.rejects(readTarIndex(archive), /entry limit exceeded/u);
   await assert.rejects(readTarIndex(archive, () => false), { name: "AbortError" });
+  const metadata = tarRecord("PaxHeader", paxRecord("mtime", "123.456"), { type: "x" });
+  const entries = Array.from({ length: 2000 }, (_, index) => [metadata, tarRecord(`file-${index}`)]);
+  assert.equal((await readTarIndex(new Blob([tarFixture(...entries.flat())]))).entries.length, 2000);
+  await assert.rejects(readTarIndex(new Blob([tarFixture(...entries.flat(), metadata)])), /header limit exceeded/u);
 });
 
 test("gzip TAR only returns after validating the complete stream", async () => {
