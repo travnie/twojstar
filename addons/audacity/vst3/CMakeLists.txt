@@ -87,6 +87,11 @@ if(BUILD_TESTING)
     target_link_libraries(SmartTransitionDspTests PRIVATE TravnySmartTransitionDsp)
     target_compile_features(SmartTransitionDspTests PRIVATE cxx_std_20)
     add_test(NAME SmartTransitionDspTests COMMAND SmartTransitionDspTests)
+
+    add_executable(SmartTransitionSelectionIsolationTests tests/SmartTransitionSelectionIsolationTests.cpp)
+    target_link_libraries(SmartTransitionSelectionIsolationTests PRIVATE TravnySmartTransitionDsp)
+    target_compile_features(SmartTransitionSelectionIsolationTests PRIVATE cxx_std_20)
+    add_test(NAME SmartTransitionSelectionIsolationTests COMMAND SmartTransitionSelectionIsolationTests)
 endif()
 
 set(VST3_SDK_ROOT "" CACHE PATH "Path to a local Steinberg VST3 SDK 3.8+ checkout")
