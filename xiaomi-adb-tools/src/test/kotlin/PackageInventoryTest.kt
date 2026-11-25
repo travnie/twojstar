@@ -29,6 +29,24 @@ class PackageInventoryTest {
     }
 
     @Test
+    fun retainsUninstalledLauncherClassification() {
+        val gallery = "com.vendor.gallery"
+        assertEquals(8704, LAUNCHER_QUERY_FLAGS)
+        val rows = packageInventory(setOf(gallery), emptySet(), emptySet(), emptySet(),
+            setOf(gallery), emptyMap(), emptySet())
+        assertEquals(PackageState.UNINSTALLED, rows.single().state)
+        assertTrue(rows.single().matches("", false))
+    }
+
+    @Test
+    fun selectionRequiresExactPackageGroup() {
+        val checked = setOf(packageGroupKey(listOf("a", "b")))
+        assertTrue(packageGroupKey(listOf("b", "a")) in checked)
+        assertFalse(packageGroupKey(listOf("a")) in checked)
+        assertFalse(packageGroupKey(listOf("a", "b", "c")) in checked)
+    }
+
+    @Test
     fun parsesOnlyPackageAndComponentLines() {
         assertEquals(setOf("android", "com.example.app"),
             parsePackages("package:android\nwarning: ignored\npackage:com.example.app\npackage:bad name\n"))

@@ -50,10 +50,10 @@ object AppManager {
                     potentialApps += entry
                     vettedApps += entry.first
                 }
+            this::class.java.classLoader.getResource("app-labels.yml")?.readText()?.lines()
+                ?.forEach { potentialApps += it.toAppEntry() }
+            customApps.forEachLine { potentialApps += it.toAppEntry() }
         }
-        this::class.java.classLoader.getResource("app-labels.yml")?.readText()?.lines()
-            ?.forEach { potentialApps += it.toAppEntry() }
-        customApps.forEachLine { potentialApps += it.toAppEntry() }
         potentialApps.remove("")
         vettedApps.remove("")
     }
@@ -77,7 +77,7 @@ object AppManager {
         val disabled = packageCommand("pm", "list", "packages", "-d", "--user", targetUser)
         val thirdParty = packageCommand("pm", "list", "packages", "-3", "-u", "--user", targetUser)
         val launcher = packageCommand("cmd", "package", "query-activities", "--components",
-            "--query-flags", "512", "--user", targetUser, "-a", "android.intent.action.MAIN",
+            "--query-flags", LAUNCHER_QUERY_FLAGS.toString(), "--user", targetUser, "-a", "android.intent.action.MAIN",
             "-c", "android.intent.category.LAUNCHER")
         val rows = if (all != null && installed != null && disabled != null) {
             packageInventory(parsePackages(all), parsePackages(installed), parsePackages(disabled),
@@ -98,15 +98,20 @@ object AppManager {
     fun filterTables(search: String, all: Boolean) {
         query = search.trim()
         showAll = all
-        renderTables()
+        renderTables(preserveSelection = true)
     }
 
-    private fun renderTables() {
+    private fun renderTables(preserveSelection: Boolean = false) {
         val visible = inventory.filter { it.matches(query, showAll) }
         fun update(table: TableView<App>, rows: List<PackageRow>) {
+            // Retain only identical visible groups in this table. Never select hidden or added packages.
+            val checked = if (preserveSelection) table.items.filter { it.selectedProperty().get() }
+                .map { packageGroupKey(it.packagenameProperty().get().lines()) }.toSet()
+            else emptySet()
             table.items.setAll(rows.groupBy { it.name }.toSortedMap()
                 .map { (name, packages) ->
-                    App(name, packages.map { it.pkg }.sorted(), isVetted = packages.all { it.vetted })
+                    val ids = packages.map { it.pkg }.sorted()
+                    App(name, ids, checked = packageGroupKey(ids) in checked, isVetted = packages.all { it.vetted })
                 })
             table.sort()
         }

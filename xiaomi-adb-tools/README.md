@@ -23,8 +23,10 @@ keep its MIT license. What changed since:
 - The build runs on a current JDK again — Gradle 9, Kotlin 2, JavaFX 21. Gradle 6.3 could
   not start on anything past JDK 20, which blocked every other change.
 - App Manager defaults to known packages, third-party apps and launcher apps. Search by
-  app or package name across the complete inventory; enable **Show all packages** to browse it.
+  catalogued name or package ID across the complete inventory; enable **Show all packages**
+  to browse it. Uncatalogued apps use their package ID, not their on-device label.
   `apps.yml` supplies legacy vetted names; `app-labels.yml` supplies names only.
+  Filters retain checkmarks only for unchanged, still-visible package groups.
 - The update check is gone. It asked the deleted upstream repository for its latest release
   on every launch, so it could only ever fail.
 - The `apps.yml` download from the deleted upstream repo is gone, so a run no longer waits

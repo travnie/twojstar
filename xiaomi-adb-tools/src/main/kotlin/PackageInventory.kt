@@ -1,3 +1,8 @@
+// PackageManager.MATCH_DISABLED_COMPONENTS | MATCH_UNINSTALLED_PACKAGES.
+const val LAUNCHER_QUERY_FLAGS = 512 or 8192
+
+fun packageGroupKey(packages: List<String>): Set<String> = packages.toSet()
+
 enum class PackageState { ENABLED, DISABLED, UNINSTALLED }
 
 data class PackageRow(
