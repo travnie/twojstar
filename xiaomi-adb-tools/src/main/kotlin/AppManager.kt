@@ -26,6 +26,9 @@ object AppManager {
     // Packages the curated list vouches for. Everything else comes straight off the device and
     // has never been checked by anyone, which is what the Vetted column in the tables says.
     private val vettedApps = mutableSetOf<String>()
+    private var inventory = emptyList<PackageRow>()
+    private var query = ""
+    private var showAll = false
 
     init {
         if (!customApps.exists())
@@ -48,6 +51,8 @@ object AppManager {
                     vettedApps += entry.first
                 }
         }
+        this::class.java.classLoader.getResource("app-labels.yml")?.readText()?.lines()
+            ?.forEach { potentialApps += it.toAppEntry() }
         customApps.forEachLine { potentialApps += it.toAppEntry() }
         potentialApps.remove("")
         vettedApps.remove("")
@@ -59,57 +64,56 @@ object AppManager {
         return pkg to if (app.size == 2 && app[1].isNotBlank()) app[1].trim() else pkg
     }
 
+    private suspend fun packageCommand(vararg args: String): String? = withContext(Dispatchers.IO) {
+        val process = startProcess(listOf("${prefix}adb", "shell") + args, true)
+        val output = process.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        output.takeIf { process.waitFor() == 0 }
+    }
+
     suspend fun createTables() {
-        val uninstallApps = mutableMapOf<String, MutableList<String>>()
-        val reinstallApps = mutableMapOf<String, MutableList<String>>()
-        val disableApps = mutableMapOf<String, MutableList<String>>()
-        val enableApps = mutableMapOf<String, MutableList<String>>()
-        val deviceApps = mutableMapOf<String, String>()
-        Command.exec(mutableListOf("adb", "shell", "pm", "list", "packages", "-u", "--user", user)).trim().lines()
-            .filter { it.isNotBlank() }
-            .forEach {
-                deviceApps[it.substringAfter(':').trim()] = "uninstalled"
-            }
-        Command.exec(mutableListOf("adb", "shell", "pm", "list", "packages", "-d", "--user", user)).trim().lines()
-            .filter { it.isNotBlank() }
-            .forEach {
-                deviceApps[it.substringAfter(':').trim()] = "disabled"
-            }
-        Command.exec(mutableListOf("adb", "shell", "pm", "list", "packages", "-e", "--user", user)).trim().lines()
-            .filter { it.isNotBlank() }
-            .forEach {
-                deviceApps[it.substringAfter(':').trim()] = "enabled"
-            }
-        // Walk what the device actually has, not just the curated list: apps.yml is a source
-        // of readable names, and anything missing from it shows up under its package name.
-        deviceApps.forEach { (pkg, state) ->
-            val name = potentialApps[pkg] ?: pkg
-            when (state) {
-                "disabled" -> {
-                    uninstallApps.add(name, pkg)
-                    enableApps.add(name, pkg)
-                }
-                "enabled" -> {
-                    uninstallApps.add(name, pkg)
-                    disableApps.add(name, pkg)
-                }
-                "uninstalled" -> reinstallApps.add(name, pkg)
-            }
-        }
+        val targetUser = user
+        val all = packageCommand("pm", "list", "packages", "-u", "--user", targetUser)
+        val installed = packageCommand("pm", "list", "packages", "--user", targetUser)
+        val disabled = packageCommand("pm", "list", "packages", "-d", "--user", targetUser)
+        val thirdParty = packageCommand("pm", "list", "packages", "-3", "-u", "--user", targetUser)
+        val launcher = packageCommand("cmd", "package", "query-activities", "--components",
+            "--query-flags", "512", "--user", targetUser, "-a", "android.intent.action.MAIN",
+            "-c", "android.intent.category.LAUNCHER")
+        val rows = if (all != null && installed != null && disabled != null) {
+            packageInventory(parsePackages(all), parsePackages(installed), parsePackages(disabled),
+                parsePackages(thirdParty.orEmpty()), parseLauncherPackages(launcher.orEmpty()),
+                potentialApps.toMap(), vettedApps.toSet())
+        } else emptyList()
         withContext(Dispatchers.Main) {
-            uninstallerTableView.items.setAll(uninstallApps.toSortedMap()
-                .map { App(it.key, it.value, isVetted = it.value.all(vettedApps::contains)) })
-            reinstallerTableView.items.setAll(reinstallApps.toSortedMap()
-                .map { App(it.key, it.value, isVetted = it.value.all(vettedApps::contains)) })
-            disablerTableView.items.setAll(disableApps.toSortedMap()
-                .map { App(it.key, it.value, isVetted = it.value.all(vettedApps::contains)) })
-            enablerTableView.items.setAll(enableApps.toSortedMap()
-                .map { App(it.key, it.value, isVetted = it.value.all(vettedApps::contains)) })
-            uninstallerTableView.refresh()
-            reinstallerTableView.refresh()
-            disablerTableView.refresh()
-            enablerTableView.refresh()
+            if (user != targetUser) return@withContext
+            inventory = rows
+            if (all == null || installed == null || disabled == null)
+                outputTextArea.appendText("\nERROR: Could not read package inventory for user $targetUser.\n")
+            else if (thirdParty == null || launcher == null)
+                outputTextArea.appendText("\nSome app filters are unavailable on this device. Use Show all packages to see every package.\n")
+            renderTables()
         }
+    }
+
+    fun filterTables(search: String, all: Boolean) {
+        query = search.trim()
+        showAll = all
+        renderTables()
+    }
+
+    private fun renderTables() {
+        val visible = inventory.filter { it.matches(query, showAll) }
+        fun update(table: TableView<App>, rows: List<PackageRow>) {
+            table.items.setAll(rows.groupBy { it.name }.toSortedMap()
+                .map { (name, packages) ->
+                    App(name, packages.map { it.pkg }.sorted(), isVetted = packages.all { it.vetted })
+                })
+            table.sort()
+        }
+        update(uninstallerTableView, visible.filter { it.state != PackageState.UNINSTALLED })
+        update(reinstallerTableView, visible.filter { it.state == PackageState.UNINSTALLED })
+        update(disablerTableView, visible.filter { it.state == PackageState.ENABLED })
+        update(enablerTableView, visible.filter { it.state == PackageState.DISABLED })
     }
 
     suspend fun uninstall(selected: ObservableList<App>, n: Int) {

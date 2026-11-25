@@ -120,7 +120,12 @@
                                     <RowConstraints />
                                  </rowConstraints>
                                  <children>
-                                    <TabPane fx:id="appManagerPane" disable="true" GridPane.rowSpan="4">
+                                    <VBox spacing="5.0" GridPane.rowSpan="4">
+                                       <HBox fx:id="appFilterBar" alignment="CENTER_LEFT" spacing="8.0">
+                                          <TextField fx:id="appSearch" promptText="Search all apps or package names" HBox.hgrow="ALWAYS" />
+                                          <CheckBox fx:id="showAllPackages" mnemonicParsing="false" text="Show all packages" />
+                                       </HBox>
+                                       <TabPane fx:id="appManagerPane" disable="true" VBox.vgrow="ALWAYS">
                                        <tabs>
                                           <Tab fx:id="uninstallerTab" closable="false" text="Uninstaller">
                                              <content>
@@ -253,7 +258,8 @@
                                              </content>
                                           </Tab>
                                        </tabs>
-                                    </TabPane>
+                                       </TabPane>
+                                    </VBox>
                                     <FlowPane alignment="TOP_RIGHT" columnHalignment="CENTER" vgap="10.0" GridPane.columnIndex="1">
                                        <children>
                                           <TitledPane fx:id="camera2Pane" animated="false" collapsible="false" disable="true" prefWidth="220.0" text="Camera2 (TWRP)">
