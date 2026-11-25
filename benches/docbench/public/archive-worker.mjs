@@ -1,7 +1,10 @@
 import init, { Archive } from "./vendor/exav/pkg/exav_unpack_wasm.js";
 import { WASM_ARCHIVE_LIMITS } from "./archive-engine.mjs";
 
-self.onmessage = async ({ data: { file, operation, index, password } }) => {
+self.onmessage = async (event) => {
+  // Dedicated worker: empty origin is normal for its owning page.
+  if (event.origin !== "" && event.origin !== self.location.origin) return;
+  const { file, operation, index, password } = event.data ?? {};
   let archive;
   try {
     if (!(file instanceof Blob) || file.size > WASM_ARCHIVE_LIMITS.maxInputBytes) throw new Error("Archive input limit exceeded.");
@@ -23,7 +26,7 @@ self.onmessage = async ({ data: { file, operation, index, password } }) => {
       const value = archive.extractAll(passwords);
       self.postMessage({ ok: true, value }, [...new Set(value.map((entry) => entry.data.buffer))]);
     } else throw new Error("Unsupported archive operation.");
-  } catch (error) {
+  } catch {
     self.postMessage({ ok: false, error: "Archive unreadable. Check format, password and size limits." });
   } finally {
     archive?.free();
