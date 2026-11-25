@@ -98,7 +98,7 @@ int main()
 
         // Differential diagnostic: some hosts may deliver a zero-filled
         // processing pre-roll before the actual selected samples.
-        for (int prefix : {0, 48, 256, 4800})
+        for (int prefix : {0, 48, 64, 128, 256, 4800})
         {
             const auto padded = processSelection(source, prefix, {13, 57, 512});
             double maxStartChange = 0.0;
@@ -116,9 +116,11 @@ int main()
                       << " expected=" << expected
                       << " start_delta=" << maxStartChange
                       << " seam_delta=" << maxSeamChange << '\n';
-            if (prefix == 0)
-                require(padded.audio == plain.audio,
-                    "Chunking changed unpadded selection");
+            require(padded.anchor >= expected - 8 &&
+                        padded.anchor <= expected + 8,
+                    "Priming silence stole the real splice candidate");
+            require(padded.audio == plain.audio,
+                    "Priming silence changed compensated selection output");
         }
         std::cout << "Smart Transition selection isolation passed\n";
         return 0;
