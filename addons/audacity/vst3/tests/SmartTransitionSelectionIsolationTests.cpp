@@ -51,8 +51,10 @@ Result processSelection(const std::vector<Frame>& source,
     std::size_t index = 0;
     while (position < input.size())
     {
-        const auto count = std::min(input.size() - position,
+        auto count = std::min(input.size() - position,
             chunks[index++ % chunks.size()]);
+        if (prefixSilence > 0 && position < static_cast<std::size_t>(prefixSilence))
+            count = std::min(count, static_cast<std::size_t>(prefixSilence) - position);
         if (count == 0) throw std::runtime_error("Invalid chunk");
         for (std::size_t j = 0; j < count; ++j)
         {
