@@ -112,6 +112,18 @@ std::int64_t globalAnchor(const RenderResult& result)
     return result.planWindowStart + result.plan.seamAnchorSamples;
 }
 
+void testInternalAudioToSilenceJoinStillQualifies()
+{
+    std::vector<Frame> signal(1400);
+    for (std::size_t i = 0; i < signal.size(); ++i)
+        signal[i] = i < 500 ? Frame{0.35, -0.24} : Frame{0.0, 0.0};
+
+    const auto result = render(signal, 2, {13, 41, 67});
+    require(result.hasPlan, "In-selection audio-to-silence cut rejected");
+    require(std::abs(globalAnchor(result) - 500) <= 8,
+        "In-selection silence cut moved away from edit");
+}
+
 void testHardPannedStereoJoinStillQualifies()
 {
     // Both sides carry sound, but never in the same channel.
@@ -931,6 +943,7 @@ int main()
 {
     try
     {
+        testInternalAudioToSilenceJoinStillQualifies();
         testHardPannedStereoJoinStillQualifies();
         testConservativeSpectralRepair();
         testCleanAudioIsBitTransparent();
