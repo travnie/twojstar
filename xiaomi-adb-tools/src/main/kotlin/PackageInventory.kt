@@ -54,3 +54,22 @@ fun packageInventory(
         defaultVisible = pkg in labels || pkg in thirdParty || pkg in launcher
     )
 }
+
+data class PackageGroup(
+    val name: String,
+    val packages: List<String>,
+    val checked: Boolean,
+    val vetted: Boolean
+)
+
+fun visiblePackageGroups(
+    rows: List<PackageRow>,
+    query: String,
+    showAll: Boolean,
+    checked: Set<Set<String>>
+): List<PackageGroup> = rows.filter { it.matches(query, showAll) }
+    .groupBy { it.name }.toSortedMap()
+    .map { (name, packages) ->
+        val ids = packages.map { it.pkg }.sorted()
+        PackageGroup(name, ids, packageGroupKey(ids) in checked, packages.all { it.vetted })
+    }

@@ -39,11 +39,30 @@ class PackageInventoryTest {
     }
 
     @Test
-    fun selectionRequiresExactPackageGroup() {
-        val checked = setOf(packageGroupKey(listOf("a", "b")))
-        assertTrue(packageGroupKey(listOf("b", "a")) in checked)
-        assertFalse(packageGroupKey(listOf("a")) in checked)
-        assertFalse(packageGroupKey(listOf("a", "b", "c")) in checked)
+    fun selectionRequiresExactVisiblePackageGroup() {
+        val rows = listOf(
+            PackageRow("org.example.a", "Example", PackageState.ENABLED, true, true),
+            PackageRow("org.example.b", "Example", PackageState.ENABLED, true, true),
+            PackageRow("org.example.c", "Other", PackageState.ENABLED, false, false)
+        )
+        fun checkedGroups(groups: List<PackageGroup>) =
+            groups.filter { it.checked }.map { packageGroupKey(it.packages) }.toSet()
+
+        val initial = setOf(packageGroupKey(listOf("org.example.a", "org.example.b")))
+        val unchanged = visiblePackageGroups(rows, "Example", false, initial)
+        assertEquals(initial, checkedGroups(unchanged))
+        val narrowed = visiblePackageGroups(rows, "org.example.a", false, initial)
+        assertEquals(listOf("org.example.a"), narrowed.single().packages)
+        assertFalse(narrowed.single().checked)
+
+        val selectedNarrow = setOf(packageGroupKey(narrowed.single().packages))
+        val expanded = visiblePackageGroups(rows, "", true, selectedNarrow)
+        assertEquals(2, expanded.size)
+        assertTrue(expanded.none { it.checked })
+        val hidden = visiblePackageGroups(rows, "Other", false, initial)
+        assertFalse(hidden.single().checked)
+        val restored = visiblePackageGroups(rows, "", false, checkedGroups(hidden))
+        assertTrue(restored.none { it.checked })
     }
 
     @Test

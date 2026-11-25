@@ -102,23 +102,20 @@ object AppManager {
     }
 
     private fun renderTables(preserveSelection: Boolean = false) {
-        val visible = inventory.filter { it.matches(query, showAll) }
         fun update(table: TableView<App>, rows: List<PackageRow>) {
             // Retain only identical visible groups in this table. Never select hidden or added packages.
             val checked = if (preserveSelection) table.items.filter { it.selectedProperty().get() }
                 .map { packageGroupKey(it.packagenameProperty().get().lines()) }.toSet()
             else emptySet()
-            table.items.setAll(rows.groupBy { it.name }.toSortedMap()
-                .map { (name, packages) ->
-                    val ids = packages.map { it.pkg }.sorted()
-                    App(name, ids, checked = packageGroupKey(ids) in checked, isVetted = packages.all { it.vetted })
-                })
+            table.items.setAll(visiblePackageGroups(rows, query, showAll, checked).map {
+                App(it.name, it.packages, checked = it.checked, isVetted = it.vetted)
+            })
             table.sort()
         }
-        update(uninstallerTableView, visible.filter { it.state != PackageState.UNINSTALLED })
-        update(reinstallerTableView, visible.filter { it.state == PackageState.UNINSTALLED })
-        update(disablerTableView, visible.filter { it.state == PackageState.ENABLED })
-        update(enablerTableView, visible.filter { it.state == PackageState.DISABLED })
+        update(uninstallerTableView, inventory.filter { it.state != PackageState.UNINSTALLED })
+        update(reinstallerTableView, inventory.filter { it.state == PackageState.UNINSTALLED })
+        update(disablerTableView, inventory.filter { it.state == PackageState.ENABLED })
+        update(enablerTableView, inventory.filter { it.state == PackageState.DISABLED })
     }
 
     suspend fun uninstall(selected: ObservableList<App>, n: Int) {
