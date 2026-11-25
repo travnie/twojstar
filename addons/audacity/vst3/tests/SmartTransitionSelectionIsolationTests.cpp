@@ -61,6 +61,10 @@ Result processSelection(const std::vector<Frame>& source,
             raw.push_back(output);
         }
         position += count;
+        if (prefixSilence > 0 &&
+            position >= static_cast<std::size_t>(prefixSilence) &&
+            position - count < static_cast<std::size_t>(prefixSilence))
+            dsp.markHostPrimer(prefixSilence);
     }
     for (std::size_t i = 0; i < dsp.latencySamples(); ++i)
     {
