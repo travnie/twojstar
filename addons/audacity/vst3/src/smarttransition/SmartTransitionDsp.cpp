@@ -200,6 +200,8 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
 
     double strongestScore = 0.0;
     std::size_t affectedChannels = 0;
+    bool leftSignalPresent = false;
+    bool rightSignalPresent = false;
     for (std::size_t channel = 0; channel < channels; ++channel)
     {
         double leftSum = 0.0;
@@ -221,12 +223,11 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
         const auto leftRms = std::sqrt(leftSquares / static_cast<double>(radius));
         const auto rightRms = std::sqrt(rightSquares / static_cast<double>(radius));
 
-        // Audacity may prime VST3 processors with a silent block before the
-        // actual selection. Its transition into program audio is not a splice.
-        // Conservatively ignore candidates without real signal on both sides.
-        // This also leaves genuine silence-to-audio onsets untouched.
-        if (leftRms <= 1e-8 || rightRms <= 1e-8)
-            continue;
+        // Audacity may prime the processor with silence before a selection.
+        // Detect absent program audio across the whole bus, not per channel:
+        // a real hard-left -> hard-right join must remain eligible.
+        leftSignalPresent |= leftRms > 1e-8;
+        rightSignalPresent |= rightRms > 1e-8;
 
         double derivativeSum = 0.0;
         std::int64_t derivativeCount = 0;
@@ -283,7 +284,8 @@ SmartTransitionDsp::Candidate SmartTransitionDsp::scoreCandidate(
 
     candidate.scoreKey = static_cast<std::int64_t>(std::llround(score * static_cast<double>(kScoreScale)));
     candidate.confidence = static_cast<double>(candidate.scoreKey) / static_cast<double>(kScoreScale);
-    candidate.valid = candidate.confidence >= kCandidateThreshold && candidate.affectedChannelsMask != 0;
+    candidate.valid = candidate.confidence >= kCandidateThreshold &&
+        candidate.affectedChannelsMask != 0 && leftSignalPresent && rightSignalPresent;
     return candidate;
 }
 
