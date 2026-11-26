@@ -65,9 +65,16 @@ class AppBindingTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         PACK["stage"](source, Path(tmp), **kwargs)
 
+    def test_other_documented_id_prefixes(self):
+        for ident in ("connector_abc123", "templated_apps_A-b_1"):
+            with self.subTest(ident=ident), tempfile.TemporaryDirectory() as tmp:
+                PACK["stage"](ROOT / "plugins/google", Path(tmp), app_bindings={"google-compute": ident})
+                apps = json.loads((Path(tmp) / ".app.json").read_text())["apps"]
+                self.assertEqual(apps, {"google-compute": {"id": ident}})
+
     def test_invalid_ids_fail_closed(self):
         source = ROOT / "plugins/cloudflare"
-        for ident in ("", "bogus", "plugin_asdk_app_unsafe", "plugin_asdk_app_" + "A" * 32):
+        for ident in ("", "bogus", "plugin_asdk_app_unsafe", "plugin_asdk_app_" + "A" * 32, "connector_", "templated_apps_a b"):
             with self.subTest(ident=ident), tempfile.TemporaryDirectory() as tmp:
                 dest = Path(tmp) / "staged"
                 dest.mkdir()

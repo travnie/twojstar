@@ -146,6 +146,10 @@ def validate(root: Path) -> tuple[dict, dict | None]:
     return manifest, mcp
 
 
+# asdk_app stays strict (typo guard); the other two documented prefixes have no fixed length.
+APP_ID = re.compile(r"(?:plugin_)?(?:asdk_app_[0-9a-f]{32}|(?:connector|templated_apps)_[A-Za-z0-9][A-Za-z0-9_-]*)")
+
+
 def stage(
     source: Path,
     target: Path,
@@ -199,8 +203,8 @@ def stage(
         for alias, ident in app_bindings.items():
             if alias not in declared:
                 raise ValueError(f"no declared MCP server named {alias}")
-            if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", ident):
-                raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
+            if not APP_ID.fullmatch(ident):
+                raise ValueError("app ID must be an existing asdk_app, connector or templated_apps connection ID")
         apps = {alias: {"id": ident.removeprefix("plugin_")} for alias, ident in app_bindings.items()}
         if len({app["id"] for app in apps.values()}) != len(apps):
             raise ValueError("distinct MCP aliases need distinct registered Apps")
