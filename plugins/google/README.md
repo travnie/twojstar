@@ -1,4 +1,4 @@
-# Android & Chrome (Google Dev) plugin
+# Google Dev plugin
 
 <img src="assets/icon.svg" width="96" alt="Google Dev">
 
@@ -9,15 +9,20 @@ Google developer platforms with live docs. Replaces the `android` plugin (uninst
 | Component | What it does |
 |---|---|
 | MCP `google-developer` | `https://developerknowledge.googleapis.com/mcp` — `search_documents`, `get_documents`, `answer_query` over developer.android.com, developer.chrome.com, web.dev, Firebase, Google Cloud, ai.google.dev, Flutter/Dart, Go, Maps, Workspace |
+| MCP `google-cloud-cli` | `https://cloudcli.googleapis.com/mcp` (preview) — `run_gcloud_command`, `run_bq_command` |
+| MCP `google-cloud-storage` | `https://storage.googleapis.com/storage/mcp` — buckets and objects |
+| MCP `google-compute` | `https://compute.googleapis.com/mcp` — VMs, disks, snapshots |
+| MCP `google-monitoring` | `https://monitoring.googleapis.com/mcp` — time series, alerts, dashboards (read-only) |
+| Skill `google-cloud-mcp` | Tool choice, project handling and confirmation rules for the four Cloud servers. [Connecting them](skills/google-cloud-mcp/references/connection.md) needs your own Google OAuth client |
 | Skill `android-compose` | Recon-first Android/Kotlin/Compose: architecture, Gradle/AGP 9, Nav 3, testing, Compose performance, ANRs, R8, security, identity, widgets, Media3/Cast, on-device AI. Builds through CI |
 | Skill `chrome-web` | Manifest V3 extensions (runtime traps, permissions, side panel, userScripts), Chrome Web Store publishing, Baseline-aware web platform APIs. `scripts/check_mv3.py` static check + headless Chromium load test |
 | Skill `google-developer-knowledge` | Focused document retrieval, OAuth/REST fallback, and on-demand upstream skill discovery |
 
-Cloud operations, gcloud, Storage, and Gemini implementation → [Google Dev Kit](../google-dev-kit/README.md). If not installed, use the relevant live upstream skill via `google-developer-knowledge`; no duplicated Cloud workflows here.
+Gemini implementation and deeper Cloud workflows → [Google Dev Kit](../google-dev-kit/README.md). If not installed, use the relevant live upstream skill via `google-developer-knowledge`.
 
 ## Surfaces
 
-- **claude.ai chat / Cowork:** skills + the remote MCP. Use Playwright Chromium for extension load tests when available.
+- **claude.ai chat / Cowork:** skills + the remote MCPs (each connected separately). Use Playwright Chromium for extension load tests when available.
 - **Claude Code / Codex:** same, plus `npx modern-web-guidance@latest` for Google's curated web guides. Google recommends an API key in the `X-Goog-Api-Key` header for the MCP — set it in the client's MCP config, never in this plugin.
 
 ## Upstream

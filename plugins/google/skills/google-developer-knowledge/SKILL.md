@@ -10,7 +10,7 @@ license: Apache-2.0
 - Exact APIs, flags, errors and IAM: search with 2–5 focused keywords, then fetch relevant documents using returned parent names unchanged. Conceptual synthesis: `answer_query`; on 429 use search. Cite returned official URIs, not the synthesis alone for exact syntax.
 - Empty/error/401/403 results are failed lookups. Do not confuse quota with OAuth. See [connection and REST fallback](references/connection.md).
 - Verify against resolved dependency versions; current docs do not prove an older project supports an API. Documentation tools cannot execute cloud, CLI or device operations.
-- Android → `android-compose`; Chrome/web → `chrome-web`. Cloud/Gemini/gcloud/Storage operations → Google Dev Kit if available. Otherwise discover the specific upstream recipe.
+- Android → `android-compose`; Chrome/web → `chrome-web`. Cloud resource operations → `google-cloud-mcp`. Gemini and deeper Cloud implementation → Google Dev Kit if available. Otherwise discover the specific upstream recipe.
 
 ## Uncovered Google workflows
 

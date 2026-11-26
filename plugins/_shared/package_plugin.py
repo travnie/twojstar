@@ -146,7 +146,13 @@ def validate(root: Path) -> tuple[dict, dict | None]:
     return manifest, mcp
 
 
-def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict[str, str] | None = None) -> None:
+def stage(
+    source: Path,
+    target: Path,
+    app_id: str | None = None,
+    extra_mcp: dict[str, str] | None = None,
+    app_bindings: dict[str, str] | None = None,
+) -> None:
     source = source.resolve()
     for path in sorted(source.rglob("*")):
         rel = path.relative_to(source)
@@ -183,17 +189,24 @@ def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict
             data["mcpServers"] = {name: {"type": "http", "url": server["url"]} for name, server in mcp["mcpServers"].items()}
             claude.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if app_id is not None:
-        if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", app_id):
-            raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
+        if app_bindings:
+            raise ValueError("use either --app-id or --app-binding")
         if mcp is None or len(mcp["mcpServers"]) != 1:
             raise ValueError("the --app-id shortcut requires exactly one declared MCP server")
-        alias = next(iter(mcp["mcpServers"]))
+        app_bindings = {next(iter(mcp["mcpServers"])): app_id}
+    if app_bindings:
+        declared = mcp["mcpServers"] if mcp is not None else {}
+        for alias, ident in app_bindings.items():
+            if alias not in declared:
+                raise ValueError(f"no declared MCP server named {alias}")
+            if not re.fullmatch(r"(?:plugin_)?asdk_app_[0-9a-f]{32}", ident):
+                raise ValueError("app ID must be an existing asdk_app or plugin_asdk_app connection ID")
+        apps = {alias: {"id": ident.removeprefix("plugin_")} for alias, ident in app_bindings.items()}
+        if len({app["id"] for app in apps.values()}) != len(apps):
+            raise ValueError("distinct MCP aliases need distinct registered Apps")
         manifest["extensions"]["com.openai"]["apps"] = "./.app.json"
         (target / "plugin.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-        (target / ".app.json").write_text(
-            json.dumps({"apps": {alias: {"id": app_id.removeprefix("plugin_")}}}, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        (target / ".app.json").write_text(json.dumps({"apps": apps}, indent=2) + "\n", encoding="utf-8")
     overlay = {key: value for key, value in manifest.items() if key not in {"$schema", "extensions", "icon"}}
     overlay.update(manifest["extensions"]["com.openai"])
     overlay.update(skills="./skills/")
@@ -206,7 +219,13 @@ def stage(source: Path, target: Path, app_id: str | None = None, extra_mcp: dict
         (target / ".mcp.json").write_text(json.dumps(legacy, indent=2) + "\n", encoding="utf-8")
 
 
-def package(source: Path, output: Path, app_id: str | None = None, extra_mcp: dict[str, str] | None = None) -> dict:
+def package(
+    source: Path,
+    output: Path,
+    app_id: str | None = None,
+    extra_mcp: dict[str, str] | None = None,
+    app_bindings: dict[str, str] | None = None,
+) -> dict:
     source = source.resolve()
     output = output.resolve()
     if output == source or output.is_relative_to(source):
@@ -215,7 +234,7 @@ def package(source: Path, output: Path, app_id: str | None = None, extra_mcp: di
     with tempfile.TemporaryDirectory() as directory:
         staged = Path(directory) / source.name
         staged.mkdir()
-        stage(source, staged, app_id, extra_mcp)
+        stage(source, staged, app_id, extra_mcp, app_bindings)
         temp = output.with_suffix(output.suffix + ".tmp")
         try:
             with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -255,6 +274,13 @@ if __name__ == "__main__":
         help="Existing registered MCP app connection-page ID; adds an optional private binding",
     )
     parser.add_argument(
+        "--app-binding",
+        action="append",
+        default=[],
+        metavar="MCP_ALIAS=REGISTERED_APP_ID",
+        help="Private builds only: bind one registered app per declared MCP server (repeatable)",
+    )
+    parser.add_argument(
         "--extra-mcp",
         action="append",
         default=[],
@@ -262,6 +288,12 @@ if __name__ == "__main__":
         help="Private builds only: add a personal remote MCP server (repeatable)",
     )
     args = parser.parse_args()
+    bindings: dict[str, str] = {}
+    for item in args.app_binding:
+        alias, separator, ident = item.partition("=")
+        if not separator or not alias or alias in bindings:
+            parser.error("--app-binding needs unique MCP_ALIAS=REGISTERED_APP_ID values")
+        bindings[alias] = ident
     extra: dict[str, str] = {}
     for item in args.extra_mcp:
         name, separator, url = item.partition("=")
@@ -269,7 +301,7 @@ if __name__ == "__main__":
             parser.error("--extra-mcp needs unique NAME=URL values")
         extra[name] = url
     try:
-        result = package(args.source, args.output, args.app_id, extra)
+        result = package(args.source, args.output, args.app_id, extra, bindings)
     except ValueError as error:
         parser.error(str(error))
     print(json.dumps(result, indent=2))

@@ -26,4 +26,6 @@ Live source of the web-platform guides: `npx modern-web-guidance@latest` (not bu
 
 ## Remote MCP servers
 
-Referenced by URL in `mcp.json`, not redistributed: `google-developer` (https://developerknowledge.googleapis.com/mcp).
+Referenced by URL in `mcp.json`, not redistributed: `google-developer` (https://developerknowledge.googleapis.com/mcp), `google-cloud-cli` (https://cloudcli.googleapis.com/mcp), `google-cloud-storage` (https://storage.googleapis.com/storage/mcp), `google-compute` (https://compute.googleapis.com/mcp), `google-monitoring` (https://monitoring.googleapis.com/mcp).
+
+`google-cloud-mcp` is original to this plugin.
