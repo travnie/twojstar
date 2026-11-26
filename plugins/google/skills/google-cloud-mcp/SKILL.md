@@ -20,8 +20,8 @@ license: Apache-2.0
 
 ## Rules
 
-- Never guess the project. Ask or list, and name it in the reply. Cloud CLI's `project` argument is only the execution project; the command needs its own scope: `--project=ID` for project resources, `--billing-project=ID` (not `--project`) for folder or organization commands; bq: `--project_id=ID`.
-- Cloud CLI syntax: long flags as `--flag=value`; `gcloud logging read` always with `--limit`; `--async` for long operations.
+- Never guess the project. Ask or list, and name it in the reply. Cloud CLI's `project` argument is only the execution project; the command needs its own scope: `--project=ID` for project resources, `--billing-project=ID` (not `--project`) for folder or organization commands; bq: `--project_id=ID`. `--billing-project` only sets quota/billing: the target still comes from the command (e.g. `gcloud logging read` needs `--folder=ID` or `--organization=ID`).
+- Cloud CLI syntax: long flags as `--flag=value`; `gcloud logging read` always with `--limit`. Long operations: `--async` where the `gcloud` command supports it, `--nosync` for `bq` jobs.
 - Cloud CLI forbids some command groups, including `auth`, `billing`, `config`, `init`, `components`, `docker`, `app deploy` and `app instances ssh` ([tool contract](https://docs.cloud.google.com/sdk/reference/mcp/tools_list/run_gcloud_command)). So these servers cannot answer billing-account or billing-link questions: say so. It is not a shell on a VM: do not promise SSH or file access inside an instance.
 - Read first. Before anything that creates, changes, deletes, overwrites, stops or resets, or that can cost money (new resources, machine type, egress), state the exact target and effect and get confirmation. Server annotations are not the whole risk: `run_gcloud_command` can do anything the signed-in account can.
 - `write_text` overwrites objects: read metadata first.
