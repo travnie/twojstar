@@ -4,6 +4,22 @@
     "google-developer": {
       "type": "streamable-http",
       "url": "https://developerknowledge.googleapis.com/mcp"
+    },
+    "google-cloud-cli": {
+      "type": "streamable-http",
+      "url": "https://cloudcli.googleapis.com/mcp"
+    },
+    "google-cloud-storage": {
+      "type": "streamable-http",
+      "url": "https://storage.googleapis.com/storage/mcp"
+    },
+    "google-compute": {
+      "type": "streamable-http",
+      "url": "https://compute.googleapis.com/mcp"
+    },
+    "google-monitoring": {
+      "type": "streamable-http",
+      "url": "https://monitoring.googleapis.com/mcp"
     }
   }
 }

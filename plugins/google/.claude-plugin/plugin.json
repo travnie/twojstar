@@ -1,7 +1,7 @@
 {
   "name": "google",
-  "version": "2.2.1",
-  "description": "Android, Chrome and web development with Google Developer Knowledge MCP: android-compose (Kotlin, Compose, Gradle, navigation, performance, testing), chrome-web (MV3, Web Store, Baseline) and google-developer-knowledge (live docs, skill discovery and auth troubleshooting).",
+  "version": "2.3.0",
+  "description": "Google development and Cloud operations: android-compose, chrome-web and google-developer-knowledge (live docs), plus google-cloud-mcp over Google remote MCP servers (Cloud CLI, Cloud Storage, Compute Engine, Monitoring) for hosts without a local gcloud.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
@@ -18,7 +18,11 @@
     "manifest-v3",
     "web-platform",
     "baseline",
-    "mcp"
+    "mcp",
+    "google-cloud",
+    "gcloud",
+    "cloud-storage",
+    "compute-engine"
   ],
   "icon": "./assets/icon.png",
   "documentationUrl": "https://github.com/travnie/twojstar/tree/main/plugins/google",
@@ -29,6 +33,22 @@
     "google-developer": {
       "type": "http",
       "url": "https://developerknowledge.googleapis.com/mcp"
+    },
+    "google-cloud-cli": {
+      "type": "http",
+      "url": "https://cloudcli.googleapis.com/mcp"
+    },
+    "google-cloud-storage": {
+      "type": "http",
+      "url": "https://storage.googleapis.com/storage/mcp"
+    },
+    "google-compute": {
+      "type": "http",
+      "url": "https://compute.googleapis.com/mcp"
+    },
+    "google-monitoring": {
+      "type": "http",
+      "url": "https://monitoring.googleapis.com/mcp"
     }
   }
 }

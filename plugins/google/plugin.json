@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "google",
-  "version": "2.2.1",
-  "description": "Android, Chrome and web development with Google Developer Knowledge MCP: android-compose (Kotlin, Compose, Gradle, navigation, performance, testing), chrome-web (MV3, Web Store, Baseline) and google-developer-knowledge (live docs, skill discovery and auth troubleshooting).",
+  "version": "2.3.0",
+  "description": "Google development and Cloud operations: android-compose, chrome-web and google-developer-knowledge (live docs), plus google-cloud-mcp over Google remote MCP servers (Cloud CLI, Cloud Storage, Compute Engine, Monitoring) for hosts without a local gcloud.",
   "author": {
     "name": "travnie",
     "url": "https://github.com/travnie"
@@ -20,19 +20,24 @@
     "manifest-v3",
     "web-platform",
     "baseline",
-    "mcp"
+    "mcp",
+    "google-cloud",
+    "gcloud",
+    "cloud-storage",
+    "compute-engine"
   ],
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Android & Chrome",
-        "shortDescription": "Android, Chrome & web docs",
-        "longDescription": "Android/Kotlin/Compose and Chrome/web development. Use Google Developer Knowledge for current official docs, targeted skill discovery and connection troubleshooting. android-compose covers architecture, Gradle, navigation, testing, performance, security, widgets and Media3; chrome-web covers MV3, Web Store, Baseline and extension checks. Cloud/Gemini operations live in the separate Google Dev Kit. Personal toolkit maintained by travnie; not an official Google plugin.",
+        "displayName": "Google Dev",
+        "shortDescription": "Android, web & Google Cloud",
+        "longDescription": "Android/Kotlin/Compose, Chrome/web and Google Cloud operations. Use Google Developer Knowledge for current official docs. android-compose covers architecture, Gradle, navigation, testing, performance, security, widgets and Media3; chrome-web covers MV3, Web Store, Baseline and extension checks. google-cloud-mcp manages Cloud resources, buckets, VMs and metrics through Google remote MCP servers, without a local gcloud; each server needs its own Google OAuth connection. Personal toolkit maintained by travnie; not an official Google plugin.",
         "developerName": "travnie",
         "category": "Developer Tools",
         "capabilities": [
           "Interactive",
-          "Read"
+          "Read",
+          "Write"
         ],
         "websiteURL": "https://github.com/travnie/twojstar/tree/main/plugins/google",
         "supportURL": "https://github.com/travnie/twojstar/blob/main/docs/plugins/SUPPORT.md",

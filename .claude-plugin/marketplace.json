@@ -41,9 +41,9 @@
     {
       "name": "google",
       "source": "./plugins/google",
-      "description": "Android, Chrome and web development with Google Developer Knowledge MCP: android-compose (Kotlin, Compose, Gradle, navigation, performance, testing), chrome-web (MV3, Web Store, Baseline) and google-developer-knowledge (live docs, skill discovery and auth troubleshooting).",
-      "version": "2.2.1",
-      "displayName": "Android & Chrome",
+      "description": "Google development and Cloud operations: android-compose, chrome-web and google-developer-knowledge (live docs), plus google-cloud-mcp over Google remote MCP servers (Cloud CLI, Cloud Storage, Compute Engine, Monitoring) for hosts without a local gcloud.",
+      "version": "2.3.0",
+      "displayName": "Google Dev",
       "category": "Developer Tools"
     },
     {

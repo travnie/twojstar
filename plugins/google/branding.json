@@ -6,6 +6,18 @@
   "mcpServers": {
     "google-developer": {
       "logo": "./assets/icon.svg"
+    },
+    "google-cloud-cli": {
+      "logo": "./assets/icon.svg"
+    },
+    "google-cloud-storage": {
+      "logo": "./assets/icon.svg"
+    },
+    "google-compute": {
+      "logo": "./assets/icon.svg"
+    },
+    "google-monitoring": {
+      "logo": "./assets/icon.svg"
     }
   },
   "skills": {
@@ -20,6 +32,10 @@
     "google-developer-knowledge": {
       "iconSmall": "./skills/google-developer-knowledge/assets/icon.svg",
       "iconLarge": "./skills/google-developer-knowledge/assets/icon.svg"
+    },
+    "google-cloud-mcp": {
+      "iconSmall": "./skills/google-cloud-mcp/assets/icon.svg",
+      "iconLarge": "./skills/google-cloud-mcp/assets/icon.svg"
     }
   }
 }

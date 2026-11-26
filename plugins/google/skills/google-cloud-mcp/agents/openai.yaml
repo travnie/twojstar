@@ -1,0 +1,36 @@
+interface:
+  display_name: "Google Cloud (MCP)"
+  short_description: "Manage Cloud resources, buckets, VMs and metrics without local gcloud"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#4285F4"
+  default_prompt: "Use $google-cloud-mcp to check the status of my Google Cloud resources."
+
+policy:
+  products:
+    - "CHAT"
+    - "CODEX"
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "google-cloud-cli"
+      description: "google-cloud-cli"
+      transport: "streamable_http"
+      url: "https://cloudcli.googleapis.com/mcp"
+    - type: "mcp"
+      value: "google-cloud-storage"
+      description: "google-cloud-storage"
+      transport: "streamable_http"
+      url: "https://storage.googleapis.com/storage/mcp"
+    - type: "mcp"
+      value: "google-compute"
+      description: "google-compute"
+      transport: "streamable_http"
+      url: "https://compute.googleapis.com/mcp"
+    - type: "mcp"
+      value: "google-monitoring"
+      description: "google-monitoring"
+      transport: "streamable_http"
+      url: "https://monitoring.googleapis.com/mcp"
