@@ -464,9 +464,9 @@ function openTvpiLink() {
   if (!link) return;
   const index = sourceItems.findIndex(({ url }) => url === link.url || url === link.legacyUrl);
   const source = sourceItems[index];
-  const item = source || { title: link.slug.toUpperCase(), providerId: "direct" };
+  const item = source ? effectiveItem(source) : { title: link.slug.toUpperCase(), providerId: "direct" };
   const url = location.protocol === "file:" ? link.legacyUrl : link.url;
-  playItem({ ...item, url, radio: false }, index, { mutedFallback: true });
+  playItem({ ...item, url, radio: false, external: false }, index, { mutedFallback: true });
 }
 
 window.addEventListener("streambench:defaults-ready", () => {
