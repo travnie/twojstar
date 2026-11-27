@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { isRecoverableHlsError, shouldWaitForHlsRecovery } from "../public/playback-recovery-policy.js";
+import { tvpiStreamFromFragment } from "../public/default-playlists.js";
 import { parseProviderRelays } from "../public/provider-relay.js";
 import { relayTarget } from "../public/stream-bridge.js";
 import { activePlaylistIndex, playbackSubmissionContext, setActivePlaylistIndex, submitPlaybackForm } from "../public/playback-submission.js";
+
+assert.equal(tvpiStreamFromFragment("#tvpi=tvp1"), "https://bartek.lol/tv/tvp1.m3u8");
+assert.equal(tvpiStreamFromFragment("#tvpi=../tvp1"), null);
+assert.equal(tvpiStreamFromFragment("#tvpi=https%3A%2F%2Fexample.com%2Ftvp1"), null);
+assert.equal(tvpiStreamFromFragment("#player"), null);
 
 const origin = "https://streambench.example";
 const httpRadio = "http://radio.example/live.mp3?token=abc";
