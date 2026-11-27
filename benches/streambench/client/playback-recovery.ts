@@ -85,6 +85,7 @@ if (typeof document !== "undefined") {
           playlistIndex: activePlaylistIndex(form),
           preserveSelection: true,
           preserveAttempt: true,
+          mutedFallback: form.dataset.streambenchActiveMutedFallback === "true",
         });
       }, attempts * 700);
     }).observe(diagnosticError, { childList: true, subtree: true });

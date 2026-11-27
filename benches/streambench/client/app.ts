@@ -329,6 +329,7 @@ ui.form.addEventListener("submit", (event) => {
     if (selected) window.open(selected.href, "_blank", "noopener,noreferrer");
     return;
   }
+  ui.form.dataset.streambenchActiveMutedFallback = String(context.mutedFallback);
   playStream(parsed.href, { preserveAttempt: context.preserveAttempt, mutedFallback: context.mutedFallback });
 });
 
