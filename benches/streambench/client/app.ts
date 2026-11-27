@@ -51,6 +51,7 @@ const providerCatalogs = new Map();
 let providerRequest = null;
 let hls = null;
 let playbackGeneration = 0;
+let autoplayMutedMedia = null;
 let activeEntry = null;
 let activeItemIndex = -1;
 const playbackAttempts = createPlaybackAttemptCoordinator();
@@ -144,6 +145,10 @@ function stopPlayback() {
     media.pause();
     media.removeAttribute("src");
     media.load();
+    if (autoplayMutedMedia === media) {
+      autoplayMutedMedia = null;
+      media.muted = false;
+    }
   }
 }
 
@@ -199,6 +204,7 @@ function playStream(rawUrl, options = {}) {
     } catch (error) {
       if (!stillPlaying()) return;
       if (options.mutedFallback && error?.name === "NotAllowedError" && !media.muted) {
+        autoplayMutedMedia = media;
         media.muted = true;
         try {
           await media.play();
@@ -206,6 +212,7 @@ function playStream(rawUrl, options = {}) {
           return;
         } catch {
           if (!stillPlaying()) return;
+          autoplayMutedMedia = null;
           media.muted = false;
         }
       }
@@ -266,6 +273,9 @@ function playStream(rawUrl, options = {}) {
 }
 
 for (const media of [ui.video, ui.audio]) {
+  media.addEventListener("volumechange", () => {
+    if (autoplayMutedMedia === media && !media.muted) autoplayMutedMedia = null;
+  });
   media.addEventListener("loadedmetadata", () => updateMediaDiagnostics(media));
   media.addEventListener("durationchange", () => updateMediaDiagnostics(media));
   media.addEventListener("playing", () => {

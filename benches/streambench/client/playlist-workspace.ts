@@ -464,15 +464,9 @@ function openTvpiLink() {
   if (!link) return;
   const index = sourceItems.findIndex(({ url }) => url === link.url || url === link.legacyUrl);
   const source = sourceItems[index];
-  if (source) {
-    const item = effectiveItem(source);
-    if (!item.external) {
-      // Keep saved channel edits. Upgrade the original Worker alias to the hub URL.
-      playItem({ ...item, url: item.url === source.url ? link.url : item.url }, index, { mutedFallback: true });
-      return;
-    }
-  }
-  playItem({ url: link.url, title: link.slug.toUpperCase(), providerId: "direct" }, -1, { mutedFallback: true });
+  const item = source || { title: link.slug.toUpperCase(), providerId: "direct" };
+  const url = location.protocol === "file:" ? link.legacyUrl : link.url;
+  playItem({ ...item, url, radio: false }, index, { mutedFallback: true });
 }
 
 window.addEventListener("streambench:defaults-ready", () => {
