@@ -50,6 +50,7 @@ const providers = new Map();
 const providerCatalogs = new Map();
 let providerRequest = null;
 let hls = null;
+let playbackGeneration = 0;
 let activeEntry = null;
 let activeItemIndex = -1;
 const playbackAttempts = createPlaybackAttemptCoordinator();
@@ -134,6 +135,7 @@ function inferMode(url, requested = "auto", radio = false) {
 }
 
 function stopPlayback() {
+  playbackGeneration++;
   if (hls) {
     hls.destroy();
     hls = null;
@@ -188,6 +190,29 @@ function playStream(rawUrl, options = {}) {
   const nativeHls = isHls && Boolean(media.canPlayType("application/vnd.apple.mpegurl"));
 
   stopPlayback();
+  const generation = playbackGeneration;
+  const stillPlaying = () => generation === playbackGeneration && attemptActive();
+
+  async function requestPlay() {
+    try {
+      await media.play();
+    } catch (error) {
+      if (!stillPlaying()) return;
+      if (options.mutedFallback && error?.name === "NotAllowedError" && !media.muted) {
+        media.muted = true;
+        try {
+          await media.play();
+          if (stillPlaying()) ui.hint.textContent = "Playing muted. Unmute in the player for sound.";
+          return;
+        } catch {
+          if (!stillPlaying()) return;
+          media.muted = false;
+        }
+      }
+      setStatus("Naciśnij play");
+    }
+  }
+
   ui.shell.dataset.mode = mode;
   ui.url.value = url;
   ui.title.textContent = options.title || parsed.hostname;
@@ -207,9 +232,7 @@ function playStream(rawUrl, options = {}) {
     instance.on(window.Hls.Events.MANIFEST_PARSED, (_event, data) => {
       if (!attemptActive()) return;
       ui.diagnosticHls.textContent = describeHls(data.levels || instance.levels || []);
-      media.play().catch(() => {
-        if (attemptActive()) setStatus("Naciśnij play");
-      });
+      void requestPlay();
     });
     instance.on(window.Hls.Events.LEVEL_LOADED, (_event, data) => {
       if (!attemptActive()) return;
@@ -239,9 +262,7 @@ function playStream(rawUrl, options = {}) {
   }
 
   media.src = url;
-  media.play().catch(() => {
-    if (attemptActive()) setStatus("Naciśnij play");
-  });
+  void requestPlay();
 }
 
 for (const media of [ui.video, ui.audio]) {
@@ -298,7 +319,7 @@ ui.form.addEventListener("submit", (event) => {
     if (selected) window.open(selected.href, "_blank", "noopener,noreferrer");
     return;
   }
-  playStream(parsed.href, { preserveAttempt: context.preserveAttempt });
+  playStream(parsed.href, { preserveAttempt: context.preserveAttempt, mutedFallback: context.mutedFallback });
 });
 
 function parseM3u(source, {

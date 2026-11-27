@@ -121,14 +121,32 @@ https://liveovh010.cda.pl/zkr7GNESGht4_0Wk12c78A/17538736/2782059/enc120/tvrepub
 https://liveovh010.cda.pl/zkr7GNESGht4_0Wk12c78A/17538736/2782059/enc010/telewizjarepublikaraw/telewizjarepublikaraw.m3u8
 #EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/d/d4/TV4Polska.png" tvg-name="TV4" group-title="General",TV4
 https://cdn-s-playnow-live.pluscdn.pl/ch/1502601/309/dash/e25c2c93/live.mpd
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/TVP1_2021_box-1.svg/960px-TVP1_2021_box-1.svg.png" tvg-name="TVP 1" group-title="General",TVP 1
+https://tvpi.travny.workers.dev/tvp1.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/TVP2_2021_box-1.svg/960px-TVP2_2021_box-1.svg.png" tvg-name="TVP 2" group-title="General",TVP 2
+https://tvpi.travny.workers.dev/tvp2.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/TVP_Dokument_%282020%29.svg/960px-TVP_Dokument_%282020%29.svg.png" tvg-name="TVP DOKUMENT" group-title="Documentary",TVP DOKUMENT
+https://tvpi.travny.workers.dev/tvpdokument.m3u8
+#EXTINF:-1 tvg-id="399724" tvg-logo="https://s.tvp.pl/files/tvp.pl/images/vod-logo-header.png" tvg-name="TVP Rozrywka" group-title="Entertainment",TVP Rozrywka
+https://tvpi.travny.workers.dev/tvprozrywka.m3u8
+#EXTINF:-1 tvg-id="2999109" tvg-logo="https://s.tvp.pl/files/tvp.pl/images/vod-logo-header.png" tvg-name="TVP Muzyka i Koncerty" group-title="Music",TVP Muzyka i Koncerty
+https://tvpi.travny.workers.dev/tvpmuzyka.m3u8
+#EXTINF:-1 tvg-id="399703" tvg-logo="https://s.tvp.pl/files/tvp.pl/images/vod-logo-header.png" tvg-name="TVP Historia" group-title="Documentary",TVP Historia
+https://tvpi.travny.workers.dev/tvphistoria.m3u8
 #EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/TVP_HD_logo.svg/960px-TVP_HD_logo.svg.png" tvg-name="TVP HD" group-title="General",TVP HD
 http://78.130.250.2:8023/play/a03a/index.m3u8
 #EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/TVP_Info_logo.svg/960px-TVP_Info_logo.svg.png" tvg-name="TVP Info" group-title="News",TVP Info
 https://dash4.antik.sk/live/test_tvp_info/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/TVP_Info_logo.svg/960px-TVP_Info_logo.svg.png" tvg-name="TVP INFO" group-title="News",TVP INFO
+https://tvpi.travny.workers.dev/tvpinfo.m3u8
 #EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Tvp-info-nowe-logo.svg/960px-Tvp-info-nowe-logo.svg.png" tvg-name="TVP Info (1080p)" group-title="News",TVP Info (1080p)
 https://lowa8026-cmyk.github.io/tvpvod/399699.m3u8
 #EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/TVP_Info_logo.svg/960px-TVP_Info_logo.svg.png" tvg-name="TVP Info (1080p)" group-title="News",TVP Info (1080p)
 http://78.130.250.2:8023/play/a03b/index.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/TVP_Nauka_%282022%29.svg/960px-TVP_Nauka_%282022%29.svg.png" tvg-name="TVP NAUKA" group-title="Documentary",TVP NAUKA
+https://tvpi.travny.workers.dev/tvpnauka.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/TVP_Sport_%282021%29.svg/960px-TVP_Sport_%282021%29.svg.png" tvg-name="TVP SPORT" group-title="Sports",TVP SPORT
+https://tvpi.travny.workers.dev/tvpsport.m3u8
 #EXTINF:-1 tvg-logo="https://i.imgur.com/JUZDOCO.png" tvg-name="TVP Sport (1080p)" group-title="Sports",TVP Sport (1080p)
 https://estreams.tv.nej.cz/dash/CH_TVP_SPORT_Portable.ism/playlist.mpd
 #EXTINF:-1 tvg-logo="https://i.imgur.com/lB4MgRI.png" tvg-name="TVP World" group-title="News",TVP World

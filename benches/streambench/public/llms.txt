@@ -35,7 +35,7 @@ On browser hosts that implement WebMCP, Streambench exposes `read_stream_state`,
 ## Related TRAVNY tools
 
 - [TRAVNY hub](https://bartek.lol/): family landing page.
-- [TVP IPTV](https://tvpi.travny.workers.dev/playlist.m3u): fresh TVP playlist endpoint.
+- [TVP IPTV](https://bartek.lol/tv/playlist.m3u): fresh TVP playlist endpoint.
 - [Codebench](https://codebench.bartek.lol/): QR and code utility.
 - [Doc Bench](https://docbench.bartek.lol/): local-first document and PDF studio.
 - [Weather](https://weather.travny.workers.dev/): local weather ensemble.

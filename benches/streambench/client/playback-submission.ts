@@ -2,6 +2,7 @@ type PlaybackSubmissionOptions = {
   playlistIndex?: number;
   preserveSelection?: boolean;
   preserveAttempt?: boolean;
+  mutedFallback?: boolean;
 };
 
 function parsedIndex(value: string | undefined): number {
@@ -23,6 +24,7 @@ export function playbackSubmissionContext(form: HTMLFormElement) {
     playlistIndex: parsedIndex(form.dataset.streambenchPlaylistIndex),
     preserveSelection: form.dataset.streambenchPreserveSelection === "true",
     preserveAttempt: form.dataset.streambenchPreserveAttempt === "true",
+    mutedFallback: form.dataset.streambenchMutedFallback === "true",
   };
 }
 
@@ -30,11 +32,13 @@ export function submitPlaybackForm(form: HTMLFormElement, {
   playlistIndex = activePlaylistIndex(form),
   preserveSelection = playlistIndex >= 0,
   preserveAttempt = false,
+  mutedFallback = false,
 }: PlaybackSubmissionOptions = {}): void {
   const previous = {
     playlistIndex: form.dataset.streambenchPlaylistIndex,
     preserveSelection: form.dataset.streambenchPreserveSelection,
     preserveAttempt: form.dataset.streambenchPreserveAttempt,
+    mutedFallback: form.dataset.streambenchMutedFallback,
   };
   if (playlistIndex >= 0) form.dataset.streambenchPlaylistIndex = String(playlistIndex);
   else delete form.dataset.streambenchPlaylistIndex;
@@ -42,13 +46,13 @@ export function submitPlaybackForm(form: HTMLFormElement, {
   else delete form.dataset.streambenchPreserveSelection;
   if (preserveAttempt) form.dataset.streambenchPreserveAttempt = "true";
   else delete form.dataset.streambenchPreserveAttempt;
+  if (mutedFallback) form.dataset.streambenchMutedFallback = "true";
+  else delete form.dataset.streambenchMutedFallback;
   try {
     form.requestSubmit();
   } finally {
     for (const [key, value] of Object.entries(previous)) {
-      const datasetKey = key === "playlistIndex" ? "streambenchPlaylistIndex"
-        : key === "preserveSelection" ? "streambenchPreserveSelection"
-          : "streambenchPreserveAttempt";
+      const datasetKey = "streambench" + key[0].toUpperCase() + key.slice(1);
       if (value === undefined) delete form.dataset[datasetKey];
       else form.dataset[datasetKey] = value;
     }

@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { isRecoverableHlsError, shouldWaitForHlsRecovery } from "../public/playback-recovery-policy.js";
-import { tvpiStreamFromFragment } from "../public/default-playlists.js";
+import { tvpiLink } from "../public/tvpi-link.js";
 import { parseProviderRelays } from "../public/provider-relay.js";
 import { relayTarget } from "../public/stream-bridge.js";
 import { activePlaylistIndex, playbackSubmissionContext, setActivePlaylistIndex, submitPlaybackForm } from "../public/playback-submission.js";
 
-assert.equal(tvpiStreamFromFragment("#tvpi=tvp1"), "https://bartek.lol/tv/tvp1.m3u8");
-assert.equal(tvpiStreamFromFragment("#tvpi=../tvp1"), null);
-assert.equal(tvpiStreamFromFragment("#tvpi=https%3A%2F%2Fexample.com%2Ftvp1"), null);
-assert.equal(tvpiStreamFromFragment("#player"), null);
+assert.deepEqual(tvpiLink("#tvpi=tvp1"), {
+  slug: "tvp1",
+  url: "https://bartek.lol/tv/tvp1.m3u8",
+  legacyUrl: "https://tvpi.travny.workers.dev/tvp1.m3u8",
+});
+assert.equal(tvpiLink("#tvpi=../tvp1"), null);
+assert.equal(tvpiLink("#tvpi=https%3A%2F%2Fexample.com%2Ftvp1"), null);
+assert.equal(tvpiLink("#player"), null);
 
 const origin = "https://streambench.example";
 const httpRadio = "http://radio.example/live.mp3?token=abc";
@@ -55,10 +59,11 @@ const fakeForm = {
 };
 setActivePlaylistIndex(fakeForm, 0);
 assert.equal(activePlaylistIndex(fakeForm), 0);
-submitPlaybackForm(fakeForm, { preserveAttempt: true });
-assert.deepEqual(submitted, [{ playlistIndex: 0, preserveSelection: true, preserveAttempt: true }]);
+submitPlaybackForm(fakeForm, { preserveAttempt: true, mutedFallback: true });
+assert.deepEqual(submitted, [{ playlistIndex: 0, preserveSelection: true, preserveAttempt: true, mutedFallback: true }]);
 assert.equal(activePlaylistIndex(fakeForm), 0);
 assert.equal(playbackSubmissionContext(fakeForm).playlistIndex, -1);
+assert.equal(playbackSubmissionContext(fakeForm).mutedFallback, false);
 
 const [appSource, workspaceSource, bridgeSource, recoverySource, sourceWorkspaceSource] = await Promise.all([
   readFile(new URL("../client/app.ts", import.meta.url), "utf8"),
