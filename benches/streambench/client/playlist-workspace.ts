@@ -2,6 +2,7 @@ import { classifyChannel } from "./channel-meta.js";
 import { createLocalState, itemKey } from "./local-state.js";
 import { parseM3uWorkspace, serializeM3u } from "./playlist-format.js";
 import { submitPlaybackForm } from "./playback-submission.js";
+import { tvpiLink } from "./tvpi-link.js";
 
 const originalFetch = window.fetch.bind(window);
 let sourceGeneration = 0;
@@ -249,7 +250,7 @@ function sourceIndexFor(item) {
   return sourceItems.findIndex((entry) => itemKey(effectiveItem(entry)) === itemKey(item));
 }
 
-function playItem(item, sourceIndex = sourceIndexFor(item), { preserveAttempt = false } = {}) {
+function playItem(item, sourceIndex = sourceIndexFor(item), { preserveAttempt = false, mutedFallback = false } = {}) {
   const active = ui.entries.querySelector('[aria-current="true"]');
   active?.removeAttribute("aria-current");
   const row = sourceIndex >= 0
@@ -273,6 +274,7 @@ function playItem(item, sourceIndex = sourceIndexFor(item), { preserveAttempt = 
       playlistIndex: sourceIndex,
       preserveSelection: sourceIndex >= 0,
       preserveAttempt,
+      mutedFallback,
     });
   } finally {
     submittingWorkspaceItem = false;
@@ -456,6 +458,27 @@ function playSourceIndex(index) {
   playItem(item, index, { preserveAttempt: true });
   return { ok: true, item };
 }
+
+function openTvpiLink() {
+  const link = tvpiLink(location.hash);
+  if (!link) return;
+  const index = sourceItems.findIndex(({ url }) => url === link.url || url === link.legacyUrl);
+  const source = sourceItems[index];
+  if (source) {
+    const item = effectiveItem(source);
+    if (!item.external) {
+      // Keep saved channel edits. Upgrade the original Worker alias to the hub URL.
+      playItem({ ...item, url: item.url === source.url ? link.url : item.url }, index, { mutedFallback: true });
+      return;
+    }
+  }
+  playItem({ url: link.url, title: link.slug.toUpperCase(), providerId: "direct" }, -1, { mutedFallback: true });
+}
+
+window.addEventListener("streambench:defaults-ready", () => {
+  window.addEventListener("hashchange", openTvpiLink);
+  if (!ui.url.value.trim()) openTvpiLink();
+}, { once: true });
 
 globalThis.StreambenchWorkspace = Object.freeze({
   entries: workspaceEntries,
