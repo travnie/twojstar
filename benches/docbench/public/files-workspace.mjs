@@ -214,7 +214,7 @@ function filterDupReport(result) {
   const groups = result.groups
     .map((group) => ({ ...group, members: group.members.filter((member) => store.get(member.id)) }))
     .filter((group) => group.members.length > 1);
-  return { ...result, groups, scanned: store.count() };
+  return { ...result, groups };
 }
 
 function setHashField(hex) {
@@ -258,18 +258,18 @@ async function hashActiveFile() {
       },
     });
     hashCache.set(id, { size: entry.size, modified: entry.modified, hex });
-    if (store.activeId() === id) {
+    if (store.activeId() === id && !dupController) {
       setHashField(hex);
       setStatus("SHA-256 computed locally");
     }
   } catch (error) {
-    if (store.activeId() === id) {
+    if (store.activeId() === id && !dupController) {
       if (error?.name === "AbortError") setStatus("Hashing canceled");
       else setStatus(error?.message || "Hashing failed", true);
     }
   } finally {
     if (hashJob?.controller === controller) hashJob = null;
-    hashButton.disabled = !store.activeId() || Boolean(hashJob);
+    hashButton.disabled = !store.activeId() || Boolean(hashJob) || Boolean(dupController);
   }
 }
 
@@ -395,11 +395,15 @@ function renderList() {
       pathLabel.dataset.i18nSkip = "";
       button.append(pathLabel);
     }
-    button.addEventListener("click", (event) => store.choose(entry.id, {
-      toggle: event.ctrlKey || event.metaKey,
-      range: event.shiftKey,
-      visibleIds: ids,
-    }));
+    button.addEventListener("click", (event) => {
+      store.choose(entry.id, {
+        toggle: event.ctrlKey || event.metaKey,
+        range: event.shiftKey,
+        visibleIds: ids,
+      });
+      if (dupReport && store.activeId() === entry.id
+        && !event.ctrlKey && !event.metaKey && !event.shiftKey) showActive();
+    });
     button.addEventListener("dblclick", () => openDialog());
     row.append(checkbox, button);
     fragment.append(row);
@@ -1207,7 +1211,7 @@ async function showActive() {
   const start = performance.now();
   try {
     const info = await inspectLocalFile(file);
-    if (revision !== selectionRevision) return;
+    if (store.activeId() !== activeId) return;
     appendMetadata(info, performance.now() - start);
     const cached = cachedHash(entry);
     if (cached) setHashField(cached);
@@ -1216,7 +1220,7 @@ async function showActive() {
     setStatus(info.mismatch ? "Signature mismatch" : info.label, info.mismatch);
     await renderPreview(file, info, revision);
   } catch (error) {
-    if (revision !== selectionRevision) return;
+    if (store.activeId() !== activeId) return;
     setStatus("Inspection failed", true);
     emptyPreview(error.message || "Could not read the file.");
   }
