@@ -95,6 +95,8 @@ let dialogFocusReturn = null;
 let zipController = null;
 let zipFinalizing = false;
 let dupController = null;
+let dupReport = null;
+let dupScanIds = "";
 let hashJob = null;
 const hashCache = new Map();
 
@@ -197,8 +199,22 @@ function appendMetadata(info, timeMs) {
   }
 }
 
-function hashKey(entry) {
-  return `${entry.id}:${entry.size}:${entry.modified}`;
+function cachedHash(entry) {
+  const hit = hashCache.get(entry.id);
+  return hit && hit.size === entry.size && hit.modified === entry.modified ? hit.hex : null;
+}
+
+function pruneHashCache() {
+  for (const id of [...hashCache.keys()]) {
+    if (!store.get(id)) hashCache.delete(id);
+  }
+}
+
+function filterDupReport(result) {
+  const groups = result.groups
+    .map((group) => ({ ...group, members: group.members.filter((member) => store.get(member.id)) }))
+    .filter((group) => group.members.length > 1);
+  return { ...result, groups, scanned: store.count() };
 }
 
 function setHashField(hex) {
@@ -221,9 +237,8 @@ function setHashField(hex) {
 async function hashActiveFile() {
   const id = store.activeId();
   const entry = id ? store.get(id) : null;
-  if (!entry || hashJob) return;
-  const key = hashKey(entry);
-  const cached = hashCache.get(key);
+  if (!entry || hashJob || dupController) return;
+  const cached = cachedHash(entry);
   if (cached) {
     setHashField(cached);
     setStatus("SHA-256 from cache");
@@ -236,9 +251,13 @@ async function hashActiveFile() {
   try {
     const hex = await sha256File(entry.file, {
       signal: controller.signal,
-      onProgress: (done, total) => setStatus(`Hashing SHA-256 · ${formatBytes(done)} / ${formatBytes(total)}`),
+      onProgress: (done, total) => {
+        if (hashJob?.controller === controller && store.activeId() === id) {
+          setStatus(`Hashing SHA-256 · ${formatBytes(done)} / ${formatBytes(total)}`);
+        }
+      },
     });
-    hashCache.set(key, hex);
+    hashCache.set(id, { size: entry.size, modified: entry.modified, hex });
     if (store.activeId() === id) {
       setHashField(hex);
       setStatus("SHA-256 computed locally");
@@ -254,7 +273,9 @@ async function hashActiveFile() {
   }
 }
 
-function renderDuplicateReport(result) {
+function renderDuplicateReport(result, focus = true) {
+  ++selectionRevision;
+  dupReport = result;
   releasePreview();
   const box = element("section", "files-zip");
   const files = result.groups.reduce((sum, group) => sum + group.members.length, 0);
@@ -282,22 +303,29 @@ function renderDuplicateReport(result) {
     const select = element("button", "button compact", "Select all but one copy per group");
     select.type = "button";
     select.addEventListener("click", () => {
-      const ids = result.groups.flatMap((group) => group.members.slice(1).map((member) => member.id));
-      if (store.setSelection(ids)) {
+      const ids = [];
+      for (const group of result.groups) {
+        const current = group.members.map((member) => member.id).filter((id) => store.get(id));
+        for (const id of current.slice(1)) ids.push(id);
+      }
+      if (ids.length && store.setSelection(ids)) {
         setStatus(`Selected ${ids.length} duplicate copies; one copy per group stays unselected.`);
       }
     });
     box.append(select);
   }
   preview.append(box);
-  title.focus();
+  if (focus) title.focus();
 }
 
 async function runDuplicateScan() {
   const items = store.visible().map((entry) => store.get(entry.id)).filter(Boolean);
   if (items.length < 2) return;
+  hashJob?.controller.abort();
   const controller = new AbortController();
   dupController = controller;
+  dupScanIds = items.map((item) => item.id).join("\n");
+  dupReport = null;
   renderList();
   setStatus(`Hashing ${items.length} files for exact duplicates…`);
   try {
@@ -391,9 +419,9 @@ function renderList() {
   selectVisible.disabled = !ids.length;
   packZipButton.disabled = selectedCount === 0 || Boolean(zipController);
   compressionSelect.disabled = Boolean(zipController);
-  duplicatesButton.disabled = store.count() < 2;
+  duplicatesButton.disabled = dupController ? false : store.count() < 2;
   duplicatesButton.textContent = dupController ? "Cancel scan" : "Find duplicates";
-  hashButton.disabled = !store.activeId() || Boolean(hashJob);
+  hashButton.disabled = !store.activeId() || Boolean(hashJob) || Boolean(dupController);
 
   const available = store.folders();
   const requested = folder;
@@ -1087,7 +1115,7 @@ async function renderFileContent(file, info, target, isCurrent) {
 function updateTool(entry, info) {
   activeTool = null;
   activeAudioTool = null;
-  toolActions.hidden = true;
+  toolActions.hidden = !entry;
   toolButton.hidden = true;
   audioOpenButton.hidden = true;
   if (!entry || !info) return;
@@ -1145,6 +1173,8 @@ async function openInTool() {
 
 async function showActive() {
   const activeId = store.activeId();
+  if (hashJob) hashJob.controller.abort();
+  dupReport = null;
   updateTool(null, null);
   if (activeRendered !== activeId) {
     if (dialog.open) dialog.close();
@@ -1167,7 +1197,6 @@ async function showActive() {
 
   const entry = store.get(activeId);
   if (!entry) return;
-  if (hashJob) hashJob.controller.abort();
   toolActions.hidden = false;
   hashButton.hidden = false;
   hashButton.disabled = Boolean(hashJob);
@@ -1180,8 +1209,8 @@ async function showActive() {
     const info = await inspectLocalFile(file);
     if (revision !== selectionRevision) return;
     appendMetadata(info, performance.now() - start);
-    const cachedHash = hashCache.get(hashKey(entry));
-    if (cachedHash) setHashField(cachedHash);
+    const cached = cachedHash(entry);
+    if (cached) setHashField(cached);
     updateTool(entry, info);
     metadata.prepend(field("Virtual path", entry.path));
     setStatus(info.mismatch ? "Signature mismatch" : info.label, info.mismatch);
@@ -1447,7 +1476,16 @@ bindFileDrop(getNode("#files-drop-zone"), addFiles);
 bindFileDrop(list, addFiles);
 store.subscribe(() => {
   if (audioDockId && !store.get(audioDockId)) closeAudioDock();
+  pruneHashCache();
+  if (dupController && store.visible().map((entry) => entry.id).join("\n") !== dupScanIds) {
+    dupController.abort();
+  }
   renderList();
+  if (dupReport) {
+    const fresh = filterDupReport(dupReport);
+    if (JSON.stringify(fresh.groups) !== JSON.stringify(dupReport.groups)) renderDuplicateReport(fresh, false);
+    else dupReport = fresh;
+  }
   if (activeRendered !== store.activeId()) showActive();
 });
 new MutationObserver(() => {

@@ -21,6 +21,7 @@ export function createSha256() {
   const words = new Uint32Array(64);
   let buffered = 0;
   let totalBytes = 0;
+  let finalized = null;
 
   function compress() {
     const view = new DataView(block.buffer);
@@ -67,6 +68,7 @@ export function createSha256() {
   }
 
   function update(input) {
+    if (finalized) throw new Error("SHA-256 hasher is already finalized.");
     const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
     totalBytes += bytes.length;
     let offset = 0;
@@ -83,6 +85,7 @@ export function createSha256() {
   }
 
   function digest() {
+    if (finalized) return finalized;
     const bitHigh = Math.floor(totalBytes / 0x20000000);
     const bitLow = ((totalBytes % 0x20000000) * 8) >>> 0;
     block[buffered] = 0x80;
@@ -100,6 +103,7 @@ export function createSha256() {
     const out = new Uint8Array(32);
     const outView = new DataView(out.buffer);
     for (let index = 0; index < 8; index += 1) outView.setUint32(index * 4, state[index]);
+    finalized = out;
     return out;
   }
 
@@ -124,12 +128,14 @@ export async function sha256File(file, { signal, chunkBytes = SHA256_CHUNK_BYTES
     const end = Math.min(size, offset + chunk);
     hasher.update(new Uint8Array(await file.slice(offset, end).arrayBuffer()));
     onProgress?.(end, size);
+    if (end < size) await new Promise((resolve) => setTimeout(resolve, 0));
   }
   signal?.throwIfAborted();
   return toHex(hasher.digest());
 }
 
 export async function findDuplicateGroups(items, { signal, chunkBytes, onProgress } = {}) {
+  signal?.throwIfAborted();
   const list = Array.from(items || []);
   for (const item of list) {
     if (!item || typeof item !== "object" || !item.file) {

@@ -18,6 +18,16 @@ test("sha256 matches reference digests across padding boundaries", () => {
   assert.equal(toHex(abc.digest()), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 });
 
+test("digest is finalized: repeated calls match and updates reject", () => {
+  const data = randomBytes(1000);
+  const hasher = createSha256();
+  hasher.update(data);
+  const first = hasher.digest();
+  assert.equal(toHex(hasher.digest()), reference(data));
+  assert.equal(toHex(hasher.digest()), toHex(first));
+  assert.throws(() => hasher.update(new Uint8Array([1])), /already finalized/);
+});
+
 test("incremental updates equal one-shot hashing at random splits", () => {
   for (const size of [1, 63, 64, 65, 500, 4097, 100_000]) {
     const data = randomBytes(size);
@@ -119,6 +129,13 @@ test("findDuplicateGroups reports no groups for unique content and aborts cleanl
     findDuplicateGroups([
       entry("a", "a.txt", "a.txt", "same"),
       entry("b", "b.txt", "b.txt", "same"),
+    ], { signal: controller.signal }),
+    (error) => error.name === "AbortError",
+  );
+  await assert.rejects(
+    findDuplicateGroups([
+      entry("a", "a.txt", "a.txt", "alpha"),
+      entry("b", "b.txt", "b.txt", "different size"),
     ], { signal: controller.signal }),
     (error) => error.name === "AbortError",
   );
