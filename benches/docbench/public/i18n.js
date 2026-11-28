@@ -29,6 +29,19 @@
   ["Balanced","Zrównoważony"],
   ["Maximum","Maksymalnie"],
   ["Cancel ZIP","Anuluj ZIP"],
+  ["Find duplicates","Znajdź duplikaty"],
+  ["Cancel scan","Anuluj skanowanie"],
+  ["Hash SHA-256","Skrót SHA-256"],
+  ["Hashing SHA-256…","Obliczanie skrótu SHA-256…"],
+  ["SHA-256 from cache","Skrót SHA-256 z pamięci podręcznej"],
+  ["SHA-256 computed locally","Obliczono skrót SHA-256 lokalnie"],
+  ["Hashing canceled","Anulowano obliczanie skrótu"],
+  ["Hashing failed","Obliczanie skrótu nie powiodło się"],
+  ["No exact duplicates","Brak dokładnych duplikatów"],
+  ["Select all but one copy per group","Zaznacz wszystkie kopie oprócz jednej z grupy"],
+  ["Duplicate scan canceled.","Anulowano skanowanie duplikatów."],
+  ["Duplicate scan failed.","Skanowanie duplikatów nie powiodło się."],
+  ["SHA-256 over full contents, hashed locally. Same bytes with different names or paths count as duplicates.","SHA-256 pełnej zawartości, liczony lokalnie. Te same bajty pod innymi nazwami lub ścieżkami to duplikaty."],
   ["ZIP packing","Pakowanie ZIP"],
   ["ZIP packing progress","Postęp pakowania ZIP"],
   ["Invalid ZIP selection.","Nieprawidłowy wybór plików ZIP."],
@@ -293,7 +306,15 @@
     [/^(\d+) words?$/, (_match, count) => `${count} ${plPlural(count, "słowo", "słowa", "słów")}`],
     [/^(\d+) chars?$/, (_match, count) => `${count} ${plPlural(count, "znak", "znaki", "znaków")}`],
     [/^(\d+) tokens? · o200k$/, (_match, count) => `${count} ${plPlural(count, "token", "tokeny", "tokenów")} · o200k`],
-    [/^Inspect · (\d+\+?)$/, "Analiza · $1"]
+    [/^Inspect · (\d+\+?)$/, "Analiza · $1"],
+    [/^Hashing SHA-256 · (.+) \/ (.+)$/u, "Obliczanie skrótu SHA-256 · $1 / $2"],
+    [/^Hashing (\d+) files for exact duplicates…$/u, (_match, count) => `Obliczanie skrótów ${count} ${plPlural(count, "pliku", "plików", "plików")} w poszukiwaniu dokładnych duplikatów…`],
+    [/^Hashing (\d+)\/(\d+) · (.+) of (.+)$/u, "Obliczanie skrótów $1/$2 · $3 z $4"],
+    [/^(\d+) duplicate groups? · (\d+) files$/u, (_match, groups, files) => `${groups} ${plPlural(groups, "grupa duplikatów", "grupy duplikatów", "grup duplikatów")} · ${files} ${plPlural(files, "plik", "pliki", "plików")}`],
+    [/^No exact duplicates among (\d+) files$/u, (_match, count) => `Brak dokładnych duplikatów wśród ${count} ${plPlural(count, "pliku", "plików", "plików")}`],
+    [/^Exact duplicate groups · (\d+) \((\d+) files\)$/u, (_match, groups, files) => `Grupy dokładnych duplikatów · ${groups} (${files} ${plPlural(files, "plik", "pliki", "plików")})`],
+    [/^Hashed (\d+) of (\d+) files · (.+)$/u, (_match, hashed, scanned, bytes) => `Obliczono skróty: ${hashed} z ${scanned} ${plPlural(scanned, "pliku", "plików", "plików")} · ${bytes}`],
+    [/^Selected (\d+) duplicate copies; one copy per group stays unselected\.$/u, (_match, count) => `Zaznaczono ${count} ${plPlural(count, "kopię duplikatu", "kopie duplikatów", "kopii duplikatów")}; po jednej kopii z grupy zostaje niezaznaczona.`]
   ],
   en: [
     [/^Sprawdzanie ZIP · (\d+)\/(\d+) · (.+) \/ (.+)$/u, "Checking ZIP data · $1/$2 · $3 / $4"],
@@ -326,7 +347,15 @@
     [/^(\d+) (?:słowo|słowa|słów)$/, (_match, count) => `${count} ${enPlural(count, "word", "words")}`],
     [/^(\d+) (?:znak|znaki|znaków)$/, (_match, count) => `${count} ${enPlural(count, "char", "chars")}`],
     [/^(\d+) (?:token|tokeny|tokenów) · o200k$/, (_match, count) => `${count} ${enPlural(count, "token", "tokens")} · o200k`],
-    [/^Analiza · (\d+\+?)$/, "Inspect · $1"]
+    [/^Analiza · (\d+\+?)$/, "Inspect · $1"],
+    [/^Obliczanie skrótu SHA-256 · (.+) \/ (.+)$/u, "Hashing SHA-256 · $1 / $2"],
+    [/^Obliczanie skrótów (\d+) (?:pliku|plików) w poszukiwaniu dokładnych duplikatów…$/u, (_match, count) => `Hashing ${count} ${enPlural(count, "file", "files")} for exact duplicates…`],
+    [/^Obliczanie skrótów (\d+)\/(\d+) · (.+) z (.+)$/u, "Hashing $1/$2 · $3 of $4"],
+    [/^(\d+) (?:grupa duplikatów|grupy duplikatów|grup duplikatów) · (\d+) (?:plik|pliki|plików)$/u, (_match, groups, files) => `${groups} duplicate ${enPlural(groups, "group", "groups")} · ${files} ${enPlural(files, "file", "files")}`],
+    [/^Brak dokładnych duplikatów wśród (\d+) (?:pliku|plików)$/u, (_match, count) => `No exact duplicates among ${count} ${enPlural(count, "file", "files")}`],
+    [/^Grupy dokładnych duplikatów · (\d+) \((\d+) (?:plik|pliki|plików)\)$/u, (_match, groups, files) => `Exact duplicate groups · ${groups} (${files} ${enPlural(files, "file", "files")})`],
+    [/^Obliczono skróty: (\d+) z (\d+) (?:pliku|plików) · (.+)$/u, (_match, hashed, scanned, bytes) => `Hashed ${hashed} of ${scanned} ${enPlural(scanned, "file", "files")} · ${bytes}`],
+    [/^Zaznaczono (\d+) (?:kopię duplikatu|kopie duplikatów|kopii duplikatów); po jednej kopii z grupy zostaje niezaznaczona\.$/u, (_match, count) => `Selected ${count} duplicate ${enPlural(count, "copy", "copies")}; one copy per group stays unselected.`]
   ]
 };
   // Reuse existing locale strings for new workbench controls, without duplicating translations.

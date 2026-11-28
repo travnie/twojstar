@@ -17,6 +17,7 @@ for (const path of [
   "public/zip-pack.mjs",
   "public/file-store.mjs",
   "public/file-routing.mjs",
+  "public/file-hash.mjs",
   "public/files-workspace.mjs",
   "public/files-workspace.css",
   "public/document-merge.mjs",
@@ -117,6 +118,16 @@ for (const id of ["files-tab", "files-workspace", "files-drop-zone", "files-meta
 }
 if (!index.includes('src="/local-files.js"') || !index.includes('src="/files-workspace.mjs"')) {
   throw new Error("Files workspace scripts missing.");
+}
+for (const id of ["files-duplicates", "files-hash"]) {
+  if (!index.includes(`id="${id}"`) || !portableFiles.includes(`id="${id}"`)) {
+    throw new Error("Hash/duplicate controls missing in hosted or portable build: " + id);
+  }
+}
+if (!portableFiles.includes("function createSha256(")
+  || !portableFiles.includes("async function sha256File(")
+  || !portableFiles.includes("async function findDuplicateGroups(")) {
+  throw new Error("Local SHA-256/duplicate engine missing in portable build.");
 }
 if (portableFiles.includes('src="/local-files.js"') || portableFiles.includes('src="/files-workspace.mjs"')
   || portableFiles.includes('href="/files-workspace.css"')

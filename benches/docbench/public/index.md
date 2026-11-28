@@ -9,6 +9,7 @@ Doc Bench runs at https://docbench.bartek.lol/.
 - Import local files and folders, then search, sort, inspect detected signatures and preview without uploads.
 - Open supported text and PDF files in their specialist tools; convert DOCX through the existing local converter.
 - Preview images, audio, video and ZIP indexes when supported. Unsupported formats still show bounded properties and diagnostics.
+- Hash files on demand with SHA-256 in the inspector; find exact duplicates (size + SHA-256) across the list with a report and bulk selection.
 - Removing items from the workspace does not delete source files on disk.
 
 ## Documents
