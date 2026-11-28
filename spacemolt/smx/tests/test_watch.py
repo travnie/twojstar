@@ -97,7 +97,8 @@ class WatchAndFieldsTests(unittest.TestCase):
         self.assertFalse(watch_command_is_read_only("mine"))
 
     def test_watch_raises_interval_for_tick_limited_reads(self):
-        for command in ("ship", "get_cargo", "spacemolt/get_state"):
+        for command in ("ship", "get_cargo", "spacemolt/get_state", "status", "view_storage",
+                        "storage/view", "spacemolt_storage/view"):
             with self.subTest(command=command):
                 backend = FakeBackend()
                 stderr = io.StringIO()
@@ -113,18 +114,27 @@ class WatchAndFieldsTests(unittest.TestCase):
         stderr = io.StringIO()
         with patch("smx.cli.time.sleep") as sleep, redirect_stdout(io.StringIO()), \
                 redirect_stderr(stderr):
-            rc = cmd_watch(backend, ["status", "-n", "2", "--count", "2"])
+            rc = cmd_watch(backend, ["get_system", "-n", "2", "--count", "2"])
         self.assertEqual(rc, 0)
         sleep.assert_called_once_with(2.0)
         self.assertEqual(stderr.getvalue(), "")
 
     def test_tick_limited_read_detection(self):
-        for command in ("get_state", "ship", "cargo", "storage/view", "spacemolt_storage/view"):
+        for command in ("get_state", "status", "ship", "cargo", "view_storage", "storage/view",
+                        "spacemolt_storage/view"):
             with self.subTest(command=command):
                 self.assertTrue(is_tick_limited_read(command))
-        for command in ("status", "get_system", "storage/deposit", "spacemolt_market/view_market"):
+        for command in ("get_system", "storage/deposit", "spacemolt_market/view_market"):
             with self.subTest(command=command):
                 self.assertFalse(is_tick_limited_read(command))
+
+    def test_storage_view_is_watchable_but_storage_writes_are_not(self):
+        for command in ("view_storage", "storage/view", "spacemolt_storage/view"):
+            with self.subTest(command=command):
+                self.assertTrue(watch_command_is_read_only(command))
+        for command in ("storage/deposit", "spacemolt_storage/withdraw", "spacemolt_storage/loot"):
+            with self.subTest(command=command):
+                self.assertFalse(watch_command_is_read_only(command))
 
     def test_upstream_freight_block_list_safety(self):
         self.assertTrue(watch_command_is_read_only("spacemolt_shipping/list_blocked"))
