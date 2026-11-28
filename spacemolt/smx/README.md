@@ -93,7 +93,7 @@ smx fleet
 smx fleet check
 
 smx --fields player.username,ship.fuel status
-smx watch status --count 3 --interval 5
+smx watch status --count 3 --interval 10
 
 smx doctor
 smx doctor --online
@@ -244,10 +244,10 @@ smx --fields player.username,ship.fuel,ship.cargo_used status
 
 ```bash
 smx watch status
-smx watch status --interval 5 --count 6 --fields player.username,ship.fuel
+smx watch status --interval 10 --count 6 --fields player.username,ship.fuel
 ```
 
-Mutating commands are refused rather than repeated accidentally. `get_notifications` is watchable only with `clear=false`.
+Mutating commands are refused rather than repeated accidentally. `get_notifications` is watchable only with `clear=false`. State, ship, cargo and storage reads (incl. `status`) poll at most once per 10 s tick; shorter intervals are raised to 10 s.
 
 ## Backend maintenance
 
