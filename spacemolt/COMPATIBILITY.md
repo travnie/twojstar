@@ -1,5 +1,13 @@
 # SpaceMolt compatibility audit
 
+## Upstream follow-up (2026-11-28)
+
+- Official game server v0.735.1 (published changelog); official client-v2 v1.5.129 (release and generated OpenAPI).
+- v0.734.2 `read_repeat_limited`: repeated unchanged same-tick `get_state`/`get_ship`/`get_cargo`/storage reads are refused. `smx watch` treats the `get_status` and `view_storage` aliases the same and raises the interval to one tick for those reads; skill guidance says read once per tick. Gateway already skips repeated reads until a state change; no change.
+- v0.735.0 freight overhaul: `spacemolt_shipping/block_carrier`, `unblock_carrier`, `list_blocked`; `max_recent_defaults` on quote/post; carrier tiers, recovery deliveries, acceptance cooldown, active-contract cap. Reached through passthrough; endpoint-presence contracts and watch safety cover the new actions.
+- SMX source-reviewed baseline 1.5.129; binary-tested baseline unchanged (1.5.93). Contract drift check clean against the v1.5.129 OpenAPI.
+- No pilot login, live game mutation or credentials used.
+
 ## Upstream follow-up (2026-11-23)
 
 - Official game server v0.734.0 (published changelog); official client-v2 v1.5.127 (release and generated OpenAPI).

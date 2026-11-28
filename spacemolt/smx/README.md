@@ -93,13 +93,13 @@ smx fleet
 smx fleet check
 
 smx --fields player.username,ship.fuel status
-smx watch status --count 3 --interval 5
+smx watch status --count 3 --interval 10
 
 smx doctor
 smx doctor --online
 smx backend check
 smx backend update
-smx backend update --version 1.5.127
+smx backend update --version 1.5.129
 smx backend rollback
 
 smx mcp
@@ -111,6 +111,7 @@ smx drone/list
 smx shipping/active
 smx spacemolt_shipping/list_all
 smx spacemolt_shipping/reclaim shipment_id=...  # Explicit recovery mutation
+smx spacemolt_shipping/list_blocked
 ```
 
 ## Invariants
@@ -243,10 +244,10 @@ smx --fields player.username,ship.fuel,ship.cargo_used status
 
 ```bash
 smx watch status
-smx watch status --interval 5 --count 6 --fields player.username,ship.fuel
+smx watch status --interval 10 --count 6 --fields player.username,ship.fuel
 ```
 
-Mutating commands are refused rather than repeated accidentally. `get_notifications` is watchable only with `clear=false`.
+Mutating commands are refused rather than repeated accidentally. `get_notifications` is watchable only with `clear=false`. State, ship, cargo and storage reads (incl. `status`) poll at most once per 10 s tick; shorter intervals are raised to 10 s.
 
 ## Backend maintenance
 
@@ -256,7 +257,7 @@ smx backend status
 smx doctor --online
 smx backend check
 smx backend update
-smx backend update --version 1.5.127
+smx backend update --version 1.5.129
 smx backend rollback
 ```
 
@@ -264,7 +265,7 @@ Managed updates only use official `SpaceMolt/client-v2` releases. Before replaci
 
 Each update keeps the replaced binary next to the managed one. `rollback` swaps the two, so running it twice undoes it. `update --version X` installs that exact official release, including downgrades; plain `update` only moves forward.
 
-`status` and `check` distinguish the last **binary-tested** backend (v1.5.93) from the latest **source-reviewed** upstream release (v1.5.127). `doctor` warns when the active version exceeds the binary-tested baseline. A newer backend still runs; review is not a smoke test.
+`status` and `check` distinguish the last **binary-tested** backend (v1.5.93) from the latest **source-reviewed** upstream release (v1.5.129). `doctor` warns when the active version exceeds the binary-tested baseline. A newer backend still runs; review is not a smoke test.
 
 In a terminal, a command that needs the missing backend offers to install it. Non-interactive callers get an error instead and never trigger a download.
 

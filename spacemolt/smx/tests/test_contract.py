@@ -49,6 +49,9 @@ class ContractTests(unittest.TestCase):
             "spacemolt_battle/default_stance",
             "spacemolt_shipping/list_all",
             "spacemolt_shipping/reclaim",
+            "spacemolt_shipping/block_carrier",
+            "spacemolt_shipping/unblock_carrier",
+            "spacemolt_shipping/list_blocked",
         )
         for command in commands:
             with self.subTest(command=command):

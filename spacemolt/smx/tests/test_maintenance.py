@@ -401,7 +401,7 @@ class MaintenanceTests(unittest.TestCase):
                 status = backend_status(online=False)
             self.assertTrue(status["newer_than_tested"])
             self.assertEqual(status["tested"], "1.5.93")
-            self.assertEqual(status["source_reviewed"], "1.5.127")
+            self.assertEqual(status["source_reviewed"], "1.5.129")
 
 
 if __name__ == "__main__":
