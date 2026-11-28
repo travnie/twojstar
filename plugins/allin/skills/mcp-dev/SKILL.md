@@ -15,6 +15,7 @@ The spec moved to **2026-07-28** (stateless: no `initialize` handshake, no `Mcp-
 | Cloud API / SaaS / pure logic | anyone | **Remote streamable HTTP** (default). Works in chat, Cowork, Code, ChatGPT |
 | Local files, desktop app, localhost, OS | installers | **MCPB** bundle (runtime included) — Claude desktop/Code only; chat ignores local servers |
 | Just me, prototype | me | local stdio (`npx`/`uvx`), upgrade path MCPB |
+| Private network, must stay unexposed | Claude API / Managed Agents | Remote HTTP behind an **MCP tunnel** (research preview) → `references/ship.md` |
 | Needs pickers, charts, previews in chat | any | **MCP App** = remote server + `ui://` resources → `references/apps.md` |
 | Ships workflows/know-how with the tools | any | **Skills over MCP** (`io.modelcontextprotocol/skills`, SEP-2640) → `references/skills.md` |
 
