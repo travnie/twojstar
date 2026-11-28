@@ -102,7 +102,7 @@ const [
 ]);
 
 const [localFileUi, filesCss, fileSignatures, archiveEngine, zipIndex, tarIndex, zipTree, zipExtract,
-  fileStore, fileRouting, zipPack, filesWorkspace] = await Promise.all([
+  fileStore, fileRouting, zipPack, fileHash, filesWorkspace] = await Promise.all([
   readFile("public/local-files.js", "utf8"),
   readFile("public/files-workspace.css", "utf8"),
   readFile("public/file-signatures.mjs", "utf8"),
@@ -114,6 +114,7 @@ const [localFileUi, filesCss, fileSignatures, archiveEngine, zipIndex, tarIndex,
   readFile("public/file-store.mjs", "utf8"),
   readFile("public/file-routing.mjs", "utf8"),
   readFile("public/zip-pack.mjs", "utf8"),
+  readFile("public/file-hash.mjs", "utf8"),
   readFile("public/files-workspace.mjs", "utf8"),
 ]);
 
@@ -134,7 +135,8 @@ const filesController = filesWorkspace
   .replace('import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,\n  extractZipEntry, createMemoryExtractSink, createVerifySink } from "./zip-extract.mjs";', "")
   .replace('import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";', "")
   .replace('import { isTextFile, resolveFileTool } from "./file-routing.mjs";', "")
-  .replace('import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";', "");
+  .replace('import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";', "")
+  .replace('import { sha256File, findDuplicateGroups } from "./file-hash.mjs";', "");
 const [archiveGlue, archiveWasm, archiveWorker, archiveCore] = await Promise.all([
   readFile("public/vendor/sevenzip/sevenzip-wasm.mjs", "utf8"),
   readFile("public/vendor/sevenzip/sevenzip-wasm.wasm"),
@@ -165,6 +167,7 @@ const filesWorkspacePortable = [
   withoutExports(fileStore),
   withoutExports(fileRouting),
   withoutExports(zipPack),
+  withoutExports(fileHash),
   filesController,
   "})();",
 ].join("\n");

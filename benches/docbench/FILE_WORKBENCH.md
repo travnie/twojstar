@@ -527,6 +527,12 @@ drop/size helper and portable build. They are **not** a file manager yet.
    inside safe archive entries, metadata privacy review, image/audio
    comparisons, duplicates/hashes and reproducible engine benchmarks.
    Promote proven adapters to the capability registry one at a time.
+   Shipped 2026-11-28: on-demand SHA-256 in the Files inspector (bounded
+   chunked read, cached per file) and exact-duplicate grouping over the file
+   list (size bucket + full-content SHA-256) with a report and one-click
+   selection of all but one copy per group. `public/file-hash.mjs` carries a
+   hand-rolled incremental SHA-256 verified against `node:crypto` in tests;
+   no new dependency. WebMCP exposure of hash/inspect remains a follow-up.
 7. **WebMCP per working slice:** add corresponding capability discovery,
    read/inspect, then safe actions to the existing WebMCP registration.
    Verify agent-visible results, browser restrictions and permission flow

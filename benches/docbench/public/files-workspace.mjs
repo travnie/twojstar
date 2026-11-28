@@ -8,6 +8,7 @@ import { ZIP_EXTRACT_LIMITS, zipEntryEligibility, planZipExtraction,
 import { createFileStore, adjacentVisibleId, createFileIngress } from "./file-store.mjs";
 import { isTextFile, resolveFileTool } from "./file-routing.mjs";
 import { ZIP_PACK_LIMITS, planZipEntries, createMemoryZipSink, packZip } from "./zip-pack.mjs";
+import { sha256File, findDuplicateGroups } from "./file-hash.mjs";
 
 const getNode = (selector) => document.querySelector(selector);
 const { formatBytes, bindFileDrop } = globalThis.BenchLocalFiles;
@@ -50,6 +51,8 @@ const compressionSelect = getNode("#files-zip-compression");
 const cancelZipButton = getNode("#files-zip-cancel");
 const zipProgress = getNode("#files-zip-progress");
 const zipStatus = getNode("#files-zip-status");
+const duplicatesButton = getNode("#files-duplicates");
+const hashButton = getNode("#files-hash");
 const dialog = getNode("#files-preview-dialog");
 const dialogBody = getNode("#files-dialog-body");
 const dialogHeading = getNode("#files-dialog-name");
@@ -91,6 +94,9 @@ let dialogRevision = 0;
 let dialogFocusReturn = null;
 let zipController = null;
 let zipFinalizing = false;
+let dupController = null;
+let hashJob = null;
+const hashCache = new Map();
 
 function isCurrentPreview(target, revision) {
   return target === dialogBody
@@ -191,6 +197,132 @@ function appendMetadata(info, timeMs) {
   }
 }
 
+function hashKey(entry) {
+  return `${entry.id}:${entry.size}:${entry.modified}`;
+}
+
+function setHashField(hex) {
+  let wrapper = null;
+  for (const node of metadata.querySelectorAll(".files-meta-field")) {
+    if (node.querySelector("dt")?.textContent === "SHA-256") {
+      wrapper = node;
+      break;
+    }
+  }
+  if (!wrapper) {
+    wrapper = field("SHA-256", hex);
+    wrapper.querySelector("dd").classList.add("files-hash-value");
+    metadata.append(wrapper);
+  } else {
+    wrapper.querySelector("dd").textContent = hex;
+  }
+}
+
+async function hashActiveFile() {
+  const id = store.activeId();
+  const entry = id ? store.get(id) : null;
+  if (!entry || hashJob) return;
+  const key = hashKey(entry);
+  const cached = hashCache.get(key);
+  if (cached) {
+    setHashField(cached);
+    setStatus("SHA-256 from cache");
+    return;
+  }
+  const controller = new AbortController();
+  hashJob = { controller, id };
+  hashButton.disabled = true;
+  setStatus("Hashing SHA-256…");
+  try {
+    const hex = await sha256File(entry.file, {
+      signal: controller.signal,
+      onProgress: (done, total) => setStatus(`Hashing SHA-256 · ${formatBytes(done)} / ${formatBytes(total)}`),
+    });
+    hashCache.set(key, hex);
+    if (store.activeId() === id) {
+      setHashField(hex);
+      setStatus("SHA-256 computed locally");
+    }
+  } catch (error) {
+    if (store.activeId() === id) {
+      if (error?.name === "AbortError") setStatus("Hashing canceled");
+      else setStatus(error?.message || "Hashing failed", true);
+    }
+  } finally {
+    if (hashJob?.controller === controller) hashJob = null;
+    hashButton.disabled = !store.activeId() || Boolean(hashJob);
+  }
+}
+
+function renderDuplicateReport(result) {
+  releasePreview();
+  const box = element("section", "files-zip");
+  const files = result.groups.reduce((sum, group) => sum + group.members.length, 0);
+  const title = element("h3", "", result.groups.length
+    ? `Exact duplicate groups · ${result.groups.length} (${files} files)`
+    : "No exact duplicates");
+  title.tabIndex = -1;
+  box.append(title, element("p", "files-note",
+    "SHA-256 over full contents, hashed locally. Same bytes with different names or paths count as duplicates."),
+    element("p", "files-note", `Hashed ${result.hashed} of ${result.scanned} files · ${formatBytes(result.hashedBytes)}.`));
+  for (const group of result.groups) {
+    const groupBox = element("div", "files-dup-group");
+    const hashLine = element("p", "files-note", `SHA-256 ${group.hash} · ${formatBytes(group.size)}`);
+    hashLine.dataset.i18nSkip = "";
+    const members = element("ul", "files-dup-members");
+    for (const member of group.members) {
+      const item = element("li", "", member.path);
+      item.dataset.i18nSkip = "";
+      members.append(item);
+    }
+    groupBox.append(hashLine, members);
+    box.append(groupBox);
+  }
+  if (result.groups.length) {
+    const select = element("button", "button compact", "Select all but one copy per group");
+    select.type = "button";
+    select.addEventListener("click", () => {
+      const ids = result.groups.flatMap((group) => group.members.slice(1).map((member) => member.id));
+      if (store.setSelection(ids)) {
+        setStatus(`Selected ${ids.length} duplicate copies; one copy per group stays unselected.`);
+      }
+    });
+    box.append(select);
+  }
+  preview.append(box);
+  title.focus();
+}
+
+async function runDuplicateScan() {
+  const items = store.visible().map((entry) => store.get(entry.id)).filter(Boolean);
+  if (items.length < 2) return;
+  const controller = new AbortController();
+  dupController = controller;
+  renderList();
+  setStatus(`Hashing ${items.length} files for exact duplicates…`);
+  try {
+    const result = await findDuplicateGroups(items, {
+      signal: controller.signal,
+      onProgress: (index, total, done, size) => setStatus(`Hashing ${index}/${total} · ${formatBytes(done)} of ${formatBytes(size)}`),
+    });
+    if (dupController !== controller) return;
+    renderDuplicateReport(result);
+    const files = result.groups.reduce((sum, group) => sum + group.members.length, 0);
+    setStatus(result.groups.length
+      ? `${result.groups.length} duplicate groups · ${files} files`
+      : `No exact duplicates among ${result.scanned} files`);
+  } catch (error) {
+    if (dupController !== controller) return;
+    if (error?.name === "AbortError") setStatus("Duplicate scan canceled.");
+    else setStatus(error?.message || "Duplicate scan failed.", true);
+  } finally {
+    if (dupController === controller) {
+      dupController = null;
+      renderList();
+    }
+  }
+}
+
 function currentVisible() {
   return store.visible({ query, folder, sort: sortBy });
 }
@@ -259,6 +391,9 @@ function renderList() {
   selectVisible.disabled = !ids.length;
   packZipButton.disabled = selectedCount === 0 || Boolean(zipController);
   compressionSelect.disabled = Boolean(zipController);
+  duplicatesButton.disabled = store.count() < 2;
+  duplicatesButton.textContent = dupController ? "Cancel scan" : "Find duplicates";
+  hashButton.disabled = !store.activeId() || Boolean(hashJob);
 
   const available = store.folders();
   const requested = folder;
@@ -1024,12 +1159,18 @@ async function showActive() {
     heading.removeAttribute("data-i18n-skip");
     heading.textContent = "Choose a file";
     setStatus("Files remain on this device.");
+    toolActions.hidden = true;
+    hashButton.hidden = true;
     emptyPreview("Open files or drop them here to inspect their headers.");
     return;
   }
 
   const entry = store.get(activeId);
   if (!entry) return;
+  if (hashJob) hashJob.controller.abort();
+  toolActions.hidden = false;
+  hashButton.hidden = false;
+  hashButton.disabled = Boolean(hashJob);
   const file = entry.file;
   heading.dataset.i18nSkip = "";
   heading.textContent = entry.path;
@@ -1039,6 +1180,8 @@ async function showActive() {
     const info = await inspectLocalFile(file);
     if (revision !== selectionRevision) return;
     appendMetadata(info, performance.now() - start);
+    const cachedHash = hashCache.get(hashKey(entry));
+    if (cachedHash) setHashField(cachedHash);
     updateTool(entry, info);
     metadata.prepend(field("Virtual path", entry.path));
     setStatus(info.mismatch ? "Signature mismatch" : info.label, info.mismatch);
@@ -1295,6 +1438,11 @@ viewGrid.addEventListener("click", () => { viewMode = "grid"; renderList(); });
 selectVisible.addEventListener("click", () => {
   store.setSelection(currentVisible().map((entry) => entry.id));
 });
+duplicatesButton.addEventListener("click", () => {
+  if (dupController) dupController.abort();
+  else void runDuplicateScan();
+});
+hashButton.addEventListener("click", () => void hashActiveFile());
 bindFileDrop(getNode("#files-drop-zone"), addFiles);
 bindFileDrop(list, addFiles);
 store.subscribe(() => {
@@ -1307,6 +1455,10 @@ new MutationObserver(() => {
   if (filesPanel.hidden && audioDockId) closeAudioDock();
   if (filesPanel.hidden && !zipFinalizing) zipController?.abort();
   if (filesPanel.hidden) {
+    hashJob?.controller.abort();
+    dupController?.abort();
+  }
+  if (filesPanel.hidden) {
     archiveViews.get(preview)?.close();
     archiveViews.get(dialogBody)?.close();
   }
@@ -1314,6 +1466,8 @@ new MutationObserver(() => {
 window.addEventListener("pagehide", (event) => {
   if (event.persisted) return;
   if (!zipFinalizing) zipController?.abort();
+  hashJob?.controller.abort();
+  dupController?.abort();
   closeAudioDock();
   releasePreview();
   releasePreview(dialogBody);

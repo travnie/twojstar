@@ -7,6 +7,7 @@ Doc Bench runs at https://docbench.bartek.lol/. It is part of the TRAVNY Bench f
 ## Files (default workspace)
 
 - Add local files or folders; inspect signatures, MIME hints, metadata and previews without uploading content.
+- Hash the active file on demand with SHA-256 (bounded local read), and find exact duplicates across the list by size plus full-content SHA-256, with a report and bulk selection of duplicate copies.
 - Open supported text and PDFs in existing specialist tools, or convert DOCX locally; unsupported formats remain inspectable.
 - Selection and active preview are independent. ZIP listing is read-only; extraction and packing are future work.
 

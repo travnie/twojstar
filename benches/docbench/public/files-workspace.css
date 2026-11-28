@@ -245,6 +245,24 @@
   font-size: 0.94rem;
 }
 
+.files-dup-group {
+  margin: 0 0 12px;
+}
+
+.files-dup-members {
+  margin: 4px 0 0;
+  padding-left: 1.2rem;
+}
+
+.files-dup-members li {
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.files-hash-value {
+  font-family: "Space Mono", ui-monospace, monospace;
+}
+
 .files-zip-entry-preview-header {
   display: flex;
   flex-wrap: wrap;
