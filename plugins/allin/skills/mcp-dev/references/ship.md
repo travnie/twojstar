@@ -27,6 +27,10 @@ Checklist from `/connectors/building/review-criteria`: read/write split; annotat
 
 Remote HTTPS MCP via "With MCP" (screenshots only there); skills-only ZIP excludes MCP config unless org-approved for local MCP; hooks not eligible; version must change per upload; developer name comes from the verified identity. Field reference: `/plugins/deploy/submission`.
 
+## Authless remote servers: abuse
+
+No token means no per-user identity, and the stateless transport gives no session to key on. Rate-limit per client IP at the edge (Workers: Rate Limiting binding or WAF rule; read `CF-Connecting-IP`, not a client-supplied `X-Forwarded-For`), keep a per-instance token bucket as a backstop, and cache upstream responses so repeated queries cost nothing. Host IP ranges are for tiering limits, not gating: hard-allowlisting Anthropic IPs locks out every other MCP host.
+
 ## Deploy
 
 Cloudflare Worker via CI (`cloudflare` skill). Health: probe with `scripts/mcp_probe.py` after each deploy; for Bartek's servers, add the endpoint to `status-mcp`.
