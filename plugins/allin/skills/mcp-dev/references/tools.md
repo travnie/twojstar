@@ -65,7 +65,7 @@ Curate, don't mirror. >~30 operations → filter by tag, path prefix, explicit a
 | 15-30 | audit near-duplicates |
 | 30+ | search + execute (+ promoted top 3-5) |
 
-Cross-call state: server-minted handles passed as normal arguments (sessions are gone in 2026-07-28). Need user input mid-call → elicitation (now a multi-round-trip `input_required` result); check client capabilities and keep a plain-argument fallback. Form mode takes a flat object of primitives only (string, number/integer, boolean, enum); the reply is `accept` (with content), `decline` or `cancel`, and decline ("no") and cancel (dismissed) need different handling. Never collect secrets through a form: use URL mode or OAuth. Rich input → MCP App.
+Cross-call state: server-minted handles passed as normal arguments (sessions are gone in 2026-07-28). Need user input mid-call → elicitation (now a multi-round-trip `input_required` result); check client capabilities and keep a plain-argument fallback. Form mode takes a flat object: string, number/integer, boolean and enum fields, plus multi-select enum arrays; no nested objects. The reply is `accept` (with content), `decline` or `cancel`: on decline the user said no, so stop or take the documented alternative and don't re-ask; on cancel they dismissed it, so the call may be retried or end without a choice. Never collect secrets through a form: use URL mode or OAuth. Rich input → MCP App.
 
 ## Other primitives
 
