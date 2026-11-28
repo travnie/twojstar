@@ -58,7 +58,8 @@ Existing SPA that must keep working standalone: pick the mode from an explicit s
 - Iframe, no top navigation, no same-origin storage guarantees; persist via tool calls or host state APIs.
 - CSP: declare every external origin (images, fetch, fonts) in the resource `_meta.ui.csp`; otherwise blocked.
 - Links: through `ui/open-link`; declared HTTPS origins open without a prompt in Claude (allowed link URIs at submission).
-- Theme: use host CSS variables with a `var(--x, fallback)` so the standalone build still looks right / transparent background; test light + dark. Apply `ctx.safeAreaInsets` as padding in `onhostcontextchanged` (mobile hosts and fullscreen).
+- Theme: use host CSS variables with a `var(--x, fallback)` so the standalone build still looks right, and keep the background transparent; test light + dark.
+- Safe area: apply `safeAreaInsets` as padding from `app.getHostContext()` after connecting (insets sent at startup don't fire the change handler) and again in `onhostcontextchanged`; matters on mobile hosts and in fullscreen.
 - Payload: keep tool results small; fetch heavy data from the view via `tools/call` (app-only tool) instead of stuffing the first result.
 - View-registered tools (`app.registerTool`): since ext-apps 2.1 they are mirrored to WebMCP (`document.modelContext`) and WebMCP-registered page tools are served over `tools/list`; `webMcpBridge: false` turns the bridge off.
 - Abuse: rate-limit app-only tools, validate inputs like any public endpoint.
