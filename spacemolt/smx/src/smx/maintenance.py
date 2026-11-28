@@ -30,7 +30,7 @@ USER_AGENT = f"spacemolt-smx/{__version__}"
 # Last backend release exercised end-to-end, versus newest source-reviewed v2.
 # Do not call source review a binary smoke test.
 TESTED_BACKEND = "1.5.93"
-SOURCE_REVIEWED_BACKEND = "1.5.127"
+SOURCE_REVIEWED_BACKEND = "1.5.129"
 
 
 @dataclass(frozen=True)

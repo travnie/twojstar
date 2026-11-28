@@ -104,6 +104,9 @@ CONTRACT: dict[str, dict[str, tuple[str, ...]]] = {
     "spacemolt_battle/default_stance": {},
     "spacemolt_shipping/list_all": {},
     "spacemolt_shipping/reclaim": {},
+    "spacemolt_shipping/block_carrier": {"request": ("blocked_carrier_id", "blocked_carrier_type")},
+    "spacemolt_shipping/unblock_carrier": {"request": ("blocked_carrier_id", "blocked_carrier_type")},
+    "spacemolt_shipping/list_blocked": {},
 }
 
 

@@ -789,6 +789,16 @@ WATCH_SAFE_EXACT = {"accounts", "catalog", "help"}
 WATCH_SAFE_PREFIXES = ("get_", "list_", "view_", "find_", "search_")
 # Prefix matches that are live mutations (docs MCP marks them [mutation]).
 WATCH_UNSAFE_EXACT = {"list_for_sale", "list_ship_for_sale"}
+# Server v0.734.2: repeated unchanged same-tick reads of these return read_repeat_limited.
+TICK_LIMITED_READS = {"get_state", "get_ship", "get_cargo", "storage/view"}
+TICK_SECONDS = 10.0
+
+
+def is_tick_limited_read(command: str) -> bool:
+    normalized = ALIASES.get(normalize_command(command), normalize_command(command))
+    group, _, action = normalized.rpartition("/")
+    group = group.removeprefix("spacemolt_").removeprefix("spacemolt")
+    return (f"{group}/{action}" if group else action) in TICK_LIMITED_READS
 
 
 def watch_command_is_read_only(command: str, args: Iterable[str] = ()) -> bool:
@@ -881,6 +891,13 @@ def cmd_watch(backend: Backend, argv: list[str]) -> int:
             file=sys.stderr,
         )
         return 2
+    if interval < TICK_SECONDS and is_tick_limited_read(command):
+        print(
+            f"smx: {normalized} is limited to one unchanged read per tick; "
+            f"using --interval {TICK_SECONDS:g}.",
+            file=sys.stderr,
+        )
+        interval = TICK_SECONDS
 
     iteration = 0
     try:
